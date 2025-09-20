@@ -133,14 +133,14 @@
 
 ---
 
-# Personal Log – Oluwadabira
+# Personal Log – Oluwadabira Omotoso
 
 ---
 
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-*(Insert screenshot from Peer Eval question or list tasks here)*
+![Personal Log](../../screenshots/Week%203%20Personal%20Log-%20Oluwadabira.png)
 
 ---
 

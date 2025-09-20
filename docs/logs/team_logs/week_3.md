@@ -44,7 +44,7 @@ Paste chart image or link here:
 | #N/A          | Project Requirements   | @afuaf     |
 | #N/A          | Project Requirements   | @dabby04     |
 | #N/A          | Project Requirements   | @PaintedW0lf     |
-| #N/A          | Project Requirements   | @<username_here>     |
+| #N/A          | Project Requirements   | @kjassani    |
 
 ---
 

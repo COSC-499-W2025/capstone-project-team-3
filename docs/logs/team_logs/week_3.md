@@ -28,10 +28,10 @@ Paste chart image or link here:
 |-------------------|----------------|
 | @KarimKhalil33    | Karim Khalil   |
 | @<username_here>  | Karim Jassani  |
-| @<username_here>  | Oluwadabira    |
-| @<username_here>  | Vanshika       |
-| @<username_here>  | Shreya         |
-| @<username_here>  | Afua           |
+| @dabby04   | Oluwadabira    |
+| @PaintedW0lf  | Vanshika       |
+| @6s-1  | Shreya         |
+| @afuaf  | Afua           |
 
 ---
 
@@ -40,10 +40,10 @@ Paste chart image or link here:
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | #N/A          | Project Requirements   | @KarimKhalil33  |
-| #N/A          | Project Requirements   | @<username_here>     |
-| #N/A          | Project Requirements   | @<username_here>     |
-| #N/A          | Project Requirements   | @<username_here>     |
-| #N/A          | Project Requirements   | @<username_here>     |
+| #N/A          | Project Requirements   | @6s-1     |
+| #N/A          | Project Requirements   | @afuaf     |
+| #N/A          | Project Requirements   | @dabby04     |
+| #N/A          | Project Requirements   | @PaintedW0lf     |
 | #N/A          | Project Requirements   | @<username_here>     |
 
 ---
@@ -66,11 +66,15 @@ Paste chart image or link here:
   - Non-Functional Requirements
   - Testing the Requirements
   - Additional Use Cases
+📷 Screenshot:  
+![Sept 16 Meeting Screenshot](../../screenshots/sept16.png)
 
 ### 17th September 2025 – Team Meeting (All members present)
 - Discussions on:
   - Functional Requirements
   - Non-Functional Requirements
+📷 Screenshot:  
+![Sept 17 Meeting Screenshot](../../screenshots/sept17.png)
 
 ### 19th September 2025 – Team Meeting (All members present)
 - Final discussions for project requirements on:

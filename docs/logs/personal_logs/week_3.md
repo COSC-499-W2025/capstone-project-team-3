@@ -50,7 +50,7 @@
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-*(Insert screenshot from Peer Eval question or list tasks here)*
+![Karim Jassani Week 3 Tasks](../../screenshots/KarimJ_Week3_PersonalLog.png)
 
 ---
 

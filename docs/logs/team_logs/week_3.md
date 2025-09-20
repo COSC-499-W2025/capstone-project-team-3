@@ -27,7 +27,7 @@ Paste chart image or link here:
 | Username (GitHub) | Student Name   |
 |-------------------|----------------|
 | @KarimKhalil33    | Karim Khalil   |
-| @<username_here>  | Karim Jassani  |
+| @kjassani  | Karim Jassani  |
 | @dabby04   | Oluwadabira    |
 | @PaintedW0lf  | Vanshika       |
 | @6s-1  | Shreya         |

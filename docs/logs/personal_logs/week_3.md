@@ -185,8 +185,8 @@
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-Screenshot from Peer Eval question or task list:
-![Personal Log](../../screenshots/Week-3_Personal%Log_Shreya%Saxena.png)
+Screenshot from Peer Eval question:
+![Personal Log](../../screenshots/Week-3_Personal%20Log_Shreya%20Saxena.png)
 
 ---
 

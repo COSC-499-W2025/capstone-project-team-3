@@ -230,7 +230,7 @@
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-*(Insert screenshot from Peer Eval question or list tasks here)*
+![Personal Tasks Log](../../screenshots/Vanshika_Week3_PersonalEval.png)
 
 ---
 

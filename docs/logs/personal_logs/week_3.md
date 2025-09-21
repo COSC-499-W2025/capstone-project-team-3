@@ -178,14 +178,15 @@
 
 ---
 
-# Personal Log – Shreya
+# Personal Log – Shreya Saxena
 
 ---
 
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-*(Insert screenshot from Peer Eval question or list tasks here)*
+Screenshot from Peer Eval question or task list:
+![Personal Log](../../screenshots/Week-3_Personal%Log_Shreya%Saxena.png)
 
 ---
 
@@ -219,7 +220,7 @@
 ---
 
 ### Additional Context (Optional)
-- No blockers reported this week.  
+- No blockers reported this week, consistent communication between team members.
 
 ---
 

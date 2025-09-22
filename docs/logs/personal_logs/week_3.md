@@ -1,11 +1,11 @@
-# Personal Log – Afua
+# Personal Log – Afua Fremopong
 
 ---
 
 ## Entry for Sept 15, 2025 → Sept 21, 2025
 
 ### Type of Tasks Worked On
-*(Insert screenshot from Peer Eval question or list tasks here)*
+![Personal Log](../../screenshots/Week_3_Personal_Log_Afua.png)
 
 ---
 

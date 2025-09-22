@@ -31,7 +31,7 @@ Paste chart image or link here:
 | @dabby04   | Oluwadabira    |
 | @PaintedW0lf  | Vanshika       |
 | @6s-1  | Shreya         |
-| @afuaf  | Afua           |
+| @abstractafua  | Afua Frempong        |
 
 ---
 
@@ -41,7 +41,7 @@ Paste chart image or link here:
 |---------------|------------------------|-----------------|
 | #N/A          | Project Requirements   | @KarimKhalil33  |
 | #N/A          | Project Requirements   | @6s-1     |
-| #N/A          | Project Requirements   | @afuaf     |
+| #N/A          | Project Requirements   | @abstractafua     |
 | #N/A          | Project Requirements   | @dabby04     |
 | #N/A          | Project Requirements   | @PaintedW0lf     |
 | #N/A          | Project Requirements   | @kjassani    |

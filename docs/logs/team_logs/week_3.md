@@ -27,11 +27,11 @@ Paste chart image or link here:
 | Username (GitHub) | Student Name   |
 |-------------------|----------------|
 | @KarimKhalil33    | Karim Khalil   |
-| @kjassani  | Karim Jassani  |
-| @dabby04   | Oluwadabira    |
-| @PaintedW0lf  | Vanshika       |
-| @6s-1  | Shreya         |
-| @abstractafua  | Afua Frempong        |
+| @kjassani         | Karim Jassani  |
+| @dabby04          | Oluwadabira Omostos|
+| @PaintedW0lf      | Vanshika Singla|
+| @6s-1             | Shreya Sanexa  |
+| @abstractafua     | Afua Frempong  |
 
 ---
 

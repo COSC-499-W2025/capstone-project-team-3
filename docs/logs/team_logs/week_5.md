@@ -32,7 +32,7 @@ Paste chart image or link here:
 | @kjassani         | Karim Jassani  |
 | @dabby04          | Oluwadabira Omotoso|
 | @PaintedW0lf      | Vanshika Singla|
-| @6s-1             | Shreya Sanexa  |
+| @6s-1             | Shreya Saxena  |
 | @abstractafua     | Afua Frempong  |
 
 ---
@@ -99,7 +99,8 @@ Paste chart image or link here:
 
 ## Reflection
 
----
+During this week, our team deepened our understanding of system data flow and collaboration in Lucidchart. Translating high-level project ideas into DFD diagrams helped clarify how our dashboard components interact. We learned the importance of consistent naming conventions and clear process boundaries to prevent confusion in later design stages.
 
 ## Plan for Next Cycle
-- 
+- Finalize assigned tasks and set up the GitHub Project Board for tracking.
+- Research frameworks and tools for metadata extraction and timeline visualization.

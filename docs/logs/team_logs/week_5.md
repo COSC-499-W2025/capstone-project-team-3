@@ -70,6 +70,7 @@ Paste chart image or link here:
 - Discussions on:
   - Finalising DFD Level 0
   - DFD Level 1: process, entity, data store, data flows
+  - ![DFD Rough Sketch](../../screenshots/DFP_Rough_sketch.png)
 
 ### 1st October 2025 – Team Meeting (All members present)
 - Made adjustments to DFD Level 1
@@ -98,9 +99,14 @@ Paste chart image or link here:
 ---
 
 ## Reflection
+* Individual reflections present in the personal logs 
 
 During this week, our team deepened our understanding of system data flow and collaboration in Lucidchart. Translating high-level project ideas into DFD diagrams helped clarify how our dashboard components interact. We learned the importance of consistent naming conventions and clear process boundaries to prevent confusion in later design stages.
 
 ## Plan for Next Cycle
+* Update repo README with link to system final system architecture diagram with explanation
+* Update repo README with link to DFD Level 1 with explanation
+* Update repo README with link to revised WBS
+* Explore Docker for the system setup 
 - Finalize assigned tasks and set up the GitHub Project Board for tracking.
 - Research frameworks and tools for metadata extraction and timeline visualization.

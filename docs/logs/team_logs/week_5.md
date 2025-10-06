@@ -70,6 +70,7 @@ Paste chart image or link here:
 - Discussions on:
   - Finalising DFD Level 0
   - DFD Level 1: process, entity, data store, data flows
+  - ![DFD Rough Sketch](../../screenshots/DFP_Rough_sketch.png)
 
 ### 1st October 2025 – Team Meeting (All members present)
 - Made adjustments to DFD Level 1
@@ -98,8 +99,12 @@ Paste chart image or link here:
 ---
 
 ## Reflection
+* Individual reflections present in the personal logs 
 
 ---
 
 ## Plan for Next Cycle
-- 
+* Update repo README with link to system final system architecture diagram with explanation
+* Update repo README with link to DFD Level 1 with explanation
+* Update repo README with link to revised WBS
+* Explore Docker for the system setup 

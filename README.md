@@ -25,17 +25,3 @@ Please use the provided folder structure for your project. You are free to organ
 
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
-
-# Data Flow Diagram Level 1
-
-### Legend
-<img src="screenshots/Legend.png" width="100" alt="legend">
-
-![DFD Level 1](screenshots/DFD_level1.png)
-
- ## Description of the diagram
-
- # System Architecture Diagram
- ![System Architecture Diagram](screenshots/System_Architecture_Diagram.png)
-
- ## Description of the diagram

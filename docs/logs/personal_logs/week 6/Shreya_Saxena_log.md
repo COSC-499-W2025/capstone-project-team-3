@@ -5,7 +5,7 @@
 ## Entry for Oct 6, 2025 → Oct 12, 2025
 
 ### Type of Tasks Worked On
-![Personal Log](../../../screenshots/Shreya_Saxena-week-6.png)
+![Personal Log](../../../screenshots/Shreya_Saxena_week-6.png)
 
 ---
 

@@ -34,7 +34,7 @@
 
 ### Progress Summary
 - **Completed this week:**  
-  - Updated and finalized DFD, UML, and System Architecture diagrams  
+  - Updated and finalized the System Architecture diagramsand its summary and use.  
   - Implemented and tested file existence validation function  
   - Updated `.gitignore`, improved `README.md` with setup details, and added `setup.sh` script  
   - Collaborated with the team on refining documentation for Milestone 1  

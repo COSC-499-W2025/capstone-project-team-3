@@ -2,8 +2,6 @@
 
 # Project details
 
-- Project Proposal
-
  - [Data Flow Diagram and Explanation](docs/DFD.md)
 
 # Project-Starter

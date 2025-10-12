@@ -10,7 +10,7 @@
 ---
 
 ### Recap of Weekly Goals
-- Updated and helped in refining all project diagrams (DFD, UML, and System Architecture) based on Milestone 1 requirements.
+- Helped in refining all project diagrams (DFD, UML, and System Architecture) and documentation based on Milestone 1 requirements.
 - Updated repository configuration files (`.gitignore`, `README.md`, and `scripts/setup.sh`) for better clarity and structure.
 - Implemented backend function to check if a file or directory exists.
 

@@ -20,8 +20,7 @@ What makes our solution stand out is that we place a very high priority on accur
 ## 3. **Use Cases**
 
 ## UML Use Case Diagram
-![UML Use Case Diagram](UML_Use_Case_Diagram.png)
-
+![UML Use Case Diagram](UML_Use_Case_Diagram_(Final).png)
 
 ## **UC1 — Provide Consent**
 
@@ -42,7 +41,7 @@ What makes our solution stand out is that we place a very high priority on accur
 * 1a. **User declines consent:** System blocks analysis features; offers to exit or view privacy policy.  
 * 4a. **OS permission denied:** System guides user to OS settings and retries permission check.
 
-## **UC2 — Select Project Folder Path**
+## **UC2 — Select Project Folder**
 
 **Primary actor:** User  
 **Description:** User provides a local folder path to analyze.  
@@ -52,14 +51,15 @@ What makes our solution stand out is that we place a very high priority on accur
 
 1. User chooses “Add Project Folder”.  
 2. System opens native folder picker.  
-3. User selects/enters the folder path.  
+3. User selects the zipped folder.  
 4. System validates access and readability.  
 5. System stores the path in the local project list. 
 
 **Extensions:**
 
-* 4a. **Invalid path or inaccessible folder:** Show error with guidance; allow re-selection.  
-* 4b. **Large directory warning:** Offer estimation of scan time and allow continue/cancel (Keeping user informed)
+* 4a. **Inaccessible folder:** Show error with guidance; allow re-selection.  
+* 4b. **Large directory warning:** Offer estimation of scan time and allow continue/cancel (Keeping user informed)  
+* 4c. **Incorrect Format:** Files that are not in an accepted format will return an error to the user
 
 ## **UC3 — User Preference Selection**  
 
@@ -83,22 +83,24 @@ What makes our solution stand out is that we place a very high priority on accur
 ## **UC4 — Scan & Index Files**
 
 **Primary actor:** System (triggered by User)  
-**Description:** System crawls the folder, indexes metadata, and populates the local cache.  
+**Description:** System crawls the folder, indexes metadata, and populates the local database.  
 **Precondition:** URL/folder location available.  
-**Postcondition:** Store log of metadata for accessed files into cache.  
+**Postcondition:** Store log of metadata for accessed files into local database.  
 **Main Scenario:**
 
 1. User clicks “Scan Project”.  
 2. System enumerates files respecting filters/exclusions.  
 3. System extracts and stores file metadata.  
 4. System detects unsupported file types and marks them.  
-5. System writes indexed metadata to the local cache.
+5. System distinguishes collaborative projects from individual projects  
+6. System writes indexed metadata to the local database.
 
 **Extensions:**
 
 * 2a. **I/O error during enumeration:** Error message; ask the user to retry.  
-* 3a. Compare with the cached metadata, if data is the same- load the same dashboard.  
-* 5a. **Cache write failure:** System retries; if persistent
+* 3a. Compare with the stored metadata, if data is the same- load the same dashboard.  
+* 4a. File types that are not accepted will be greyed out and omitted from the scan  
+* 6a. **Database write failure:** System retries; if persistent
 
 ## **UC5 — Extract Git History**
 
@@ -106,39 +108,98 @@ What makes our solution stand out is that we place a very high priority on accur
 **Supporting actor:** Git Repository  
 **Description:** If the folder is a Git repo, extract commits, authors, diffs, and timestamps (git logs).  
 **Precondition:** Scan & Index Files completed; Git analysis enabled; `.git` directory present.  
-**Postcondition:** Git metadata extracted and cached for faster analytics later in case the same data is provided  
+**Postcondition:** Git metadata extracted and stored for faster analytics later in case the same data is provided  
 **Main Scenario:**
 
 1. System detects `.git` and repo status.  
 2. System runs read-only Git commands to fetch commit metadata and diffs.  
-3. System maps changes to files and timestamps.
+3. System distinguishes collaborative projects from individual projects  
+4. System maps changes to files and timestamps.
 
  **Extensions:**
 
 * 1a. **No Git repo found:** Skip gracefully; proceed with file-only insights.
 
-## **UC6 — Analyze Content & Extract Skills**
+## **UC6.1 — Analyze Non Code Content & Extract Skills**
 
 **Primary actor:** System  
-**Description:** Apply local NLP file analysis to infer topics, languages, frameworks, contributions and skills from file contents and cached commit messages  
+**Description:** Apply local NLP file analysis to infer topics, languages, frameworks, contributions and skills from file contents  
 **Precondition:** Content scan and indexed data  
 **Postcondition:** Analysis results stored per file/project.  
 **Main Scenario:**
 
-1. System accesses relevant scanned files and cached data.  
-2. System runs local NLP & file analysis   
-3. System aggregates topics (topics, languages, frameworks, contributions and skills) and computes analysis results.
+1. System accesses relevant scanned files and stored data.  
+2. System runs local NLP & file analysis on non-code files  
+3. Extrapolate individual contributions for given collaborative projects   
+4. System aggregates topics (topics, contributions and skills) and computes analysis results.
 
 **Extensions:**
 
-* 2a. **Ambiguous or Sparse Content:** When file contents or commit messages lack sufficient context for skill inference, the system flags the file & displays an error message.
+* 2a. **Ambiguous or Sparse Content:** When file contents lack sufficient context for skill inference, the system flags the file & displays an error message.
 
-## **UC7 — Prepare Visualization Graphics**
+## **UC6.2 — Analyze Code Content & Extract Skills**
+
+**Primary actor:** System  
+**Description:** Apply local NLP file analysis to infer topics, languages, frameworks, contributions and skills from file contents and stored commit messages  
+**Precondition:** Content scan and indexed data  
+**Postcondition:** Analysis results stored per file/project.  
+**Main Scenario:**
+
+1. System accesses relevant scanned files and stored data.  
+2. System runs local NLP & file analysis   
+3. Extrapolate individual contributions for given collaborative projects   
+4. System aggregates topics (topics, languages, frameworks, contributions and skills) and computes analysis results.
+
+**Extensions:**
+
+* 2a. **Ambiguous or Sparse Content:** When code document lacks sufficient context for skill inference, the system flags the file & displays an error message.
+
+## **UC7 — Project Ranking**
 
 **Primary actor:** System (triggered by User)  
-**Description:** Build chart-ready datasets (timeseries, histograms, rankings) from cached metadata/Git/analysis before dashboard render.  
+**Description:** Ranking importance of each project based on user contributions  
+**Precondition:** UC4 (Scan) done; UC5/UC6 done or skipped; UC3 preferences available;.  
+**Postcondition:** Project rank generated and saved to local database  
+**Main Scenario:**
+
+1. System retrieves project metadata and user contribution metrics from local database.  
+2. System normalizes contribution scores based on user contributions gotten from code and non code metadata, skills, and git contributions.  
+3. System calculates an aggregate ranking score for each project.  
+4. System sorts all projects in descending order of importance.  
+5. System writes the generated project ranking to the local database.
+
+**Extensions:**
+
+* 2a. **Insufficient input data**: mark affected visuals as empty placeholders; continue others.  
+* 5a. **Database write failure:** System retries; if persistent
+
+## **UC8 — Chronological Ordering**
+
+**Primary actor:** System (triggered by User)  
+**Description:** Producing a chronological order of projects and skills exercised  
+**Precondition:** UC4 (Scan) done; UC5/UC6 done or skipped; UC3 preferences available;.  
+**Postcondition:** Chronological order of projects and associated skills saved to local database.  
+**Main Scenario:**
+
+1. System retrieves project metadata and skill data from database.  
+2. System extracts creation and last modified timestamps from project metadata.  
+3. System associates skills with each project from UC5 or UC6  
+4. System sorts all projects by:  
+   * Creation date (ascending)  
+   * Last modified date (descending)  
+5. System writes the ordered project lists and skill associations to the local database.
+
+**Extensions:**
+
+* 2a. **Insufficient input data**: mark affected visuals as empty placeholders; continue others.  
+* 5a. **Database write failure:** System retries; if persistent
+
+## **UC9 — Prepare Visualization Graphics**
+
+**Primary actor:** System (triggered by User)  
+**Description:** Build chart-ready datasets (timeseries, histograms, rankings) from stored metadata/Git/analysis before dashboard render.  
 **Precondition:** UC4 (Scan) done; UC5/UC6 done or skipped; UC3 preferences available.  
-**Postcondition:** Visualization datasets and suggested layout saved to local cache   
+**Postcondition:** Visualization datasets and suggested layout saved to local database  
 **Main Scenario:**
 
 1. System loads inputs (metadata, Git, analysis, prefs/filters).  
@@ -150,7 +211,7 @@ What makes our solution stand out is that we place a very high priority on accur
 
 * 2a. **Insufficient input data**: mark affected visuals as empty placeholders; continue others.
 
-## **UC8 — Generate Dashboard**
+## **UC10 — Generate Dashboard**
 
 **Primary actor:** User  
 **Description:** Present an interactive dashboard with contributions, time, skills, and highlights  
@@ -161,37 +222,40 @@ What makes our solution stand out is that we place a very high priority on accur
 
 1. User opens the dashboard view.  
 2. System loads metrics, skills, and summaries from the analyser.  
-3. System edits charts and tables   
-4. User saves a personalized view, if needed.  
-5. System stores visualization data in cache. 
+3. System loads top ranked projects.  
+4. System edits charts and tables   
+5. User saves a personalized view, if needed.  
+6. System stores visualization data in local database. 
 
 **Extensions:** 
 
 * 2a. If the dashboard is unable to load, trigger the generate options till 3 times.  
 * 2b. **System displays an error:** “Dashboard unable to load. Please re-run the generate dashboard"   
 * 2c. **User Edits View:** User modifies the layout, changes chart types, or applies filters to the data.  
-* 4a. **System displays an error:** "Failed to save. Try again or save locally."  
-* 5a. **Cache write failure:** System retries 
+* 4a. **System displays an error:** "Failed to save. Try again or save locally." 
+* 5a. **Database write failure:** System retries; 
 
-## **UC9 — Generate Summary**
+## **UC11 — Generate Resume**
 
 **Primary actor:** System  
 **Description:** Produce tailored, evidence-backed summaries from contributions and skills; align user desired job field.  
 **Precondition:** Dashboard has been generated.  
-**Postcondition:** Dashboard Summary has been generated.  
+**Postcondition:** Dashboard and Resume has been generated.  
 **Main Scenario:**
 
 1. System surfaces top impacts (e.g., features delivered, performance gains) with evidence (files/commits).  
-2. System drafts summary following the STAR pattern.  
-3. User edits and accepts the generated summary. 
+2. System drafts summary following the STAR pattern for uploaded projects and top ranked projects.  
+3. User edits and accepts the generated summary.   
+4. System stores resume data in local database.
 
 **Extensions:**
 
-* 3a. **Insufficient evidence:** System adds a placeholder for potential data points that can be added by the user.
+* 3a. **Insufficient evidence:** System adds a placeholder for potential data points that can be added by the user.  
+* 4a. **Database write failure:** System retries; 
 
-## **UC10 — Export Reports**
+## **UC12 — Export Reports**
 
-**Primary actor:** User;   
+**Primary actor:** User   
 **Supporting actor:** Export Service  
 **Description:** Export dashboard snapshots, metrics, and bullets as PDF/CSV/JSON for applications or sharing.  
 **Precondition:** Content has already been produced.  
@@ -208,17 +272,17 @@ What makes our solution stand out is that we place a very high priority on accur
 
 * 4a. **Write permission error:** Prompt for alternate location and retry.
 
-## **UC11 — Manage Data & Privacy**
+## **UC13 — Manage Data & Privacy**
 
 **Primary actor:** User  
-**Description:** User reviews, clears local cache, revokes consent.  
-**Precondition:** UC1 previously completed (consent exists) and local cache may exist.  
+**Description:** User reviews, clears data, revokes consent.  
+**Precondition:** UC1 previously completed (consent exists) and local data may exist.  
 **Postcondition:** Data retained or deleted per user choice; consent state updated.  
 **Main Scenario:**
 
 1. User opens “Privacy & Data”.  
-2. System shows stored projects, cache size, and consent status.  
-3. User chooses to clear cache and/or revoke consent.  
+2. System shows stored projects, database size, and consent status.  
+3. User chooses to clear data and/or revoke consent.  
 4. System performs requested actions and confirms.
 
  **Extensions:**
@@ -226,35 +290,57 @@ What makes our solution stand out is that we place a very high priority on accur
 * 3a. **Selective delete (per project):** System deletes only chosen items.  
 * 4a. **Failure to delete due to OS lock:** System retries and provides manual steps.
 
-## **UC12 — Cache & Invalidation (Metadata \+ Visuals \+ UI)**
+## **UC14 — Database & Invalidation (Metadata \+ Visuals \+ UI)**
 
 **Primary actor:** System  
-**Description:** Maintain up-to-date cached data for metadata, visuals, and dashboard state; support quick incremental refreshes and accurate removal of stale items.  
+**Description:** Maintain up-to-date stored data for metadata, visuals, and dashboard state; support quick incremental refreshes and accurate removal of stale items.  
 **Precondition:** Scanning/analysis and visualization preparation completed; consent present.  
-**Postcondition:** Cache and manifest reflect the current project state; stale items are removed; dashboard state is preserved.
+**Postcondition:** Store and manifest reflect the current project state; stale items are removed; dashboard state is preserved.
 
 **Main Scenario:**
 
-1. Identify cacheable items from recent scans, analysis results, and prepared visuals.  
+1. Identify stored items from recent scans, analysis results, and prepared visuals.  
 2. Detect what has changed since the last run.  
-3. Update cached items that changed; keep unchanged items; remove items that no longer apply.  
-4. Save current dashboard state for reuse.  
-5. Record an updated summary of cache contents and status.
+3. Update data that changed; keep unchanged items; remove items that no longer apply.  
+4. Save current dashboard and summary  state for reuse.  
+5. Record an updated summary of data contents and status.
 
 **Extensions:**
 
 * 1a. **Source structure changes (e.g., items renamed/moved without meaningful content change):** retain history and update references accordingly.  
-* 2a. **Update is interrupted or blocked:** retry and, if needed, on next launch, resume and validate the cache state.  
-    
-## 4. **Requirements, Testing, Requirement Verification**
+* 2a. **Update is interrupted or blocked:** retry and, if needed, on next launch, resume and validate the data state.
 
-## **Tech stack**
+
+## **UC15 — Deletion of Previous Insights**
+
+**Primary actor:** User  
+**Description:** Delete previously generated insights without deleting other related files  
+**Precondition:** User has generated at least one dashboard (done at least one successful cycle from U1-U11)  
+**Postcondition:** Project History is deep deleted. Confirmed through UI popup
+
+**Main Scenario:**
+
+1. User selects the option to delete previously generated insights from the dashboard or project settings.  
+2. System prompts the user for confirmation, warning that the deletion is irreversible.  
+3. User confirms the deletion request.  
+4. System identifies all stored insight files associated with the selected project.  
+5. System performs a deep deletion of project history and related insight data, preserving non-insight project files.  
+6. System updates the database and verifies that the deleted data is no longer referenced.  
+7. System displays a confirmation popup indicating successful deletion.
+
+**Extensions:**
+
+* 5a. **Source Structure Change:** If project folders or file paths have been renamed/moved, system updates internal references before deletion to prevent orphaned data.
+
+4. **Requirements, Testing, Requirement Verification**
+
+# **Tech stack**
 
 | Component | Technology | Rationale |
 | ----- | ----- | ----- |
-| **Frontend / Desktop UI** | **Tauri** | Lightweight, cross-platform desktop framework. Produces tiny binaries, provides safe filesystem access, and integrates smoothly with modern frontend stacks. |
-| **Backend / Core Logic** | **Python** | Widely used for data extraction, parsing, and NLP analysis. Rich ecosystem of libraries (e.g., *GitPython*) enables efficient Git history extraction and processing. |
-| **Data Persistence / Cache** | **SQLite** | File-based, lightweight database ideal for offline desktop apps. Efficiently caches file metadata and analysis results, minimizing redundant computation. Implemented as a **two-part caching system** combining SQLite with content hashing for robust persistence and fast lookups. |
+| **Frontend / Desktop UI** | **Tauri ()** | Lightweight, cross-platform desktop framework. Produces tiny binaries, provides safe filesystem access, and integrates smoothly with modern frontend stacks. |
+| **Backend / Core Logic** | **Python ()** | Widely used for data extraction, parsing, and NLP analysis. Rich ecosystem of libraries (e.g., *GitPython*) enables efficient Git history extraction and processing. |
+| **Data Persistence / Cache** | **SQLite** | File-based, lightweight database ideal for offline desktop apps. Efficiently stores file metadata and analysis results, minimizing redundant computation. Implemented as a **two-part storing system** combining SQLite with content hashing for robust persistence and fast lookups. |
 
 ### **Testing Framework & CI/CD**
 
@@ -266,18 +352,23 @@ What makes our solution stand out is that we place a very high priority on accur
 
 | Requirement | Description of the feature, the steps involved, the complexity of it, potential difficulties | Test Cases | Who | H/M/E |
 | ----- | ----- | ----- | ----- | ----- |
-| **FR1. Consent Management (UC1)** | Implement the consent screen, local storage of consent status, and enforcement of access restriction until consent is granted. | Positive: User accepts consent; verify all features are unlocked. Negative: User declines consent; verify analysis features remain blocked and app can still close/exit. | Afua Frempong | Easy |
-| **FR2. Folder Path Selector (UC2)** | Provide a user interface element (native picker) to select and validate a local directory path, ensuring read access is available. | Positive: Select a valid, accessible local folder; verify path is saved. Negative (Path): Input an invalid or non-existent path; verify error message is displayed. Negative (Access): Select a path with read access denied; verify error and guidance provided. | Karim Jassani  | Medium |
-| **FR3. Preference Selection (UC3)** | Implement the UI for selecting industry/education from dropdowns and handling custom free-text inputs | Positive: Select a dropdown option; verify the value is saved correctly. Negative (Custom): Enter invalid characters into custom fields; verify system sanitizes or rejects the input. | Karim Khalil | Medium |
-| **FR4. File Scanning & Indexing (UC4)** | Implement the core file enumeration and metadata extraction logic, handling file filters, unsupported types, and writing indexed data to the local cache. | Positive: Scan a small project folder; verify all expected metadata fields are present in the cache. Negative (I/O): Simulate an I/O error during the scan; verify the system logs the error and allows the user to retry. Negative (I/O): if the folder is empty, the user receives a pop up message to change the url. | Shreya Saxena | Hard |
-| **FR5. Git History Extraction (UC5)** | If .git present, pull commits, authors, timestamps, and map to files; store in cache. | Positive: Scan a valid Git repository; cache reflects correct metadata Negative (Missing): Scan a non-Git folder; verify the Git extraction component skips gracefully without error. Negative (I/O): if the git files/folder is empty, the user receives a pop up message to load again. | Oluwadabira Omotoso | Hard |
-| **FR6. Content Analysis & Skill Inference (UC6)** | Apply local NLP & Python  content analysis on file content and commit messages to infer skills, languages, frameworks, and aggregate contribution topics. | Positive: Analyze a project e.g. using Python; verify "Python" and related libraries are correctly inferred and tagged. Positive: commit messages referencing “add Kafka consumer” infers “Kafka”.  Negative (Ambiguous): Analyze files with sparse or ambiguous content; verify the system flags the file and avoids false skill attribution. Negative: ignore binary files | Vanshika Singla  | Hard |
-| **FR7. Prepare Visualization Graphics (UC7)** | Precompute chart datasets from cached metadata/Git/analysis; save datasets | Functional Testing: After a scan and analysis, run preparation; verify the visualization cache is populated with the expected datasets and layout. Functional Testing (Filters): Change date/language filters and rerun preparation; verify only affected visuals recompute (others are reused). Negative Testing (I/O): Simulate a cache write failure; verify the system has retried. | Karim Khalil, Shreya Saxena | Hard |
-| **FR8. Summary Generation (UC8)** | Implement the logic to surface evidence-backed impact statements and draft structured summaries (e.g., STAR pattern) based on user-provided field/preferences. | Positive: Generate a summary; verify it includes evidence linking a skill to a file/commit.  Negative (Insufficient Evidence): If data is too sparse, verify the system includes a placeholder instead of fabricating content. | Afua Frempong  | Hard |
-| **FR9. Dashboard Generation & Edit (UC8)** | Render the interactive dashboard using analysis results and allow the user to modify the layout (add/remove widgets, filters) and save the personalized view. | Positive: Load the dashboard; verify all calculated metrics are displayed correctly.  Positive (Edit): Rearrange and remove widgets; verify the layout is saved and persists after reload.  Negative (Load): Simulate a data loading failure; verify the system retries (up to 3 times) before displaying a non-blocking error message. | Karim Jassani | Hard |
-| **FR10.Export Dashboards (UC9)** | Implement functionality to generate and write export files (e.g. PDF,JPG, JSON etc) of the dashboard, summaries, and metrics to a user-selected location. | Positive: Export the dashboard as a certain file type; verify the output file is accurate and readable.  Negative (Permission): Simulate a write permission error; verify the system prompts the user to select an alternate path and retries. | Karim Khalil | Medium |
-| **FR11. Data Management (UC10)** | Provide a UI to review stored project data, clear the local cache (fully or selectively), and revoke consent. | Positive (Clear): Clear all cache data; verify the cache files are deleted and the stored project list is empty.  Negative (Failure): Simulate the OS locking the cache file, preventing deletion. Verify that the system: Displays the exact locked file path to the user. Provides clear manual resolution steps (e.g., *“Please delete the file manually here: \[Path\]”*). Internally marks the project as inactive/deleted to maintain consistency. | Shreya Saxena | Hard |
-| **FR12: Cache & Invalidation (UC12)** | Persist caches after metadata/analysis and visuals; support incremental rescans and precise invalidation. | Positive (Single change): Modify one file; only that file’s analysis and dependent visuals update. Positive (Rename/move): Same content; path metadata updates; history preserved. Negative (Stale items retained):File is deleted or moved outside referenced folder path; cache and dashboard still reference it; stale metadata and visuals persist; dashboard shows outdated state.   | Oluwadabira Omotoso, Vanshika, Singla | Medium |
+| **FR1. Consent Management (UC1)** | Implement the consent screen, local storage of consent status, and enforcement of access restriction until consent is granted. | Positive: User accepts consent; verify all features are unlocked. Negative: User declines consent; verify analysis features remain blocked and app can still close/exit. | Afua Frempong, Karim Khalil, Vanshika Singla | Easy (2) |
+| **FR2. Folder Path Selector (UC2)** | Provide a user interface element (native picker) to select and validate a local directory path, ensuring read access is available. | Positive: Select a valid, accessible local folder; verify path is saved. Negative (Path): Input an invalid or non-existent path; verify error message is displayed. Negative (Access): Select a path with read access denied; verify error and guidance provided. | Karim Jassani, Oluwadabira Omotoso, Shreya Saxena | Medium (3) |
+| **FR3. Preference Selection (UC3)** | Implement the UI for selecting industry/education from dropdowns and handling custom free-text inputs | Positive: Select a dropdown option; verify the value is saved correctly. Negative (Custom): Enter invalid characters into custom fields; verify system sanitizes or rejects the input. | Karim Khalil | Medium (3) |
+| **FR4. File Scanning & Indexing (UC4)** | Implement the core file enumeration and metadata extraction logic, handling file filters, unsupported types, and writing indexed data to the local database. | Positive: Scan a small project folder; verify all expected metadata fields are present in the database. Negative (I/O): Simulate an I/O error during the scan; verify the system logs the error and allows the user to retry. Negative (I/O): if the folder is empty, the user receives a pop up message to change the url. | Shreya  Saxena | Hard (5) |
+| **FR5. Git History Extraction (UC5)** | If .git present, pull commits, authors, timestamps, and map to files; store in the database. | Positive: Scan a valid Git repository; database reflects correct metadata Negative (Missing): Scan a non-Git folder; verify the Git extraction component skips gracefully without error. Negative (I/O): if the git files/folder is empty, the user receives a pop up message to load again. | Oluwadabira Omotoso | Hard (5) |
+| **FR6. Content Analysis & Skill Inference (UC6s)** | Apply local NLP & Python  content analysis on file content and commit messages to infer skills, languages, frameworks, and aggregate contribution topics. | Positive: Analyze a project e.g. using Python; verify "Python" and related libraries are correctly inferred and tagged. Positive: commit messages referencing “add Kafka consumer” infers “Kafka”.  Negative (Ambiguous): Analyze files with sparse or ambiguous content; verify the system flags the file and avoids false skill attribution. Negative: ignore binary files | Vanshika Singla  | Hard (5) |
+| **FR6.1. Analyze Non-Code Content & Extract Skills (UC6.1)**  | System performs local NLP and file analysis on non-code files (e.g., docs, presentations, PDFs) to infer topics, languages, frameworks, contributions, and skills. Requires scanned and indexed data. Aggregates analysis results per project. | Positive: Given rich non-code files, verify extracted topics and skills match content. Negative: Provide ambiguous or sparse text; verify file is flagged and error message appears | TBD  | Hard (5) |
+| **FR6.2. Analyze Code Content & Extract Skills (UC6.2)** | System performs local NLP and code analysis to infer programming languages, frameworks, and contributions. Aggregates analysis results for each file and project. | Positive: Provide valid repo; verify languages and frameworks correctly detected. Negative: Provide empty or broken code files; verify system flags and reports insufficient context. | TBD | Hard (5) |
+| **FR7. Project Ranking (UC7)** | System calculates and ranks projects based on user contributions using normalized contribution scores (from code, non-code, skills, and metadata). Stores ranking results to database. | Positive: Verify ranked project list generated in descending order and saved. Negative: Remove contribution data for a project; verify that visual placeholders appear. Negative: Simulate database write failure; confirm retry and logging occur. | TBD | Hard (5) |
+| **FR8. Chronological Ordering (UC8)** | System generates chronological lists of projects and skills based on creation and modification dates. Saves ordered lists to the local database. | Positive: Verify chronological order generated correctly and saved. Negative: Missing timestamps; ensure placeholders appear, processing continues, and no crash occurs. | TBD | Medium (3) |
+| **FR9. Prepare Visualization Graphics (UC9)** | Precompute chart datasets from stored metadata/Git/analysis; save datasets | Functional Testing: After a scan and analysis, run preparation; verify the visualization database is populated with the expected datasets and layout. Functional Testing (Filters): Change date/language filters and rerun preparation; verify only affected visuals recompute (others are reused). Negative Testing (I/O): Simulate a database write failure; verify the system has retried. | Karim Khalil, Shreya Saxena | Hard (5) |
+| **FR10. Resume Generation (UC11)** | Implement the logic to surface evidence-backed impact statements and draft structured summaries (e.g., STAR pattern) based on user-provided field/preferences. | Positive: Generate a summary; verify it includes evidence linking a skill to a file/commit.  Negative (Insufficient Evidence): If data is too sparse, verify the system includes a placeholder instead of fabricating content. | Afua Frempong  | Hard |
+| **FR11. Dashboard Generation & Edit (UC10)** | Render the interactive dashboard using analysis results and allow the user to modify the layout (add/remove widgets, filters) and save the personalized view. | Positive: Load the dashboard; verify all calculated metrics are displayed correctly.  Positive (Edit): Rearrange and remove widgets; verify the layout is saved and persists after reload.  Negative (Load): Simulate a data loading failure; verify the system retries (up to 3 times) before displaying a non-blocking error message. | Karim Jassani | Hard |
+| **FR12.Export Dashboards (UC12)** | Implement functionality to generate and write export files (e.g. PDF,JPG, JSON etc) of the dashboard, summaries, and metrics to a user-selected location. | Positive: Export the dashboard as a certain file type; verify the output file is accurate and readable.  Negative (Permission): Simulate a write permission error; verify the system prompts the user to select an alternate path and retries. | Karim Khalil | Medium |
+| **FR13. Data Management (UC13)** | Provide a UI to review stored project data, clear the local database (fully or selectively), and revoke consent. | Positive (Clear): Clear all database data; verify the database files are deleted and the stored project list is empty.  Negative (Failure): Simulate the OS locking the data, preventing deletion. Verify that the system: Displays the exact locked file path to the user.  Provides clear manual resolution steps (e.g., *“Please delete the file manually here: \[Path\]”*).  Internally marks the project as inactive/deleted to maintain consistency. | Shreya  Saxena | Hard |
+| **FR14: Database & Invalidation (UC14)** | Persist database after metadata/analysis and visuals; support incremental rescans and precise invalidation. | Positive (Single change): Modify one file; only that file’s analysis and dependent visuals update. Positive (Rename/move): Same content; path metadata updates; history preserved. Negative (Stale items retained):File is deleted or moved outside referenced folder path; database and dashboard still reference it; stale metadata and visuals persist; dashboard shows outdated state.   | Oluwadabira Omotoso, Vanshika, Singla | Medium |
+| **FR15. Deletion of Previous Insights (UC15)** | Allows users to delete previously generated insights while preserving related non-insight project files. Includes confirmation popup, irreversible warning, deep deletion of insight data, and post-deletion database verification. Must handle renamed/moved project folders safely. | Positive: Verify that insights deleted, non-insight files remain, and confirmation popup displays. Negative: Rename/move project folder before deletion; verify system updates references before deletion and avoids orphaned data. | TBD  | Medium   |
 | **NFR1. Cross-Platform & Offline** | Application must be installable and executable OS-agnostically (Win/Mac/Linux) without requiring a continuous internet connection for core functions. | Test Suite: Run all functional requirements (FR1-FR10) end-to-end on Windows, macOS, and a Linux distribution. Test Case: Disconnect from the internet and verify all analysis, caching, and visualization functions operate normally. | Oluwadabira Omotoso | Medium |
-| **NFR2. Data Consistency** | Extracted information and subsequent analysis results must remain consistent with the source files and cached metadata. | Test Case: Scan a project, verify the dashboard output, change one source file and rescan; verify the dashboard output reflects only the change and not new errors. | Vanshika Singla  | Medium |
-| **NFR3. Usability/Intuitiveness** | The application must be intuitive for a first-time user, requiring minimal learning effort for basic navigation and core functions. | Manual Testing: Perform a usability test with three external first-time users; record time taken to complete UC2 (Select Folder) and UC7 (Generate Dashboard). | Afua Frempong, Karim Jassani | Easy |
+| **NFR2. Data Consistency** | Extracted information and subsequent analysis results must remain consistent with the source files and stored metadata. | Test Case: Scan a project, verify the dashboard output, change one source file and rescan; verify the dashboard output reflects only the change and not new errors. | Vanshika Singla  | Medium |
+| **NFR3. Usability/Intuitiveness** | The application must be intuitive for a first-time user, requiring minimal learning effort for basic navigation and core functions. | Manual Testing: Perform a usability test with three external first-time users; record time taken to complete UC2 (Select Folder) and UC9 (Generate Dashboard). | Afua Frempong, Karim Jassani | Easy |

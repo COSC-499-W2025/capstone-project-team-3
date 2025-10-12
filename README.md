@@ -1,4 +1,10 @@
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20539381&assignment_repo_type=AssignmentRepo)
+
+#Project details
+
+- Project Proposal
+ - [Data Flow Diagram and Explanation](docs/DFD%20Level1.md)
+ - [System Architecture Diagram and Explanation](docs/plan/System_Architecture_Diagram.md)
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 
 
@@ -19,3 +25,17 @@ Please use the provided folder structure for your project. You are free to organ
 
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
+
+# Data Flow Diagram Level 1
+
+### Legend
+<img src="screenshots/Legend.png" width="100" alt="legend">
+
+![DFD Level 1](screenshots/DFD_level1.png)
+
+ ## Description of the diagram
+
+ # System Architecture Diagram
+ ![System Architecture Diagram](screenshots/System_Architecture_Diagram.png)
+
+ ## Description of the diagram

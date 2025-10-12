@@ -4,7 +4,7 @@
 
 - Project Proposal
 
- - [Data Flow Diagram and Explanation](docs/DFD%20Level1.md)
+ - [Data Flow Diagram and Explanation](docs/DFD.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 

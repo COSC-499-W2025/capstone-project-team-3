@@ -1,6 +1,9 @@
-from app.main import main
+from app.main import app
+from fastapi.testclient import TestClient
 
-def test_main_prints(capsys):
-    main()
-    captured = capsys.readouterr()
-    assert "App started" in captured.out
+client = TestClient(app)
+
+def test_read_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Hello, world!"}

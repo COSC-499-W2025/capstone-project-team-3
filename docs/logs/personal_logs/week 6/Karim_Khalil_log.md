@@ -72,6 +72,6 @@
 ### Plan for Next Cycle
 * Begin to implement and complete consent form logic
 * Allow the user to interact with cli to accpet/reject consent form and store result in local storage
-* Kick start scanning and indexing files impolementation
+* Kick start scanning and indexing files implementation
 
 ---

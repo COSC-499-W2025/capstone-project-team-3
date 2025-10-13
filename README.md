@@ -34,7 +34,12 @@ When you're ready, start your application by running:
 
 Your application will be available at http://localhost:8000.
 
-**Note: **
+Quick helper script:
+- `scripts/setup.sh` builds and runs the app. Options:
+  - `USE_COMPOSE=1 ./scripts/setup.sh` to use docker compose
+  - `PLATFORM=linux/amd64 ./scripts/setup.sh` to force platform
+
+**Note:**
 - **Make sure you have the docker daemon running in the background i.e. open the Docker app installed on your machine**
 - **Make sure `requirements.txt` exists (Dockerfile installs from it).**
 - **Keep Dockerfile and compose files tracked in git; use `.dockerignore` to exclude files from the build context.**

@@ -1,7 +1,58 @@
-.DS_Store
-app/data/*.sqlite3
+# Python
 __pycache__/
-.pytest_cache/
+*.py[cod]
+*.pyo
+*.pyd
 *.pyc
+*.pyt
+*.pyi
+*.env
 .venv/
 venv/
+env/
+ENV/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+
+# Testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Build / dist
+build/
+dist/
+*.egg
+pip-wheel-metadata/
+
+# Database / secrets
+*.sqlite3
+*.db
+/secrets*.yaml
+.env*
+
+# Node
+node_modules/
+npm-debug.log
+
+# Logs
+*.log
+
+# Packaging
+*.whl
+
+# Ignore local docker artifacts/runtime created files (but keep Dockerfile & compose tracked)
+docker-compose.override.yml
+*.tar
+docker-entrypoint-*.sh

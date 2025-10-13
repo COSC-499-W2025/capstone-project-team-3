@@ -4,6 +4,7 @@
 - Project Proposal
 - [Data Flow Diagram and Explanation](docs/DFD.md)
 - [System Architecture Diagram and Explanation](docs/plan/System_Architecture_Diagram.md)
+ - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 

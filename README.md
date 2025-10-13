@@ -48,7 +48,9 @@ Quick helper script:
 In the terminal, run the following command to stop the application: `docker compose down`.
 
 ### Running Tests in Docker Environment
-To run all the python tests in the docker environment, run `docker compose exec server pytest`
+To run all the python tests in the docker environment, run `docker compose exec server pytest`.
+
+You might need to run this in a new terminal window after running `docker compose up --build`.
 
 ### Deploying your application to the cloud
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 # --- Paths ---
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR 
 DB_PATH = DATA_DIR / "app.sqlite3"
 
 # --- SQL Schema (draft To be Edited) ---
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS CONSENT (
     policy_version TEXT,
     consent_given INTEGER DEFAULT 0,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES user(id)
 );
 """
 

@@ -1,8 +1,9 @@
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20539381&assignment_repo_type=AssignmentRepo)
 
 # Project details
-
- - [Data Flow Diagram and Explanation](docs/DFD.md)
+- Project Proposal
+- [Data Flow Diagram and Explanation](docs/DFD.md)
+- [System Architecture Diagram and Explanation](docs/plan/System_Architecture_Diagram.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 
@@ -25,20 +26,35 @@ Please use the provided folder structure for your project. You are free to organ
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
 
-### Building and running your application
+### Building and running with Docker
+
+Prereqs: Docker Desktop (or Docker Engine + docker-compose).
 
 When you're ready, start your application by running:
 `docker compose up --build`.
 
 Your application will be available at http://localhost:8000.
 
-**Note: Make sure you have the docker daemon running in the background i.e. open the Docker app installed on your machine**
+Quick helper script:
+- `scripts/setup.sh` builds and runs the app. Options:
+  - `USE_COMPOSE=1 ./scripts/setup.sh` to use docker compose
+  - `PLATFORM=linux/amd64 ./scripts/setup.sh` to force platform
+
+**Note:**
+- **Make sure you have the docker daemon running in the background i.e. open the Docker app installed on your machine**
+- **Make sure `requirements.txt` exists (Dockerfile installs from it).**
+- **Keep Dockerfile and compose files tracked in git; use `.dockerignore` to exclude files from the build context.**
 
 In the terminal, run the following command to stop the application: `docker compose down`.
 
+### Running Tests in Docker Environment
+To run all the python tests in the docker environment, run `docker compose exec server pytest`
+
 ### Deploying your application to the cloud
 
-First, build your image, e.g.: `docker build -t myapp .`.
+Build & run (single-image):
+- Build: `docker build -t myapp .`
+- Run: `docker run -p 8000:8000 --env-file .env myapp`
 
 If your cloud uses a different CPU architecture than your development
 machine (e.g., you are on a Mac M1 and your cloud provider is amd64),

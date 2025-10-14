@@ -2,9 +2,9 @@
 
 
 ### Legend
-<img src="screenshots/Legend.png" width="200" alt="legend">
+<img src="../screenshots/Legend.png" width="200" alt="legend">
 
-![DFD Level 1](screenshots/DFD_level1.png)
+![DFD Level 1](../screenshots/DFD_level1.png)
 
 # Description of the Diagram
 

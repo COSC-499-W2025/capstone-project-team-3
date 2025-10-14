@@ -16,7 +16,8 @@ def is_existing_path(path: Union[str, Path]) -> bool:
 
 def extract_zipped_contents(path: Union[str, Path]) -> bool:
     """
-    Returns all the contents in the zipped folder to another temporary destination folder.
+    Extracts the contents of the zipped file to a temporary folder.
+    Returns True if the extraction of contents runs successfully
     Raises ValueError if path is None.
     Raise ValueError if it is not a valid zipped file or something went wrong during extraction
     """

@@ -1,10 +1,10 @@
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20539381&assignment_repo_type=AssignmentRepo)
 
 # Project details
-- Project Proposal
-- [Data Flow Diagram and Explanation](docs/DFD.md)
-- [System Architecture Diagram and Explanation](docs/plan/System_Architecture_Diagram.md)
+
+ - [Data Flow Diagram and Explanation](docs/plan/DFD.md)
  - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
+ - [System Architecture](docs/plan/System_Architecture_Diagram.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 

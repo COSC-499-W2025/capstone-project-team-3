@@ -1,3 +1,7 @@
+"""
+Minimal Python entry point.
+"""
+#TODO: Database Entry Point#
 from fastapi import FastAPI
 import uvicorn
 

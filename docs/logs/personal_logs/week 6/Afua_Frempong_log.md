@@ -10,9 +10,10 @@
 ---
 
 ### Recap of Weekly Goals
-- Creation of Level 0 and Level 1 Data Flow Diagrams 
-- Gather feedback on Data Flow Diagrams and adjust dewsign accordingly
-- Complete DFD Quiz on Canvas based on feedback from class
+- Revamp Work Breakdown Structure, DFD, System Architecture and UML diagrams
+- Setup Burn Chart in Github
+- Commit code contributions
+- Finalize Project Requirements based on in-class Project Proposal feedback
 
 ---
 

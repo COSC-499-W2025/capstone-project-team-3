@@ -1,11 +1,36 @@
 """
 Minimal Python entry point.
 """
-#TODO: Database Entry Point#
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 import uvicorn
+from app.consent_routes import router as consent_router
+from app.consent_service import initialize_database
+# Uncomment the line below to enable consent enforcement middleware
+# from app.consent_middleware import ConsentMiddleware
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan events for application startup and shutdown."""
+    # Startup
+    initialize_database()
+    yield
+    # Shutdown (if needed in the future)
+
+
+app = FastAPI(
+    title="Productivity Analyzer API",
+    description="API for productivity tracking with consent management",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Include consent management routes
+app.include_router(consent_router)
+
+# Uncomment the line below to enable consent enforcement on all protected endpoints
+# app.add_middleware(ConsentMiddleware)
 
 @app.get("/")
 def read_root():

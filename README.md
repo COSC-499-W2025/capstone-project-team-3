@@ -53,6 +53,23 @@ To run all the python tests in the docker environment, run `docker compose exec 
 
 You might need to run this in a new terminal window after running `docker compose up --build`.
 
+### How to Check Your Test Coverage
+
+Test coverage shows how much of your code is actually tested by your unit tests. It helps you find parts of the code that **aren't tested yet**, so you can improve your tests and catch potential bugs.
+
+To generate a test coverage report, run this command:
+
+```
+docker compose exec server pytest --cov=app --cov-report=html:/app/htmlcov
+```
+
+This will run your tests and create a detailed **HTML report** inside the `/app/htmlcov` folder.
+
+To view the coverage report:
+
+1. Open the `htmlcov/index.html` file in a web browser.
+2. You’ll see a visual overview showing which lines of code are tested (highlighted in green) and which are not (highlighted in red).
+
 ### Deploying your application to the cloud
 
 Build & run (single-image):

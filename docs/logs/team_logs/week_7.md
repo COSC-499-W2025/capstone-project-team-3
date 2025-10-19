@@ -15,32 +15,29 @@
     
   
 - **Associated project board tasks:**
-* Test Cases #99
-* Privacy-based Restrictions #98
-* Dropdown UI for Industry & Education #96
-* Validate Directory Read Access #79
-* Enforce Access Restriction Until Consent is given #82
-* Handle Invalid or Inaccessible Paths #81
-* Store Consent Status Locally #80
-* Implement Consent Screen UI #74
-* Zipped file path will be typed in #72
-* Extract & Store Metadata #73
-* Native Folder Picker Integration #71
-* Folder Path Selector #46
-* Consent & User Management #30
-* Consent Model + Storage Layer #29
-* Test Cases #78
-* Error Handling (I/O, Empty Folders, Retry) #77
-* Write Metadata to local database #76
-* Handle Unsupported Types #75
-* Handle Missing or Empty Git Repos #94
-* Store Git Data in local database #93
-* Map Changes to Files #92
-* Extract Commit Metadata #91
-* Git History Extraction #89
-* Test Cases (Positive/Negative) #87
-* Consent Management #88
-* FR4: File Scanning & Indexing #69
+    * Test Cases #99
+    * Privacy-based Restrictions #98
+    * Dropdown UI for Industry & Education #96
+    * Validate Directory Read Access #79
+    * Enforce Access Restriction Until Consent is given #82
+    * Handle Invalid or Inaccessible Paths #81
+    * Store Consent Status Locally #80
+    * Implement Consent Screen UI #74
+    * Zipped file path will be typed in #72
+    * Extract & Store Metadata #73
+    * Native Folder Picker Integration #71
+    * Folder Path Selector #46
+    * Consent & User Management #30
+    * Consent Model + Storage Layer #29
+    * Test Cases #78
+    * Error Handling (I/O, Empty Folders, Retry) #77
+    * Write Metadata to local database #76
+    * Handle Unsupported Types #75
+    * Extract Commit Metadata #91
+    * Git History Extraction #89
+    * Test Cases (Positive/Negative) #87
+    * Consent Management #88
+    * FR4: File Scanning & Indexing #69
 
 ---
 

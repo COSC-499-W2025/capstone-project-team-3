@@ -9,6 +9,7 @@ charset-normalizer==3.4.3
 click==8.3.0
 cloudpathlib==0.23.0
 confection==0.1.5
+coverage==7.10.6
 cymem==2.0.11
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
 fastapi==0.119.0
@@ -43,6 +44,7 @@ pydantic_core==2.41.1
 Pygments==2.19.2
 pytest==8.4.2
 pytest-asyncio==1.2.0
+pytest-cov==7.0.0
 python-dotenv==1.1.1
 python-multipart==0.0.20
 pytokens==0.1.10

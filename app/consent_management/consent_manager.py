@@ -20,7 +20,14 @@ class ConsentManager:
         """Temporarily record consent status to file"""
         # TODO: Replace with database storage once connected
         status = "accepted" if accepted else "declined"
-        self.consent_file.write_text(status)
-        
-        print(f"[Debug] Consent status ({status}) stored temporarily. Will be in database later.")
-        return True
+        try:
+            self.consent_file.write_text(status)
+            print(f"[Debug] Consent status ({status}) stored temporarily. Will be in database later.")
+            return True
+        except (PermissionError, OSError, IOError) as e:
+            # Catch specific file-related exceptions:
+            # - PermissionError: No write permission
+            # - OSError: General OS errors (disk full, etc.)
+            # - IOError: General I/O errors
+            print(f"[Error] Failed to record consent to file: {e}")
+            return False

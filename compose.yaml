@@ -14,5 +14,6 @@ services:
     ports:
       - 8000:8000
     volumes:
+      - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
     working_dir: /app

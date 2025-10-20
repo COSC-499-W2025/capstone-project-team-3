@@ -39,6 +39,7 @@
     * Consent Management #88
     * FR4: File Scanning & Indexing #69
     * Scan Files paying attention to exclusions and filters #70
+    * check zip file #48
 
 ---
 
@@ -75,7 +76,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
 | #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
 | #N/A          | Docker Setup, DFD Level 1, Project Board Setup, Assigning task priorities    | @PaintedW0lf     |
-| #N/A          | System Architecture, Folder validation, gitignore    | @kjassani    |
+| #46, #17, #31, #37, #48        | System Architecture, Folder validation, Dependency Management    | @kjassani    |
 
 ---
 

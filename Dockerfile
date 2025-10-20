@@ -49,7 +49,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Copy the source code into the container.
-COPY app ./app
+COPY . /app
 
 # Expose the port that the application listens on.
 EXPOSE 8000

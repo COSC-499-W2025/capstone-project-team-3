@@ -105,9 +105,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 - **Framework used:**  
 - **Test run date:**  
 - **Summary:**  
-  - Total tests run:  
-  - Passed:   
-  - Failed:   
+  - Total tests run:  44
+  - Passed:   44
+  - Failed:   0
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  

@@ -63,9 +63,10 @@ def extract_zipped_contents(path: Union[str, Path]) -> bool:
 def validate_read_access(path: Union[str, Path], treat_as_dir: bool = False) -> dict:
     """
     Validate that `path` exists and is readable.
-
-    - Raises ValueError if path is None.
-    - If treat_as_dir True, validates directory read/traverse access.
+    Behavior:
+    - Raises ValueError if `path` is None.
+    - Returns {"status": "error", "reason": "..."} if the path does not exist or is not accessible.
+    - If `treat_as_dir` is True, validates directory read/traverse access.
     - If path is a directory, validates directory read/traverse access.
     - Otherwise treats path as a file: checks parent traverse access, file read bit, and attempts open.
     Returns:

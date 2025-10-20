@@ -88,6 +88,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #87        | Testing for consent manager (the PR that was raised on wednesday got some conflicting reviews on sunday night), might need changes and will need more time and since the reviews are last min it will continue for next week   | @PaintedW0lf     |
 | #86, #83          | 83 is under review and 86(test cases) will be closed once 83 is closed.    | @6s-1     |
 | #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
+| #85         | FR3: User Preference Selection #85  | @abstractafua     |
 
 ---
 

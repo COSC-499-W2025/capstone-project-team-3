@@ -136,6 +136,7 @@ def validate_directory_size(path: Union[str, Path], max_size_mb: int = 500) -> d
     except Exception as exc:
         return {"status": "error", "reason": f"cannot calculate directory size: {exc}"}
     
+    # 1 MB = 1024 × 1024 bytes
     size_mb = total_size / (1024 * 1024)
     
     if size_mb > max_size_mb:

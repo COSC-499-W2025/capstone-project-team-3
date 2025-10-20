@@ -1,0 +1,79 @@
+# Personal Log – Shreya Saxena
+
+---
+
+## Entry for Oct 13, 2025 → Oct 19, 2025
+
+### Type of Tasks Worked On
+![Personal Log](../../../screenshots/Shreya_Saxena_week-7.png)
+
+---
+
+### Recap of Weekly Goals
+- Completed all FR2 sub-issues on schedule:
+  - **Validate Directory Read Access (#79):** Implemented `validate_read_access()` to verify folder and file readability, ensuring accurate permission and existence checks.
+  - **Handle Invalid or Inaccessible Paths (#81):** Added error handling and structured response logic for invalid, missing, or unreadable directories.
+  - **Handle Directory Size (#83):** Implemented `validate_directory_size()` to calculate total directory size and warn when exceeding defined limits.
+  - **Test Cases (#86):** Added pytest coverage for all FR2 validators with edge case handling and consistent TDD workflow.
+
+
+---
+
+### Features Assigned to Me
+- Folder Path Selector (FR2)
+- File functions and unit tests  
+
+---
+
+### Associated Project Board Tasks
+| Task/Issue ID | Title                                    | Status     |
+|----------------|------------------------------------------|-------------|
+| 71(47)         | Native Folder picker integration         | Completed  |
+| 79             | Validate Directory Read Access           | Completed  |
+| 81             | Handle Invalid or Inaccessible Paths     | Completed  |
+| 83             | Handle Directory Size                    | Under Review |
+| 86             | Test Cases for Validation Functions      | Completed  |
+
+
+---
+
+### Progress Summary
+- **Completed this week:**  
+  - Finalized and merged backend validation utilities for FR2, ensuring all modules passed unit testing.  
+  - Followed **Test-Driven Development (TDD)** by first writing failing tests and then implementing passing logic for both read access and size validation.  
+  - Reviewed and refined code for error handling and consistent return structures across all path utilities.  
+  - Maintained active collaboration with teammates to ensure parallel PRs (Consent Management, Git Detection, ZIP Extraction) aligned with FR2 backend updates.  
+
+- **In Progress this week:**  
+  - Implementing logic for folder decompression. 
+  - Reviewing documentation consistency for FR2 functions and related test references.  
+
+
+---
+
+### Additional Context (Optional)
+- FR2 deliverables were **completed on time and within scope**, maintaining high testing standards.  
+- The implemented validation logic establishes a strong foundation for the upcoming **File Scanning (FR4)** integration.  
+- Consistent naming conventions, reusable utility structures, and standardized error responses were maintained for code quality.  
+  
+---
+
+### Reflection
+
+**What Went Well:**  
+* Delivered all assigned FR2 tasks on schedule with 100% test coverage.  
+* Maintained strong communication with the team and code consistency across the backend module.  
+* TDD workflow helped ensure robust and predictable code behavior.  
+
+
+**What Could Be Improved:**  
+* More frequent commits could make version tracking smoother  
+
+---
+
+### Plan for Next Cycle
+* Start initial decompression logic to handle zipped project files.  
+* Support teammates with their code, pr, reviews and documentation.
+* Continue improving developer documentation and internal testing references.
+
+---

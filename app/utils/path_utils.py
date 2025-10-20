@@ -14,6 +14,28 @@ def is_existing_path(path: Union[str, Path]) -> bool:
     p = Path(path)
     return p.exists()
 
+def is_zip_file(path: Union[str, Path]) -> bool:
+    """
+    Check whether the given file is a valid zip file.
+
+    Returns True if it is a valid zip file, False otherwise.
+    Raises ValueError if path is None or does not exist.
+    """
+
+    if path is None:
+        raise ValueError("path must be provided")
+
+    p = Path(path)
+
+    if not p.exists():
+        raise ValueError(f"The path '{p}' does not exist.")
+
+    if not p.is_file():
+        raise ValueError(f"The path '{p}' is not a file.")
+
+    # Check if the file is a valid ZIP
+    return zipfile.is_zipfile(p)
+
 def extract_zipped_contents(path: Union[str, Path]) -> bool:
     """
     Extracts the contents of the zipped file to a temporary folder.

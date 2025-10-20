@@ -107,3 +107,42 @@ def validate_read_access(path: Union[str, Path], treat_as_dir: bool = False) -> 
         return {"status": "error", "reason": f"cannot open file: {exc}"}
 
     return {"status": "ok", "reason": "", "path": str(p.resolve())}
+
+def validate_directory_size(path: Union[str, Path], max_size_mb: int = 500) -> dict:
+    """
+    Validate directory size and warn if it exceeds threshold.
+    
+    - Raises ValueError if path is None.
+    - Returns {"status": "ok", "reason": "", "size_mb": <float>} if within limits.
+    - Returns {"status": "warning", "reason": "directory exceeds X MB", "size_mb": <float>} if too large.
+    - Returns {"status": "error", "reason": "..."} if path invalid/inaccessible.
+    """
+    if path is None:
+        raise ValueError("path must be provided")
+    
+    p = Path(path)
+    
+    # Validate path exists and is accessible
+    access_check = validate_read_access(str(p), treat_as_dir=True)
+    if access_check["status"] != "ok":
+        return access_check
+    
+    # Calculate total directory size
+    total_size = 0
+    try:
+        for item in p.rglob("*"):
+            if item.is_file():
+                total_size += item.stat().st_size
+    except Exception as exc:
+        return {"status": "error", "reason": f"cannot calculate directory size: {exc}"}
+    
+    size_mb = total_size / (1024 * 1024)
+    
+    if size_mb > max_size_mb:
+        return {
+            "status": "warning",
+            "reason": f"directory size ({size_mb:.2f} MB) exceeds limit ({max_size_mb} MB)",
+            "size_mb": size_mb
+        }
+    
+    return {"status": "ok", "reason": "", "size_mb": size_mb}

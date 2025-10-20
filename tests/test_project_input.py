@@ -52,3 +52,37 @@ def test_scan_project_files_excludes_by_folder(tmp_path):
     file_names = [f.name for f in files]
     assert "main.py" in file_names
     assert "lib.js" not in file_names
+    
+def test_extract_file_metadata(tmp_path):
+    """Test metadata extraction for a single file."""
+    file = tmp_path / "test.txt"
+    file.write_text("hello")
+    from app.utils.scan_utils import extract_file_metadata
+    metadata = extract_file_metadata(file)
+    assert metadata["file_name"] == "test.txt"
+    assert metadata["file_path"].endswith("test.txt")
+    assert metadata["size_bytes"] == 5
+    assert "created_at" in metadata
+    assert "last_modified" in metadata
+
+def test_get_project_metadata_signature_consistency():
+    """Test that the signature is consistent for the same metadata list."""
+    from app.utils.scan_utils import get_project_metadata_signature
+    metadata_list = [
+        {"file_path": "/a/b.txt", "last_modified": 123},
+        {"file_path": "/a/c.txt", "last_modified": 456},
+    ]
+    sig1 = get_project_metadata_signature(metadata_list)
+    sig2 = get_project_metadata_signature(list(reversed(metadata_list)))
+    assert sig1 == sig2  # Order should not matter
+
+def test_full_scan_and_signature(tmp_path):
+    """Test scanning, metadata extraction, and signature generation together."""
+    (tmp_path / "a.py").write_text("print(1)")
+    (tmp_path / "b.txt").write_text("hello")
+    from app.utils.scan_utils import scan_project_files, extract_file_metadata, get_project_metadata_signature
+    files = scan_project_files(tmp_path)
+    metadata_list = [extract_file_metadata(f) for f in files]
+    signature = get_project_metadata_signature(metadata_list)
+    assert isinstance(signature, str)
+    assert len(signature) == 64  # sha256 hex digest length

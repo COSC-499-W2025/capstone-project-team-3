@@ -1,11 +1,16 @@
 """
 Minimal Python entry point.
 """
-#TODO: Database Entry Point#
 from fastapi import FastAPI
+from app.data.db import init_db
 import uvicorn
 import sys
 import os
+#TODO: Database Entry Point#
+def main():
+    init_db()  # creates the SQLite DB + tables
+    print("App started")
+
 app = FastAPI()
 # Ensure the parent directory is in sys.path so 'app' can be imported
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +22,7 @@ from consent_management.consent_text import CONSENT_ALREADY_PROVIDED_MESSAGE, CO
 def read_root():
     return {"message": CONSENT_GRANTED_MESSAGE}
 
-def main():
+if __name__ == "__main__":
     print("App started")
 
     # Initialize consent management

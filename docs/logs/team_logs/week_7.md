@@ -39,6 +39,7 @@
     * Consent Management #88
     * FR4: File Scanning & Indexing #69
     * Scan Files paying attention to exclusions and filters #70
+    * check zip file #48
 
 ---
 

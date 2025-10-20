@@ -10,7 +10,7 @@
 
 - **Features planned for this milestone:**
     * Deciding on task priorities for the next 2 weeks+
-    * Consent and User Setup in WBS (starting most features)
+    * Consent management and User Setup in WBS (starting most features)
     * Project Input and Initialization in WBS (starting most features)
     
   
@@ -73,7 +73,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #17, #46, #22          |   System Architecture, File Existence and Tests, gitignore, README and Setup script | @6s-1     |
 | #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
 | #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
-| #N/A          | Docker Setup, DFD Level 1, Project Board Setup, Assigning task priorities    | @PaintedW0lf     |
+| #68, #80, #100, #88, #84     | Consent manager, consent form creation and different user senarios, handling consent decline and saving consent, Project board setup    | @PaintedW0lf     |
 | #N/A          | System Architecture, Folder validation, gitignore    | @kjassani    |
 
 ---
@@ -83,6 +83,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #113          | Part 2: Remaining bullet points    | @dabby04      |
+| #87        | Testing for consent manager (the PR that was raised on wednesday got some conflicting reviews on sunday night), might need changes and will need more time and since the reviews are last min it will continue for next week   | @PaintedW0lf     |
 
 ---
 
@@ -90,6 +91,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ### 15th October 2025 – Team Meeting (All members present)
 - Add tasks to project board and decide task priorities
+- Assignment of tasks 
 
 ---
 

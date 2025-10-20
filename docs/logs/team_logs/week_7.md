@@ -75,7 +75,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #47, #79, #81, #83, #86          | Checking access to directories, directory size handling, checking for invalid paths, error handling   | @6s-1     |
 | #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
 | #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
-| #N/A          | Docker Setup, DFD Level 1, Project Board Setup, Assigning task priorities    | @PaintedW0lf     |
+| #68, #80, #100, #88, #84     | Consent manager, consent form creation and different user senarios, handling consent decline and saving consent, Project board setup    | @PaintedW0lf     |
 | #46, #17, #31, #37, #48        | System Architecture, Folder validation, Dependency Management    | @kjassani    |
 
 ---

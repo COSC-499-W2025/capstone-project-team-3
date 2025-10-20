@@ -1,5 +1,5 @@
 import argparse
-from app.utils.scan_utils import scan_project_files
+from app.utils.scan_utils import scan_project_files, get_project_metadata_signature, extract_file_metadata, project_metadata_exists_in_db, store_project_signature_in_db
 
 def has_consent():
     # TODO: Replace with ConsentManager once PR is merged
@@ -31,6 +31,16 @@ def main(argv=None):
         print(f"Scanned files (excluding patterns {args.exclude}):")
         for f in files:
             print(f)
+        metadata_list = [extract_file_metadata(f) for f in files]
+        signature = get_project_metadata_signature(metadata_list)
+        if project_metadata_exists_in_db(signature):
+            print("Project already analyzed. Skipping analysis.")
+            return 0
+        else:
+            store_project_signature_in_db(signature)
+            print("Stored project signature. Proceeding with analysis.")
+            return 1
+    
     # Add logic for other subcommands here...
 
 if __name__ == "__main__":

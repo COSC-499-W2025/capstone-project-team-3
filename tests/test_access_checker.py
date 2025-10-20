@@ -2,7 +2,8 @@ import os
 import pytest
 from pathlib import Path
 
-from app.utils.path_utils import validate_read_access
+from app.utils.path_utils import validate_read_access, validate_directory_size
+
 
 def test_validate_read_access_file(tmp_path):
     f = tmp_path / "a.txt"
@@ -40,3 +41,26 @@ def test_validate_read_access_permission_denied(tmp_path, monkeypatch):
 def test_validate_read_access_none_raises():
     with pytest.raises(ValueError):
         validate_read_access(None)
+
+def test_validate_directory_size_ok(tmp_path):
+    d = tmp_path / "d"
+    d.mkdir()
+    f = d / "small.txt"
+    f.write_text("x" * 100)
+    res = validate_directory_size(str(d), max_size_mb=1)
+    assert res["status"] == "ok"
+    assert res["size_mb"] < 1
+
+def test_validate_directory_size_warning(tmp_path):
+    d = tmp_path / "d"
+    d.mkdir()
+    f = d / "large.txt"
+    f.write_text("x" * (10 * 1024 * 1024))  # 10 MB
+    res = validate_directory_size(str(d), max_size_mb=5)
+    assert res["status"] == "warning"
+    assert "exceeds" in res["reason"]
+
+def test_validate_directory_size_none_raises():
+    with pytest.raises(ValueError):
+        validate_directory_size(None)
+        

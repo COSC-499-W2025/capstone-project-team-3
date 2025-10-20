@@ -40,8 +40,8 @@
 | #80           | Store Consent Status Locally                      | Closed     |
 | #100          | Save the user input in database for consent       |            |
 | #88           | Enforce Access Restriction Until Consent is given | Closed     |
-| #87           | Test Cases (Positive/Negative)                    | Closed     |
-| #84           | Handle Consent Decline & OS Permission Denial     | In review  |
+| #87           | Test Cases (Positive/Negative)                    | In review   |
+| #84           | Handle Consent Decline & OS Permission Denial     | Closed  |
 
 ---
 

@@ -13,3 +13,6 @@ services:
       context: .
     ports:
       - 8000:8000
+    volumes:
+      - ./htmlcov:/app/htmlcov
+    working_dir: /app

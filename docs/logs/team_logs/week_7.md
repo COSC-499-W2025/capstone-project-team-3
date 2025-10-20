@@ -72,7 +72,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
 | #17, #46, #22          |   System Architecture, File Existence and Tests, gitignore, README and Setup script | @6s-1     |
-| #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
+| #103,#102,#28,| Add basic SQLite init script,Configure SQL Lite Initialization,Connect SQL Lite DB to Docker | @abstractafua     |
 | #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
 | #N/A          | Docker Setup, DFD Level 1, Project Board Setup, Assigning task priorities    | @PaintedW0lf     |
 | #N/A          | System Architecture, Folder validation, gitignore    | @kjassani    |
@@ -85,6 +85,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | #113          | Part 2: Remaining bullet points    | @dabby04      |
 | #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
+| #85         | FR3: User Preference Selection #85  | @abstractafua     |
 
 ---
 

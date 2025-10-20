@@ -8,11 +8,11 @@ DB_PATH = DATA_DIR / "app.sqlite3"
 
 # --- SQL Schema (draft To be Edited) ---
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS USER (
+CREATE TABLE IF NOT EXISTS METADATA (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
-    email TEXT UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    author TEXT
 );
 
 CREATE TABLE IF NOT EXISTS CONSENT (
@@ -23,12 +23,28 @@ CREATE TABLE IF NOT EXISTS CONSENT (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id)
 );
+
+
+
 """
 
 # --- DB Setup Functions ---
-def init_db():
-        """TODO: Create database file and initial tables."""
-        print(f" Database initialized at: {DB_PATH}")
+def ensure_data_dir():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_connection():
-        "TODO: Outline connection function"
+    ensure_data_dir()
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+
+def init_db():
+    """Create database file and initial tables."""
+    ensure_data_dir()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.executescript(SCHEMA)
+    conn.commit()
+    conn.close()
+    print(f"Database initialized at: {DB_PATH}")

@@ -40,7 +40,7 @@
 | #80           | Store Consent Status Locally                      | Closed     |
 | #100          | Save the user input in database for consent       |            |
 | #88           | Enforce Access Restriction Until Consent is given | Closed     |
-| #87           | Test Cases (Positive/Negative)                    | In review   |
+| #87           | Test Cases (Positive/Negative)                    | In Progress   |
 | #84           | Handle Consent Decline & OS Permission Denial     | Closed  |
 
 ---
@@ -57,6 +57,7 @@
 
 - **In Progress this week:**
   - Follow-ups for handling consent revocation and OS permission denial flows (issues #84, #82)
+  - Testing for consent manager(the PR that was raised on wednesday got some conflicting reviews on sunday night), might need changes and will need more time and since the reviews are last min it will continue for next week
 
 ---
 

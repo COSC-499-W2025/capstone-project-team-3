@@ -9,6 +9,7 @@ from app.utils.git_utils import (detect_git,
 from git import Repo
 from pathlib import Path
 import time
+import pytest
 
 
 def test_detect_git_with_git_repo(tmp_path):
@@ -56,6 +57,13 @@ def test_get_repo_valid_repo(tmp_path):
     create_test_repo(tmp_path)
     loaded_repo = get_repo(tmp_path)
     assert isinstance(loaded_repo, Repo)
+    
+def test_get_repo_invalid_repo(tmp_path):
+    """
+    Ensures get_repo successfully returns an error when given an invalid Git repository path.
+    """
+    with pytest.raises(ValueError, match=r"Unable to load git repo from:"):
+        get_repo(tmp_path)
 
 def test_extract_all_commits(tmp_path):
     """

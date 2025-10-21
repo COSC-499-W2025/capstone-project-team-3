@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app.data.db import init_db
 import uvicorn
 
-#TODO: Database Entry Point#
+# Database Entry Point#
 def main():
     init_db()  # creates the SQLite DB + tables
     print("App started")

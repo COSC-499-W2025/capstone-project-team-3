@@ -6,26 +6,82 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR 
 DB_PATH = DATA_DIR / "app.sqlite3"
 
-# --- SQL Schema (draft To be Edited) ---
+# --- SQL Schema ---
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS METADATA (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    author TEXT
-);
-
 CREATE TABLE IF NOT EXISTS CONSENT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
     policy_version TEXT,
     consent_given INTEGER DEFAULT 0,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES user(id)
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    industry TEXT,
+    education TEXT,
+    custom_industry TEXT,
+    custom_education TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+CREATE TABLE IF NOT EXISTS PROJECT (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    path TEXT,
+    signature TEXT UNIQUE,
+    size_bytes INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+CREATE TABLE IF NOT EXISTS FILE_METADATA (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    file_path TEXT,
+    file_type TEXT,
+    size_bytes INTEGER,
+    last_modified DATETIME,
+    content_hash TEXT,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(id)
+);
+
+CREATE TABLE IF NOT EXISTS GIT_HISTORY (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    commit_hash TEXT,
+    author_name TEXT,
+    author_email TEXT,
+    commit_date DATETIME,
+    message TEXT,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(id)
+);
+
+CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    skill TEXT,
+    confidence REAL,
+    source TEXT, -- 'code' or 'non-code'
+    FOREIGN KEY (project_id) REFERENCES PROJECT(id)
+);
+
+CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    metric_name TEXT,
+    metric_value TEXT,
+    chart_type TEXT,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(id)
+);
+
+CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    summary_text TEXT,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(id)
+);
 """
 
 # --- DB Setup Functions ---

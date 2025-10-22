@@ -48,7 +48,7 @@ Quick helper script:
 
 In the terminal, run the following command to stop the application: `docker compose down`.
 
-### Database Setup and Usage with Docker
+### Database Setup with Docker
 
 The project includes a basic SQL database initialization process that runs automatically when the application starts in Docker. This setup ensures that your database tables and schemas are created without manual intervention.
 
@@ -67,12 +67,14 @@ Local Development
 
   If everything is correct, you should see these logs in the terminal:
    ` Database initialized at: /app/app/data/app.sqlite3`
+   ` Database started`
+   `Seed data inserted successfully`
     `App started`
     `INFO:     Uvicorn running on http://0.0.0.0:8000`
   
-  If you modify your database schema or add new tables:
+  If you modify the database schema or add new tables:
 
-    Stop your running container: 
+    Stop running container: 
   `docker compose down`
 
     Rebuild the container to apply changes: 
@@ -80,15 +82,45 @@ Local Development
 
 The new schema will be automatically applied on startup.
 
-Accessing the Database
+### Accessing the Database
 
-Once you build/pull the container from docker, you can access the database in your code by using :
-  `from main.data.db import get_connection`
+  Once you build/pull the container from docker, you can access and view the database in your code by using :
+
+  `from data.db import get_connection`
   `conn = get_connection()`
   `cursor = conn.cursor()`
   `cursor.execute("SELECT * FROM PROJECT")`
+  `print(cursor.fetchall())`
 
   By default, the database file is created in the /app directory inside the container.
+
+### Accessing the Database through CLI
+
+  After composing the docker container run :
+    `docker compose exec server sqlite3 app/data/app.sqlite3`
+
+  Then run :
+    `.tables`
+    `SELECT * FROM <table name>;`
+  You should see the seed test rows.
+
+  Type `.exit` to leave SQLite.
+
+### Viewing Database through SQLite-VScode Extension
+   Install the extension through this link :
+    `https://marketplace.visualstudio.com/items?itemName=alexcvzz.vscode-sqlite`
+
+  Run command `>SQLite: Open Database` in the search bar and select the db file `app.sqlite3`
+
+  You should see the database schema appear under the SQLITE EXPLORER TAB.
+
+
+
+  From here you should be able to select a table and see an editor view of the given table.
+
+
+
+
 
 ### Running Tests in Docker Environment
 To run all the python tests in the docker environment, run `docker compose exec server pytest`.

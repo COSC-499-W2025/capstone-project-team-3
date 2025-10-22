@@ -16,12 +16,12 @@ pip-wheel-metadata/
 .eggs/
 
 # Testing / coverage
+app/data/test.py
 .coverage
 .coverage.*
 htmlcov/
 .pytest_cache/
 .tox/
-app/data/test.py
 
 # Editor / OS files
 .DS_Store

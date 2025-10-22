@@ -113,13 +113,11 @@ The new schema will be automatically applied on startup.
   Run command `>SQLite: Open Database` in the search bar and select the db file `app.sqlite3`
 
   You should see the database schema appear under the SQLITE EXPLORER TAB.
+   <img width="230" height="150" alt="Screenshot 2025-10-21 at 6 30 10 PM" src="https://github.com/user-attachments/assets/f8bc7c89-1893-4e56-9a9f-cd4eef0ab4bc" />
 
+ From here you should be able to select a table and see an editor view of the given table.
 
-
-  From here you should be able to select a table and see an editor view of the given table.
-
-
-
+<img width="1154" height="686" alt="image" src="https://github.com/user-attachments/assets/c652e76d-4431-4cd0-8cb4-0a0dc12d006e" />
 
 
 ### Running Tests in Docker Environment

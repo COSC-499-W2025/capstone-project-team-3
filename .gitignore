@@ -21,6 +21,7 @@ pip-wheel-metadata/
 htmlcov/
 .pytest_cache/
 .tox/
+app/data/test.py
 
 # Editor / OS files
 .DS_Store

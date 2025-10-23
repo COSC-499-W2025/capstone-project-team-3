@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
 );
 
 CREATE TABLE IF NOT EXISTS PROJECT (
-    project_signiture text PRIMARY KEY,
+    project_signature TEXT PRIMARY KEY,
     name TEXT,
+    path TEXT,
+    key_information JSON, -- summarized metadata for analysis and dashboard
     size_bytes INTEGER,
+    rank INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -40,7 +43,7 @@ CREATE TABLE IF NOT EXISTS FILE_METADATA (
     size_bytes INTEGER,
     last_modified DATETIME,
     content_hash TEXT,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture)
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS GIT_HISTORY (
@@ -51,7 +54,7 @@ CREATE TABLE IF NOT EXISTS GIT_HISTORY (
     author_email TEXT,
     commit_date DATETIME,
     message TEXT,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture)
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
@@ -60,7 +63,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     skill TEXT,
     confidence REAL,
     source TEXT, -- 'code' or 'non-code'
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture)
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
@@ -70,7 +73,7 @@ CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     metric_value TEXT,
     chart_type TEXT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture)
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
@@ -78,7 +81,7 @@ CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     project_id INTEGER,
     summary_text TEXT,
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture)
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
 );
 """
 

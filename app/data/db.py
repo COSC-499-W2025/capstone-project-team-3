@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS GIT_HISTORY (
     author_email TEXT,
     commit_date DATETIME,
     message TEXT,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 
 -- Analyzed Skill Analysis Data --
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     project_id INTEGER,
     skill TEXT,
     source TEXT, -- 'code' or 'non-code'
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 
 -- Analyzed Dashbaord Data --
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     metric_value TEXT,
     chart_type TEXT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 
 -- Analyzed Resume Data --
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     project_id INTEGER,
     summary_text TEXT,
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signiture) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 """
 

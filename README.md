@@ -48,6 +48,48 @@ Quick helper script:
 
 In the terminal, run the following command to stop the application: `docker compose down`.
 
+### Database Setup and Usage with Docker
+
+The project includes a basic SQL database initialization process that runs automatically when the application starts in Docker. This setup ensures that your database tables and schemas are created without manual intervention.
+
+How It Works:
+
+  The database initialization is handled by init_db() function inside app/data/db.py.
+
+  When you run the application (`docker compose up --build`), the FastAPI server triggers this initialization to create the required tables.
+
+  All SQL scripts and schema definitions should be stored inside the app/data/ directory to maintain consistency.
+
+Local Development
+  First time use : 
+  From the project root (where compose.yaml lives):
+    `docker compose up --build`
+
+  If everything is correct, you should see these logs in the terminal:
+   ` Database initialized at: /app/app/data/app.sqlite3`
+    `App started`
+    `INFO:     Uvicorn running on http://0.0.0.0:8000`
+  
+  If you modify your database schema or add new tables:
+
+    Stop your running container: 
+  `docker compose down`
+
+    Rebuild the container to apply changes: 
+  `docker compose up --build`
+
+The new schema will be automatically applied on startup.
+
+Accessing the Database
+
+Once you build/pull the container from docker, you can access the database in your code by using :
+  `from main.data.db import get_connection`
+  `conn = get_connection()`
+  `cursor = conn.cursor()`
+  `cursor.execute("SELECT * FROM PROJECT")`
+
+  By default, the database file is created in the /app directory inside the container.
+
 ### Running Tests in Docker Environment
 To run all the python tests in the docker environment, run `docker compose exec server pytest`.
 

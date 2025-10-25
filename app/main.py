@@ -2,7 +2,7 @@
 Minimal Python entry point.
 """
 from fastapi import FastAPI
-from app.data.db import init_db
+from app.data.db import init_db, seed_db
 from app.consent_management.consent_manager import ConsentManager
 import uvicorn
 import sys
@@ -17,6 +17,8 @@ def main():
         sys.exit(1)
     
     print("App started successfully")
+    seed_db()  # automatically populate test data
+    print("Database started")
 
 app = FastAPI()
 

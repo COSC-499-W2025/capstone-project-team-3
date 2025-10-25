@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import Union, List, Dict
 import hashlib
 import json
+import sqlite3 
+from app.data.db import get_connection
 
 EXCLUDE_PATTERNS = [
     # Python/system/dependency folders (not user content)
@@ -60,22 +62,64 @@ def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
     }
 
 
-def get_project_metadata_signature(metadata_list: List[Dict]) -> str:
+def get_project_signature(file_signatures: List[str]) -> str:
     """
-    Generate a unique signature for the project based on all file metadata.
+    Generate a unique signature for the project based on all file signatures.
     """
-    # Sort metadata by file_path to ensure consistent order
-    sorted_metadata = sorted(metadata_list, key=lambda x: x["file_path"])
-    # Serialize and hash
-    metadata_json = json.dumps(sorted_metadata, sort_keys=True)
-    return hashlib.sha256(metadata_json.encode()).hexdigest()
+    sorted_sigs = sorted(file_signatures)
+    sigs_json = json.dumps(sorted_sigs)
+    return hashlib.sha256(sigs_json.encode()).hexdigest()
 
-def project_metadata_exists_in_db(signature: str) -> bool:
-    """Dummy function to simulate checking for existing project metadata in the database."""
-    # TODO: Replace with real DB lookup
-    return False
 
-def store_project_signature_in_db(signature: str):
-    """Dummy function to simulate storing project signature in the database."""
-    # TODO: Replace with real DB insert logic
-    print(f"[Dummy] Would store project signature in DB: {signature}")
+def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path]) -> str:
+    """Generate a unique signature for a file (hash of relative path + last_modified)."""
+    p = Path(file_path)
+    root = Path(project_root)
+    stat = p.stat()
+    rel_path = str(p.relative_to(root))
+    sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+    return hashlib.sha256(sig_str.encode()).hexdigest()
+
+def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int):
+    """Store project and its file signatures in the PROJECT table."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes) VALUES (?, ?, ?, ?, ?)",
+        (signature, name, path, json.dumps(file_signatures), size_bytes)
+    )
+    conn.commit()
+    conn.close()
+  
+
+def project_signature_exists(signature: str) -> bool:
+    """Check if a project signature exists in the DB."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (signature,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+  
+
+def get_all_file_signatures_from_db() -> set:
+    """Get all file signatures from all projects in the DB."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT file_signatures FROM PROJECT")
+    rows = cursor.fetchall()
+    conn.close()
+    sigs = set()
+    for row in rows:
+        if row[0]:
+            sigs.update(json.loads(row[0]))
+    return sigs
+
+def calculate_project_score(current_file_signatures: List[str]) -> float:
+    """Calculate what % of current project files have already been analyzed."""
+    db_sigs = get_all_file_signatures_from_db()
+    if not current_file_signatures:
+        return 0.0
+    already_analyzed = sum(1 for sig in current_file_signatures if sig in db_sigs)
+    return round((already_analyzed / len(current_file_signatures)) * 100, 2)
+

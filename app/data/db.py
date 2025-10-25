@@ -9,78 +9,74 @@ DB_PATH = DATA_DIR / "app.sqlite3"
 # --- SQL Schema ---
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS CONSENT (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     policy_version TEXT,
     consent_given INTEGER DEFAULT 0, 
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     industry TEXT,
     education TEXT,
-    custom_industry TEXT,
-    custom_education TEXT,
+    job_title TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS PROJECT (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_signature TEXT PRIMARY KEY,
     name TEXT,
     path TEXT,
-    signature TEXT,
+    file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
+    rank INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS FILE_METADATA (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    file_path TEXT,
-    file_type TEXT,
-    size_bytes INTEGER,
-    last_modified DATETIME,
-    content_hash TEXT,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(id) ON DELETE CASCADE
-);
+--Analyzed Git Data---
 
 CREATE TABLE IF NOT EXISTS GIT_HISTORY (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id text,
     commit_hash TEXT,
     author_name TEXT,
     author_email TEXT,
     commit_date DATETIME,
     message TEXT,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
+
+-- Analyzed Skill Analysis Data --
 
 CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     skill TEXT,
-    confidence REAL,
     source TEXT, -- 'code' or 'non-code'
-    FOREIGN KEY (project_id) REFERENCES PROJECT(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
+
+-- Analyzed Dashbaord Data --
 
 CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     metric_name TEXT,
     metric_value TEXT,
     chart_type TEXT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
+
+-- Analyzed Resume Data --
 
 CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     summary_text TEXT,
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 """
 

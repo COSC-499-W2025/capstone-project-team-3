@@ -52,7 +52,7 @@ class ConsentManager:
                 print(CONSENT_MESSAGE)
                 continue
             
-            if response in ['yes', 'y', '']:
+            if response in ['yes', 'y']:
                 self.record_consent(True)
                 print(CONSENT_GRANTED_MESSAGE)
                 return True

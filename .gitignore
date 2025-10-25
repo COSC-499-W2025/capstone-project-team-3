@@ -16,6 +16,7 @@ pip-wheel-metadata/
 .eggs/
 
 # Testing / coverage
+app/data/test.py
 .coverage
 .coverage.*
 htmlcov/

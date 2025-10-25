@@ -48,7 +48,7 @@ Quick helper script:
 
 In the terminal, run the following command to stop the application: `docker compose down`.
 
-### Database Setup with Docker
+### Database Setup with Docker ###
 
 The project includes a basic SQL database initialization process that runs automatically when the application starts in Docker. This setup ensures that your database tables and schemas are created without manual intervention.
 
@@ -60,7 +60,7 @@ How It Works:
 
   All SQL scripts and schema definitions should be stored inside the app/data/ directory to maintain consistency.
 
-Local Development
+ # Local Development #
   First time use : 
   From the project root (where compose.yaml lives):
     `docker compose up --build`
@@ -72,15 +72,17 @@ Local Development
     `App started`
     `INFO:     Uvicorn running on http://0.0.0.0:8000`
   
-  If you modify the database schema or add new tables:
+  * If you modify the database schema or add new tables:
 
-    Stop running container: 
+  # Stop any running containers
   `docker compose down`
 
-    Rebuild the container to apply changes: 
+  # Remove the old SQLite DB
+  `rm app/data/app.sqlite3`
+
+  # Rebuild and restart the containers
   `docker compose up --build`
 
-The new schema will be automatically applied on startup.
 
 ### Accessing the Database
 

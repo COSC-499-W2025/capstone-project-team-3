@@ -1,3 +1,5 @@
+import datetime
+import json
 import sqlite3
 from pathlib import Path
 
@@ -20,7 +22,7 @@ CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     industry TEXT,
     education TEXT,
     job_title TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS PROJECT (
@@ -102,85 +104,111 @@ def init_db():
     print(f"Database initialized at: {DB_PATH}")
 
 def seed_db():
-    """Insert test/seed data into tables."""
+    """Insert test/seed data aligned with new schema."""
     conn = get_connection()
     cursor = conn.cursor()
 
-       # --- CONSENT ---
-    cursor.execute("INSERT OR IGNORE INTO CONSENT (id, policy_version, consent_given) VALUES (1, ?, ?)", 
-                   ("v1.0", 1))
+    # --- CONSENT ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO CONSENT (id, policy_version, consent_given)
+        VALUES (1, ?, ?)
+    """, ("v1.0", 1))
 
     # --- USER_PREFERENCES ---
-    cursor.execute("INSERT OR IGNORE INTO USER_PREFERENCES (id, industry, education) VALUES (1, ?, ?)", 
-                   ("Software", "Bachelor's"))
+    cursor.execute("""
+        INSERT OR IGNORE INTO USER_PREFERENCES (id, industry, education, job_title)
+        VALUES (1, ?, ?, ?)
+    """, ("Software", "Bachelor's", "Developer"))
 
-    # Simulate multiple projects from a zip
+    # --- Simulate multiple projects from a ZIP upload ---
     projects = [
-        {"name": "Alpha Project", "path": "/user/test/alpha", "signature": "sig_alpha", "size_bytes": 2048},
-        {"name": "Beta Project", "path": "/user/test/beta", "signature": "sig_beta", "size_bytes": 4096},
-        {"name": "Gamma Project", "path": "/user/test/gamma", "signature": "sig_gamma", "size_bytes": 1024},
+        {
+            "project_signature": "sig_alpha_project/hash",
+            "name": "Alpha Project",
+            "path": "/user/test/alpha",
+            "file_signatures": ["alpha_main_hash", "alpha_utils_hash", "alpha_readme_hash"],
+            "size_bytes": 2048,
+            "rank": 1,
+        },
+        {
+            "project_signature": "sig_beta_project/hash",
+            "name": "Beta Project",
+            "path": "/user/test/beta",
+            "file_signatures": ["beta_core_hash", "beta_helper_hash"],
+            "size_bytes": 4096,
+            "rank": 2,
+        },
+        {
+            "project_signature": "sig_gamma_project/hash",
+            "name": "Gamma Project",
+            "path": "/user/test/gamma",
+            "file_signatures": ["gamma_app_hash", "gamma_test_hash", "gamma_docs_hash"],
+            "size_bytes": 1024,
+            "rank": 3,
+        },
     ]
 
     for proj in projects:
         cursor.execute("""
-            INSERT OR IGNORE INTO PROJECT (name, path, signature, size_bytes) 
-            VALUES (?, ?, ?, ?)
-        """, (proj["name"], proj["path"], proj["signature"], proj["size_bytes"]))
+            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            proj["project_signature"],
+            proj["name"],
+            proj["path"],
+            json.dumps(proj["file_signatures"]),
+            proj["size_bytes"],
+            proj["rank"]
+        ))
 
-        # Get project_id for relationships
-        cursor.execute("SELECT id FROM PROJECT WHERE signature = ?", (proj["signature"],))
-        project_id = cursor.fetchone()[0]
-
-        # --- FILE_METADATA ---
-        files = [
-            {"file_path": "main.py", "file_type": "code", "size_bytes": 512, "content_hash": "hash_main"},
-            {"file_path": "utils.py", "file_type": "code", "size_bytes": 256, "content_hash": "hash_utils"},
-            {"file_path": "README.md", "file_type": "non-code", "size_bytes": 128, "content_hash": "hash_readme"},
-        ]
-        for f in files:
-            cursor.execute("""
-                INSERT OR IGNORE INTO FILE_METADATA (project_id, file_path, file_type, size_bytes, last_modified, content_hash) 
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-            """, (project_id, f["file_path"], f["file_type"], f["size_bytes"], f["content_hash"]))
+        project_id = proj["project_signature"]
 
         # --- GIT_HISTORY ---
         commits = [
             {"commit_hash": "c1", "author_name": "Alice", "author_email": "alice@example.com", "message": "Initial commit"},
-            {"commit_hash": "c2", "author_name": "Bob", "author_email": "bob@example.com", "message": "Added utils"},
+            {"commit_hash": "c2", "author_name": "Bob", "author_email": "bob@example.com", "message": "Refactored utils"},
         ]
         for c in commits:
             cursor.execute("""
-                INSERT OR IGNORE INTO GIT_HISTORY (project_id, commit_hash, author_name, author_email, commit_date, message) 
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-            """, (project_id, c["commit_hash"], c["author_name"], c["author_email"], c["message"]))
+                INSERT OR IGNORE INTO GIT_HISTORY (project_id, commit_hash, author_name, author_email, commit_date, message)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                project_id,
+                c["commit_hash"],
+                c["author_name"],
+                c["author_email"],
+                datetime.datetime.now().isoformat(),
+                c["message"]
+            ))
 
         # --- SKILL_ANALYSIS ---
         skills = [
-            {"skill": "Python", "confidence": 0.95, "source": "code"},
-            {"skill": "Git", "confidence": 0.9, "source": "non-code"},
+            {"skill": "Python", "source": "code"},
+            {"skill": "Git", "source": "non-code"},
         ]
         for s in skills:
             cursor.execute("""
-                INSERT OR IGNORE INTO SKILL_ANALYSIS (project_id, skill, confidence, source) 
-                VALUES (?, ?, ?, ?)
-            """, (project_id, s["skill"], s["confidence"], s["source"]))
+                INSERT OR IGNORE INTO SKILL_ANALYSIS (project_id, skill, source)
+                VALUES (?, ?, ?)
+            """, (project_id, s["skill"], s["source"]))
 
         # --- DASHBOARD_DATA ---
         metrics = [
-            {"metric_name": "Lines of Code", "metric_value": str(sum(f["size_bytes"] for f in files)), "chart_type": "bar"},
-            {"metric_name": "Files Count", "metric_value": str(len(files)), "chart_type": "pie"},
+            {"metric_name": "Lines of Code", "metric_value": str(proj["size_bytes"]), "chart_type": "bar"},
+            {"metric_name": "Files Count", "metric_value": str(len(proj["file_signatures"])), "chart_type": "pie"},
         ]
         for m in metrics:
             cursor.execute("""
-                INSERT OR IGNORE INTO DASHBOARD_DATA (project_id, metric_name, metric_value, chart_type) 
+                INSERT OR IGNORE INTO DASHBOARD_DATA (project_id, metric_name, metric_value, chart_type)
                 VALUES (?, ?, ?, ?)
             """, (project_id, m["metric_name"], m["metric_value"], m["chart_type"]))
 
         # --- RESUME_SUMMARY ---
+        summary_text = f"{proj['name']} demonstrates skills in Python, Git, and collaborative project structure."
         cursor.execute("""
-            INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text) 
+            INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text)
             VALUES (?, ?)
-        """, (project_id, f"Worked on {proj['name']}, implementing core functionality and utilities."))
+        """, (project_id, summary_text))
 
     conn.commit()
     conn.close()

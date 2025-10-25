@@ -2,13 +2,14 @@
 Minimal Python entry point.
 """
 from fastapi import FastAPI
-from app.data.db import init_db
+from app.data.db import init_db, seed_db
 import uvicorn
 
 # Database Entry Point#
 def main():
     init_db()  # creates the SQLite DB + tables
-    print("App started")
+    seed_db()  # automatically populate test data
+    print("Database started")
 
 app = FastAPI()
 

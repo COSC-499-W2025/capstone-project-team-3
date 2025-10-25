@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS PROJECT (
 
 CREATE TABLE IF NOT EXISTS GIT_HISTORY (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id text,
     commit_hash TEXT,
     author_name TEXT,
     author_email TEXT,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS GIT_HISTORY (
 
 CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     skill TEXT,
     source TEXT, -- 'code' or 'non-code'
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
 
 CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     metric_name TEXT,
     metric_value TEXT,
     chart_type TEXT,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
 
 CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
+    project_id TEXT,
     summary_text TEXT,
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE

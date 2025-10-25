@@ -82,12 +82,13 @@ The new schema will be automatically applied on startup.
 
 Accessing the Database
 
-  By default, the database file (e.g., app.db) is created in the /app directory inside the container.
-  You can access it locally using:
-  `docker compose exec server bash`
-  `sqlite3 app/app.db`
+Once you build/pull the container from docker, you can access the database in your code by using :
+  `from main.data.db import get_connection`
+  `conn = get_connection()`
+  `cursor = conn.cursor()`
+  `cursor.execute("SELECT * FROM PROJECT")`
 
-Run SQL commands directly within the container to inspect or test data.
+  By default, the database file is created in the /app directory inside the container.
 
 ### Running Tests in Docker Environment
 To run all the python tests in the docker environment, run `docker compose exec server pytest`.

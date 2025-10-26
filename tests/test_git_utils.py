@@ -1,11 +1,11 @@
 from app.utils.git_utils import (detect_git,
     get_repo,
     extract_all_commits,
-    extract_commit_hash,
-    extract_commit_message,
-    extract_commit_authored_datetime,
-    extract_commit_datetime,
-    extract_commit_author,
+    extract_commit_hashes,
+    extract_commit_messages,
+    extract_commit_authored_datetimes,
+    extract_commit_datetimes,
+    extract_commit_authors,
     is_repo_empty,
     extract_files_changed,
     extract_line_changes,
@@ -116,52 +116,52 @@ def test_extract_all_commits(tmp_path):
     assert commits[0].message.strip() == "Second commit"
     assert commits[1].message.strip() == "Initial commit"
 
-def test_extract_commit_hash(tmp_path):
+def test_extract_commit_hashes(tmp_path):
     """
     Ensures that extract_commit_hash returns a list of commit hashes in string format.
     """
     create_test_repo(tmp_path)
-    hashes = extract_commit_hash(tmp_path)
+    hashes = extract_commit_hashes(tmp_path)
     assert len(hashes) == 2
     assert all(isinstance(h, str) for h in hashes)
 
-def test_extract_commit_message(tmp_path):
+def test_extract_commit_messages(tmp_path):
     """
     Verifies that extract_commit_message returns all commit messages in order.
     """
     create_test_repo(tmp_path)
-    messages = extract_commit_message(tmp_path)
+    messages = extract_commit_messages(tmp_path)
     assert messages[0].strip() == "Second commit"
     assert messages[1].strip() == "Initial commit"
 
-def test_extract_commit_authored_datetime(tmp_path):
+def test_extract_commit_authored_datetimes(tmp_path):
     """
     Ensures that extract_commit_authored_datetime returns commit authored timestamps
     in the expected string format: 'YYYY-MM-DD HH:MM:SS'.
     """
     create_test_repo(tmp_path)
-    datetimes = extract_commit_authored_datetime(tmp_path)
+    datetimes = extract_commit_authored_datetimes(tmp_path)
     assert len(datetimes) == 2
     assert all(isinstance(dt, str) for dt in datetimes)
     assert all(len(dt) == 19 for dt in datetimes)
 
-def test_extract_commit_datetime(tmp_path):
+def test_extract_commit_datetimes(tmp_path):
     """
     Ensures that extract_commit_datetime returns committed timestamps
     in the expected string format: 'YYYY-MM-DD HH:MM:SS'.
     """
     create_test_repo(tmp_path)
-    datetimes = extract_commit_datetime(tmp_path)
+    datetimes = extract_commit_datetimes(tmp_path)
     assert len(datetimes) == 2
     assert all(isinstance(dt, str) for dt in datetimes)
     assert all(len(dt) == 19 for dt in datetimes)
 
-def test_extract_commit_author(tmp_path):
+def test_extract_commit_authors(tmp_path):
     """
     Verifies that extract_commit_author returns a list of author names for each commit.
     """
     create_test_repo(tmp_path)
-    authors = extract_commit_author(tmp_path)
+    authors = extract_commit_authors(tmp_path)
     assert len(authors) == 2
     assert all(author == "Test User" for author in authors)
     

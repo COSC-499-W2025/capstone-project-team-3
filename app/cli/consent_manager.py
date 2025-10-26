@@ -19,13 +19,15 @@ class ConsentManager:
         return sqlite3.connect(self.db_path)
     
     def has_consent(self):
+        """Check if user has given consent (consent_given = 1)"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT consent_given FROM CONSENT ORDER BY id DESC LIMIT 1")
             result = cursor.fetchone()
             conn.close()
-            return bool(result[0]) if result else False
+            # Return True only if consent_given is 1
+            return result[0] == 1 if result else False
         except sqlite3.Error:
             return False
     
@@ -67,5 +69,20 @@ class ConsentManager:
     def enforce_consent(self):
         if self.has_consent():
             print(CONSENT_ALREADY_PROVIDED_MESSAGE)
-            return True
+            print("\nWould you like to revoke your consent? (yes/no): ", end='')
+            response = input().strip().lower()
+            if response in ['yes', 'y']:
+                self.revoke_consent()
+                return False  # Exit the app
+            return True  # Continue with the app
         return self.prompt_for_consent()
+
+    def revoke_consent(self):
+        """Set consent_given to 0 in database"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE CONSENT SET consent_given = 0 WHERE consent_given = 1")
+        conn.commit()
+        conn.close()
+        print("\n✓ Consent revoked. Application will now exit.")
+        print("  You will be asked for consent again on next startup.\n")

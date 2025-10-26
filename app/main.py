@@ -3,7 +3,7 @@ Minimal Python entry point.
 """
 from fastapi import FastAPI
 from app.data.db import init_db, seed_db
-from app.consent_management.consent_manager import ConsentManager
+from app.cli.consent_manager import ConsentManager
 import uvicorn
 import sys
 

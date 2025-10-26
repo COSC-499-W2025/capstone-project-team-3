@@ -44,9 +44,12 @@ def scan_project_files(root: Union[str, Path], exclude_patterns: List[str] = EXC
     """
     root_path = Path(root)
     files = []
-    for p in root_path.rglob("*"):
-        if p.is_file() and not should_exclude(p, exclude_patterns):
-            files.append(p)
+    try:
+        for p in root_path.rglob("*"):
+            if p.is_file() and not should_exclude(p, exclude_patterns):
+                files.append(p)
+    except Exception as e:
+        print(f"Error scanning files in {root}: {e}")
     return files
 
 def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
@@ -72,13 +75,20 @@ def get_project_signature(file_signatures: List[str]) -> str:
 
 
 def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path]) -> str:
-    """Generate a unique signature for a file (hash of relative path + last_modified)."""
-    p = Path(file_path)
-    root = Path(project_root)
-    stat = p.stat()
-    rel_path = str(p.relative_to(root))
-    sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
-    return hashlib.sha256(sig_str.encode()).hexdigest()
+    """
+    Generate a unique signature for a file (hash of relative path + size + last_modified).
+    Handles errors if file is missing, unreadable, or path issues.
+    """
+    try:
+        p = Path(file_path)
+        root = Path(project_root)
+        stat = p.stat()
+        rel_path = str(p.relative_to(root))
+        sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+        return hashlib.sha256(sig_str.encode()).hexdigest()
+    except(FileNotFoundError, PermissionError, ValueError) as e:
+        print(f"Error extracting signature for {file_path}: {e}")
+        return "ERROR_SIGNATURE"
 
 def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int):
     """Store project and its file signatures in the PROJECT table."""

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union, List, Dict
 import hashlib
 import json
-import sqlite3 
+import time 
 from app.data.db import get_connection
 
 EXCLUDE_PATTERNS = [
@@ -74,21 +74,24 @@ def get_project_signature(file_signatures: List[str]) -> str:
     return hashlib.sha256(sigs_json.encode()).hexdigest()
 
 
-def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path]) -> str:
+def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path], retries: int = 2, delay: float = 0.1) -> str:
     """
     Generate a unique signature for a file (hash of relative path + size + last_modified).
-    Handles errors if file is missing, unreadable, or path issues.
+    Handles errors if file is missing, unreadable, or path issues. Retries on error.
     """
-    try:
-        p = Path(file_path)
-        root = Path(project_root)
-        stat = p.stat()
-        rel_path = str(p.relative_to(root))
-        sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
-        return hashlib.sha256(sig_str.encode()).hexdigest()
-    except(FileNotFoundError, PermissionError, ValueError) as e:
-        print(f"Error extracting signature for {file_path}: {e}")
-        return "ERROR_SIGNATURE"
+    for attempt in range(1, retries + 1):
+        try:
+            p = Path(file_path)
+            root = Path(project_root)
+            stat = p.stat()
+            rel_path = str(p.relative_to(root))
+            sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+            return hashlib.sha256(sig_str.encode()).hexdigest()
+        except (FileNotFoundError, PermissionError, ValueError) as e:
+            print(f"Error extracting signature for {file_path} (attempt {attempt}/{retries}): {e}")
+            if attempt < retries:
+                time.sleep(delay)
+    return "ERROR_SIGNATURE"
 
 def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int):
     """Store project and its file signatures in the PROJECT table."""

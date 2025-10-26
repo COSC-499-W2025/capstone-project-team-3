@@ -9,8 +9,7 @@ from app.utils.scan_utils import (
     calculate_project_score
 )
 from pathlib import Path
-import tempfile
-import json
+from unittest.mock import patch
 
 def test_scan_project_files_excludes_patterns(tmp_path):
     """Test that files matching exclude patterns are not returned."""
@@ -160,3 +159,30 @@ def test_extract_file_signature_error(tmp_path):
     missing_file = tmp_path / "does_not_exist.txt"
     sig = extract_file_signature(missing_file, tmp_path)
     assert sig == "ERROR_SIGNATURE"
+    
+from unittest.mock import patch
+from app.utils.scan_utils import extract_file_signature
+from pathlib import Path
+
+def test_extract_file_signature_retries(tmp_path):
+    """Test that extract_file_signature retries on error and eventually succeeds."""
+    test_file = tmp_path / "retry.txt"
+    test_file.write_text("data")
+    root = tmp_path
+
+    # Simulate stat raising FileNotFoundError on first call, then succeeding
+    original_stat = Path.stat
+
+    call_count = {"count": 0}
+    def flaky_stat(self):
+        if call_count["count"] == 0:
+            call_count["count"] += 1
+            raise FileNotFoundError("Simulated transient error")
+        return original_stat(self)
+    '''
+    This uses unittest.mock.patch to temporarily replace Path.stat with 
+    flaky_stat to simulate a error on the first attempt but secceeds on the second
+    '''
+    with patch.object(Path, "stat", flaky_stat):
+        sig = extract_file_signature(test_file, root, retries=2)
+        assert sig != "ERROR_SIGNATURE"

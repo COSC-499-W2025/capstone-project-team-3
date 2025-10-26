@@ -5,7 +5,8 @@ from app.utils.git_utils import (detect_git,
     extract_commit_message,
     extract_commit_authored_datetime,
     extract_commit_datetime,
-    extract_commit_author)
+    extract_commit_author,
+    is_repo_empty)
 from git import Repo
 from pathlib import Path
 import time
@@ -124,3 +125,25 @@ def test_extract_commit_author(tmp_path):
     authors = extract_commit_author(tmp_path)
     assert len(authors) == 2
     assert all(author == "Test User" for author in authors)
+    
+def test_is_repo_empty_with_no_commits(tmp_path):
+    """
+    Ensures is_repo_empty returns True for a newly initialized repo (no commits).
+    """
+    Repo.init(tmp_path)
+    assert is_repo_empty(tmp_path) is True
+    
+def test_is_repo_empty_with_commits(tmp_path):
+    """
+    Ensures is_repo_empty returns False for a repo with existing commits.
+    """
+    create_test_repo(tmp_path)
+    assert is_repo_empty(tmp_path) is False
+    
+def test_is_repo_empty_with_non_repo_path(tmp_path):
+    """
+    Ensures is_repo_empty returns True for a path that is not a git repo 
+    (handling the ValueError raised by get_repo).
+    """
+    # tmp_path is just a plain directory here
+    assert is_repo_empty(tmp_path) is True

@@ -154,3 +154,9 @@ def test_calculate_project_score(tmp_path):
     # Now test score calculation
     score = calculate_project_score([sig1, sig2])
     assert score == 50.0  # Only one of two files is already in DB
+    
+def test_extract_file_signature_error(tmp_path):
+    """Test that extract_file_signature returns ERROR_SIGNATURE for missing file."""
+    missing_file = tmp_path / "does_not_exist.txt"
+    sig = extract_file_signature(missing_file, tmp_path)
+    assert sig == "ERROR_SIGNATURE"

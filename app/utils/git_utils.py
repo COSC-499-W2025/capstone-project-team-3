@@ -62,3 +62,15 @@ def extract_commit_authors(path: Union[str, Path]) ->list:
     """Returns a list of the authors of commits associated with the specified git repo"""
     
     return [commit.author.name for commit in extract_all_commits(path)]
+
+def is_repo_empty(path: Union[str, Path]) -> bool:
+    """Check if the given path corresponds to an empty Git repository.
+    A repo is considered empty if it has no commits (no HEAD reference).
+    """
+    try:
+        repo = get_repo(path)
+        # repo.head.is_valid() returns False if there are no commits
+        return not repo.head.is_valid()
+    except ValueError:
+        # if function fails, it means it's not a valid repo
+        return True

@@ -11,6 +11,7 @@ This application needs your permission to:
 3. Store analysis results locally
 
 Your data remains on your machine and is not uploaded.
+Please type 'yes' to provide consent and proceed, 'no' to decline, or
 For more details, type 'more' or press Enter to continue.
 """
 
@@ -27,10 +28,9 @@ DATA COLLECTION:
 
 DATA STORAGE:
 - All results stored in local database
-- Located at: ~/.project_insights/data.db
 - No cloud upload or sharing of your data
 
-DATA RETENTION:
+DATA RETENTION: TODO
 - Data kept until explicitly deleted by you
 - Use '--clear-data' command to remove all stored information
 
@@ -39,7 +39,7 @@ Press Enter to return to consent prompt.
 
 # Message shown when consent is granted
 CONSENT_GRANTED_MESSAGE = """
-✅ Consent granted! 
+Consent granted! 
 
 Thank you for providing consent. Project Insights is now ready to
 analyze your project and provide valuable insights about your code.
@@ -47,7 +47,7 @@ analyze your project and provide valuable insights about your code.
 
 # Message shown when consent is declined
 CONSENT_DECLINED_MESSAGE = """
-⛔ You've declined consent.
+You've declined consent.
 
 Project Insights needs these permissions to function properly.
 You can run the tool again if you change your mind.
@@ -55,7 +55,7 @@ You can run the tool again if you change your mind.
 
 # Message shown when resuming with existing consent
 CONSENT_ALREADY_PROVIDED_MESSAGE = """
-✓ Consent previously provided.
+Consent previously provided.
 
 Project Insights will continue analyzing your project.
 To revoke consent, use the '--revoke-consent' command.

@@ -17,3 +17,5 @@ services:
       - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
     working_dir: /app
+    stdin_open: true
+    tty: true

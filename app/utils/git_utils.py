@@ -64,24 +64,44 @@ def extract_commit_authors(path: Union[str, Path]) ->list:
     
     return [commit.author.name for commit in extract_all_commits(path)]
 
-def extract_files_changed(path: Union[str, Path],author: str,branches=True)->int:
-    """Returns the total number of files changed by the author in all branches"""
-    total_files_changed=0
+def author_matches(commit, author: str) -> bool:
+    """Return True if a commit's author matches the given author string (by name or email)."""
+    a = commit.author
+    return a and (a.name == author or a.email == author)
+
+def extract_files_changed(path: Union[str, Path], author: str, branches=True) -> int:
+    """Returns the total number of files changed by the author in all branches."""
+    total_files_changed = 0
     repo = get_repo(path)
-    for commit in repo.iter_commits(author=author, branches=branches):
-        total_files_changed += len(commit.stats.files)
+    seen = set()
+
+    for commit in repo.iter_commits(branches=branches):
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+
+        if author_matches(commit, author):
+            total_files_changed += len(commit.stats.files)
+
     return total_files_changed
     
-def extract_line_changes(path: Union[str, Path], author: str,branches=True) -> dict:
+def extract_line_changes(path: Union[str, Path], author: str, branches=True) -> dict:
     """Return the total number of lines added and deleted by the author."""
-    
     total_added = 0
     total_deleted = 0
     repo = get_repo(path)
-    for commit in repo.iter_commits(author=author, branches=branches):
-        stats = commit.stats.total
-        total_added += stats["insertions"]
-        total_deleted += stats["deletions"]
+    seen = set()
+    
+    for commit in repo.iter_commits(branches=branches):
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+        
+        if author_matches(commit, author):
+            stats = commit.stats.total
+            total_added += stats["insertions"]
+            total_deleted += stats["deletions"]
+
     contributions = {"added":total_added,"deleted":total_deleted}
     return contributions
 
@@ -89,15 +109,23 @@ def init_file_stats() -> dict:
     """Initialize a contribution dictionary for a file type."""
     return {"files_changed": 0, "added": 0, "deleted": 0}
 
-def extract_contribution_by_filetype(path: Union[str, Path], author: str,branches=True) -> dict:
+def extract_contribution_by_filetype(path: Union[str, Path], author: str, branches=True) -> dict:
     """
     Return a breakdown of contributions (files changed, lines added/deleted) by file type.
     Example format: {".py": {"files_changed": 10, "added": 310, "deleted": 80}}
     """
     repo = get_repo(path)
     contributions = {}
+    seen = set()
 
-    for commit in repo.iter_commits(author=author, branches=branches):
+    for commit in repo.iter_commits(branches=branches):
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+        
+        if not author_matches(commit, author):
+            continue
+
         for file_path, details in commit.stats.files.items():
             ext = os.path.splitext(file_path)[1] or "[no extension]"
 
@@ -111,15 +139,13 @@ def extract_contribution_by_filetype(path: Union[str, Path], author: str,branche
     return contributions
 
 def extract_branches_for_author(path: Union[str, Path], author: str) -> list[str]:
-    """
-    Return a list of branches that include at least one commit by the given author.
-    """
+    """Return a list of branches that include at least one commit by the given author."""
     repo = get_repo(path)
-    author_branches = set() #in case we loop through commit of same branch; only store unique
+    author_branches = set()
 
     for branch in repo.branches:
         for commit in repo.iter_commits(branch):
-            if commit.author.name == author or commit.author.email == author:
+            if author_matches(commit, author):
                 author_branches.add(branch.name)
                 break  # Stop after finding first commit by that author in this branch
 

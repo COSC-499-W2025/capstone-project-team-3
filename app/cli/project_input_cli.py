@@ -37,6 +37,12 @@ def main(argv=None):
             return
         print("Consent verified. Scanning files...")
         files = scan_project_files(args.root, exclude_patterns=args.exclude)
+        
+        # check if project folder is empty
+        if not files:
+            print("No files found to scan in the specified directory. Skipping analysis.")
+            return
+        
         print(f"Scanned files (excluding patterns {args.exclude}):")
         for f in files:
             print(f)

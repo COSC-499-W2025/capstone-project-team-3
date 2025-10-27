@@ -20,6 +20,8 @@ def main():
     seed_db()  # automatically populate test data
     print("Database started")
 
+    #TODO: Call User Preference Manager
+
 app = FastAPI()
 
 @app.get("/")

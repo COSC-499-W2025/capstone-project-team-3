@@ -111,13 +111,17 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 - **Framework used:** `pytest` and `pytest-cov`  
 - **Test run date:** 26 October 2025 
 - **Summary:**  
-  - Total tests run:  60
-  - Passed:   60
-  - Failed:   0
+  - Total tests run:  70
+  - Passed:   69
+  - Failed:   1
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  
-  *(Insert here if available)*
+  
+<img width="649" height="405" alt="t2" src="https://github.com/user-attachments/assets/99c8ef04-a8b7-4c41-ad7e-10c098776c27" />
+
+<img width="948" height="294" alt="t1" src="https://github.com/user-attachments/assets/69f57ab6-c553-4813-84d8-fd01ce0039d6" />
+
 
 ---
 

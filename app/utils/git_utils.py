@@ -162,3 +162,27 @@ def is_repo_empty(path: Union[str, Path]) -> bool:
     except ValueError:
         # if function fails, it means it's not a valid repo
         return True
+    
+def is_collaborative(path: Union[str, Path]) -> bool:
+    """
+    Determines if a Git repository is a collaborative project.
+    A repository is considered collaborative if it has commits from
+    more than one unique author.
+    """
+    try:
+        # Use the existing helper function to get all author names
+        authors = extract_commit_authors(path)
+        
+        # Convert the list of authors to a set to find unique authors
+        unique_authors = set(authors)
+        
+        # If the number of unique authors is greater than 1, it's collaborative
+        return len(unique_authors) > 1
+    
+    except (ValueError, GitCommandError, PermissionError):
+        # extract_commit_authors -> get_repo will raise a ValueError
+        # if the path is not a valid git repository.
+        # A non-repo is not a collaborative project.
+        return False
+    except Exception:
+        return False

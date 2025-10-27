@@ -6,7 +6,11 @@ from app.utils.git_utils import (detect_git,
     extract_commit_authored_datetimes,
     extract_commit_datetimes,
     extract_commit_authors,
-    is_repo_empty)
+    is_repo_empty,
+    extract_files_changed,
+    extract_line_changes,
+    extract_contribution_by_filetype,
+    extract_branches_for_author)
 from git import Repo
 from pathlib import Path
 import time
@@ -49,6 +53,41 @@ def create_test_repo(tmp_path: Path) -> Repo:
     repo.index.add([str(file_path)])
     repo.index.commit("Second commit")
 
+    return repo
+
+def create_test_repo_with_branches(tmp_path: Path) -> Repo:
+    """
+    Helper to initialize a repo, make a couple of commits, and create multiple branches.
+    """
+    repo = Repo.init(tmp_path)
+    file_path = tmp_path / "test_file.txt"
+
+    # Configure user (necessary for commits)
+    repo.config_writer().set_value("user", "name", "Test User").release()
+    repo.config_writer().set_value("user", "email", "test@example.com").release()
+
+    # Commit 1 on main
+    file_path.write_text("First commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Initial commit")
+
+    time.sleep(1)
+
+    # Commit 2 on main
+    file_path.write_text("Second commit content\n") # overwrites counts as deletion
+    repo.index.add([str(file_path)])
+    repo.index.commit("Second commit")
+
+    # Create and switch to a new branch
+    new_branch = repo.create_head("feature-branch")
+    repo.head.reference = new_branch
+    repo.head.reset(index=True, working_tree=True)
+
+    # Commit 3 on feature branch
+    file_path.write_text("Third commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Feature commit")
+    
     return repo
 
 def test_get_repo_valid_repo(tmp_path):
@@ -125,6 +164,43 @@ def test_extract_commit_authors(tmp_path):
     authors = extract_commit_authors(tmp_path)
     assert len(authors) == 2
     assert all(author == "Test User" for author in authors)
+    
+def test_extract_files_changed(tmp_path):
+    """Verifies that extract_files_changed returns the total number of files changed by an author"""
+    create_test_repo_with_branches(tmp_path)
+    assert extract_files_changed(tmp_path, "Test User") == 3
+
+
+def test_extract_line_changes(tmp_path):
+    """Verifies that extract_line_changes returns the number of added and deleted lines by an author"""
+    create_test_repo_with_branches(tmp_path)
+    changes = extract_line_changes(tmp_path, "Test User")
+    assert "added" in changes and "deleted" in changes
+    assert changes["added"] > 0
+    assert changes["deleted"] >= 0 
+
+
+def test_extract_contribution_by_filetype(tmp_path):
+    """Verifies that extract_contribution_by_filetype returns the number of lines added and deleted for specific filetypes by an author"""
+    create_test_repo_with_branches(tmp_path)
+    contributions = extract_contribution_by_filetype(tmp_path, "Test User")
+    
+    # Should have at least .txt in contributions
+    assert ".txt" in contributions
+    txt_stats = contributions[".txt"]
+    assert txt_stats["files_changed"] == 3
+    assert txt_stats["added"] > 0
+    assert txt_stats["deleted"] >= 0
+
+
+def test_extract_branches_for_author(tmp_path):
+    """Verifies that branches containing commits by the author are returned"""
+    create_test_repo_with_branches(tmp_path)
+    branches = extract_branches_for_author(tmp_path, "Test User")
+    
+    # Should include both main and feature-branch
+    assert "master" in branches or "main" in branches  # branch name differs depending on Git version
+    assert "feature-branch" in branches 
     
 def test_is_repo_empty_with_no_commits(tmp_path):
     """

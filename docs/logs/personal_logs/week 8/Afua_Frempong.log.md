@@ -5,7 +5,7 @@
 ## Entry for Oct 20, 2025 → Oct 26, 2025
 
 ### Type of Tasks Worked On
-![Personal Log](../../../docs/screenshots/Week 8 Personal_Log_Afua.png)
+![Personal Log](../../../screenshots/Week%208%20Personal_Log_Afua.png)
 
 ---
 

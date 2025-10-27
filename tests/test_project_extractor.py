@@ -2,7 +2,7 @@ import pytest
 import zipfile
 from pathlib import Path
 
-from app.utils.project_extractor import extract_and_list_projects
+from app.utils.project_extractor import extract_and_list_projects, _identify_projects
 
 def test_extract_and_list_projects_single_project(tmp_path):
     """Test extracting a ZIP with one project."""
@@ -84,3 +84,116 @@ def test_extract_and_list_projects_returns_correct_structure(tmp_path):
     assert "count" in res
     assert "projects" in res
     assert "extracted_dir" in res
+
+def test_identify_projects_root_is_project(tmp_path):
+    """Test when root directory itself is a project."""
+    (tmp_path / "setup.py").write_text("# setup")
+    (tmp_path / "main.py").write_text("print('hi')")
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1
+    assert str(tmp_path) in projects[0]
+
+def test_identify_projects_multiple_subdirs(tmp_path):
+    """Test identifying multiple projects in subdirectories."""
+    proj1 = tmp_path / "proj1"
+    proj1.mkdir()
+    (proj1 / "package.json").write_text("{}")
+    
+    proj2 = tmp_path / "proj2"
+    proj2.mkdir()
+    (proj2 / "setup.py").write_text("# setup")
+    
+    proj3 = tmp_path / "proj3"
+    proj3.mkdir()
+    (proj3 / "go.mod").write_text("module main")
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 3
+    assert any("proj1" in p for p in projects)
+    assert any("proj2" in p for p in projects)
+    assert any("proj3" in p for p in projects)
+
+def test_identify_projects_ignores_hidden_dirs(tmp_path):
+    """Test that hidden directories (starting with .) are ignored."""
+    hidden = tmp_path / ".hidden"
+    hidden.mkdir()
+    (hidden / "setup.py").write_text("# setup")
+    
+    proj = tmp_path / "visible"
+    proj.mkdir()
+    (proj / "package.json").write_text("{}")
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1
+    assert any("visible" in p for p in projects)
+    assert not any(".hidden" in p for p in projects)
+
+def test_identify_projects_no_projects(tmp_path):
+    """Test when no projects are found."""
+    (tmp_path / "file.txt").write_text("hello")
+    (tmp_path / "another.md").write_text("# README")
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 0
+
+def test_identify_projects_mixed_files_and_dirs(tmp_path):
+    """Test with mix of files and directories."""
+    (tmp_path / "README.md").write_text("# Project")
+    (tmp_path / "LICENSE").write_text("MIT")
+    
+    proj1 = tmp_path / "backend"
+    proj1.mkdir()
+    (proj1 / "setup.py").write_text("# setup")
+    
+    proj2 = tmp_path / "frontend"
+    proj2.mkdir()
+    (proj2 / "package.json").write_text("{}")
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 2
+
+def test_identify_projects_empty_directory(tmp_path):
+    """Test with empty directory."""
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 0
+
+def test_identify_projects_returns_list(tmp_path):
+    """Test that function returns a list of strings."""
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (proj / ".git").mkdir()
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert isinstance(projects, list)
+    assert all(isinstance(p, str) for p in projects)
+
+def test_identify_projects_git_marker(tmp_path):
+    """Test detection by .git marker."""
+    proj = tmp_path / "git_proj"
+    proj.mkdir()
+    (proj / ".git").mkdir()
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1
+    assert "git_proj" in projects[0]
+
+def test_identify_projects_multiple_markers(tmp_path):
+    """Test project with multiple markers (should still count as one)."""
+    proj = tmp_path / "multi_marker"
+    proj.mkdir()
+    (proj / "setup.py").write_text("# setup")
+    (proj / "package.json").write_text("{}")
+    (proj / ".git").mkdir()
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1

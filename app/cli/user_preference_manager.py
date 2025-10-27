@@ -4,7 +4,20 @@ import sqlite3
 
 # --- Constants ---
 DB_PATH = Path(__file__).parent / "database.db"
-
+industry_options = [
+    "Technology",       
+    "Healthcare",
+    "Finance",
+    "Education",
+    "Manufacturing",
+    "Retail",
+    "Hospitality",
+    "Transportation",
+    "Construction",
+    "Energy",
+    "Entertainment",
+    "Other"
+]
 def get_user_preferences(user_id):
     """
     Retrieve and/or save user preference input.

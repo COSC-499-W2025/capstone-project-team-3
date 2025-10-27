@@ -9,56 +9,95 @@
 
 ---
 
+### Type of Tasks Worked On
+- Backend development (Folder Path Selector – FR2)
+- ZIP Extraction and Project Detection utilities
+- Test-driven development (pytest – validation & extraction)
+- PR documentation, issue linking, and progress tracking
+- Peer review and coordination across backend modules
+- Updating feature documentation and summary tables
+
+---
+
 ### Recap of Weekly Goals
-- Began and completed core updates for **FR2’s final ZIP handling flow:**
-  - **Project Extraction Utility (#139):** Implemented `extract_and_list_projects()` to handle ZIP extraction and metadata listing.  
-  - **Project Identification Utility (#153):** Added `_identify_projects()` helper to detect valid project directories using common markers (e.g., `setup.py`, `package.json`, `.git`).  
-  - **Unit Tests (TDD – #152, #153):** Developed comprehensive pytest coverage before implementation to ensure reliability across valid, invalid, and edge cases.  
-  - **Integration Alignment:** Verified extraction utilities integrate smoothly with existing folder validation and scanning modules.  
+- Complete all remaining FR2 subtasks and align them with the final feature requirements.  
+- Ensure ZIP extraction and project identification logic works for multiple projects in uploaded archives.  
+- Write comprehensive unit tests before implementation (TDD).  
+- Finalize documentation and progress summaries for the Folder Path Selector module.
 
 ---
 
 ### Features Assigned to Me
-- Folder Path Selector (FR2)  
-- Project Extraction and Identification Utilities  
-- Unit Testing for Project Detection  
+- **FR2:** Folder Path Selector  
+- **Project Extraction & Identification Utilities** (`extract_and_list_projects`, `_identify_projects`)  
+- **Test Coverage for Validation Utilities**
 
 ---
 
 ### Associated Project Board Tasks
-| Task/Issue ID | Title                                         | Status       |
-|----------------|-----------------------------------------------|--------------|
-| 139            | Read the Number of Projects Uploaded by User  | Completed  |
-| 153            | Add Project Identification Logic (`_identify_projects`) | Completed |
-| 86             | Test Cases for Validation and Extraction Functions | Completed |
+| Task/Issue ID | Title                                               | Status      |
+|----------------|-----------------------------------------------------|-------------|
+| #71            | Native Folder Picker Integration                    | ✅ Completed |
+| #79            | Validate Directory Read Access                      | ✅ Completed |
+| #81            | Handle Invalid or Inaccessible Paths                | ✅ Completed |
+| #83            | Handle Directory Size                               | ✅ Completed |
+| #139           | Read the Number of Projects Uploaded by the User    | ✅ Completed |
+| #153           | Project Identification from ZIPs                    | ✅ Completed |
+| #86            | Test Cases (Validation & Extraction Utilities)      | ✅ Completed |
+
+---
+
+### Issue Descriptions for this week:
+- **#153: Project Identification from ZIPs**  
+  Added `extract_and_list_projects()` to handle ZIP extraction, error handling, and automatic project listing for downstream modules.  
+
+- **#86: Test Cases for Validation & Extraction Utilities**  
+  Comprehensive pytest coverage added following TDD, including valid, invalid, and edge case scenarios.  
+
+- **#139: Read the Number of Projects Uploaded by the User**  
+  Implemented `_identify_projects()` utility to detect valid projects within extracted ZIPs based on standard project markers (e.g., `setup.py`, `package.json`, `.git`).  
 
 ---
 
 ### Progress Summary
 - **Completed this week:**  
-  - Implemented and tested both project extraction and identification utilities using a TDD approach.  
-  - Ensured that extracted ZIPs are validated, decompressed, and scanned for distinct project folders with proper error handling.  
-  - Extended FR2’s capabilities to read and interpret multiple uploaded projects automatically.  
-  - Documented all changes and linked relevant PRs to their corresponding feature issues (#152, #153).  
-  - Updated internal progress documentation under FR2 to reflect completion of project detection.  
+  - Implemented and tested extraction and identification utilities for project uploads.  
+  - Ensured consistent error handling, validation, and integration with FR2 modules.  
+  - Updated progress documentation and verified all FR2 subtasks are now ✅ Completed.  
+  - Conducted peer reviews for related modules (Consent, Git Detection, etc.) and provided feedback.  
 
 - **In Progress this week:**  
-  - Final test refinements for ZIP edge cases and directory permission variations.  
-  - Preparing documentation updates and progress summaries for the next milestone.  
+  - Documentation finalization for FR2 and its alignment with FR4 (File Scanning).  
+  - Preparing for next milestone: validation integration and scanning coordination.
 
 ---
 
 ### Additional Context (Optional)
-- These additions finalize **FR2’s backend functionality**, enabling seamless transition to **File Scanning (FR4)** in the next sprint.  
-- Strong collaboration with teammates on consent flow and git detection utilities ensured feature compatibility and stability.  
-- Maintained consistent modular design and standardized return schemas for all FR2 components.  
+- FR2 backend feature set is now **fully complete**.  
+- Established strong modular structure, reusable utilities, and standardized return schemas.  
+- All functions verified and merged through passing tests and reviews.  
 
 ---
 
 ### Reflection
 
 **What Went Well:**  
-* Successfully implemented both extraction and project detection logic ahead of schedule.  
+- Completed all FR2 subtasks successfully and on time.  
+- Maintained 100% test coverage through TDD.  
+- Ensured seamless integration of ZIP handling with existing validation logic.  
+- Actively reviewed and documented peer contributions for overall feature consistency.  
+
+**What Could Be Improved:**  
+- Dedicated weekly meeting time. 
+
+---
+
+### Plan for Next Cycle
+- Transition focus to **FR4: File Scanning Integration**.  
+- Support teammates in connecting folder validation outputs to scanning workflows.  
+- Continue maintaining testing discipline and structured documentation.
+
+---
 * Followed TDD effectively — all tests passed immediately after implementation.  
 * Improved understanding of ZIP handling, directory traversal, and Python file I/O edge cases.  
 

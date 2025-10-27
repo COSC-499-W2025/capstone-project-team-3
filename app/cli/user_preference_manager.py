@@ -1,69 +1,76 @@
-
 from pathlib import Path
 import sqlite3
+from consent_manager import ConsentManager
 
-# --- Constants ---
-DB_PATH = Path(__file__).parent / "database.db"
+DB_PATH = Path(__file__).parent / "db" / "database.db"
+USER_ID = 1
+
 industry_options = [
-    "Technology",       
-    "Healthcare",
-    "Finance",
-    "Education",
-    "Manufacturing",
-    "Retail",
-    "Hospitality",
-    "Transportation",
-    "Construction",
-    "Energy",
-    "Entertainment",
-    "Other"
+    "Technology", "Healthcare", "Finance", "Education", "Manufacturing",
+    "Retail", "Hospitality", "Transportation", "Construction", "Energy",
+    "Entertainment", "Other"
 ]
-def get_user_preferences(user_id):
-    """
-    Retrieve and/or save user preference input.
-    """
-    # TODO 1: Connect to the SQLite database
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    try:
-        # TODO 2: Check if the user has accepted consent in the DB
-        # SELECT consent_status FROM CONSENT WHERE user_id = ?
-        # If not accepted, print message and exit function
+class UserPreferences:
+    def __init__(self):
+        self.user_id = USER_ID
+        self.education = ""
+        self.industry = ""
+        self.job_title = ""
+        self.conn = sqlite3.connect(DB_PATH)
+        self.cursor = self.conn.cursor()
 
-        # TODO 3: Check if user preferences already exist
-        # SELECT * FROM USER_PREFERENCES WHERE user_id = ?
-        # If preferences exist:
-        #     a. Load and display current preferences
-        #     b. Ask user if they want to update them (yes/no)
-        #     If yes → continue to step 4
-        #     If no → return current preferences
+    def manage_preferences(self):
+        try:
+            # --- TODO 2: Check consent ---
+            consent_manager = ConsentManager()
+            if not consent_manager.has_consent(self.user_id):
+                print("User consent not found. Please provide consent first.")
+                return
 
-        # TODO 4: If no existing preferences, or user chooses to update:
-        #     Prompt user for:
-        #         - Educational background
-        #         - Industry
-        #         - Job title
-        #     Validate inputs:
-        #         a. If any field is empty, show an error and re-prompt
+            # --- TODO 3: Check for existing preferences ---
+            self.cursor.execute("SELECT * FROM USER_PREFERENCES WHERE user_id = ?", (self.user_id,))
+            existing = self.cursor.fetchone()
 
-        # TODO 5: Save new or updated preferences to DB
-        # Use INSERT OR REPLACE INTO USER_PREFERENCES (user_id, education, industry, job_title)
-        # values (?, ?, ?, ?)
+            if existing:
+                print(f"Existing preferences: {existing}")
+                choice = input("Would you like to update them? (yes/no): ").strip().lower()
+                if choice == "no":
+                    print("Keeping existing preferences.")
+                    return
 
-        # TODO 6: Commit transaction to save changes
-        conn.commit()
+            # --- TODO 4: Collect new or updated preferences ---
+            while True:
+                education = input("Enter your educational background: ").strip()
+                industry = input(f"Select your industry {industry_options}: ").strip()
+                job_title = input("Enter your job title. This can be current or aspiring: ").strip()
 
-    except sqlite3.Error as e:
-        # TODO: Handle database errors 
-        print(f"Database error: {e}")
+                if not education or not industry or not job_title:
+                    print("Missing fields are required. Please try again.")
+                else:
+                    break
 
-    finally:
-        # TODO 7: Close DB connection
-        conn.close()
+            self.education = education
+            self.industry = industry
+            self.job_title = job_title
 
-# Example usage
+            # --- TODO 5: Save to DB ---
+            self.cursor.execute("""
+                INSERT OR REPLACE INTO USER_PREFERENCES (user_id, education, industry, job_title)
+                VALUES (?, ?, ?, ?)
+            """, (self.user_id, self.education, self.industry, self.job_title))
+
+            # --- TODO 6: Commit ---
+            self.conn.commit()
+            print("Preferences saved successfully.")
+
+        except sqlite3.Error as e:
+            print(f"Database error: {e}")
+
+        finally:
+            # --- TODO 7: Close connection ---
+            self.conn.close()
+
 if __name__ == "__main__":
-    # TODO: Replace with user_id from local storage or session
-    user_id = 1
-    get_user_preferences(user_id)
+    manager = UserPreferences()
+    manager.manage_preferences()

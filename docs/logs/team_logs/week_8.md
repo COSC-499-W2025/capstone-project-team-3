@@ -82,7 +82,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
 | #79, #81, #83, #86, #139, #153 | Folder Path Selector (FR2) – directory validation, ZIP extraction, project identification, and complete TDD test coverage | @6s-1 |
-| #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
+| #135, #136          | Expand Db Schema and Add steps to Read.ME, Seed Data with test data    | @abstractafua |
 | #91, #113, #133, #132       | Extract Commit Metadata, Fixed no tests ran result in Docker Env, Methods that return list should be plural     | @dabby04     |
 | #80, #100, #88, #84, #141, #148     | Consent manager, consent form creation and different user scenarios, handling consent decline and saving consent, consent revocation functionality, test cases for revocation  | @PaintedW0lf     |
 | #160, #94,  #48, #113    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo    | @kjassani    |

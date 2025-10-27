@@ -12,6 +12,8 @@
     * Deciding on task priorities for the next 2 weeks+
     * Consent management and User Setup in WBS (starting most features)
     * Project Input and Initialization in WBS (starting most features)
+    * Folder Path Selector and File input in WBS (starting most features
+
     
   
 - **Associated project board tasks:**
@@ -40,6 +42,35 @@
     * FR4: File Scanning & Indexing #69
     * Scan Files paying attention to exclusions and filters #70
     * check zip file #48
+    * - **Associated project board tasks:**
+    * Test Cases #99
+    * Privacy-based Restrictions #98
+    * Dropdown UI for Industry & Education #96
+    * Validate Directory Read Access #79
+    * Enforce Access Restriction Until Consent is given #82
+    * Handle Invalid or Inaccessible Paths #81
+    * Store Consent Status Locally #80
+    * Implement Consent Screen UI #74
+    * Zipped file path will be typed in #72
+    * Extract & Store Metadata #73
+    * Native Folder Picker Integration #71
+    * Folder Path Selector #46
+    * Consent & User Management #30
+    * Consent Model + Storage Layer #29
+    * Test Cases #78
+    * Error Handling (I/O, Empty Folders, Retry) #77
+    * Write Metadata to local database #76
+    * Handle Unsupported Types #75
+    * Extract Commit Metadata #91
+    * Git History Extraction #89
+    * Test Cases (Positive/Negative) #87
+    * Consent Management #88
+    * FR4: File Scanning & Indexing #69
+    * Scan Files paying attention to exclusions and filters #70
+    * Check ZIP file #48
+    * Project Extraction Logic #152 
+    * Project Identification from ZIPs #153 
+    * Read the Number of Projects Uploaded by the User #139 
 
 ---
 
@@ -72,7 +103,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
-| #47, #79, #81, #83, #86          | Checking access to directories, directory size handling, checking for invalid paths, error handling   | @6s-1     |
+| #79, #81, #83, #86, #139, #152, #153 | Folder Path Selector (FR2) – directory validation, ZIP extraction, project identification, and complete TDD test coverage | @6s-1 |
 | #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
 | #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
 | #80, #100, #88, #84, #141, #148     | Consent manager, consent form creation and different user scenarios, handling consent decline and saving consent, consent revocation functionality, test cases for revocation  | @PaintedW0lf     |
@@ -85,7 +116,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #113          | Part 2: Remaining bullet points    | @dabby04      |
-| #86, #83          | 83 is under review and 86(test cases) will be closed once 83 is closed.    | @6s-1     |
 | #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
 | #85         | FR3: User Preference Selection #85  | @abstractafua     |
 

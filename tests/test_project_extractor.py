@@ -174,3 +174,26 @@ def test_identify_projects_returns_list(tmp_path):
     
     assert isinstance(projects, list)
     assert all(isinstance(p, str) for p in projects)
+
+def test_identify_projects_git_marker(tmp_path):
+    """Test detection by .git marker."""
+    proj = tmp_path / "git_proj"
+    proj.mkdir()
+    (proj / ".git").mkdir()
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1
+    assert "git_proj" in projects[0]
+
+def test_identify_projects_multiple_markers(tmp_path):
+    """Test project with multiple markers (should still count as one)."""
+    proj = tmp_path / "multi_marker"
+    proj.mkdir()
+    (proj / "setup.py").write_text("# setup")
+    (proj / "package.json").write_text("{}")
+    (proj / ".git").mkdir()
+    
+    projects = _identify_projects(tmp_path)
+    
+    assert len(projects) == 1

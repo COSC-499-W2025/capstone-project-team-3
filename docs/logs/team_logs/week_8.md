@@ -40,6 +40,13 @@
     * FR4: File Scanning & Indexing #69
     * Scan Files paying attention to exclusions and filters #70
     * check zip file #48
+    * Project Extraction Logic #152
+    * Project Identification from ZIPs #153
+    * Read the Number of Projects Uploaded by the User #139
+    * Methods that return list should be plural named #132
+    * Fixed no tests ran result in Docker Env #133
+    * Fix Docker environment interactivity issue #145
+
 
 ---
 
@@ -71,10 +78,10 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
-| #47, #79, #81, #83, #86          | Checking access to directories, directory size handling, checking for invalid paths, error handling   | @6s-1     |
+| #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
+| #79, #81, #83, #86, #139, #153 | Folder Path Selector (FR2) – directory validation, ZIP extraction, project identification, and complete TDD test coverage | @6s-1 |
 | #N/A          | Project Proposal, DB setup, Assigning task priorities and Project Board setup   | @abstractafua     |
-| #107, #90, #112, #91, #113        | Docker Coverage test setup, Detect .git folder, Extract Commit Metadata     | @dabby04     |
+| #91, #113, #133, #132       | Extract Commit Metadata, Fixed no tests ran result in Docker Env, Methods that return list should be plural     | @dabby04     |
 | #80, #100, #88, #84, #141, #148     | Consent manager, consent form creation and different user scenarios, handling consent decline and saving consent, consent revocation functionality, test cases for revocation  | @PaintedW0lf     |
 | #46, #17, #31, #37, #48        | System Architecture, Folder validation, Dependency Management    | @kjassani    |
 
@@ -84,32 +91,37 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| #113          | Part 2: Remaining bullet points    | @dabby04      |
-| #86, #83          | 83 is under review and 86(test cases) will be closed once 83 is closed.    | @6s-1     |
+| #145          |  Fix Docker environment interactivity issue  | @dabby04      |
+| #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
 | #85         | FR3: User Preference Selection #85  | @abstractafua     |
 
 ---
 
 ## Meeting Notes
 
-### 15th October 2025 – Team Meeting (All members present)
-- Add tasks to project board and decide task priorities
+### 24th October 2025 – Team Meeting (All members present)
 - Assignment of tasks 
+- Discuss what everyone is working on
+- Clarified what should be stored in the schema for project info and consent
 
 ---
 
 ## Test Report
 
-- **Framework used:**  
-- **Test run date:**  
+- **Framework used:** `pytest` and `pytest-cov`  
+- **Test run date:** 26 October 2025 
 - **Summary:**  
-  - Total tests run:  44
-  - Passed:   44
-  - Failed:   0
+  - Total tests run:  70
+  - Passed:   69
+  - Failed:   1
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  
-  *(Insert here if available)*
+  
+<img width="649" height="405" alt="t2" src="https://github.com/user-attachments/assets/99c8ef04-a8b7-4c41-ad7e-10c098776c27" />
+
+<img width="948" height="294" alt="t1" src="https://github.com/user-attachments/assets/69f57ab6-c553-4813-84d8-fd01ce0039d6" />
+
 
 ---
 

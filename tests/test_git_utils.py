@@ -10,8 +10,9 @@ from app.utils.git_utils import (detect_git,
     extract_files_changed,
     extract_line_changes,
     extract_contribution_by_filetype,
-    extract_branches_for_author)
-from git import Repo
+    extract_branches_for_author
+    ,is_collaborative)
+from git import Repo, Actor
 from pathlib import Path
 import time
 import pytest
@@ -223,3 +224,61 @@ def test_is_repo_empty_with_non_repo_path(tmp_path):
     """
     # tmp_path is just a plain directory here
     assert is_repo_empty(tmp_path) is True
+    
+def create_collaborative_repo(tmp_path: Path) -> Repo:
+    """
+    Helper to initialize a repo and make commits from two different authors.
+    """
+    repo = Repo.init(tmp_path)
+    file_path = tmp_path / "test_file.txt"
+
+    # Define Actors
+    author1 = Actor("Test User", "test@example.com")
+    author2 = Actor("Collaborator", "collab@example.com")
+
+    # Author 1's commit
+    file_path.write_text("First commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Initial commit by Test User", author=author1)
+
+    time.sleep(1) 
+
+    # Author 2's commit
+    file_path.write_text("Second commit content by Collaborator")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Second commit by Collaborator", author=author2)
+
+    return repo
+
+def test_is_collaborative_with_multiple_authors(tmp_path):
+    """
+    Ensures is_collaborative returns True for a repo with commits from 
+    more than one unique author.
+    """
+    create_collaborative_repo(tmp_path)
+    assert is_collaborative(tmp_path) is True
+
+def test_is_collaborative_with_single_author(tmp_path):
+    """
+    Ensures is_collaborative returns False for a repo with multiple commits
+    from only one author.
+    """
+    # create_test_repo makes two commits from the *same* "Test User"
+    create_test_repo(tmp_path)
+    assert is_collaborative(tmp_path) is False
+
+def test_is_collaborative_with_empty_repo(tmp_path):
+    """
+    Ensures is_collaborative returns False for an empty repo (no commits).
+    This also tests the error handling path (ValueError/GitCommandError).
+    """
+    Repo.init(tmp_path)
+    assert is_collaborative(tmp_path) is False
+
+def test_is_collaborative_with_non_repo(tmp_path):
+    """
+    Ensures is_collaborative returns False for a path that isn't a git repo.
+    This tests the error handling path (ValueError from get_repo).
+    """
+    # tmp_path is just an empty directory
+    assert is_collaborative(tmp_path) is False

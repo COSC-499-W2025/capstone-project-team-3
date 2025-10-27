@@ -4,6 +4,7 @@ Minimal Python entry point.
 from fastapi import FastAPI
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
+from app.utils.git_utils import detect_git,extract_all_commits
 import uvicorn
 import sys
 
@@ -19,6 +20,9 @@ def main():
     print("App started successfully")
     seed_db()  # automatically populate test data
     print("Database started")
+    
+    if(detect_git(".")):
+        print(extract_all_commits("."))
 
 app = FastAPI()
 

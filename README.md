@@ -127,6 +127,8 @@ To run all the python tests in the docker environment, run `docker compose exec 
 
 You might need to run this in a new terminal window after running `docker compose up --build`.
 
+To run the docker environment in the interactive environment, please run `docker compose run --rm -it server`.
+
 ### How to Check Your Test Coverage
 
 Test coverage shows how much of your code is actually tested by your unit tests. It helps you find parts of the code that **aren't tested yet**, so you can improve your tests and catch potential bugs.

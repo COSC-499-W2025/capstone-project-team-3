@@ -39,3 +39,30 @@ def extract_and_list_projects(zip_path: Union[str, Path]) -> dict:
         "extracted_dir": temp_dir,
         "count": len(projects)
     }
+
+def _identify_projects(root_dir: Union[str, Path]) -> List[str]:
+    """
+    Identify individual projects in a directory.
+    
+    Project markers: .git, package.json, setup.py, pom.xml, .gradle, requirements.txt, Gemfile
+    Returns list of project paths (strings).
+    """
+    root = Path(root_dir)
+    projects = []
+    project_markers = {
+        ".git", "package.json", "setup.py", "pom.xml", ".gradle",
+        "requirements.txt", "Gemfile", "go.mod", "Cargo.toml", ".gitignore"
+    }
+    
+    # Check if root itself is a project
+    if any((root / marker).exists() for marker in project_markers):
+        projects.append(str(root))
+        return projects
+    
+    # Scan subdirectories (one level)
+    for item in root.iterdir():
+        if item.is_dir() and not item.name.startswith("."):
+            if any((item / marker).exists() for marker in project_markers):
+                projects.append(str(item))
+    
+    return projects

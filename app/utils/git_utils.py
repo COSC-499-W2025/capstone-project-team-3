@@ -193,7 +193,6 @@ def extract_commit_content_by_author(
     path: Union[str, Path],
     author: str,
     output_path: Union[str, Path, None] = None,
-    *, # Enforces keyword-only arguments after this
     include_merges: bool = False,
     max_commits: Optional[int] = None,
     ) -> Union[str, None]:

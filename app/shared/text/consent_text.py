@@ -1,5 +1,6 @@
-# Main consent message shown to users initially
-CONSENT_MESSAGE = """
+class ConsentText:
+    # Main consent message shown to users initially
+    CONSENT_MESSAGE = """
 =======================================================
 PROJECT INSIGHTS - CONSENT AGREEMENT
 =======================================================
@@ -7,7 +8,7 @@ PROJECT INSIGHTS - CONSENT AGREEMENT
 This application needs your permission to:
 
 1. Access and analyze your project files
-2. Read Git history and contribution data 
+2. Read Git history and contribution data
 3. Store analysis results locally
 
 Your data remains on your machine and is not uploaded.
@@ -15,8 +16,8 @@ Please type 'yes' to provide consent and proceed, 'no' to decline, or
 For more details, type 'more' or press Enter to continue.
 """
 
-# Detailed privacy information shown when user requests more details
-DETAILED_PRIVACY_INFO = """
+    # Detailed privacy information shown when user requests more details
+    DETAILED_PRIVACY_INFO = """
 =======================================================
 PRIVACY DETAILS
 =======================================================
@@ -37,24 +38,24 @@ DATA RETENTION: TODO
 Press Enter to return to consent prompt.
 """
 
-# Message shown when consent is granted
-CONSENT_GRANTED_MESSAGE = """
-Consent granted! 
+    # Message shown when consent is granted
+    CONSENT_GRANTED_MESSAGE = """
+Consent granted!
 
 Thank you for providing consent. Project Insights is now ready to
 analyze your project and provide valuable insights about your code.
 """
 
-# Message shown when consent is declined
-CONSENT_DECLINED_MESSAGE = """
+    # Message shown when consent is declined
+    CONSENT_DECLINED_MESSAGE = """
 You've declined consent.
 
 Project Insights needs these permissions to function properly.
 You can run the tool again if you change your mind.
 """
 
-# Message shown when resuming with existing consent
-CONSENT_ALREADY_PROVIDED_MESSAGE = """
+    # Message shown when resuming with existing consent
+    CONSENT_ALREADY_PROVIDED_MESSAGE = """
 Consent previously provided.
 
 Project Insights will continue analyzing your project.

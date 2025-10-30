@@ -34,6 +34,8 @@ Prereqs: Docker Desktop (or Docker Engine + docker-compose).
 When you're ready, start your application by running:
 `docker compose up --build`.
 
+**To run the docker environment in the interactive environment, please run `docker compose run --rm -it server`.**
+
 Your application will be available at http://localhost:8000.
 
 Quick helper script:
@@ -126,8 +128,6 @@ How It Works:
 To run all the python tests in the docker environment, run `docker compose exec server pytest`.
 
 You might need to run this in a new terminal window after running `docker compose up --build`.
-
-**To run the docker environment in the interactive environment, please run `docker compose run --rm -it server`.**
 
 ### How to Check Your Test Coverage
 

@@ -59,5 +59,4 @@ You can run the tool again if you change your mind.
 Consent previously provided.
 
 Project Insights will continue analyzing your project.
-To revoke consent, use the '--revoke-consent' command.
 """

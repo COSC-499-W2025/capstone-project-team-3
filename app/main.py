@@ -4,7 +4,6 @@ Minimal Python entry point.
 from fastapi import FastAPI
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
-from app.utils.git_utils import detect_git,extract_all_commits
 import uvicorn
 import sys
 

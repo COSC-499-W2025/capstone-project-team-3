@@ -16,7 +16,6 @@ services:
     volumes:
       - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
-      - /Users/oluwadabiraomotoso/Desktop/Projects/NeuedaProject25:/app/project
     working_dir: /app
     stdin_open: true
     tty: true

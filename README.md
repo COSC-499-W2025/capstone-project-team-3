@@ -34,6 +34,8 @@ Prereqs: Docker Desktop (or Docker Engine + docker-compose).
 When you're ready, start your application by running:
 `docker compose up --build`.
 
+**To run the docker environment in the interactive environment, please run `docker compose run --rm -it --service-ports server python -m app.main`.**
+
 Your application will be available at http://localhost:8000.
 
 Quick helper script:

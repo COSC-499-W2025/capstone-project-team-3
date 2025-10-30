@@ -19,9 +19,6 @@ def main():
     print("App started successfully")
     seed_db()  # automatically populate test data
     print("Database started")
-    
-    if(detect_git(".")):
-        print(extract_all_commits("."))
 
 app = FastAPI()
 

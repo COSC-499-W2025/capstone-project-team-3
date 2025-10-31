@@ -5,8 +5,8 @@ import sqlite3
 
 DB_PATH = Path(__file__).parent.parent / "db.py"
 
-class UserPreferenceStore:
     # Initialize the UserPreferenceStore with the database path
+class UserPreferenceStore:
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

@@ -128,7 +128,7 @@ def fake_store():
         def get_preferences(self, user_id):
             return self._data.get(user_id)
 
-        # support flexible kwargs/positional to match different implementations
+        # support flexible args/positional to match different implementations
         def save_preferences(self, *args, **kwargs):
             # normalize into a dict that the test can assert later
             if kwargs:

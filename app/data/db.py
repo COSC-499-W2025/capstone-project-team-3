@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS CONSENT (
 
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     id INTEGER PRIMARY KEY,
+    github_user TEXT,
+    name TEXT,
     industry TEXT,
     education TEXT,
     job_title TEXT,

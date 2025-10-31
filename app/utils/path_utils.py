@@ -37,10 +37,11 @@ def is_zip_file(path: Union[str, Path]) -> bool:
     # Check if the file is a valid ZIP
     return zipfile.is_zipfile(p)
 
-def extract_zipped_contents(path: Union[str, Path]) -> bool:
+
+def extract_zipped_contents(path: Union[str, Path]) -> str:
     """
     Extracts the contents of the zipped file to a temporary folder.
-    Returns True if the extraction of contents runs successfully
+    Returns the path to the temporary directory if extraction succeeds.
     Raises ValueError if path is None.
     Raise ValueError if it is not a valid zipped file or something went wrong during extraction
     """
@@ -54,11 +55,12 @@ def extract_zipped_contents(path: Union[str, Path]) -> bool:
     try:
         with zipfile.ZipFile(zipped_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
-        return True
+        return temp_dir  # Return temp directory path instead of True
     except zipfile.BadZipFile:
         raise ValueError(f"The file {zipped_path} is not a valid zip archive.")
     except Exception as e:
         raise RuntimeError(f"An error occured during extraction: {e}")
+
     
 def validate_read_access(path: Union[str, Path], treat_as_dir: bool = False) -> dict:
     """

@@ -4,6 +4,7 @@ Minimal Python entry point.
 from fastapi import FastAPI
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
+from app.cli.user_preference_manager import UserPreferences
 import uvicorn
 import sys
 
@@ -20,7 +21,7 @@ def main():
     seed_db()  # automatically populate test data
     print("Database started")
 
-    #TODO: Call User Preference Manager
+    user_preference = UserPreferences()
 
 app = FastAPI()
 

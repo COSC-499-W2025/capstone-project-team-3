@@ -2,8 +2,10 @@ from pathlib import Path
 import sqlite3
 from consent_manager import ConsentManager
 
-DB_PATH = Path(__file__).parent / "db" / "database.db"
-USER_ID = 1
+"This file manages user preferences via CLI by prompting the user. This will later on be replaced by UI"
+
+DB_PATH = Path(__file__).parent / "db.py"
+USER_ID = 
 
 industry_options = [
     "Technology", "Healthcare", "Finance", "Education", "Manufacturing",
@@ -19,6 +21,8 @@ class UserPreferences:
         self.job_title = ""
         self.conn = sqlite3.connect(DB_PATH)
         self.cursor = self.conn.cursor()
+
+    def get_preferences
 
     def manage_preferences(self):
         try:

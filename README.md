@@ -164,3 +164,27 @@ docs for more detail on building and pushing.
 
 ### References
 * [Docker's Python guide](https://docs.docker.com/language/python/)
+
+## Setting Up Gemini API Key for LLM Features
+
+To use the LLM-powered features in this project, you **must provide your own Gemini API key**.
+
+1. **Get your Gemini API key:**
+   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey) and create an API key for a "default gemini project".
+
+2. **Create a `.env` file in your project root:**
+   - Copy the example below into a new file named `.env` (do **not** commit your real key to GitHub by adding the .env in the .gitignore file):
+
+     ```
+     GEMINI_API_KEY=AIzaSy...your-gemini-api-key-here...
+     ```
+
+3. **Your `.env` file should look like:**
+GEMINI_API_KEY=AIzaSy...your-gemini-api-key-here...
+
+4. **Keep your `.env` file private:**  
+- Do **not** share your API key or commit it to version control.
+
+---
+
+**Now you can use all LLM features in the project!**

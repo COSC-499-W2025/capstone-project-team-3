@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS CONSENT (
 );
 
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
-    id INTEGER PRIMARY KEY,
+    user_id INTEGER PRIMARY KEY,
     name TEXT,
     github_user TEXT,
     industry TEXT,
@@ -118,7 +118,7 @@ def seed_db():
 
     # --- USER_PREFERENCES ---
     cursor.execute("""
-        INSERT OR IGNORE INTO USER_PREFERENCES (id, name, github_user, industry, education, job_title)
+        INSERT OR IGNORE INTO USER_PREFERENCES (user_id, name, github_user, industry, education, job_title)
         VALUES (1, ?, ?, ?, ?, ?)
     """, ("John User", "testuser", "Technology", "Bachelor's", "Developer"))
 

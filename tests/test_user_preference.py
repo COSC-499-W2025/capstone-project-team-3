@@ -8,7 +8,7 @@ user_utils_mod = pytest.importorskip("app.utils.user_preference_utils", reason="
 cli_mod = pytest.importorskip("app.cli.user_preference_cli", reason="user_preference_cli module missing or broken")
 
 # Acquire classes if available, otherwise skip specific tests below
-UserPreferenceStore = getattr(user_utils_mod, "UserPreferenceStore", None)
+UserPreferenceUTILStore = getattr(user_utils_mod, "UserPreferenceStore", None)
 UserPreferencesCLIClass = getattr(cli_mod, "UserPreferences", None)
 
 def table_exists(db_path: Path, table_name: str) -> bool:
@@ -28,7 +28,7 @@ def ensure_table_for_store(conn: sqlite3.Connection):
         CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
             user_id TEXT PRIMARY KEY,
             name TEXT,
-            github TEXT,
+            github_user TEXT,
             education TEXT,
             industry TEXT,
             job_title TEXT
@@ -61,7 +61,7 @@ def test_save_and_get_preferences(store_tmp):
     store.save_preferences(
         user_id="user1",
         name="Alice Example",
-        github="alicegit",
+        github_user="alicegit",
         education="BSc Computer Science",
         industry="Technology",
         job_title="Developer"
@@ -69,7 +69,7 @@ def test_save_and_get_preferences(store_tmp):
 
     prefs = store.get_preferences("user1")
     assert prefs is not None
-    expected_keys = {"user_id", "name", "github", "education", "industry", "job_title"}
+    expected_keys = {"user_id", "name", "github_user", "education", "industry", "job_title"}
     assert set(prefs.keys()) == expected_keys
     assert prefs["name"] == "Alice Example"
     assert prefs["github"] == "alicegit"
@@ -85,7 +85,7 @@ def test_save_preferences_updates_existing_row(store_tmp):
     prefs = store.get_preferences("user2")
     assert prefs is not None
     assert prefs["name"] == "Second Name"
-    assert prefs["github"] == "gh2"
+    assert prefs["github_user"] == "gh2"
     assert prefs["industry"] == "Healthcare"
 
 def test_persistence_after_reopen(tmp_path):
@@ -104,7 +104,7 @@ def test_persistence_after_reopen(tmp_path):
         prefs = s2.get_preferences("persist_user")
         assert prefs is not None
         assert prefs["name"] == "Persist Name"
-        assert prefs["github"] == "persistGH"
+        assert prefs["github_user"] == "persistGH"
     finally:
         s2.close()
 
@@ -132,23 +132,23 @@ def fake_store():
         def save_preferences(self, *args, **kwargs):
             # normalize into a dict that the test can assert later
             if kwargs:
-                user_id = kwargs.get("user_id") or kwargs.get("id") or kwargs.get("user")
+                user_id = kwargs.get("user_id") 
                 entry = {
                     "user_id": user_id,
                     "name": kwargs.get("name"),
-                    "github": kwargs.get("github") or kwargs.get("github_user"),
+                    "github_user": kwargs.get("github_user"),
                     "education": kwargs.get("education"),
                     "industry": kwargs.get("industry"),
                     "job_title": kwargs.get("job_title"),
                 }
                 self._data[user_id] = entry
             else:
-                # positional expected order: user_id, name, github, education, industry, job_title
+                # positional expected order: user_id, name, github_user, education, industry, job_title
                 user_id = args[0]
                 self._data[user_id] = {
                     "user_id": args[0],
                     "name": args[1],
-                    "github": args[2],
+                    "github_user": args[2],
                     "education": args[3],
                     "industry": args[4],
                     "job_title": args[5],
@@ -161,11 +161,11 @@ def fake_store():
 
 @pytest.mark.skipif(UserPreferencesCLIClass is None, reason="UserPreferences CLI class not found")
 def test_cli_prompts_and_saves(monkeypatch, capsys, fake_store):
-    # Prepare inputs: user id, (no existing), name, github, education, industry, job_title
+    # Prepare inputs: user id, (no existing), name, github_user, education, industry, job_title
     inputs = iter([
         "testuser",        # user id
         "Test User",       # name
-        "testgh",          # github
+        "testgh",          # github_user
         "BSc",             # education
         "Technology",      # industry
         "Developer",       # job title
@@ -179,4 +179,4 @@ def test_cli_prompts_and_saves(monkeypatch, capsys, fake_store):
     saved = fake_store._data.get("testuser")
     assert saved is not None
     assert saved["name"] == "Test User"
-    assert saved["github"] in
+    assert saved["github_user"] in

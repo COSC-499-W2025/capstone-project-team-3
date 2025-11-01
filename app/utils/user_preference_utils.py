@@ -22,14 +22,21 @@ class UserPreferenceStore:
             # Ensure the parent directory exists
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             self.conn = sqlite3.connect(str(self.db_path))
-
-    # Get user preferences by user_id if exists (Read from DB)
-    def get_preferences(self, user_id: str):
+    
+    # Retrieve latest record of user preferences (Read from DB)
+    def get_latest_preferences(self):
+        """
+        Retrieve the latest user preferences based on the most recent updated_at timestamp.
+        """
         cur = self.conn.cursor()
         cur.execute(
-            "SELECT user_id, name, github_user, education, industry, job_title FROM USER_PREFERENCES WHERE user_id = ?",
-            (user_id,),
-                        )
+            """
+            SELECT user_id, name, github_user, education, industry, job_title
+            FROM USER_PREFERENCES
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """
+        )
         row = cur.fetchone()
         if not row:
             return None

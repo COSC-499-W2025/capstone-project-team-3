@@ -2,8 +2,6 @@ from app.utils.user_preference_utils import UserPreferenceStore
 
 "This file manages user preferences via CLI by prompting the user. This will later on be replaced by UI"
 
-DB_PATH = Path(__file__).parent / "db.py"
-USER_ID = 
 
 industry_options = [
     "Technology", "Healthcare", "Finance", "Education", "Manufacturing",
@@ -12,12 +10,12 @@ industry_options = [
 ]
 
 class UserPreferences:
-    def __init__(self, store: Optional[UserPreferenceStore] = None):
+    def __init__(self, store: UserPreferenceStore = None):
         self.store = store or UserPreferenceStore()
 
     def manage_preferences(self):
         try:
-            user_id = input("Enter a user id (email or username) to load/save preferences: ").strip()
+            user_id = input("Enter a user id to load/save preferences: ").strip()
             if not user_id:
                 print("User id is required.")
                 return

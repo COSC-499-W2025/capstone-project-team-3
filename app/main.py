@@ -14,6 +14,8 @@ def main():
     seed_db()  # automatically populate test data
     print("Database started")
 
+
+
     # Check for the consent
     consent_manager = ConsentManager()
     if not consent_manager.enforce_consent():
@@ -21,9 +23,12 @@ def main():
         sys.exit(1)
     
     print("App started successfully")
-    
-    #Allow first time and returning users to manage preferences
+
+          #Allow first time and returning users to manage preferences
     user_preference_manager = UserPreferences()
+    user_preference_manager.manage_preferences()
+    
+ 
 
 app = FastAPI()
 

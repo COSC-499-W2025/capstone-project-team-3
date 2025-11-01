@@ -71,6 +71,7 @@ def generate_resume_summary_from_parsed(metrics: Dict, llm_client=None) -> Union
         response = llm_client.generate(prompt)
         return response
     else:
+        #TODO: Create a more detailed and relevant NLP process 
         # Basic rule-based summary
         summary = [
             f"Worked on a project with {metrics.get('total_files', 0)} files and {metrics.get('total_lines', 0)} lines of code.",
@@ -168,6 +169,7 @@ def generate_github_resume_summary(metrics: Dict, llm_client=None) -> Union[str,
         response = llm_client.generate(prompt)
         return response
     else:
+        #TODO: Create a more detailed and relevant NLP process 
         # Basic rule-based summary
         summary = [
             f"Contributed {metrics.get('total_commits', 0)} commits over {metrics.get('duration_days', 0)} days.",

@@ -1,9 +1,29 @@
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
+from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
 from typing import Union
 from datetime import datetime
 import os, json
 from typing import Optional
+
+BINARY_EXTENSIONS = {
+    # Images
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico",
+    # Audio
+    ".mp3", ".wav", ".ogg", ".flac", ".aac",
+    # Video
+    ".mp4", ".mov", ".avi", ".mkv", ".webm",
+    # Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt",
+    # Archives
+    ".zip", ".gz", ".tar", ".rar", ".7z",
+    # Compiled/Binary
+    ".exe", ".dll", ".so", ".o", ".a", ".jar", ".pyc", ".class", ".swf",
+    # Other
+    ".db", ".sqlite", ".dat", ".bin", ".lock", ".DS_Store"
+}
+
+# --- Vendor/build folders to skip entirely ---
+SKIP_DIRS = ("node_modules/", "dist/", "build/", "out/", "__pycache__/", ".git/")
 
 def detect_git(path: Union[str, Path]) -> bool:
     """Determines whether specified path is a git folder or not.
@@ -187,58 +207,60 @@ def is_collaborative(path: Union[str, Path]) -> bool:
         return False
     except Exception:
         return False
- 
 
-def extract_commit_content_by_author(
+def extract_code_commit_content_by_author(
     path: Union[str, Path],
     author: str,
-    output_path: Union[str, Path, None] = None,
     include_merges: bool = False,
     max_commits: Optional[int] = None,
-    ) -> Union[str, None]:
+    ) -> str:
     """
-    Extract detailed, per-file commit data (metadata + diff + content) 
+    Extract detailed, per-file commit data (metadata + diff) 
     for all commits by `author` across all branches.
-    Returns a JSON string or writes to `output_path`.
+    Returns a JSON string.
 
     Notes:
     - Data is granular, with a list of files for each commit.
-    - Full file content is included (up to 500KB) for context.
+    - Binary files (images, PDFs, videos, etc.) are automatically skipped
     - Merge commits are skipped by default.
     - Use max_commits to cap output size on large repos.
     """
-    repo = get_repo(path)  # uses your existing helper (raises ValueError if invalid)
-
+    try:
+        repo = get_repo(path)  # uses existing helper to get Repo object
+    except Exception:
+        return json.dumps([], indent =2)  # on error, return empty list
     seen = set()
     out = []
-    
+    errors = []
+
     # Iterate over all commits in the repo
     for commit in repo.iter_commits(rev="--all"):
         
-        # --- CRITICAL FILTERING LOGIC ---
+        #if we've already processed this commit, skip it
         if commit.hexsha in seen:
             continue
         seen.add(commit.hexsha)
 
+        #only process commits by the specified author
         if not author_matches(commit, author):  
             continue
-
+        #prevents double counting merges unless specified
         is_merge = len(commit.parents) > 1
         if is_merge and not include_merges:
             continue
-        # --- END OF FILTERING LOGIC ---
 
 
         # --- START NEW PER-FILE LOGIC ---
         try:
-            parent = commit.parents[0] if commit.parents else None
-            # Get a list of diff objects, one for each file
+            parent = commit.parents[0] if commit.parents else NULL_TREE
             diffs = commit.diff(parent, create_patch=True) 
             
             files_changed_data = []
             for d in diffs:
-                status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed else "M"
-                path_after = d.b_path or d.a_path
+                 # Skip binary files - only process code/text files
+                if not is_code_file(d): 
+                    continue
+                status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")
                 try:
@@ -246,30 +268,27 @@ def extract_commit_content_by_author(
                 except Exception:
                     patch = "/* Could not decode patch text */"
 
-                content_after = None
-                if status != "D" and path_after:
-                    try:
-                        blob = commit.tree / path_after #generating blob size of specifc commit
-                        # Guardrails for huge/binary files
-                        if blob.size <= 500_000:  # 500 KB cap
-                            content_after = blob.data_stream.read().decode("utf-8", errors="replace")
-                        else:
-                            content_after = f"/* File content omitted, size {blob.size} bytes > 500KB */"
-                    except Exception as e:
-                        content_after = f"/* Could not read file content: {e} */"
-
                 files_changed_data.append({
                     "status": status,
                     "path_before": d.a_path,
                     "path_after": d.b_path,
-                    "patch": patch,  # The diff for *this file*
-                    "content_after": content_after, # The *full file content* after commit for context
+                    "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
                 })
             # --- END NEW PER-FILE LOGIC ---
-
+        # Handle potential Git command errors by adding to dictionary
         except GitCommandError as e:
-            files_changed_data = [{"error": f"Could not get diff for commit: {e}"}]
+            errors.append({
+                "commit_hash": commit.hexsha,
+                "author_name": getattr(commit.author, "name", "") or "",
+                "author_email": getattr(commit.author, "email", "") or "",
+                "committed_datetime": commit.committed_datetime.isoformat(),
+                "message_summary": commit.summary,
+                "error": str(e)
+            })
+            continue
+        if not files_changed_data:
+            continue
 
         out.append({
             "hash": commit.hexsha,
@@ -280,25 +299,57 @@ def extract_commit_content_by_author(
             "message_summary": commit.summary,
             "message_full": commit.message,
             "is_merge": is_merge,
-            "files": files_changed_data  # Replaced 'patch' with 'files'
+            "files": files_changed_data 
         })
         
         # --- CRITICAL LIMITING LOGIC ---
         if max_commits is not None and len(out) >= max_commits:
             break
 
-    # --- JSON and FILE I/O LOGIC (after the loop) ---
-    json_str = json.dumps(out, indent=2)
+    return json.dumps(out, indent=2)
 
-    if output_path is None:
-        return json_str
+def is_code_file(diff_object) -> bool:
+    """
+    Determines if a diff object represents a code/text file.
+    Returns False for binary, vendor, or very large files.
+    
+    Args:
+        diff_object: A GitPython diff object
+        
+    Returns:
+        bool: True if the file is a code/text file, False if binary or non-code
+    """
+    # --- 1. Get file path ---
+    path_str = diff_object.b_path or diff_object.a_path
+    if not path_str:
+        return False  # No valid path
+    
+    # Normalize slashes for cross-platform consistency
+    norm_path = path_str.replace("\\", "/")
 
-    try:
-        p = Path(output_path)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json_str, encoding="utf-8")
-        return None
-    except (OSError, IOError) as e:
-        # Fall back to returning the JSON if writing fails
-        print(f"Error: Could not write to file {output_path}: {e}")
-        return json_str
+    # --- 2. Skip vendor/build/system folders early ---
+    if any(skip in norm_path for skip in SKIP_DIRS):
+        return False
+
+    # --- 3. Check file extension blacklist ---
+    _, extension = os.path.splitext(path_str)
+    if extension.lower() in BINARY_EXTENSIONS:
+        return False
+
+    # --- 4. Size-based skip ---
+    blob = diff_object.b_blob or diff_object.a_blob
+    if blob and getattr(blob, "size", 0) > 2_000_000:  # 2 MB size limit
+        return False  # Too large to be meaningful source code
+
+    # --- 5. Optional NUL-byte sniff for unknown extensions ---
+    if not extension or extension.lower() not in BINARY_EXTENSIONS:
+        try:
+            if blob:
+                # Read only first 2 KB for efficiency
+                data = blob.data_stream.read(2048)
+                if b"\x00" in data:  # NUL byte → binary
+                    return False
+        except Exception:
+            return False  # Safe fallback
+
+    return True

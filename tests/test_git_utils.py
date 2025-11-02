@@ -11,11 +11,14 @@ from app.utils.git_utils import (detect_git,
     extract_line_changes,
     extract_contribution_by_filetype,
     extract_branches_for_author
-    ,is_collaborative)
+    ,is_collaborative,
+    extract_code_commit_content_by_author)
 from git import Repo, Actor
 from pathlib import Path
-import time
-import pytest
+import time, json, pytest
+from unittest.mock import MagicMock, patch
+
+import app.utils.git_utils as git_utils, io
 
 
 def test_detect_git_with_git_repo(tmp_path):

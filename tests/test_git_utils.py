@@ -11,12 +11,14 @@ from app.utils.git_utils import (detect_git,
     extract_line_changes,
     extract_contribution_by_filetype,
     extract_branches_for_author
-    ,is_collaborative)
+    ,is_collaborative,
+    is_code_file)
 from git import Repo, Actor
 from pathlib import Path
 import time
 import pytest
 
+import app.utils.git_utils as git_utils, io
 
 def test_detect_git_with_git_repo(tmp_path):
     """
@@ -282,3 +284,108 @@ def test_is_collaborative_with_non_repo(tmp_path):
     """
     # tmp_path is just an empty directory
     assert is_collaborative(tmp_path) is False
+    
+
+# ---- Tiny fakes/mocks ----
+class MockStream:
+    def __init__(self, data: bytes):
+        self._buf = io.BytesIO(data)
+    def read(self, n=-1):
+        return self._buf.read(n)
+
+class MockBlob:
+    def __init__(self, size: int, data: bytes):
+        self.size = size
+        self.data_stream = MockStream(data)
+
+class MockDiff:
+    def __init__(self, a_path=None, b_path=None, a_blob=None, b_blob=None):
+        self.a_path = a_path
+        self.b_path = b_path
+        self.a_blob = a_blob
+        self.b_blob = b_blob
+
+#Unit tests for is_code_file
+
+def test_basic_code_file_returns_true(monkeypatch):
+    # Checks that a normal small .py file passes as code (True)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", {".png", ".jpg", ".zip"})
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", {"vendor/", "node_modules/"})
+
+    blob = MockBlob(size=20, data=b"print('hello')\n")
+    d = MockDiff(b_path="src/app.py", b_blob=blob)
+
+    assert is_code_file(d) is True
+
+def test_vendor_directory_skipped(monkeypatch):
+    # Ensures files in vendor/node_modules folders are ignored (False)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", {"vendor/", "node_modules/"})
+
+    blob = MockBlob(size=10, data=b"print('vendored')")
+    d = MockDiff(b_path="vendor/lib/foo.py", b_blob=blob)
+
+    assert is_code_file(d) is False  # skipped by SKIP_DIRS
+
+def test_binary_extension_blacklist(monkeypatch):
+    # Confirms files with binary extensions (.png, .jpg) are skipped (False)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", {".png", ".jpg"})
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    blob = MockBlob(size=256, data=b"\x89PNG\r\n\x1a\n" + b"\x00" * 8)
+    d = MockDiff(b_path="image.png", b_blob=blob)
+
+    assert is_code_file(d) is False  # .png blacklisted
+
+def test_size_based_skip_over_2mb(monkeypatch):
+    # Verifies files larger than 2 MB are not treated as code (False)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    blob = MockBlob(size=2_000_001, data=b"a" * 128)
+    d = MockDiff(b_path="big.txt", b_blob=blob)
+
+    assert is_code_file(d) is False  # bigger than threshold
+
+def test_null_byte_detection_for_txt(monkeypatch):
+    # Ensures NUL-byte detection correctly flags binary-like text files (False)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    blob = MockBlob(size=11, data=b"hello\x00world")  # NUL in first 2KB
+    d = MockDiff(b_path="notes.txt", b_blob=blob)
+
+    assert is_code_file(d) is False
+
+def test_extensionless_text_is_treated_as_code(monkeypatch):
+    # Verifies text files with no extension but code content are accepted (True)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    blob = MockBlob(size=28, data=b"#!/usr/bin/env python3\nprint('ok')\n")
+    d = MockDiff(b_path="script", b_blob=blob)  # no extension
+
+    assert is_code_file(d) is True
+
+def test_missing_paths_returns_false(monkeypatch):
+    # Ensures files with neither a_path nor b_path are invalid (False)
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    d = MockDiff(a_path=None, b_path=None, a_blob=None, b_blob=None)
+    assert is_code_file(d) is False
+
+def test_blob_read_error_falls_back_to_false(monkeypatch):
+     # Confirms that unreadable blobs (e.g., I/O error) safely return False
+    monkeypatch.setattr(git_utils, "BINARY_EXTENSIONS", set())
+    monkeypatch.setattr(git_utils, "SKIP_DIRS", set())
+
+    class BadStream:
+        def read(self, n=-1):
+            raise IOError("boom")
+    class BadBlob:
+        size = 100
+        data_stream = BadStream()
+
+    d = MockDiff(b_path="src/app.py", b_blob=BadBlob())
+    assert is_code_file(d) is False

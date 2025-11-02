@@ -219,6 +219,7 @@ def extract_code_commit_content_by_author(
     max_commits: Optional[int] = None,
     ) -> str:
     """
+    Assumes that only code/text files are provided - there will be different function that checks for code files only.
     Extract detailed, per-file commit data (metadata + diff) 
     for all commits by `author` across all branches.
     Returns a JSON string.
@@ -261,9 +262,9 @@ def extract_code_commit_content_by_author(
             
             files_changed_data = []
             for d in diffs:
-                 # Skip binary files - only process code/text files
-                if not is_code_file(d): 
-                    continue
+                #  # Skip binary files - only process code/text files
+                # if not is_code_file(d): 
+                #     continue
                 status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")

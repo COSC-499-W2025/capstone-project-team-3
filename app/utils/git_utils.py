@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Union
 from datetime import datetime
 import os, json
+from typing import Optional
+
 
 def detect_git(path: Union[str, Path]) -> bool:
     """Determines whether specified path is a git folder or not.

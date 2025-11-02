@@ -21,6 +21,9 @@ class GeminiLLMClient:
         :param prompt: The prompt string to send to the model.
         :return: The model's response text.
         """
-        model = genai.GenerativeModel(self.model)
-        response = model.generate_content(prompt)
-        return response.text
+        try:
+            model = genai.GenerativeModel(self.model)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return "Invalid Key. Check your key format and Try again"

@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Dict, Union, List
 import os
 from datetime import datetime
@@ -20,7 +19,6 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         "imports": set(),
         "average_function_length": [],
         "comment_ratios": [],
-        "summary_snippets": [],
     }
 
     # Collect metrics from each file
@@ -30,15 +28,13 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         metrics["total_lines"] += file.get("lines_of_code", 0)
         metrics["functions"] += len(file.get("functions", []))
         metrics["components"] += len(file.get("components", []))
-        metrics["roles"].update(file.get("roles_detected", []))
+        metrics["roles"].update(infer_roles_from_file(file))
         metrics["imports"].update(file.get("imports", []))
         if "metrics" in file:
             if "average_function_length" in file["metrics"]:
                 metrics["average_function_length"].append(file["metrics"]["average_function_length"])
             if "comment_ratio" in file["metrics"]:
                 metrics["comment_ratios"].append(file["metrics"]["comment_ratio"])
-        if "summary_snippet" in file:
-            metrics["summary_snippets"].append(file["summary_snippet"])
 
     # Calculate averages and convert sets to lists
     metrics["average_function_length"] = (
@@ -82,10 +78,7 @@ def generate_resume_summary_from_parsed(metrics: Dict, llm_client=None) -> Union
             f"Average comment ratio: {metrics.get('average_comment_ratio', 0):.2f}.",
             f"Key imports: {', '.join(metrics.get('imports', []))}.",
         ]
-        # Optionally add summary snippets
-        if metrics.get("summary_snippets"):
-            summary.append("Sample file summaries:")
-            summary.extend(metrics["summary_snippets"][:3])  # Show up to 3
+        
         return summary
 
 # Aggregate metrics from a list of GitHub commits
@@ -100,7 +93,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     dates = []
     messages = []
     total_files_changed = set()
-
+    roles = set()
+    
     # File type extensions for classification
     code_exts = {".py", ".js", ".java", ".cpp", ".c", ".ts", ".rb", ".go"}
     doc_exts = {".md", ".rst", ".txt", ".docx", ".pdf"}
@@ -111,7 +105,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         authors.add(commit.get("author_name"))
         dates.append(commit.get("authored_datetime"))
         messages.append(commit.get("message_summary"))
-        for f in commit.get("files", []):
+        files = commit.get("files", [])
+        for f in files:
             status = f.get("status")
             file_status_counter[status] += 1
             path = f.get("path_after") or f.get("path_before")
@@ -127,7 +122,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
                     file_types_counter["test"] += 1
                 else:
                     file_types_counter["other"] += 1
-
+        roles.update(infer_roles_from_commit_files(files))
+        
     # Calculate duration in days between first and last commit
     def parse_dt(dt): return datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
     if dates:
@@ -148,7 +144,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         "doc_files_changed": file_types_counter["docs"],
         "test_files_changed": file_types_counter["test"],
         "other_files_changed": file_types_counter["other"],
-        "sample_messages": messages[:3],  # up to 3
+        "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages),  # 
+        "roles": list(roles),
     }
     return metrics
 
@@ -185,7 +182,73 @@ def generate_github_resume_summary(metrics: Dict, llm_client=None) -> Union[str,
             summary.extend(metrics["sample_messages"])
         return summary
 
-# Main entry point for project analysis
+# --- Role inference for local files ---
+def infer_roles_from_file(file):
+    """
+    Infers roles played in a local project file based on file path and imports.
+    Returns a set of detected roles.
+    """
+    roles = set()
+    path = file.get("file_path", "").lower()
+    imports = [imp.lower() for imp in file.get("imports", [])]
+
+    # Define keyword sets for each role
+    frontend_keywords = {"frontend", "src", "component", "react", "vue", "angular", ".js", ".jsx", ".ts", ".tsx", ".css", ".html"}
+    backend_keywords = {"backend", "api", "server", "django", "flask", "express", ".py", ".java", ".rb", ".go", ".cpp", ".c"}
+    database_keywords = {"db", "database", "models", "sql", "mongodb", "postgres", "mysql", ".sql", ".db", ".json"}
+    devops_keywords = {"docker", "ci", "pipeline", "deploy", "k8s", "kubernetes", ".yml", ".yaml", "dockerfile", ".sh"}
+    datascience_keywords = {"notebook", "pandas", "numpy", "sklearn", "matplotlib", ".ipynb", ".csv", ".pkl"}
+
+    # Helper to check keywords in path or imports
+    def has_keyword(keywords):
+        return any(kw in path or kw in imports for kw in keywords)
+
+    if has_keyword(frontend_keywords):
+        roles.add("frontend")
+    if has_keyword(backend_keywords):
+        roles.add("backend")
+    if has_keyword(database_keywords):
+        roles.add("database")
+    if has_keyword(devops_keywords):
+        roles.add("devops")
+    if has_keyword(datascience_keywords):
+        roles.add("data science")
+
+    return roles
+
+# --- Role inference for GitHub commits ---
+def infer_roles_from_commit_files(files):
+    """
+    Infers roles played based on file types changed in GitHub commits.
+    Returns a set of detected roles.
+    """
+    roles = set()
+    # Define extension sets for each role
+    frontend_exts = {".js", ".jsx", ".ts", ".tsx", ".css", ".html"}
+    backend_exts = {".py", ".java", ".rb", ".go", ".cpp", ".c"}
+    database_exts = {".sql", ".db", ".json"}
+    devops_exts = {".yml", ".yaml", ".sh"}
+    datascience_exts = {".ipynb", ".csv", ".pkl"}
+
+    for f in files:
+        path = f.get("path_after") or f.get("path_before", "")
+        ext = os.path.splitext(path)[1].lower()
+        fname = os.path.basename(path).lower()
+
+        if ext in frontend_exts:
+            roles.add("frontend")
+        if ext in backend_exts:
+            roles.add("backend")
+        if ext in database_exts:
+            roles.add("database")
+        if ext in devops_exts or "dockerfile" in fname:
+            roles.add("devops")
+        if ext in datascience_exts:
+            roles.add("data science")
+
+    return roles
+
+# Main entry point for local project analysis
 def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
     """
     Analyze a project from parsed file dicts and return a resume summary.
@@ -193,3 +256,12 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
     """
     metrics = aggregate_parsed_files_metrics(parsed_files)
     return generate_resume_summary_from_parsed(metrics, llm_client)
+
+# Main entry point for Github project analysis
+def analyze_github_project(commits: List[Dict], llm_client=None):
+    """
+    Analyze a project from GitHub commit dicts and return a resume summary.
+    Uses LLM if provided, otherwise returns a basic summary.
+    """
+    metrics = aggregate_github_individual_metrics(commits)
+    return generate_github_resume_summary(metrics, llm_client)

@@ -46,10 +46,17 @@ def main(argv: Optional[list] = None) -> int:
         if extract_res.get("status") != "ok":
             print(json.dumps({"status": "error", "reason": extract_res.get("reason", "zip extraction failed")}))
             return 1
+        
+        # Check if any projects were found
+        projects = extract_res.get("projects", [])
+        if not projects:
+            print(json.dumps({"status": "error", "reason": "no identifiable projects found in ZIP archive"}))
+            return 1
+        
         result.update({
             "extracted_dir": extract_res.get("extracted_dir"),
-            "projects": extract_res.get("projects", []),
-            "count": extract_res.get("count", 0),
+            "projects": projects,
+            "count": len(projects),
         })
 
     print(json.dumps(result, indent=2))

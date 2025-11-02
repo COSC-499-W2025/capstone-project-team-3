@@ -23,7 +23,11 @@ BINARY_EXTENSIONS = {
 }
 
 # --- Vendor/build folders to skip entirely ---
-SKIP_DIRS = ("node_modules/", "dist/", "build/", "out/", "__pycache__/", ".git/")
+SKIP_DIRS = {
+    ".git", ".github", ".gitlab", ".venv", "venv", "__pycache__", ".idea", ".vscode",
+    "node_modules", "vendor", "dist", "build", "target", ".next", ".gradle", ".mvn",
+    ".cargo", ".pnpm-store", ".tox", ".pytest_cache"
+}
 
 def detect_git(path: Union[str, Path]) -> bool:
     """Determines whether specified path is a git folder or not.

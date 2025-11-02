@@ -144,7 +144,7 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         "doc_files_changed": file_types_counter["docs"],
         "test_files_changed": file_types_counter["test"],
         "other_files_changed": file_types_counter["other"],
-        "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages),  # 
+        "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages), 
         "roles": list(roles),
     }
     return metrics

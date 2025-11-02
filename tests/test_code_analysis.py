@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 from app.client.llm_client import GeminiLLMClient
-from app.utils.code_analysis.code_analysis_utils import analyze_parsed_project, aggregate_github_individual_metrics, generate_github_resume_summary
+from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project, aggregate_github_individual_metrics, generate_github_resume_summary
+from app.utils.code_analysis.code_analysis_utils import infer_roles_from_file, infer_roles_from_commit_files
 import logging
 
 logging.basicConfig(level=logging.INFO,force=True)
@@ -33,9 +34,7 @@ sample_parsed_files = [
         "metrics": {
             "average_function_length": 14,
             "comment_ratio": 0.08
-        },
-        "roles_detected": ["frontend", "data visualization", "API integration"],
-        "summary_snippet": "React component implementing the main dashboard view, fetching data from backend and rendering charts."
+        }
     }
 ]
 
@@ -63,12 +62,14 @@ sample_commits = [
 ]
 
 def test_local_analysis_no_llm():
+    # Test local project analysis without LLM (rule-based summary)
     summary = analyze_parsed_project(sample_parsed_files)
     logger.info("Local Analysis (no LLM):\n%s", summary)
     assert summary is not None
     assert isinstance(summary, list)
 
 def test_local_analysis_with_llm():
+    # Test local project analysis with LLM (Gemini API)
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     llm_client = GeminiLLMClient(api_key=api_key)
@@ -78,18 +79,60 @@ def test_local_analysis_with_llm():
     assert isinstance(summary, str) or isinstance(summary, list)
 
 def test_github_analysis_no_llm():
-    github_metrics = aggregate_github_individual_metrics(sample_commits)
-    summary = generate_github_resume_summary(github_metrics)
+    # Test GitHub commit analysis without LLM (rule-based summary)
+    summary = analyze_github_project(sample_commits)
     logger.info("GitHub Analysis (no LLM):\n%s", summary)
     assert summary is not None
     assert isinstance(summary, list)
 
 def test_github_analysis_with_llm():
+    # Test GitHub commit analysis with LLM (Gemini API)
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
     llm_client = GeminiLLMClient(api_key=api_key)
-    github_metrics = aggregate_github_individual_metrics(sample_commits)
-    summary = generate_github_resume_summary(github_metrics, llm_client)
+    summary = analyze_github_project(sample_commits, llm_client)
     logger.info("GitHub Analysis (LLM):\n%s", summary)
     assert summary is not None
     assert isinstance(summary, str) or isinstance(summary, list)
+
+def test_local_analysis_empty_input():
+    # Test local analysis with empty input to ensure defaults are returned
+    summary = analyze_parsed_project([])
+    logger.info("Local Analysis (empty input):\n%s", summary)
+    assert summary is not None
+    assert isinstance(summary, list)
+    # Check that all metrics are zero or empty
+    assert any("0" in str(line) for line in summary)
+    
+def test_infer_roles_from_file_single_role():
+    # Test role inference for a file with clear frontend indicators
+    file = {
+        "file_path": "frontend/src/App.js",
+        "imports": ["react"]
+    }
+    roles = infer_roles_from_file(file)
+    assert "frontend" in roles
+
+def test_infer_roles_from_commit_files_multiple_roles():
+    # Test role inference for commit files covering multiple roles
+    files = [
+        {"path_after": "frontend/src/App.js"},
+        {"path_after": "docker/Dockerfile"},
+        {"path_after": "data/analysis.ipynb"},
+    ]
+    roles = infer_roles_from_commit_files(files)
+    assert "frontend" in roles
+    assert "devops" in roles
+    assert "data science" in roles
+
+def test_infer_roles_no_roles():
+    # Test role inference for files/commits with no relevant role indicators
+    file = {
+        "file_path": "docs/readme.md",
+        "imports": []
+    }
+    roles_file = infer_roles_from_file(file)
+    files_commit = [{"path_after": "docs/readme.md"}]
+    roles_commit = infer_roles_from_commit_files(files_commit)
+    assert len(roles_file) == 0
+    assert len(roles_commit) == 0

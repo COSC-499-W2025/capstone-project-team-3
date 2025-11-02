@@ -415,8 +415,7 @@ def make_commit(hexsha, author_name, author_email, message, is_merge=False, file
     return commit
 
 @patch("app.utils.git_utils.get_repo")
-@patch("app.utils.git_utils.is_code_file", return_value=True)
-def test_basic_extraction(mock_is_code, mock_get_repo):
+def test_basic_extraction(mock_get_repo):
     # Arrange
     mock_repo = MagicMock()
     commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
@@ -431,11 +430,9 @@ def test_basic_extraction(mock_is_code, mock_get_repo):
     assert isinstance(data, list)
     assert data[0]["author_email"] == "alice@example.com"
     assert "files" in data[0]
-    mock_is_code.assert_called()
 
 @patch("app.utils.git_utils.get_repo")
-@patch("app.utils.git_utils.is_code_file", return_value=True)
-def test_skips_other_authors(mock_is_code, mock_get_repo):
+def test_skips_other_authors(mock_get_repo):
     mock_repo = MagicMock()
     commit = make_commit("def456", "Bob", "bob@example.com", "Bob’s commit")
     mock_repo.iter_commits.return_value = [commit]
@@ -446,8 +443,7 @@ def test_skips_other_authors(mock_is_code, mock_get_repo):
     assert data == []  # filtered out by author
 
 @patch("app.utils.git_utils.get_repo")
-@patch("app.utils.git_utils.is_code_file", return_value=True)
-def test_skips_merges_when_flag_false(mock_is_code, mock_get_repo):
+def test_skips_merges_when_flag_false(mock_get_repo):
     mock_repo = MagicMock()
     merge_commit = make_commit("xyz789", "Alice", "alice@example.com", "Merge branch", is_merge=True)
     mock_repo.iter_commits.return_value = [merge_commit]
@@ -457,8 +453,7 @@ def test_skips_merges_when_flag_false(mock_is_code, mock_get_repo):
     assert json.loads(result_json) == []  # merge skipped
 
 @patch("app.utils.git_utils.get_repo")
-@patch("app.utils.git_utils.is_code_file", return_value=False)
-def test_skips_non_code_files(mock_is_code, mock_get_repo):
+def test_skips_non_code_files(mock_get_repo):
     mock_repo = MagicMock()
     commit = make_commit("ghi789", "Alice", "alice@example.com", "Binary file change")
     mock_repo.iter_commits.return_value = [commit]

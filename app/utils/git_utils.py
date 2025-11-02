@@ -2,7 +2,7 @@ from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandErro
 from pathlib import Path
 from typing import Union
 from datetime import datetime
-import os
+import os, json
 
 def detect_git(path: Union[str, Path]) -> bool:
     """Determines whether specified path is a git folder or not.
@@ -186,3 +186,105 @@ def is_collaborative(path: Union[str, Path]) -> bool:
         return False
     except Exception:
         return False
+    
+
+def extract_code_commit_content_by_author(
+    path: Union[str, Path],
+    author: str,
+    include_merges: bool = False,
+    max_commits: Optional[int] = None,
+    ) -> str:
+    """
+    Assumes that only code/text files are provided - there will be different function that checks for code files only.
+    Extract detailed, per-file commit data (metadata + diff) 
+    for all commits by `author` across all branches.
+    Returns a JSON string.
+
+    Notes:
+    - Data is granular, with a list of files for each commit.
+    - Binary files (images, PDFs, videos, etc.) are automatically skipped
+    - Merge commits are skipped by default.
+    - Use max_commits to cap output size on large repos.
+    """
+    try:
+        repo = get_repo(path)  # uses existing helper to get Repo object
+    except Exception:
+        return json.dumps([], indent =2)  # on error, return empty list
+    seen = set()
+    out = []
+    errors = []
+
+    # Iterate over all commits in the repo
+    for commit in repo.iter_commits(rev="--all"):
+        
+        #if we've already processed this commit, skip it
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+
+        #only process commits by the specified author
+        if not author_matches(commit, author):  
+            continue
+        #prevents double counting merges unless specified
+        is_merge = len(commit.parents) > 1
+        if is_merge and not include_merges:
+            continue
+
+
+        # --- START NEW PER-FILE LOGIC ---
+        try:
+            parent = commit.parents[0] if commit.parents else NULL_TREE
+            diffs = commit.diff(parent, create_patch=True) 
+            
+            files_changed_data = []
+            for d in diffs:
+                #  # Skip binary files - only process code/text files
+                # if not is_code_file(d): 
+                #     continue
+                status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
+
+                patch_text = getattr(d, "diff", b"")
+                try:
+                    patch = patch_text.decode("utf-8", errors="replace")
+                except Exception:
+                    patch = "/* Could not decode patch text */"
+
+                files_changed_data.append({
+                    "status": status,
+                    "path_before": d.a_path,
+                    "path_after": d.b_path,
+                    "patch": patch, 
+                    "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                })
+            # --- END NEW PER-FILE LOGIC ---
+        # Handle potential Git command errors by adding to dictionary
+        except GitCommandError as e:
+            errors.append({
+                "commit_hash": commit.hexsha,
+                "author_name": getattr(commit.author, "name", "") or "",
+                "author_email": getattr(commit.author, "email", "") or "",
+                "committed_datetime": commit.committed_datetime.isoformat(),
+                "message_summary": commit.summary,
+                "error": str(e)
+            })
+            continue
+        if not files_changed_data:
+            continue
+
+        out.append({
+            "hash": commit.hexsha,
+            "author_name": getattr(commit.author, "name", "") or "",
+            "author_email": getattr(commit.author, "email", "") or "",
+            "authored_datetime": commit.authored_datetime.isoformat(),
+            "committed_datetime": commit.committed_datetime.isoformat(),
+            "message_summary": commit.summary,
+            "message_full": commit.message,
+            "is_merge": is_merge,
+            "files": files_changed_data 
+        })
+        
+        # --- CRITICAL LIMITING LOGIC ---
+        if max_commits is not None and len(out) >= max_commits:
+            break
+
+    return json.dumps(out, indent=2)

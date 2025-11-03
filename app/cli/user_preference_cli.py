@@ -66,7 +66,5 @@ class UserPreferences:
         return self.store.get_latest_preferences(email)
 
 if __name__ == "__main__":
-    try:
         UserPreferences().manage_preferences()
-    finally:
-        UserPreferences().store.close()
+

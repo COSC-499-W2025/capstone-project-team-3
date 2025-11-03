@@ -9,8 +9,8 @@ class UserPreferenceStore:
 
     def __init__(self, db_path=None):
         """
-        Initialize the store. If db_path is provided, open a connection to that path
-        (creating parent directories if necessary). Otherwise, ensure the data
+        Initialize the store. If db_path is provided, open a connection to that path. 
+        Otherwise, ensure the data
         directory exists and use the default DB connection.
         """
         if db_path is None:
@@ -24,34 +24,36 @@ class UserPreferenceStore:
             self.conn = sqlite3.connect(str(self.db_path))
     
     # Retrieve latest record of user preferences (Read from DB)
-    def get_latest_preferences(self):
+    def get_latest_preferences(self,email):
         """
         Retrieve the latest user preferences based on the most recent updated_at timestamp.
         """
         cur = self.conn.cursor()
         cur.execute(
             """
-            SELECT user_id, name, github_user, education, industry, job_title
+            SELECT name, email, github_user, education, industry, job_title
             FROM USER_PREFERENCES
+            WHERE email = ?
             ORDER BY updated_at DESC
             LIMIT 1
-            """
+            """,
+            (email,)
         )
         row = cur.fetchone()
         if not row:
             return None
-        keys = ["user_id", "name", "github_user", "education", "industry", "job_title"]
+        keys = [ "name", "email", "github_user", "education", "industry", "job_title"]
         return dict(zip(keys, row))
 
     # Save/Update user preferences (Write to DB)
-    def save_preferences(self, user_id: str, name: str, github_user: str, education: str, industry: str, job_title: str):
+    def save_preferences(self, name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
         cur = self.conn.cursor()
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, github_user, education, industry, job_title)
+            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, github_user, education, industry, job_title),
+            ( name, email, github_user, education, industry, job_title),
         )
         self.conn.commit()
 

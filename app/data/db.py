@@ -18,8 +18,9 @@ CREATE TABLE IF NOT EXISTS CONSENT (
 );
 
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
-    user_id INTEGER PRIMARY KEY,
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
+    email TEXT UNIQUE,
     github_user TEXT,
     industry TEXT,
     education TEXT,
@@ -118,9 +119,9 @@ def seed_db():
 
     # --- USER_PREFERENCES ---
     cursor.execute("""
-        INSERT OR IGNORE INTO USER_PREFERENCES (user_id, name, github_user, industry, education, job_title)
-        VALUES (1, ?, ?, ?, ?, ?)
-    """, ("John User", "testuser", "Technology", "Bachelor's", "Developer"))
+        INSERT OR IGNORE INTO USER_PREFERENCES (user_id, name, email, github_user, industry, education, job_title)
+        VALUES (1,?, ?, ?, ?, ?, ?)
+    """, ("John User","johnU@gmail.com", "testuser", "Technology", "Bachelor's", "Developer"))
 
     # --- Simulate multiple projects from a ZIP upload ---
     projects = [

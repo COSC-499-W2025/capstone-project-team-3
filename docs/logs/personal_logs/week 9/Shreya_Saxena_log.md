@@ -43,11 +43,12 @@
 | #79            | Validate Directory Read Access                      | ✅ Completed |
 | #81            | Handle Invalid or Inaccessible Paths                | ✅ Completed |
 | #83            | Handle Directory Size                               | ✅ Completed |
-| #139           | Read the Number of Projects Uploaded by the User    | ✅ Completed |
-| #153           | Project Identification from ZIPs                    | ✅ Completed |
+| #139         | Read the Number of Projects Uploaded by the User    | ✅ Completed |
+| #153         | Project Identification from ZIPs                    | ✅ Completed |
 | #86            | Test Cases (Validation & Extraction Utilities)      | ✅ Completed |
-| #184            | Implement User Flow for inputting file path.	     | ✅ Completed |
-| #186           | Researching LLM/non-LLM implementation for non code file analysis. | In-Progress |
+| #184         | Implement User Flow for inputting file path.	     | ✅ Completed |
+| #198         | Added missing tests for prompt input & consent management.	| ✅ Completed |
+| #186         | Researching LLM/non-LLM implementation for non code file analysis. | In-Progress |
 
 
 ---

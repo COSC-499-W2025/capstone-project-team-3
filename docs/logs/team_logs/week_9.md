@@ -10,8 +10,8 @@
 
 - **Features planned for this milestone:**
     * Deciding on task priorities for the next 2 weeks+
-    * Consent management and User Setup in WBS (starting most features)
-    * Project Input and Initialization in WBS (starting most features)
+    * Consent management and User Setup in WBS (Finishing most features)
+    * Project Input and Initialization in WBS (Finishing most features)
     * Code and non code analysis in WBS (starting most features)
     
   
@@ -48,6 +48,7 @@
     * Test Cases #86
     * Implement User Flow for inputting file path #185
     * Researching LLM/non-LLM implementation for non code file analysis #186
+    * Added the missing tests for the main.py file for consent management and prompt input.
     * Extract import statements using tree_sitter libraries #190
     * Fix Docker environment interactivity issue #145
     * Extract import statements using regex (fallback) #191
@@ -85,9 +86,10 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | #169 | Code analysis - using AI  | @KarimKhalil33 |
-| #79, #81, #83, #86, #139, #153, #86, #183, #186 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
-| #135, #136          | Expand Db Schema and Add steps to Read.ME, Seed Data with test data    | @abstractafua |
-|     #190, #145, #191, #180   |  Extract import statements using tree_sitter libraries, Fix Docker environment interactivity issue, Extract import statements using regex (fallback), Added some of the parsing functions | @dabby04     |
+
+| #79, #81, #83, #86, #139, #153, #86, #183, #186, #196 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
+| #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
+| #190, #145, #191, #180   |  Extract import statements using tree_sitter libraries, Fix Docker environment interactivity issue, Extract import statements using regex (fallback), Added some of the parsing functions | @dabby04     |
 | #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |
 | #160, #94,  #48, #113    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo    | @kjassani    |
 
@@ -99,7 +101,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | #186          |  Researching LLM/Non-LLM non-code file analysis methods | @6s1      |
 | #115         | Absolute path for target Dockerr  | @kjassani     |
-| #85         | FR3: User Preference Selection #85  | @abstractafua     |
+| #186         |  Researching LLM/Non-LLM non-code file analysis methods | @abstractafua     |
 
 ---
 

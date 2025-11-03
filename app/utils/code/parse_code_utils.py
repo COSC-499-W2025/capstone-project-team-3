@@ -84,7 +84,7 @@ def traverse_imports(node: Node, file_content: str, import_node_types: Set[str],
     for child in node.children:
         traverse_imports(child, file_content, import_node_types, imports)
         
-def _extract_with_treesitter_dynamic(file_content: str, ts_lang: str, language:str) -> List[str]:
+def extract_with_treesitter_dynamic(file_content: str, ts_lang: str, language:str) -> List[str]:
     """
     Extract import statements from source code using a Tree-sitter parser.
 
@@ -138,7 +138,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
     
     if ts_language:
         try:
-            imports = _extract_with_treesitter_dynamic(file_content, ts_language, language)
+            imports = extract_with_treesitter_dynamic(file_content, ts_language, language)
         except Exception:
             return []
 

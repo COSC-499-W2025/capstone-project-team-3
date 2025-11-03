@@ -31,15 +31,11 @@
     * Consent & User Management #30
     * Consent Model + Storage Layer #29
     * Test Cases #78
-    * Error Handling (I/O, Empty Folders, Retry) #77
-    * Write Metadata to local database #76
-    * Handle Unsupported Types #75
     * Extract Commit Metadata #91
     * Git History Extraction #89
     * Test Cases (Positive/Negative) #87
     * Consent Management #88
     * FR4: File Scanning & Indexing #69
-    * Scan Files paying attention to exclusions and filters #70
     * check zip file #48
     * Project Extraction Logic #152
     * Project Identification from ZIPs #153
@@ -84,7 +80,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
+| #169 | Code analysis - using AI  | @KarimKhalil33 |
 | #79, #81, #83, #86, #139, #153, #86, #183, #186 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
 | #135, #136          | Expand Db Schema and Add steps to Read.ME, Seed Data with test data    | @abstractafua |
 | #91, #113, #133, #132       | Extract Commit Metadata, Fixed no tests ran result in Docker Env, Methods that return list should be plural     | @dabby04     |
@@ -99,7 +95,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | #145          |  Fix Docker environment interactivity issue  | @dabby04      |
 | #186          |  Researching LLM/Non-LLM non-code file analysis methods | @6s1      |
-| #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
 | #115         | Absolute path for target Dockerr  | @kjassani     |
 | #85         | FR3: User Preference Selection #85  | @abstractafua     |
 

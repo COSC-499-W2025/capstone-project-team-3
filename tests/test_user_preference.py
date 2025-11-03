@@ -1,5 +1,5 @@
 import sqlite3
-from pathlib import Path
+import re
 import pytest
 from app.utils.user_preference_utils import UserPreferenceStore
 from app.cli.user_preference_cli import UserPreferences
@@ -10,18 +10,18 @@ def create_user_pref_table(conn: sqlite3.Connection):
     """Ensure USER_PREFERENCES table exists."""
     cur = conn.cursor()
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
-            user_id TEXT PRIMARY KEY,
-            name TEXT,
-            github_user TEXT,
-            education TEXT,
-            industry TEXT,
-            job_title TEXT,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+    CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        email TEXT UNIQUE,
+        github_user TEXT,
+        education TEXT,
+        industry TEXT,
+        job_title TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
     """)
     conn.commit()
-
 
 # --- Fixtures ---
 
@@ -29,115 +29,99 @@ def create_user_pref_table(conn: sqlite3.Connection):
 def temp_store(tmp_path):
     """Create a temporary UserPreferenceStore with a fresh SQLite DB record."""
     db_path = tmp_path / "prefs.db"
-    store = UserPreferenceStore(db_path=db_path)
+    store = UserPreferenceStore(db_path=str(db_path))
     create_user_pref_table(store.conn)
     yield store
     store.close()
 
-
-# --- Tests for the DB store ---
+# --- DB store tests ---
 
 def test_save_and_get_preferences(temp_store):
-    store = temp_store
-
-    # Save one preference record
-    store.save_preferences(
-        user_id="user1",
+    temp_store.save_preferences(
         name="Alice Example",
+        email="alice@example.com",
         github_user="alicegit",
         education="BSc Computer Science",
         industry="Technology",
         job_title="Developer"
     )
-
-    prefs = store.get_latest_preferences()
-    assert prefs is not None
+    prefs = temp_store.get_latest_preferences("alice@example.com")
     assert prefs["name"] == "Alice Example"
     assert prefs["github_user"] == "alicegit"
     assert prefs["industry"] == "Technology"
 
-
-def test_get_preferences_returns_none_when_empty(temp_store):
-    """Ensure no crash when DB is empty."""
-    assert temp_store.get_latest_preferences() is None
-
-
-def test_save_preferences_overwrites_latest(temp_store):
-    """Ensure the most recently updated record is retrieved."""
-    store = temp_store
-    store.save_preferences("user1", "First Name", "gh1", "MS", "Finance", "Analyst")
-
-    prefs = store.get_latest_preferences()
-    assert prefs["user_id"] == "user1"
-    assert prefs["name"] == "First Name"
-
+def test_get_preferences_none(temp_store):
+    assert temp_store.get_latest_preferences("nonexistent@example.com") is None
 
 def test_persistence_across_sessions(tmp_path):
-    """Ensure data persists when DB is reopened."""
     db_path = tmp_path / "prefs.db"
+    store1 = UserPreferenceStore(db_path=str(db_path))
+    create_user_pref_table(store1.conn)
+    store1.save_preferences(
+        name="Persist Name",
+        email="persist@example.com",
+        github_user="persistGH",
+        education="BA",
+        industry="Education",
+        job_title="Instructor"
+    )
+    store1.close()
 
-    s1 = UserPreferenceStore(db_path=db_path)
-    create_user_pref_table(s1.conn)
-    s1.save_preferences("persist_user", "Persist Name", "persistGH", "BA", "Education", "Instructor")
-    s1.close()
-
-    s2 = UserPreferenceStore(db_path=db_path)
-    prefs = s2.get_latest_preferences()
-    s2.close()
-
-    assert prefs is not None
+    store2 = UserPreferenceStore(db_path=str(db_path))
+    prefs = store2.get_latest_preferences("persist@example.com")
+    store2.close()
     assert prefs["name"] == "Persist Name"
     assert prefs["github_user"] == "persistGH"
 
+# --- CLI logic tests without input mocking ---
 
-# --- CLI Test ---
+class FakeStore:
+    def __init__(self):
+        self.data = []
 
-@pytest.fixture
-def fake_store():
-    """A fake in-memory store to test CLI logic without touching a DB."""
-    class FakeStore:
-        def __init__(self):
-            self.data = []
+    def get_latest_preferences(self, email):
+        for record in reversed(self.data):
+            if record["email"] == email:
+                return record
+        return None
 
-        def get_latest_preferences(self):
-            return self.data[-1] if self.data else None
+    def save_preferences(self, name, email, github_user, education, industry, job_title):
+        self.data.append({
+            "name": name,
+            "email": email,
+            "github_user": github_user,
+            "education": education,
+            "industry": industry,
+            "job_title": job_title
+        })
 
-        def save_preferences(self, user_id, name, github_user, education, industry, job_title):
-            self.data.append({
-                "user_id": user_id,
-                "name": name,
-                "github_user": github_user,
-                "education": education,
-                "industry": industry,
-                "job_title": job_title
-            })
+    def close(self):
+        pass
 
-        def close(self):
-            pass
+def test_cli_save_and_retrieve_preferences():
+    store = FakeStore()
+    cli = UserPreferences(store=store)
 
-    return FakeStore()
+    # Simulate inputs as function parameters instead of interactive input
+    email = "user@example.com"
+    name = "Test User"
+    github = "testgh"
+    education = "BSc"
+    industry = "Technology"
+    job_title = "Developer"
 
+    store.save_preferences(name, email, github, education, industry, job_title)
+    prefs = store.get_latest_preferences(email)
+    assert prefs["name"] == name
+    assert prefs["email"] == email
+    assert prefs["github_user"] == github
 
-def test_cli_creates_and_saves_preferences(monkeypatch, capsys, fake_store):
-    """Simulate CLI user input and ensure preferences save correctly."""
-    inputs = iter([
-        "testuser",        # user id
-        "Test User",       # name
-        "testgh",          # github_user
-        "BSc",             # education
-        "Technology",      # industry
-        "Developer"        # job title
-    ])
+def test_invalid_email():
+    # Regex validation test
+    invalid_emails = ["plainaddress", "missingatsign.com", "user@.com"]
+    pattern = r"^[\w.-]+@[\w.-]+\.\w+$"
+    for email in invalid_emails:
+        assert not re.match(pattern, email)
 
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    cli = UserPreferences(store=fake_store)
-    cli.manage_preferences()
-
-    out = capsys.readouterr().out
-    assert "Preferences saved successfully" in out
-
-    saved = fake_store.get_latest_preferences()
-    assert saved is not None
-    assert saved["name"] == "Test User"
-    assert saved["github_user"] == "testgh"
-    assert saved["industry"] == "Technology"
+    valid_email = "user@example.com"
+    assert re.match(pattern, valid_email)

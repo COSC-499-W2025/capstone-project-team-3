@@ -108,3 +108,21 @@ def test_extract_imports_handles_unsupported_language_gracefully():
     with patch("app.utils.code.parse_code_utils.get_language", side_effect=ValueError("Language not supported")):
         result = extract_imports(content, "unknownlang")
     assert result == []
+    
+def test_extract_imports_falls_back_to_regex_when_treesitter_fails():
+    """Test that extract_imports uses regex fallback when Tree-sitter returns no imports."""
+    file_content = "const fs = require('fs');"
+    language = "javascript"
+
+    # Mock get_language to succeed (so Tree-sitter is attempted)
+    # But mock Tree-sitter to return no imports (e.g., parser fails or finds nothing)
+    with patch("app.utils.code.parse_code_utils.get_language", return_value="mock_js_lang"):
+        with patch("app.utils.code.parse_code_utils.extract_with_treesitter_dynamic", return_value=[]):
+            # Provide a regex config for JavaScript that matches 'require'
+            mock_regex_config = [{
+                "language": "javascript",
+                "import_patterns": [r"require\s*\(", r"import\s+.*from"]
+            }]
+            with patch("app.utils.code.parse_code_utils._TS_IMPORT_REGEX", mock_regex_config):
+                result = extract_imports(file_content, language)
+    assert result == ["const fs = require('fs');"]

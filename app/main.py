@@ -28,7 +28,8 @@ def main():
         user_pref.manage_preferences()
     finally:
         user_pref.store.close()
-        
+        print("User preferences stored successfully.")
+
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):

@@ -11,11 +11,14 @@ from app.utils.git_utils import (detect_git,
     extract_line_changes,
     extract_contribution_by_filetype,
     extract_branches_for_author
-    ,is_collaborative)
+    ,is_collaborative,
+    extract_code_commit_content_by_author)
 from git import Repo, Actor
 from pathlib import Path
-import time
-import pytest
+import time, json, pytest
+from unittest.mock import MagicMock, patch
+
+import app.utils.git_utils as git_utils, io
 
 
 def test_detect_git_with_git_repo(tmp_path):
@@ -282,3 +285,81 @@ def test_is_collaborative_with_non_repo(tmp_path):
     """
     # tmp_path is just an empty directory
     assert is_collaborative(tmp_path) is False
+    
+#test for extract_code_commit_content_by_author
+    
+    # Helper to make fake commits
+def make_commit(hexsha, author_name, author_email, message, is_merge=False, files=None):
+    commit = MagicMock()
+    commit.hexsha = hexsha
+    commit.author.name = author_name
+    commit.author.email = author_email
+    commit.authored_datetime.isoformat.return_value = "2024-10-01T00:00:00"
+    commit.committed_datetime.isoformat.return_value = "2024-10-01T00:00:01"
+    commit.summary = message
+    commit.message = message
+    commit.parents = [1, 2] if is_merge else [1]
+    # simulate commit.diff
+    diff_mock = MagicMock()
+    diff_mock.a_path = "src/app.py"
+    diff_mock.b_path = "src/app.py"
+    diff_mock.b_blob.size = 100
+    diff_mock.diff = b""
+    diff_mock.change_type = "M"
+    commit.diff.return_value = files or [diff_mock]
+    return commit
+
+@patch("app.utils.git_utils.get_repo")
+def test_basic_extraction(mock_get_repo):
+    # Arrange
+    mock_repo = MagicMock()
+    commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
+    mock_repo.iter_commits.return_value = [commit1]
+    mock_get_repo.return_value = mock_repo
+
+    # Act
+    result_json = extract_code_commit_content_by_author("/fake/path", "alice@example.com")
+
+    # Assert
+    data = json.loads(result_json)
+    assert isinstance(data, list)
+    assert data[0]["author_email"] == "alice@example.com"
+    assert "files" in data[0]
+
+@patch("app.utils.git_utils.get_repo")
+def test_skips_other_authors(mock_get_repo):
+    mock_repo = MagicMock()
+    commit = make_commit("def456", "Bob", "bob@example.com", "Bob’s commit")
+    mock_repo.iter_commits.return_value = [commit]
+    mock_get_repo.return_value = mock_repo
+
+    result_json = extract_code_commit_content_by_author("/fake", "alice@example.com")
+    data = json.loads(result_json)
+    assert data == []  # filtered out by author
+
+@patch("app.utils.git_utils.get_repo")
+def test_skips_merges_when_flag_false(mock_get_repo):
+    mock_repo = MagicMock()
+    merge_commit = make_commit("xyz789", "Alice", "alice@example.com", "Merge branch", is_merge=True)
+    mock_repo.iter_commits.return_value = [merge_commit]
+    mock_get_repo.return_value = mock_repo
+
+    result_json = extract_code_commit_content_by_author("/fake", "alice@example.com", include_merges=False)
+    assert json.loads(result_json) == []  # merge skipped
+
+@patch("app.utils.git_utils.get_repo")
+def test_skips_non_code_files(mock_get_repo):
+    mock_repo = MagicMock()
+    commit = make_commit("ghi789", "Alice", "alice@example.com", "Binary file change")
+    mock_repo.iter_commits.return_value = [commit]
+    mock_get_repo.return_value = mock_repo
+
+    result_json = extract_code_commit_content_by_author("/fake", "alice@example.com")
+    data = json.loads(result_json)
+    assert all(not f["path_after"].endswith(".png") for c in data for f in c.get("files", []))
+
+@patch("app.utils.git_utils.get_repo", side_effect=ValueError("Invalid repo"))
+def test_invalid_repo_returns_empty_list(mock_get_repo):
+    result_json = extract_code_commit_content_by_author("/invalid", "alice@example.com")
+    data = json.loads(result_json)
+    assert data == [] 

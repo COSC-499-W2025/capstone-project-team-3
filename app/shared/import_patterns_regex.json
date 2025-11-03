@@ -1,0 +1,633 @@
+[
+  {
+    "language": "Ada",
+    "file_extensions": [
+      ".adb",
+      ".ads"
+    ],
+    "import_patterns": [
+      "^\\s*with\\s+[A-Za-z0-9_\\.]+;",
+      "^\\s*use\\s+[\\w\\.]+;"
+    ],
+    "notes": "with/use for packages (GNAT)."
+  },
+  {
+    "language": "Assembly",
+    "file_extensions": [
+      ".asm",
+      ".s",
+      ".S"
+    ],
+    "import_patterns": [
+      "^\\s*INCLUDE\\s+['\\\"].+['\\\"]",
+      "^\\s*\\.include\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "Varies by assembler dialect; many use INCLUDE or .include."
+  },
+  {
+    "language": "AWK",
+    "file_extensions": [
+      ".awk"
+    ],
+    "import_patterns": [
+      "^\\s*#include\\s+[\\\"<].+[\\\">]"
+    ],
+    "notes": "gawk has @include and include extension."
+  },
+  {
+    "language": "Bash",
+    "file_extensions": [
+      ".sh"
+    ],
+    "import_patterns": [
+      "^\\s*(?:source|\\.)\\s+['\\\"]?[^'\\\"]+['\\\"]?"
+    ],
+    "notes": "source or . filename"
+  },
+  {
+    "language": "Batch",
+    "file_extensions": [
+      ".bat",
+      ".cmd"
+    ],
+    "import_patterns": [
+      "^\\s*call\\s+[^:\\r\\n]+",
+      "^\\s*%~dp0"
+    ],
+    "notes": "CALL used to invoke other batch files."
+  },
+  {
+    "language": "C",
+    "file_extensions": [
+      ".c",
+      ".h"
+    ],
+    "import_patterns": [
+      "^\\s*#\\s*include\\s+[<\\\"][^>\\\"]+[>\\\"]"
+    ],
+    "notes": "#include <...> and \"...\"."
+  },
+  {
+    "language": "C++",
+    "file_extensions": [
+      ".cpp",
+      ".cc",
+      ".hpp",
+      ".h",
+      ".cxx"
+    ],
+    "import_patterns": [
+      "^\\s*#\\s*include\\s+[<\\\"][^>\\\"]+[>\\\"]",
+      "^\\s*using\\s+namespace\\s+[A-Za-z0-9_:]+;?"
+    ],
+    "notes": "preprocessor include; using namespace."
+  },
+  {
+    "language": "C#",
+    "file_extensions": [
+      ".cs"
+    ],
+    "import_patterns": [
+      "^\\s*using\\s+[A-Za-z0-9_\\.]+\\s*;"
+    ],
+    "notes": "using namespace/type imports."
+  },
+  {
+    "language": "Clojure",
+    "file_extensions": [
+      ".clj",
+      ".cljs",
+      ".cljc"
+    ],
+    "import_patterns": [
+      "^\\s*\\(ns\\s+[^\\s]+\\s+(:require\\s+\\[[^\\]]+\\])?",
+      "^\\s*\\(ns\\s+[^\\s]+\\s+(:import\\s+[^\\)]+)\\)"
+    ],
+    "notes": "ns macro with :require and :import forms."
+  },
+  {
+    "language": "CoffeeScript",
+    "file_extensions": [
+      ".coffee"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+.+\\s+from\\s+['\\\"].+['\\\"]",
+      "^\\s*require\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "ES-style or require depending on runtime."
+  },
+  {
+    "language": "Crystal",
+    "file_extensions": [
+      ".cr"
+    ],
+    "import_patterns": [
+      "^\\s*require\\s+['\\\"].+['\\\"]",
+      "^\\s*require_relative\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "require and require_relative."
+  },
+  {
+    "language": "D",
+    "file_extensions": [
+      ".d"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+;?"
+    ],
+    "notes": "D uses 'import' for modules."
+  },
+  {
+    "language": "Dart",
+    "file_extensions": [
+      ".dart"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+['\\\"].+['\\\"]\\s*;?",
+      "^\\s*export\\s+['\\\"].+['\\\"]\\s*;?"
+    ],
+    "notes": "import/export with optional show/hide."
+  },
+  {
+    "language": "Delphi/Object Pascal",
+    "file_extensions": [
+      ".pas",
+      ".pp"
+    ],
+    "import_patterns": [
+      "^\\s*uses\\s+[A-Za-z0-9_,\\s]+;"
+    ],
+    "notes": "uses clause lists units."
+  },
+  {
+    "language": "Elixir",
+    "file_extensions": [
+      ".ex",
+      ".exs"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*alias\\s+[A-Za-z0-9_\\.]+(?:\\s+as\\s+[A-Za-z0-9_]+)?",
+      "^\\s*require\\s+[A-Za-z0-9_\\.]+"
+    ],
+    "notes": "import/alias/require macros."
+  },
+  {
+    "language": "Erlang",
+    "file_extensions": [
+      ".erl",
+      ".hrl"
+    ],
+    "import_patterns": [
+      "^\\s*-include(?:_lib)?\\s*\\(\\s*['\\\"].+['\\\"]\\s*\\)\\s*\\.",
+      "^\\s*-module\\("
+    ],
+    "notes": "-include/-include_lib for headers; -module declares module."
+  },
+  {
+    "language": "F#",
+    "file_extensions": [
+      ".fs",
+      ".fsx"
+    ],
+    "import_patterns": [
+      "^\\s*open\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*#load\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "open for namespaces; #load for scripts."
+  },
+  {
+    "language": "Fortran",
+    "file_extensions": [
+      ".f90",
+      ".f95",
+      ".f",
+      ".f03"
+    ],
+    "import_patterns": [
+      "^\\s*use\\s+[A-Za-z0-9_]+",
+      "^\\s*include\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "use for modules; include for files."
+  },
+  {
+    "language": "Go",
+    "file_extensions": [
+      ".go"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+['\\\"].+['\\\"]",
+      "^\\s*import\\s+\\(\\s*([^)]+)\\s*\\)"
+    ],
+    "notes": "single-line and block imports."
+  },
+  {
+    "language": "Groovy",
+    "file_extensions": [
+      ".groovy"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*@Grab\\(.+\\)"
+    ],
+    "notes": "Java-style imports and @Grab."
+  },
+  {
+    "language": "Haskell",
+    "file_extensions": [
+      ".hs",
+      ".lhs"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+(?:qualified\\s+)?[A-Za-z0-9_\\.]+(?:\\s+as\\s+[A-Za-z0-9_]+)?"
+    ],
+    "notes": "qualified/as forms supported."
+  },
+  {
+    "language": "Haxe",
+    "file_extensions": [
+      ".hx"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+;?"
+    ],
+    "notes": "Haxe import statements."
+  },
+  {
+    "language": "HTML (templates)",
+    "file_extensions": [
+      ".html",
+      ".htm"
+    ],
+    "import_patterns": [
+      "^\\s*<!--\\s*#include\\s+file=",
+      "^\\s*<link\\s+rel=\\\"import\\\""
+    ],
+    "notes": "Includes in templating; not a programming language but sometimes used."
+  },
+  {
+    "language": "Java",
+    "file_extensions": [
+      ".java"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+(?:static\\s+)?[A-Za-z0-9_\\.]+\\s*;"
+    ],
+    "notes": "Java import and static import."
+  },
+  {
+    "language": "JavaScript",
+    "file_extensions": [
+      ".js",
+      ".mjs"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+.+\\s+from\\s+['\\\"].+['\\\"]\\s*;?",
+      "^\\s*import\\s+['\\\"].+['\\\"]\\s*;?",
+      "^\\s*(?:const|let|var)\\s+[A-Za-z0-9_]+\\s*=\\s*require\\(['\\\"].+['\\\"]\\)\\s*;?"
+    ],
+    "notes": "ESM import forms and CommonJS require."
+  },
+  {
+    "language": "Julia",
+    "file_extensions": [
+      ".jl"
+    ],
+    "import_patterns": [
+      "^\\s*using\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+"
+    ],
+    "notes": "using and import for modules and symbols."
+  },
+  {
+    "language": "Kotlin",
+    "file_extensions": [
+      ".kt",
+      ".kts"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+(?:\\s+as\\s+[A-Za-z0-9_]+)?"
+    ],
+    "notes": "Kotlin imports with alias support."
+  },
+  {
+    "language": "LabVIEW",
+    "file_extensions": [
+      ".vi"
+    ],
+    "import_patterns": [
+      ""
+    ],
+    "notes": "Graphical language — imports not textual (left blank)."
+  },
+  {
+    "language": "Lisp",
+    "file_extensions": [
+      ".lisp",
+      ".lsp",
+      ".cl"
+    ],
+    "import_patterns": [
+      "^\\s*\\(require\\s+'?[A-Za-z0-9_\\-]+\\)",
+      "^\\s*\\(load\\s+['\\\"]?[^'\\\"]+['\\\"]?\\)"
+    ],
+    "notes": "Various dialect-specific forms (Common Lisp, Scheme, Clojure handled separately)."
+  },
+  {
+    "language": "Lua",
+    "file_extensions": [
+      ".lua"
+    ],
+    "import_patterns": [
+      "^\\s*require\\s*\\(?\\s*['\\\"].+['\\\"]\\s*\\)?",
+      "^\\s*loadfile\\s*\\(?\\s*['\\\"].+['\\\"]\\s*\\)?"
+    ],
+    "notes": "require and loadfile forms."
+  },
+  {
+    "language": "MATLAB",
+    "file_extensions": [
+      ".m"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.:\\*]+",
+      "^\\s*addpath\\(",
+      "^\\s*run\\("
+    ],
+    "notes": "import for packages; addpath/run to include files."
+  },
+  {
+    "language": "Nim",
+    "file_extensions": [
+      ".nim"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*include\\s+[A-Za-z0-9_\\.]+"
+    ],
+    "notes": "import and include."
+  },
+  {
+    "language": "Objective-C",
+    "file_extensions": [
+      ".m",
+      ".mm",
+      ".h"
+    ],
+    "import_patterns": [
+      "^\\s*#\\s*import\\s+[<\\\"][^>\\\"]+[>\\\"]",
+      "^\\s*@import\\s+[A-Za-z0-9_\\.]+\\s*;?"
+    ],
+    "notes": "#import and @import modules."
+  },
+  {
+    "language": "OCaml",
+    "file_extensions": [
+      ".ml",
+      ".mli"
+    ],
+    "import_patterns": [
+      "^\\s*open\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*#use\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "open for modules; #use in toplevel."
+  },
+  {
+    "language": "Pascal",
+    "file_extensions": [
+      ".pas"
+    ],
+    "import_patterns": [
+      "^\\s*uses\\s+[A-Za-z0-9_,\\s]+;"
+    ],
+    "notes": "unit 'uses' clause."
+  },
+  {
+    "language": "Perl",
+    "file_extensions": [
+      ".pl",
+      ".pm"
+    ],
+    "import_patterns": [
+      "^\\s*use\\s+[A-Za-z0-9_:]+(?:\\s+qw\\(.+\\))?",
+      "^\\s*require\\s+['\\\"].+['\\\"]\\s*;?"
+    ],
+    "notes": "use and require."
+  },
+  {
+    "language": "PHP",
+    "file_extensions": [
+      ".php"
+    ],
+    "import_patterns": [
+      "^\\s*use\\s+[A-Za-z0-9_\\\\]+(?:\\s+as\\s+[A-Za-z0-9_]+)?\\s*;",
+      "^\\s*(?:require|include)(?:_once)?\\s*\\(?\\s*['\\\"].+['\\\"]\\s*\\)?\\s*;?"
+    ],
+    "notes": "namespace imports and file includes."
+  },
+  {
+    "language": "PowerShell",
+    "file_extensions": [
+      ".ps1"
+    ],
+    "import_patterns": [
+      "^\\s*Import-Module\\s+[^#\\r\\n]+",
+      "^\\s*\\.\\s+[^#\\r\\n]+"
+    ],
+    "notes": "Import-Module and dot-sourcing."
+  },
+  {
+    "language": "Prolog",
+    "file_extensions": [
+      ".pl"
+    ],
+    "import_patterns": [
+      "^\\s*:-\\s+use_module\\(\\s*library\\([A-Za-z0-9_]+\\)\\s*\\)\\s*\\."
+    ],
+    "notes": "Directive forms vary by Prolog implementation."
+  },
+  {
+    "language": "Python",
+    "file_extensions": [
+      ".py"
+    ],
+    "import_patterns": [
+      "^\\s*from\\s+[A-Za-z0-9_\\.]+\\s+import\\s+.+",
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+(?:\\s+as\\s+[A-Za-z0-9_]+)?",
+      "^\\s*__import__\\("
+    ],
+    "notes": "import, from ... import, and dynamic __import__ (heuristic)."
+  },
+  {
+    "language": "R",
+    "file_extensions": [
+      ".r",
+      ".R"
+    ],
+    "import_patterns": [
+      "^\\s*library\\(\\s*[A-Za-z0-9\\.]+\\s*\\)\\s*$",
+      "^\\s*require\\(\\s*[A-Za-z0-9\\.]+\\s*\\)"
+    ],
+    "notes": "library() and require()."
+  },
+  {
+    "language": "Ruby",
+    "file_extensions": [
+      ".rb"
+    ],
+    "import_patterns": [
+      "^\\s*require(?:_relative)?\\s+['\\\"].+['\\\"]",
+      "^\\s*load\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "require, require_relative, load."
+  },
+  {
+    "language": "Rust",
+    "file_extensions": [
+      ".rs"
+    ],
+    "import_patterns": [
+      "^\\s*use\\s+[A-Za-z0-9_:\\{\\}\\s,]+;",
+      "^\\s*extern\\s+crate\\s+[A-Za-z0-9_]+;?"
+    ],
+    "notes": "use and extern crate."
+  },
+  {
+    "language": "Scala",
+    "file_extensions": [
+      ".scala"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+(?:\\.[A-Za-z0-9_\\{\\},\\s]+)*"
+    ],
+    "notes": "import with selectors/wildcards."
+  },
+  {
+    "language": "Scheme",
+    "file_extensions": [
+      ".scm",
+      ".ss"
+    ],
+    "import_patterns": [
+      "^\\s*\\(import\\s+[^\\)]+\\)"
+    ],
+    "notes": "Racket and other Scheme dialects vary."
+  },
+  {
+    "language": "Smalltalk",
+    "file_extensions": [
+      ".st"
+    ],
+    "import_patterns": [
+      ""
+    ],
+    "notes": "Different Smalltalk systems use image-based loading; textual imports uncommon."
+  },
+  {
+    "language": "Solidity",
+    "file_extensions": [
+      ".sol"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+['\\\"].+['\\\"]\\s*;"
+    ],
+    "notes": "Solidity import 'path';"
+  },
+  {
+    "language": "SQL",
+    "file_extensions": [
+      ".sql"
+    ],
+    "import_patterns": [
+      "^\\s*\\\\i\\s+[^;\\r\\n]+",
+      "^\\s*INCLUDE\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "Client-specific include commands (psql \\i) or tools may support includes."
+  },
+  {
+    "language": "Swift",
+    "file_extensions": [
+      ".swift"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+[A-Za-z0-9_\\.]+"
+    ],
+    "notes": "import modules or frameworks."
+  },
+  {
+    "language": "Tcl",
+    "file_extensions": [
+      ".tcl"
+    ],
+    "import_patterns": [
+      "^\\s*package\\s+require\\s+[A-Za-z0-9_\\.]+",
+      "^\\s*source\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "package require and source."
+  },
+  {
+    "language": "TypeScript",
+    "file_extensions": [
+      ".ts",
+      ".tsx"
+    ],
+    "import_patterns": [
+      "^\\s*import\\s+.+\\s+from\\s+['\\\"].+['\\\"]\\s*;?",
+      "^\\s*import\\s+['\\\"].+['\\\"]\\s*;?"
+    ],
+    "notes": "ES module syntax with types supported."
+  },
+  {
+    "language": "Vala",
+    "file_extensions": [
+      ".vala",
+      ".vapi"
+    ],
+    "import_patterns": [
+      "^\\s*using\\s+[A-Za-z0-9_\\.]+;?"
+    ],
+    "notes": "using for namespaces."
+  },
+  {
+    "language": "VB.NET",
+    "file_extensions": [
+      ".vb"
+    ],
+    "import_patterns": [
+      "^\\s*Imports\\s+[A-Za-z0-9_\\.]+"
+    ],
+    "notes": "Imports statements."
+  },
+  {
+    "language": "Visual Basic (classic)",
+    "file_extensions": [
+      ".vbs",
+      ".vb"
+    ],
+    "import_patterns": [
+      "^\\s*#INCLUDE\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "Classic VB uses #INCLUDE in some tools."
+  },
+  {
+    "language": "Vimscript",
+    "file_extensions": [
+      ".vim"
+    ],
+    "import_patterns": [
+      "^\\s*runtime\\s+.+",
+      "^\\s*source\\s+['\\\"].+['\\\"]"
+    ],
+    "notes": "runtime and source for loading scripts."
+  },
+  {
+    "language": "Zig",
+    "file_extensions": [
+      ".zig"
+    ],
+    "import_patterns": [
+      "^\\s*const\\s+[A-Za-z0-9_]+\\s*=\\s*std\\.import\\([^)]+\\)"
+    ],
+    "notes": "Zig uses std.import for compile-time imports; module system different."
+  }
+]

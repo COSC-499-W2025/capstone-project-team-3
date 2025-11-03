@@ -270,6 +270,7 @@ def extract_code_commit_content_by_author(
                 "error": str(e)
             })
             continue
+        # TODO: Consider informing the user about errors via logging or return value
         if not files_changed_data:
             continue
 

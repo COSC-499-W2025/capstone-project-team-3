@@ -23,8 +23,10 @@ from tree_sitter import Parser, Node
 from tree_sitter_language_pack import get_language, get_parser
 from typing import List, Set
 import importlib.resources as pkg_resources
+import re
 
 _TS_IMPORT_NODES = {}
+_TS_IMPORT_REGEX={}
 
 try:
     # Works even when installed as a package or run inside Docker
@@ -33,6 +35,13 @@ try:
 except Exception as e:
     print(f"Warning: Could not load treesitter_import_keywords.json: {e}")
     _TS_IMPORT_NODES = {}
+
+try:
+    with pkg_resources.files("app.shared").joinpath("import_patterns_regex.json").open() as f:
+        _TS_IMPORT_REGEX = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load import_patterns_regex.json: {e}")
+    _TS_IMPORT_REGEX = {}
 
 def detect_language(file_path: Path) -> str | None:
     """
@@ -119,6 +128,39 @@ def extract_with_treesitter_dynamic(file_content: str, ts_lang: str, language:st
     imports: List[str] = []
     traverse_imports(root, file_content, import_types, imports)
     return imports
+
+def extract_with_regex_fallback(file_content: str, language: str) -> List[str]:
+    """
+    Fallback method to extract import-like statements using regex patterns
+    defined for the given language.
+    """
+    
+    config = None
+    for entry in _TS_IMPORT_REGEX:
+        if isinstance(entry, dict) and entry.get("language", "").lower() == language:
+            config = entry
+            break
+        
+    if not config:
+        return []
+
+    patterns = config.get("import_patterns", [])
+    if not isinstance(patterns, list):
+        return []
+
+    imports = []
+    lines = file_content.splitlines()
+
+    for line in lines:
+        for pattern in patterns:
+            try:
+                if re.search(pattern, line):
+                    imports.append(line.strip())
+                    break
+            except re.error:
+                continue  # skip malformed regex
+
+    return imports
 # ---- End of helper methods -----
 
 def extract_imports(file_content: str, language: str) -> List[str]:
@@ -130,23 +172,21 @@ def extract_imports(file_content: str, language: str) -> List[str]:
     """
     imports: List[str] = []
     language= language.lower()
+    # Try Tree-sitter only if the language is supported
     try:
-        ts_language = get_language(language) 
-    except ValueError:
-        # Language not supported by tree_sitter_language_pack
-        return imports
-    
-    if ts_language:
+        ts_language = get_language(language)
+        imports = extract_with_treesitter_dynamic(file_content, ts_language, language)
+    except (ValueError, Exception):
+        # ValueError: language not supported by tree_sitter_languages
+        # Exception: any runtime error during parsing
+        # In either case, we'll fall through to regex
+        imports = []
+
+    # Fallback to regex
+    if not imports:
         try:
-            imports = extract_with_treesitter_dynamic(file_content, ts_language, language)
+            imports = extract_with_regex_fallback(file_content, language)
         except Exception:
             return []
-
-    # TODO: Fallback to regex
-    # if not imports:
-    #     try:
-    #         imports = _extract_with_regex_fallback(file_content, language)
-    #     except Exception:
-    #         return []
 
     return imports

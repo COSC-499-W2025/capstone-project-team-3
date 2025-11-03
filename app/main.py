@@ -22,14 +22,10 @@ def main():
 
     # Manage user preferences
     user_pref = UserPreferences()
-    prefs = user_pref.get_latest_preferences()
-    if not prefs:
-        print("No user preferences found — let's create them.\n")
+    try:
         user_pref.manage_preferences()
-        prefs = user_pref.get_latest_preferences()
-    else:
-        print("Existing user preferences found.")
-        user_pref.manage_preferences()
+    finally:
+        user_pref.store.close()
 
     
 # Create FastAPI app

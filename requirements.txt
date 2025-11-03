@@ -66,6 +66,8 @@ spacy-loggers==1.0.5
 SQLAlchemy==2.0.44
 srsly==2.5.1
 starlette==0.48.0
+tree-sitter==0.25.2
+tree_sitter_language_pack==0.10.0
 thinc==8.3.6
 tqdm==4.67.1
 typer==0.19.2

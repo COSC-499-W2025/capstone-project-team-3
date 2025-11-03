@@ -72,7 +72,7 @@
 
 **What Went Well:**  
 - Great progress on project overall.
-- 
+- Managed to split up work in a quick and efficient manner allowing us to tackle different parts of the project. 
 
 **What Could Be Improved:**  
 - Completing tasks earlier during the week can help us progress faster with the project. 

@@ -355,3 +355,36 @@ def test_main_prints_error_when_file_input_cancelled(capsys):
         
         captured = capsys.readouterr()
         assert "Root input step failed or was cancelled" in captured.out
+
+        # --- Main Test --- #
+def test_main_user_preferences(temp_store):
+    """
+    Test the integration of user preferences in the main function.
+    """
+    # Mock the UserPreferences class to use the temp_store
+    with patch("app.cli.user_preference_cli.UserPreferences") as MockUserPreferences:
+        # Mock the behavior of manage_preferences and store
+        mock_user_pref = MockUserPreferences.return_value
+        mock_user_pref.store = temp_store
+
+        # Simulate saving preferences
+        temp_store.save_preferences(
+            name="Test User",
+            email="testuser@example.com",
+            github_user="testgithub",
+            education="BSc Computer Science",
+            industry="Technology",
+            job_title="Developer"
+        )
+
+        # Call the main function
+        main()
+
+        # Retrieve the preferences to ensure they were saved correctly
+        prefs = temp_store.get_latest_preferences("testuser@example.com")
+        assert prefs["name"] == "Test User"
+        assert prefs["email"] == "testuser@example.com"
+        assert prefs["github_user"] == "testgithub"
+        assert prefs["education"] == "BSc Computer Science"
+        assert prefs["industry"] == "Technology"
+        assert prefs["job_title"] == "Developer"

@@ -18,10 +18,12 @@ class UserPreferences:
         """
         Prompt user to enter or update their preferences via CLI.
         """
-        email = input("Enter your email: ").strip()
-        if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email) :
-            print("Invalid email format. Please try again.")
-            return
+        while True:
+            email = input("Enter your email: ").strip()
+            if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+                print("Invalid email format. Please try again.")
+            else:
+                break  # Exit the loop when a valid email is entered
 
         existing_preferences = self.store.get_latest_preferences(email)
         if existing_preferences:

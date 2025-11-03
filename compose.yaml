@@ -16,6 +16,8 @@ services:
     volumes:
       - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
+    environment:
+      - PROMPT_ROOT=1
     working_dir: /app
     stdin_open: true
     tty: true

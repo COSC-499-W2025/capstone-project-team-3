@@ -4,13 +4,14 @@
 #  "detect_language":"str" --done
 #   "lines_of_code": "integer",    ---done      
 #   "docstring_count": "integer", ---done
+
 #   "imports": ["string"],                 // Third-party + standard libs //Would need language detection and extracting file content
+#  Imports only returns full import statements, working to only extract the library...
+
 #   "dependencies_internal": ["string"],   // Local imports within the project
 #   "top_keywords": ["string"],            // Most frequent meaningful identifiers
 #   "entities": { FileEntities },          // Structural elements (functions, classes, etc.)
 #   "metrics": { FileMetrics },            // Per-file stats
-#   "roles_detected": ["string"],          // e.g. ["training", "api"]
-#   "summary_snippet": "string"            // Optional 1–2 line summary
 
 from pathlib import Path
 from typing import Union, List, Dict
@@ -27,10 +28,7 @@ _TS_IMPORT_NODES = {}
 
 try:
     # Works even when installed as a package or run inside Docker
-    # with pkg_resources.files("app.shared").joinpath("treesitter_import_keywords.json").open() as f:
-    #     _TS_IMPORT_NODES = json.load(f)
-    json_path = Path(__file__).resolve().parents[2] / "shared" / "treesitter_import_keywords.json"
-    with open(json_path, "r", encoding="utf-8") as f:
+    with pkg_resources.files("app.shared").joinpath("treesitter_import_keywords.json").open() as f:
         _TS_IMPORT_NODES = json.load(f)
 except Exception as e:
     print(f"Warning: Could not load treesitter_import_keywords.json: {e}")
@@ -133,8 +131,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
     imports: List[str] = []
     language= language.lower()
     try:
-        ts_language = get_language(language)
-        print(ts_language)
+        ts_language = get_language(language) 
     except ValueError:
         # Language not supported by tree_sitter_language_pack
         return imports
@@ -145,7 +142,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
         except Exception:
             return []
 
-    # Fallback to regex
+    # TODO: Fallback to regex
     # if not imports:
     #     try:
     #         imports = _extract_with_regex_fallback(file_content, language)
@@ -153,7 +150,3 @@ def extract_imports(file_content: str, language: str) -> List[str]:
     #         return []
 
     return imports
-
-contents=extract_contents(Path("app/utils/path_utils.py"))
-language= detect_language(Path("app/utils/path_utils.py"))
-print(extract_imports(contents,language))

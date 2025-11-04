@@ -263,8 +263,8 @@ def extract_code_commit_content_by_author(
             files_changed_data = []
             for d in diffs:
                 #  # Skip binary files - only process code/text files
-                # if not is_code_file(d): 
-                #     continue
+                if not is_code_file(d): 
+                    continue
                 status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")
@@ -276,7 +276,7 @@ def extract_code_commit_content_by_author(
                 files_changed_data.append({
                     "status": status,
                     "path_before": d.a_path,
-                    "path_after": d.b_path,
+                    "path_after": d.b_path, 
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
                 })

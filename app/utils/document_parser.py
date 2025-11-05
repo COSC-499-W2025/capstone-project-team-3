@@ -4,7 +4,6 @@ Document parser for non-code files.
 import json
 from pathlib import Path
 
-# Optional dependencies are imported at module import time for clarity.
 # If they're not installed, we keep their names as None and raise the
 # same informative errors later when extraction is attempted.
 try:
@@ -59,18 +58,24 @@ def parse_documents_to_json(file_paths, output_path):
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
+    # Return the parsed object in JSON format
+    return output_data
+
 def _extract_pdf_text(file_path):
     """Extract text from PDF file."""
     try:
-        import PyPDF2
+        if PdfReader is None:
+            raise ImportError
         with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
+            pdf_reader = PdfReader(file)
             text = ""
             for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
+                # page.extract_text() may return None for pages with no extractable text
+                page_text = page.extract_text() or ""
+                text += page_text + "\n"
             return text.strip()
     except ImportError:
-        raise Exception("PyPDF2 not installed")
+        raise Exception("pypdf not installed")
     except Exception as e:
         raise Exception(f"PDF extraction failed: {e}")
 

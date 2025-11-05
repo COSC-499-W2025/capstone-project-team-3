@@ -4,6 +4,19 @@ Document parser for non-code files.
 import json
 from pathlib import Path
 
+# Optional dependencies are imported at module import time for clarity.
+# If they're not installed, we keep their names as None and raise the
+# same informative errors later when extraction is attempted.
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
+
+try:
+    import docx
+except Exception:
+    docx = None
+
 def parse_documents_to_json(file_paths, output_path):
     """
     Parse non-code documents and save results to JSON.

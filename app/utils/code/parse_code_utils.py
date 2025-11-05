@@ -5,7 +5,7 @@
 #   "lines_of_code": "integer",    ---done      
 #   "docstring_count": "integer", ---done
 
-#   "imports": ["string"],                 // Third-party + standard libs //Would need language detection and extracting file content
+#   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
 #  Imports only returns full import statements, working to only extract the library...
 
 #   "dependencies_internal": ["string"],   // Local imports within the project
@@ -19,7 +19,7 @@ import json
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from pygount import SourceAnalysis
-from tree_sitter import Parser, Node
+from tree_sitter import Parser, Node, Query
 from tree_sitter_language_pack import get_language, get_parser
 from typing import List, Set
 import importlib.resources as pkg_resources
@@ -27,6 +27,7 @@ import re
 
 _TS_IMPORT_NODES = {}
 _TS_IMPORT_REGEX={}
+_TS_IMPORT_QUERIES={}
 
 try:
     # Works even when installed as a package or run inside Docker
@@ -42,6 +43,13 @@ try:
 except Exception as e:
     print(f"Warning: Could not load import_patterns_regex.json: {e}")
     _TS_IMPORT_REGEX = {}
+    
+try:
+    with pkg_resources.files("app.shared").joinpath("library.json").open() as f:
+        _TS_IMPORT_QUERIES = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load library.json: {e}")
+    _TS_IMPORT_QUERIES = {}
 
 def detect_language(file_path: Path) -> str | None:
     """
@@ -56,7 +64,8 @@ def detect_language(file_path: Path) -> str | None:
     
     try:
         lexer = guess_lexer_for_filename(file_path.name, file_path.read_text(encoding="utf-8"))
-        return lexer.name
+        language= lexer.name
+        return re.split(r'[ +]', language)[0]
     except ClassNotFound:
         return None
 
@@ -190,3 +199,26 @@ def extract_imports(file_content: str, language: str) -> List[str]:
             return []
 
     return imports
+
+def extract_libraries(import_statements: List[str], language: str) -> List[str]:
+    """
+    Extract library/module names from a list of import statements.
+
+    Returns:
+        List of library/module names.
+    """
+    language = language.lower()
+    patterns = _TS_IMPORT_QUERIES.get(language, [])
+    libraries = []
+
+    for stmt in import_statements:
+        for pattern in patterns:
+            match = re.search(pattern, stmt)
+            if match:
+                # If regex has multiple groups, take the first non-empty group
+                for g in match.groups():
+                    if g and not g.startswith((".", "/")):
+                        libraries.append(g)
+                        break
+
+    return libraries

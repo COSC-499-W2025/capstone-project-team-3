@@ -22,6 +22,14 @@ def main():
         print("\n Cannot start application without consent. Please provide consent to proceed.")
         sys.exit(1)
 
+    # Manage user preferences
+    user_pref = UserPreferences()
+    try:
+        user_pref.manage_preferences()
+    finally:
+        user_pref.store.close()
+        print("User preferences stored successfully.")
+
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):
@@ -34,13 +42,6 @@ def main():
     print("App started successfully")
     seed_db()  # automatically populate test data
     print("Database started")
-
-    # Manage user preferences
-    user_pref = UserPreferences()
-    try:
-        user_pref.manage_preferences()
-    finally:
-        user_pref.store.close()
 
     
 # Create FastAPI app

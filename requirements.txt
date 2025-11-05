@@ -41,6 +41,7 @@ pluggy==1.6.0
 preshed==3.0.10
 pydantic==2.12.0
 pydantic_core==2.41.1
+pygount==3.1.0
 Pygments==2.19.2
 pytest==8.4.2
 pytest-asyncio==1.2.0
@@ -65,6 +66,8 @@ spacy-loggers==1.0.5
 SQLAlchemy==2.0.44
 srsly==2.5.1
 starlette==0.48.0
+tree-sitter==0.25.2
+tree_sitter_language_pack==0.10.0
 thinc==8.3.6
 tqdm==4.67.1
 typer==0.19.2
@@ -80,3 +83,4 @@ websockets==15.0.1
 wrapt==1.17.3
 pypdf>=3.0.0
 python-docx==1.2.0
+google-generativeai>=0.8.0

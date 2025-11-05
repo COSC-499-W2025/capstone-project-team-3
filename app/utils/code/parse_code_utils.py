@@ -217,6 +217,7 @@ def extract_libraries(import_statements: List[str], language: str) -> List[str]:
             if match:
                 # If regex has multiple groups, take the first non-empty group
                 for g in match.groups():
+                    # Do not include project module imports (does not work for all languages)
                     if g and not g.startswith((".", "/")):
                         libraries.append(g)
                         break

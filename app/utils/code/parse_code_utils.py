@@ -209,17 +209,24 @@ def extract_libraries(import_statements: List[str], language: str) -> List[str]:
     """
     language = language.lower()
     patterns = _TS_IMPORT_QUERIES.get(language, [])
-    libraries = []
+    libraries = set()
 
     for stmt in import_statements:
         for pattern in patterns:
-            match = re.search(pattern, stmt)
-            if match:
-                # If regex has multiple groups, take the first non-empty group
-                for g in match.groups():
-                    # Do not include project module imports (does not work for all languages)
-                    if g and not g.startswith((".", "/")):
-                        libraries.append(g)
-                        break
+            matches = re.findall(pattern, stmt)
+            
+            for match in matches:
+                # match may be a tuple if multiple groups exist
+                if isinstance(match, tuple):
+                    match = next((g for g in match if g), None)
+                if not match:
+                    continue #if there’s no valid match, skip the rest of this loop iteration and move on to the next one.
 
-    return libraries
+                # Split multi-imports like "os, sys" or "os ,sys"
+                parts = re.split(r"\s*,\s*", match)
+                for lib in parts:
+                    lib = lib.strip().strip('\'"')
+                    if lib and not lib.startswith((".", "/")):
+                        libraries.add(lib)
+
+    return list(libraries)

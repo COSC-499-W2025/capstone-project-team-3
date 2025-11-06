@@ -9,7 +9,8 @@ from app.utils.code.parse_code_utils import (detect_language,
                                              collect_node_types,
                                             traverse_imports,
                                             extract_with_treesitter_dynamic,
-                                            extract_imports)
+                                            extract_imports,
+                                            extract_libraries)
 
 @pytest.fixture
 def sample_file(tmp_path):
@@ -126,3 +127,25 @@ def test_extract_imports_falls_back_to_regex_when_treesitter_fails():
             with patch("app.utils.code.parse_code_utils._TS_IMPORT_REGEX", mock_regex_config):
                 result = extract_imports(file_content, language)
     assert result == ["const fs = require('fs');"]
+    
+def test_extract_libraries_filters_relative_and_extracts_symbols():
+    """Test that extract_libraries returns modules and symbols correctly, ignoring relative imports."""
+    import_statements = [
+        "import os, json",
+        "import ./local_module",
+        "from pathlib import Path",
+        "from typing import Optional,Union"
+    ]
+
+    patterns_python = {
+        "python": [
+            r"from\s+([\w\.]+)\s+import\s+([*\w\.\s,]+)",
+            r"import\s+([\w\.]+(?:\s*,\s*[\w\.]+)*)"
+        ]
+    }
+
+    with patch("app.utils.code.parse_code_utils._TS_IMPORT_QUERIES", patterns_python):
+        result = extract_libraries(import_statements, "python")
+        
+    expected = {'Optional', 'Path', 'Union', 'json', 'os', 'pathlib', 'typing'}
+    assert set(result) == expected

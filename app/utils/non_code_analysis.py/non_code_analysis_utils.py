@@ -106,10 +106,10 @@ def store_non_code_analysis_results(final_result):
     pass
 
 
-def analyze_non_code_files( parsed_files):
+def analyze_non_code_files(parsed_files):
     """
-    Main Flow: preprocess files, aggregate summaries, generate prompt,
-    call LLM, and return analysis results.
+    Entry & Main Flow: pre-process files (LLM1), aggregate summaries, generate prompt,
+    call LLM2, store analysis results.
     """
     # 1. Pre-Process files (Use LLM1)
     pre_process_non_code_files(parsed_files)

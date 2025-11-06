@@ -91,7 +91,7 @@ def create_non_code_analysis_prompt(aggregated_project, llm2_metrics):
 # Step 4: Analyze summries using the second LLM
 def generate_non_code_insights(PROMPT):
     """
-    Generates llm2_metrics
+    Generates llm2_metrics by calling LLM2 with the formatted prompt.
     Returns Final_Result
     """
     pass

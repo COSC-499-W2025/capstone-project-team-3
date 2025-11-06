@@ -1,12 +1,14 @@
 
 from cmd import PROMPT
 
-
 parsed_file_structure = {
-"file_type": "pdf",  # Example values; one of ["pdf", "docx", "pptx", "txt"]
-"file_name": "capstone_project_proposal_v3.pdf",
+"path": str(file_path),
+"type": "pdf",  # Example values; one of ["pdf", "docx", "pptx", "txt"]
+"name": "capstone_project_proposal_v3.pdf",
 "file_size": 245760,  # bytes; used for size filtering
-"text_content":"Project Overview: This proposal outlines goals, milestones, stakeholders, and risks for the Team 3 capstone..."
+"content":"Project Overview: This proposal outlines goals, milestones, stakeholders, and risks for the Team 3 capstone...",
+"success": False,
+"error": ""
 }
 
 

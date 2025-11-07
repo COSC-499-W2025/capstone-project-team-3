@@ -291,3 +291,33 @@ def extract_code_commit_content_by_author(
             break
 
     return json.dumps(out, indent=2)
+
+def extract_readme(path: Union[str, Path]) -> Optional[str]:
+    """
+    Extracts the content of a README file from the latest commit (HEAD) of a Git repository.
+    Checks only top-level files whose names start with 'readme' (case-insensitive)
+    and end with one of the common text-based extensions.
+
+    Args:
+        path (Union[str, Path]): Path to the Git repository.
+
+    Returns:
+        Optional[str]: The README content as a string, or None if not found.
+    """
+    try:
+        repo = get_repo(path)
+        if not repo.head.is_valid():
+            return None  # Empty repo
+
+        tree = repo.head.commit.tree
+        allowed_exts = ['', '.md', '.rst', '.txt']
+
+        for blob in tree.blobs:
+            name = blob.name.lower()
+            if name.startswith('readme') and any(name.endswith(ext) for ext in allowed_exts):
+                return blob.data_stream.read().decode('utf-8', errors='replace')
+
+        return None
+
+    except Exception:
+        return None

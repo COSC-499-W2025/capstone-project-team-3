@@ -1,7 +1,6 @@
-from ast import Dict
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 from datetime import datetime
 import os, json
 from typing import Optional
@@ -295,10 +294,9 @@ def extract_code_commit_content_by_author(
 
 _ALLOWED_EXTS_FOR_README = {"", ".md", ".rst", ".txt", ".markdown", ".adoc", ".org"}
 
-def extract_all_readmes_traverse(path: Union[str, Path]) -> Dict[str, str]:
+def extract_all_readmes(path: Union[str, Path]) -> Dict[str, str]:
     """
-    Cleaner version using tree.traverse().
-    Finds README* anywhere in HEAD, skips binary-looking blobs,
+    Finds files that start with readme anywhere in repo, skips binary-looking blobs,
     caps read size, and decodes as UTF-8 (replace on errors).
     """
     readmes: Dict[str, str] = {}
@@ -325,7 +323,7 @@ def extract_all_readmes_traverse(path: Union[str, Path]) -> Dict[str, str]:
             try:
                 stream = item.data_stream
                 head = stream.read(4096)
-                if _is_probably_binary(head):  
+                if _is_binary_heuristic(head):  
                     continue
 
                 # Clamp to avoid over-read if head already exceeded max_bytes
@@ -343,7 +341,7 @@ def extract_all_readmes_traverse(path: Union[str, Path]) -> Dict[str, str]:
     except Exception:
         return readmes
     
-def _is_probably_binary(sample: bytes) -> bool:
+def _is_binary_heuristic(sample: bytes) -> bool:
     """
     Heuristically detects if a file is binary.
 

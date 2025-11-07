@@ -1,3 +1,4 @@
+from ast import Dict
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
 from typing import Union
@@ -292,32 +293,74 @@ def extract_code_commit_content_by_author(
 
     return json.dumps(out, indent=2)
 
-def extract_readme(path: Union[str, Path]) -> Optional[str]:
-    """
-    Extracts the content of a README file from the latest commit (HEAD) of a Git repository.
-    Checks only top-level files whose names start with 'readme' (case-insensitive)
-    and end with one of the common text-based extensions.
+_ALLOWED_EXTS_FOR_README = {"", ".md", ".rst", ".txt", ".markdown", ".adoc", ".org"}
 
-    Args:
-        path (Union[str, Path]): Path to the Git repository.
-
-    Returns:
-        Optional[str]: The README content as a string, or None if not found.
+def extract_all_readmes_traverse(path: Union[str, Path]) -> Dict[str, str]:
     """
+    Cleaner version using tree.traverse().
+    Finds README* anywhere in HEAD, skips binary-looking blobs,
+    caps read size, and decodes as UTF-8 (replace on errors).
+    """
+    readmes: Dict[str, str] = {}
+    max_bytes = 2_000_000  # 2MB limit
+
     try:
         repo = get_repo(path)
         if not repo.head.is_valid():
-            return None  # Empty repo
+            return readmes
 
-        tree = repo.head.commit.tree
-        allowed_exts = ['', '.md', '.rst', '.txt']
+        for item in repo.head.commit.tree.traverse():
+            if item.type != "blob":
+                continue
 
-        for blob in tree.blobs:
-            name = blob.name.lower()
-            if name.startswith('readme') and any(name.endswith(ext) for ext in allowed_exts):
-                return blob.data_stream.read().decode('utf-8', errors='replace')
+            name_lower = item.name.lower()
+            if not name_lower.startswith("readme"):
+                continue
 
-        return None
+            # Proper extension check
+            ext = Path(name_lower).suffix  # "" if no extension
+            if ext not in _ALLOWED_EXTS_FOR_README:
+                continue
+
+            try:
+                stream = item.data_stream
+                head = stream.read(4096)
+                if _is_probably_binary(head):  
+                    continue
+
+                # Clamp to avoid over-read if head already exceeded max_bytes
+                remaining_budget = max(0, max_bytes - len(head))
+                rest = stream.read(remaining_budget)
+                data = head + rest
+
+                text = data.decode("utf-8", errors="replace")
+                readmes[item.path] = text  # repo-relative path
+            except Exception:
+                continue
+
+        return readmes
 
     except Exception:
-        return None
+        return readmes
+    
+def _is_probably_binary(sample: bytes) -> bool:
+    """
+    Heuristically detects if a file is binary.
+
+    The check follows two simple rules:
+      1. If the sample contains any NUL byte (`b'\\x00'`), it's considered binary.
+      2. Otherwise, count printable ASCII and whitespace characters 
+         (tab, newline, carriage return). If fewer than ~85% of bytes are printable, 
+         it's likely binary.
+
+    This lightweight heuristic reliably filters out images, PDFs, and other 
+    non-text blobs while keeping normal text and Markdown files.
+    """
+    if not sample:
+        return False
+    if b"\x00" in sample:
+        return True
+    textish = sum(c in (9, 10, 13) or 32 <= c <= 126 for c in sample)
+    ratio = textish / len(sample)
+    return ratio < 0.85
+

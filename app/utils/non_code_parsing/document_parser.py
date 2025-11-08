@@ -3,7 +3,7 @@ Document parser for non-code files.
 """
 import json
 from pathlib import Path
-from file_size_checker import is_file_too_large, MAX_FILE_SIZE_MB
+from .file_size_checker import is_file_too_large, MAX_FILE_SIZE_MB
 
 
 # If they're not installed, we keep their names as None and raise the
@@ -38,6 +38,8 @@ def parse_documents_to_json(file_paths, output_path):
         try:
             if not file_path.exists():
                 result["error"] = "File does not exist"
+            elif is_file_too_large(file_path):
+                result["error"] = f"File size exceeds {MAX_FILE_SIZE_MB} MB limit"
             elif file_path.suffix.lower() == '.pdf':
                 result["content"] = _extract_pdf_text(file_path)
                 result["success"] = True
@@ -47,8 +49,6 @@ def parse_documents_to_json(file_paths, output_path):
             elif file_path.suffix.lower() in ['.txt', '.md', '.markdown']:
                 result["content"] = _extract_text_file(file_path)
                 result["success"] = True
-            elif is_file_too_large(file_path):
-                result["error"] = f"File size exceeds {MAX_FILE_SIZE_MB} MB limit"
             else:
                 result["error"] = f"Unsupported file type: {file_path.suffix}"
             

@@ -63,7 +63,6 @@ def generate_resume_summary_from_parsed(metrics: Dict, llm_client=None) -> Union
             f"{metrics}\n"
             "Generate resume-like bullet points summarizing the user's contributions, "
             "including key activities, skills, technologies, and impact."
-            "Output ONLY the bullet points as a Python list of strings. "
             "Do NOT include any explanations, headings, or options—just the list."
         )
         response = llm_client.generate(prompt)
@@ -164,7 +163,6 @@ def generate_github_resume_summary(metrics: Dict, llm_client=None) -> Union[str,
             f"{metrics}\n"
             "Generate resume-like bullet points summarizing the user's contributions, "
             "including key activities, skills, technologies, and impact."
-            "Output ONLY the bullet points as a Python list of strings. "
             "Do NOT include any explanations, headings, or options—just the list."
         )
         response = llm_client.generate(prompt)

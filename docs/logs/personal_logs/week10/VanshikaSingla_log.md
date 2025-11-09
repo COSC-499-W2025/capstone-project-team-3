@@ -52,8 +52,8 @@
 | #207          | Mock PDF and other file types for testing | Completed  |
 | #205         | Testing for parsing non code | Completed  |
 | #170          | Parse function for non-code files and testing the functioning | Completed |
-| #219         | File size limit for Successful analysis| In review |
-| #220        | Test cases for File size | In review|
+| #219         | File size limit for Successful analysis| Completed |
+| #220        | Test cases for File size | Completed|
 | #186           | Colaborating on Researching LLM/non-LLM implementation for non code file analysis. | In-Progress |
 
 ---

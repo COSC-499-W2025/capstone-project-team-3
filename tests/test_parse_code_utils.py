@@ -10,7 +10,8 @@ from app.utils.code.parse_code_utils import (detect_language,
                                             traverse_imports,
                                             extract_with_treesitter_dynamic,
                                             extract_imports,
-                                            extract_libraries)
+                                            extract_libraries,
+                                            map_language_for_treesitter)
 
 @pytest.fixture
 def sample_file(tmp_path):
@@ -102,7 +103,19 @@ def test_extract_with_treesitter_dynamic_finds_imports_via_heuristic():
             )
     assert result == ["require('fs')"]
 
+def test_map_language_for_treesitter_maps_known_language():
+    """Test that map_language_for_treesitter correctly maps known language names to Tree-sitter names."""
+    mock_mapping = {"Python": "python", "C++": "cpp"}
 
+    with patch("app.utils.code.parse_code_utils._TS_LANGUAGE_MAPPING", mock_mapping):
+
+        # Should match a known language (case-insensitive)
+        assert map_language_for_treesitter("PYTHON") == "python"
+        # Should trim whitespace
+        assert map_language_for_treesitter("  C++  ") == "cpp"
+        # Should fall back to lowercase when not in mapping
+        assert map_language_for_treesitter("Rust") == "rust"
+        
 def test_extract_imports_handles_unsupported_language_gracefully():
     """Test that extract_imports returns empty list when language is unsupported."""
     content = "import x from 'y';"

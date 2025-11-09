@@ -28,6 +28,7 @@ import re
 _TS_IMPORT_NODES = {}
 _TS_IMPORT_REGEX={}
 _TS_IMPORT_QUERIES={}
+_TS_LANGUAGE_MAPPING={}
 
 try:
     # Works even when installed as a package or run inside Docker
@@ -50,6 +51,13 @@ try:
 except Exception as e:
     print(f"Warning: Could not load library.json: {e}")
     _TS_IMPORT_QUERIES = {}
+    
+try:
+    with pkg_resources.files("app.shared").joinpath("language_mapping.json").open() as f:
+        _TS_LANGUAGE_MAPPING = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load language_mapping.json: {e}")
+    _TS_LANGUAGE_MAPPING = {}
 
 def detect_language(file_path: Path) -> str | None:
     """
@@ -170,6 +178,16 @@ def extract_with_regex_fallback(file_content: str, language: str) -> List[str]:
                 continue  # skip malformed regex
 
     return imports
+
+def map_language_for_treesitter(language: str) -> str:
+    """Map detected language (from Pygments) to Tree-sitter naming."""
+    if not language:
+        return language
+    
+    lang_lower = language.strip().lower()
+    # Build a lowercased mapping for lookups
+    mapping = {k.lower(): v for k, v in _TS_LANGUAGE_MAPPING.items()}
+    return mapping.get(lang_lower, lang_lower)
 # ---- End of helper methods -----
 
 def extract_imports(file_content: str, language: str) -> List[str]:
@@ -180,9 +198,9 @@ def extract_imports(file_content: str, language: str) -> List[str]:
     Works fully offline, detects import-like node types dynamically.
     """
     imports: List[str] = []
-    language= language.lower()
     # Try Tree-sitter only if the language is supported
     try:
+        language = map_language_for_treesitter(language)
         ts_language = get_language(language)
         imports = extract_with_treesitter_dynamic(file_content, ts_language, language)
     except (ValueError, Exception):
@@ -193,6 +211,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
 
     # Fallback to regex
     if not imports:
+        language= language.lower()
         try:
             imports = extract_with_regex_fallback(file_content, language)
         except Exception:
@@ -207,7 +226,7 @@ def extract_libraries(import_statements: List[str], language: str) -> List[str]:
     Returns:
         List of library/module names.
     """
-    language = language.lower()
+    language = map_language_for_treesitter(language)
     patterns = _TS_IMPORT_QUERIES.get(language, [])
     libraries = set()
 

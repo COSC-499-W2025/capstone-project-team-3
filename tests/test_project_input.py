@@ -1,4 +1,5 @@
 from app.utils.scan_utils import (
+    run_scan_flow,
     scan_project_files,
     extract_file_metadata,
     get_project_signature,
@@ -186,3 +187,24 @@ def test_extract_file_signature_retries(tmp_path):
     with patch.object(Path, "stat", flaky_stat):
         sig = extract_file_signature(test_file, root, retries=2)
         assert sig != "ERROR_SIGNATURE"
+        
+def test_run_scan_flow_returns_files_and_stores_in_db(tmp_path):
+    """Test that run_scan_flow returns the correct files and stores signatures in DB."""
+    # Create some files in the temp directory
+    (tmp_path / "a.py").write_text("print('a')")
+    (tmp_path / "b.txt").write_text("hello")
+    (tmp_path / "ignore.mp3").write_text("audio")
+
+    # Exclude .mp3 files by default 
+    files = run_scan_flow(str(tmp_path), exclude=[])
+    file_names = [f.name for f in files]
+
+    # Should include a.py and b.txt, but not ignore.mp3
+    assert "a.py" in file_names
+    assert "b.txt" in file_names
+    assert "ignore.mp3" not in file_names
+
+    # Check that the project signature is now in the DB
+    file_sigs = [extract_file_signature(f, tmp_path) for f in files]
+    proj_sig = get_project_signature(file_sigs)
+    assert project_signature_exists(proj_sig) is True

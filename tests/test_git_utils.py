@@ -12,13 +12,14 @@ from app.utils.git_utils import (detect_git,
     extract_contribution_by_filetype,
     extract_branches_for_author
     ,is_collaborative,
-    extract_code_commit_content_by_author)
+    extract_code_commit_content_by_author,
+    extract_all_readmes)
 from git import Repo, Actor
 from pathlib import Path
-import time, json, pytest
+import time, json, pytest, os
 from unittest.mock import MagicMock, patch
 
-import app.utils.git_utils as git_utils, io
+import app.utils.git_utils as git_utils
 
 
 def test_detect_git_with_git_repo(tmp_path):
@@ -363,3 +364,111 @@ def test_invalid_repo_returns_empty_list(mock_get_repo):
     result_json = extract_code_commit_content_by_author("/invalid", "alice@example.com")
     data = json.loads(result_json)
     assert data == [] 
+    
+
+# --- Tests for extract_all_readmes() ---
+
+def test_extracts_root_readme_md(tmp_path):
+    """Should find a README.md in the repo root."""
+
+    repo = Repo.init(tmp_path)
+    readme_path = tmp_path / "README.md"
+
+    readme_path.write_text("# Hello World\nThis is a test README.")
+    repo.index.add(["README.md"])
+    repo.index.commit("Add README.md")
+
+    result = extract_all_readmes(tmp_path)
+    assert "README.md" in result
+    assert "Hello World" in result["README.md"]
+
+def test_extracts_nested_readmes(tmp_path):
+    """Should find READMEs in subdirectories."""
+
+    repo = Repo.init(tmp_path)
+    os.makedirs(tmp_path / "docs")
+    (tmp_path / "docs" / "README.txt").write_text("Docs readme content.")
+    repo.index.add(["docs/README.txt"])
+    repo.index.commit("Add docs README")
+
+    result = extract_all_readmes(tmp_path)
+    assert "docs/README.txt" in result
+    assert "Docs readme" in result["docs/README.txt"]
+
+def test_ignores_non_readme_files(tmp_path):
+    """Should ignore files not starting with README."""
+
+    repo = Repo.init(tmp_path)
+    (tmp_path / "NOT_README.md").write_text("Should not be read.")
+    repo.index.add(["NOT_README.md"])
+    repo.index.commit("Add non-readme")
+
+    result = extract_all_readmes(tmp_path)
+    assert result == {}  # no files found
+
+def test_skips_binary_files(tmp_path):
+    """Should skip files that look binary (contain null bytes)."""
+
+    repo = Repo.init(tmp_path)
+    binary_data = b"\x00\x01\x02Hello"
+
+    (tmp_path / "README.md").write_bytes(binary_data)
+    repo.index.add(["README.md"])
+    repo.index.commit("Add binary README")
+
+    result = extract_all_readmes(tmp_path)
+    assert result == {}  # binary skipped
+
+def test_skips_unreadable_files(tmp_path):
+    """Files with NUL bytes are treated as binary and skipped."""
+    from git import Repo
+    repo = Repo.init(tmp_path)
+
+    (tmp_path / "README.md").write_bytes(b"\xff\xfe\x00\x00SomeText")  # contains NULs
+    repo.index.add(["README.md"])
+    repo.index.commit("Add unreadable README")
+
+    result = extract_all_readmes(tmp_path)
+    assert result == {}
+
+def test_multiple_readmes_found(tmp_path):
+    """Should handle multiple READMEs across the repo."""
+
+    repo = Repo.init(tmp_path)
+    (tmp_path / "README.md").write_text("Main readme")
+    os.makedirs(tmp_path / "docs")
+    (tmp_path / "docs" / "README.rst").write_text("Docs readme")
+    repo.index.add(["README.md", "docs/README.rst"])
+    repo.index.commit("Add multiple readmes")
+
+    result = extract_all_readmes(tmp_path)
+    assert len(result) == 2
+
+    assert "README.md" in result
+    assert "docs/README.rst" in result
+
+def test_empty_repo_returns_empty_dict(tmp_path):
+    """Should return empty dict for empty repo."""
+
+    repo = Repo.init(tmp_path)
+    result = extract_all_readmes(tmp_path)
+    assert result == {}
+
+def test_large_readme_respects_max_size(tmp_path):
+    """Should cap reading at ~2MB and not crash on large files."""
+    repo = Repo.init(tmp_path)
+
+    large_text = "A" * (2_500_000)  # 2.5 MB of text
+    (tmp_path / "README.md").write_text(large_text)
+    repo.index.add(["README.md"])
+    repo.index.commit("Add large README")
+
+    result = extract_all_readmes(tmp_path)
+
+    assert "README.md" in result
+    content = result["README.md"]
+
+    # Should be truncated to the configured limit (2MB)
+    assert len(content.encode("utf-8")) <= 2_000_000
+    # Content should look correct (still valid text, not binary)
+    assert all(ch == "A" for ch in content[:1000])

@@ -54,7 +54,8 @@ except Exception as e:
     
 try:
     with pkg_resources.files("app.shared").joinpath("language_mapping.json").open() as f:
-        _TS_LANGUAGE_MAPPING = json.load(f)
+        _TS_LANGUAGE_MAPPING_LOAD = json.load(f)
+        _TS_LANGUAGE_MAPPING={k.strip().lower(): v for k, v in _TS_LANGUAGE_MAPPING_LOAD.items()}
 except Exception as e:
     print(f"Warning: Could not load language_mapping.json: {e}")
     _TS_LANGUAGE_MAPPING = {}
@@ -73,7 +74,9 @@ def detect_language(file_path: Path) -> str | None:
     try:
         lexer = guess_lexer_for_filename(file_path.name, file_path.read_text(encoding="utf-8"))
         language= lexer.name
-        return re.split(r'[ +]', language)[0]
+        language = re.split(r'\+(?=[A-Za-z])', language)[0].strip()
+        language = language.split()[0]
+        return language
     except ClassNotFound:
         return None
 
@@ -184,10 +187,9 @@ def map_language_for_treesitter(language: str) -> str:
     if not language:
         return language
     
-    lang_lower = language.strip().lower()
-    # Build a lowercased mapping for lookups
-    mapping = {k.lower(): v for k, v in _TS_LANGUAGE_MAPPING.items()}
-    return mapping.get(lang_lower, lang_lower)
+    lang_key = language.strip().lower()
+    return _TS_LANGUAGE_MAPPING.get(lang_key, lang_key)
+
 # ---- End of helper methods -----
 
 def extract_imports(file_content: str, language: str) -> List[str]:

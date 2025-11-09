@@ -105,7 +105,8 @@ def test_extract_with_treesitter_dynamic_finds_imports_via_heuristic():
 
 def test_map_language_for_treesitter_maps_known_language():
     """Test that map_language_for_treesitter correctly maps known language names to Tree-sitter names."""
-    mock_mapping = {"Python": "python", "C++": "cpp"}
+    mock_mapping_raw = {"Python": "python", "C++": "cpp"}
+    mock_mapping = {k.strip().lower(): v for k, v in mock_mapping_raw.items()}
 
     with patch("app.utils.code.parse_code_utils._TS_LANGUAGE_MAPPING", mock_mapping):
 

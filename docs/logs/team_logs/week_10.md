@@ -60,7 +60,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #79, #81, #83, #86, #139, #153, #86, #183, #186, #196 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
 | #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
-| #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |
+| #170, #205, #219, #220, #186 | Mock PDF and other file types for testing,  Testing for parsing non code, Parse function for non-code files and testing the functioning,File size limit for Successful analysis,Test cases for File size,Colaborating on Researching LLM/non-LLM implementation for non code file analysis.    | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git)   | @kjassani    |
 
 ---

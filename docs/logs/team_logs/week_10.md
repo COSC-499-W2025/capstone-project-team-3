@@ -63,7 +63,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | #226, #227 | Implement scanning flow to the project's main, Fix analysis bugs and refactor code - Code Analysis Section,   | @KarimKhalil33 |
-| #196,#212, #221, #230, #215, #245  | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
+| #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
 | #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |

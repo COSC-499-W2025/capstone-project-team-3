@@ -189,8 +189,6 @@ GEMINI_API_KEY=AIzaSy...your-gemini-api-key-here...
 
 **Now you can use all LLM features in the project!**
 
-Perfect — here’s a clean **“Troubleshooting”** section you can append directly under your new README entry.
-It’s concise, developer-friendly, and matches your project’s tone and structure.
 
 ---
 

@@ -1,4 +1,4 @@
-# Team Log week 9
+# Team Log week 10
 
 **Team Name:** Team 3
 
@@ -21,6 +21,10 @@
     * 227: Implement scanning flow to the project's main
     * 226: Fix analysis bugs and refactor code - Code Analysis Section
     * 228: Research and fine tune non LLM analysis - Code Analysis
+    * Extract Internal Dependencies	#209
+    * Added a dictionary map for Pygments -> Tree_sitter #239
+    * Extract File Entities	#210
+    * Extract libraries from import statements	#192
     
 ---
 
@@ -55,7 +59,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #226, #227 | Implement scanning flow to the project's main, Fix analysis bugs and refactor code - Code Analysis Section,   | @KarimKhalil33 |
 | #79, #81, #83, #86, #139, #153, #86, #183, #186, #196 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
 | #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
-| #190, #145, #191, #180   |  Extract import statements using tree_sitter libraries, Fix Docker environment interactivity issue, Extract import statements using regex (fallback), Added some of the parsing functions | @dabby04     |
+| #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |
 | #160, #94,  #48, #113, #92, #181    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git)   | @kjassani    |
 
@@ -66,6 +70,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
+| #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
 | #186          |  Researching LLM/Non-LLM non-code file analysis methods | @6s1      |
 | #186         |  Researching LLM/Non-LLM non-code file analysis methods | @abstractafua     |
 
@@ -73,29 +78,23 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Meeting Notes
 
-### 24th October 2025 – Team Meeting (All members present)
-- Assignment of tasks 
-- Discuss what everyone is working on
-- Clarified what should be stored in the schema for project info and consent
-- Code review the previous week's week done
+### 4th November 2025 – Team Meeting (All members present)
+- Code review session and clarifying any doubts
 
 ---
 
 ## Test Report
 
 - **Framework used:** `pytest` and `pytest-cov`  
-- **Test run date:** 26 October 2025 
+- **Test run date:** 9th November 2025 
 - **Summary:**  
-  - Total tests run:  70
-  - Passed:   69
-  - Failed:   1
+  - Total tests run:  
+  - Passed:   
+  - Failed:   
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  
   
-<img width="649" height="405" alt="t2" src="https://github.com/user-attachments/assets/99c8ef04-a8b7-4c41-ad7e-10c098776c27" />
-
-<img width="948" height="294" alt="t1" src="https://github.com/user-attachments/assets/69f57ab6-c553-4813-84d8-fd01ce0039d6" />
 
 
 ---

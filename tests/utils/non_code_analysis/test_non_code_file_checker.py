@@ -1,9 +1,11 @@
 import pytest
 from pathlib import Path
-from app.utils.non_code_analysis.non_code_file_checker import is_non_code_file
-from pathlib import Path
-from app.utils.non_code_analysis.non_code_file_checker import collect_local_non_code_files
+from app.utils.non_code_analysis.non_code_file_checker import is_non_code_file, filter_non_code_files
 
+
+# ============================================================================
+# Tests for is_non_code_file() - KEEP ALL EXISTING TESTS
+# ============================================================================
 
 def test_is_non_code_file_pdf():
     assert is_non_code_file("document.pdf") is True
@@ -20,8 +22,6 @@ def test_is_non_code_file_markdown():
 def test_is_non_code_file_image():
     assert is_non_code_file("logo.png") is True
 
-
-# Additional comprehensive tests
 
 def test_is_non_code_file_multiple_document_types():
     """Test various document formats."""
@@ -145,324 +145,344 @@ def test_is_non_code_file_parametrized(extension, expected):
     filename = f"testfile{extension}"
     assert is_non_code_file(filename) is expected
 
-def test_collect_local_non_code_files_basic(tmp_path):
-    """Test basic collection of non-code files."""
+
+# ============================================================================
+# Tests for filter_non_code_files() - NEW TESTS
+# ============================================================================
+
+def test_filter_non_code_files_basic(tmp_path):
+    """Test basic filtering of pre-scanned file list."""
     # Create test files
-    (tmp_path / "doc.pdf").write_bytes(b"PDF content")
-    (tmp_path / "script.py").write_text("print('hello')")
-    (tmp_path / "README.md").write_text("# Title")
-    (tmp_path / "image.png").write_bytes(b"\x89PNG")
+    doc = tmp_path / "report.pdf"
+    doc.write_bytes(b"PDF")
     
-    files = collect_local_non_code_files(tmp_path)
+    code = tmp_path / "script.py"
+    code.write_text("print('hello')")
     
-    assert len(files) == 3  # PDF, MD, PNG (not .py)
-    assert any("doc.pdf" in f for f in files)
-    assert any("README.md" in f for f in files)
-    assert any("image.png" in f for f in files)
-    assert not any("script.py" in f for f in files)
+    readme = tmp_path / "README.md"
+    readme.write_text("# Title")
+    
+    # Simulate scan_project_files() output
+    scanned_files = [str(doc), str(code), str(readme)]
+    
+    non_code = filter_non_code_files(scanned_files)
+    
+    assert len(non_code) == 2
+    assert any("report.pdf" in f for f in non_code)
+    assert any("README.md" in f for f in non_code)
+    assert not any("script.py" in f for f in non_code)
 
 
-def test_collect_local_non_code_files_nested_directories(tmp_path):
-    """Test collection from nested directory structures."""
-    # Create nested structure
+def test_filter_non_code_files_empty_list():
+    """Test with empty input list."""
+    result = filter_non_code_files([])
+    assert result == []
+
+
+def test_filter_non_code_files_all_code_files(tmp_path):
+    """Test with list containing only code files."""
+    py_file = tmp_path / "app.py"
+    py_file.write_text("code")
+    
+    js_file = tmp_path / "script.js"
+    js_file.write_text("code")
+    
+    scanned_files = [str(py_file), str(js_file)]
+    
+    result = filter_non_code_files(scanned_files)
+    assert result == []
+
+
+def test_filter_non_code_files_all_non_code_files(tmp_path):
+    """Test with list containing only non-code files."""
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"PDF")
+    
+    png = tmp_path / "image.png"
+    png.write_bytes(b"PNG")
+    
+    md = tmp_path / "README.md"
+    md.write_text("readme")
+    
+    scanned_files = [str(pdf), str(png), str(md)]
+    
+    result = filter_non_code_files(scanned_files)
+    assert len(result) == 3
+
+
+def test_filter_non_code_files_mixed_list(tmp_path):
+    """Test with mixed code and non-code files."""
+    # Non-code
+    pdf = tmp_path / "report.pdf"
+    pdf.write_bytes(b"PDF")
+    
+    docx = tmp_path / "doc.docx"
+    docx.write_bytes(b"DOCX")
+    
+    png = tmp_path / "logo.png"
+    png.write_bytes(b"PNG")
+    
+    # Code
+    py = tmp_path / "main.py"
+    py.write_text("code")
+    
+    js = tmp_path / "app.js"
+    js.write_text("code")
+    
+    json_file = tmp_path / "config.json"
+    json_file.write_text("{}")
+    
+    scanned_files = [str(pdf), str(py), str(docx), str(js), str(png), str(json_file)]
+    
+    result = filter_non_code_files(scanned_files)
+    
+    assert len(result) == 3
+    assert any("report.pdf" in f for f in result)
+    assert any("doc.docx" in f for f in result)
+    assert any("logo.png" in f for f in result)
+
+
+def test_filter_non_code_files_returns_absolute_paths(tmp_path):
+    """Test that returned paths are absolute."""
+    doc = tmp_path / "file.pdf"
+    doc.write_bytes(b"PDF")
+    
+    result = filter_non_code_files([str(doc)])
+    
+    assert len(result) == 1
+    assert Path(result[0]).is_absolute()
+
+
+def test_filter_non_code_files_with_string_paths(tmp_path):
+    """Test that function accepts string paths."""
+    doc = tmp_path / "doc.pdf"
+    doc.write_bytes(b"PDF")
+    
+    # Pass as string instead of Path
+    result = filter_non_code_files([str(doc)])
+    
+    assert len(result) == 1
+    assert "doc.pdf" in result[0]
+
+
+def test_filter_non_code_files_with_path_objects(tmp_path):
+    """Test that function accepts Path objects."""
+    doc = tmp_path / "doc.pdf"
+    doc.write_bytes(b"PDF")
+    
+    result = filter_non_code_files([doc])
+    
+    assert len(result) == 1
+    assert "doc.pdf" in result[0]
+
+
+def test_filter_non_code_files_skips_nonexistent_files(tmp_path):
+    """Test that non-existent files are safely skipped."""
+    existing = tmp_path / "exists.pdf"
+    existing.write_bytes(b"PDF")
+    
+    nonexistent = tmp_path / "missing.pdf"
+    
+    result = filter_non_code_files([str(existing), str(nonexistent)])
+    
+    assert len(result) == 1
+    assert "exists.pdf" in result[0]
+
+
+def test_filter_non_code_files_skips_directories(tmp_path):
+    """Test that directories in the list are skipped."""
+    doc = tmp_path / "file.pdf"
+    doc.write_bytes(b"PDF")
+    
+    a_dir = tmp_path / "somedir"
+    a_dir.mkdir()
+    
+    result = filter_non_code_files([str(doc), str(a_dir)])
+    
+    assert len(result) == 1
+    assert "file.pdf" in result[0]
+
+
+def test_filter_non_code_files_multiple_extensions(tmp_path):
+    """Test various non-code extensions."""
+    files = []
+    extensions = [".pdf", ".docx", ".png", ".mp4", ".zip", ".md", ".txt"]
+    
+    for i, ext in enumerate(extensions):
+        f = tmp_path / f"file{i}{ext}"
+        f.write_bytes(b"content")
+        files.append(str(f))
+    
+    result = filter_non_code_files(files)
+    
+    assert len(result) == len(extensions)
+
+
+def test_filter_non_code_files_case_insensitive(tmp_path):
+    """Test case-insensitive extension matching."""
+    pdf_upper = tmp_path / "DOC.PDF"
+    pdf_upper.write_bytes(b"PDF")
+    
+    png_mixed = tmp_path / "Image.PnG"
+    png_mixed.write_bytes(b"PNG")
+    
+    result = filter_non_code_files([str(pdf_upper), str(png_mixed)])
+    
+    assert len(result) == 2
+
+
+def test_filter_non_code_files_special_characters(tmp_path):
+    """Test files with special characters in names."""
+    file1 = tmp_path / "my document (2024).pdf"
+    file1.write_bytes(b"PDF")
+    
+    file2 = tmp_path / "report-final_v2.docx"
+    file2.write_bytes(b"DOCX")
+    
+    result = filter_non_code_files([str(file1), str(file2)])
+    
+    assert len(result) == 2
+
+
+def test_filter_non_code_files_preserves_order(tmp_path):
+    """Test that order is preserved."""
+    a = tmp_path / "a.pdf"
+    a.write_bytes(b"PDF")
+    
+    b = tmp_path / "b.pdf"
+    b.write_bytes(b"PDF")
+    
+    c = tmp_path / "c.pdf"
+    c.write_bytes(b"PDF")
+    
+    input_order = [str(a), str(b), str(c)]
+    result = filter_non_code_files(input_order)
+    
+    # Check that a comes before b comes before c
+    a_idx = next(i for i, p in enumerate(result) if "a.pdf" in p)
+    b_idx = next(i for i, p in enumerate(result) if "b.pdf" in p)
+    c_idx = next(i for i, p in enumerate(result) if "c.pdf" in p)
+    
+    assert a_idx < b_idx < c_idx
+
+
+def test_filter_non_code_files_nested_paths(tmp_path):
+    """Test files from nested directory structures."""
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
-    (docs_dir / "guide.pdf").write_bytes(b"PDF")
+    doc = docs_dir / "guide.pdf"
+    doc.write_bytes(b"PDF")
     
     assets_dir = tmp_path / "assets" / "images"
     assets_dir.mkdir(parents=True)
-    (assets_dir / "logo.png").write_bytes(b"PNG")
+    img = assets_dir / "logo.png"
+    img.write_bytes(b"PNG")
+    
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    code = src_dir / "main.py"
+    code.write_text("code")
+    
+    scanned_files = [str(doc), str(img), str(code)]
+    result = filter_non_code_files(scanned_files)
+    
+    assert len(result) == 2
+    assert any("guide.pdf" in f for f in result)
+    assert any("logo.png" in f for f in result)
+
+
+def test_filter_non_code_files_duplicate_paths(tmp_path):
+    """Test handling of duplicate file paths in input."""
+    doc = tmp_path / "file.pdf"
+    doc.write_bytes(b"PDF")
+    
+    # Pass same file twice
+    scanned_files = [str(doc), str(doc)]
+    result = filter_non_code_files(scanned_files)
+    
+    # Should return both (no deduplication by default)
+    assert len(result) == 2
+
+
+def test_filter_non_code_files_with_relative_paths(tmp_path):
+    """Test with relative paths (should still work)."""
+    doc = tmp_path / "doc.pdf"
+    doc.write_bytes(b"PDF")
+    
+    # Use relative path
+    import os
+    original_dir = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        result = filter_non_code_files(["doc.pdf"])
+        assert len(result) == 1
+        # Result should be absolute
+        assert Path(result[0]).is_absolute()
+    finally:
+        os.chdir(original_dir)
+
+
+@pytest.mark.parametrize("extension", [
+    ".pdf", ".docx", ".png", ".jpg", ".mp4", ".zip", ".md", ".txt"
+])
+def test_filter_non_code_files_parametrized(tmp_path, extension):
+    """Parametrized test for various non-code extensions."""
+    f = tmp_path / f"file{extension}"
+    f.write_bytes(b"content")
+    
+    result = filter_non_code_files([str(f)])
+    
+    assert len(result) == 1
+    assert extension in result[0]
+
+
+def test_filter_non_code_files_large_list(tmp_path):
+    """Test performance with large file list."""
+    files = []
+    
+    # Create 100 files (mix of code and non-code)
+    for i in range(50):
+        pdf = tmp_path / f"doc{i}.pdf"
+        pdf.write_bytes(b"PDF")
+        files.append(str(pdf))
+        
+        py = tmp_path / f"script{i}.py"
+        py.write_text("code")
+        files.append(str(py))
+    
+    result = filter_non_code_files(files)
+    
+    # Should only return the 50 PDFs
+    assert len(result) == 50
+    assert all(".pdf" in f for f in result)
+
+
+def test_filter_non_code_files_integration_pattern(tmp_path):
+    """Test realistic integration scenario with scan_project_files pattern."""
+    # Create project structure (what scan_project_files would return)
+    (tmp_path / "README.md").write_text("readme")
+    (tmp_path / "app.py").write_text("code")
+    (tmp_path / "logo.png").write_bytes(b"PNG")
     
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "main.py").write_text("code")
+    (src_dir / "guide.pdf").write_bytes(b"PDF")
     
-    files = collect_local_non_code_files(tmp_path)
+    # Simulate scan_project_files output (already excludes .git, node_modules, etc.)
+    scanned_files = [
+        str(tmp_path / "README.md"),
+        str(tmp_path / "app.py"),
+        str(tmp_path / "logo.png"),
+        str(src_dir / "main.py"),
+        str(src_dir / "guide.pdf")
+    ]
     
-    assert len(files) == 2
-    assert any("guide.pdf" in f for f in files)
-    assert any("logo.png" in f for f in files)
-    assert not any("main.py" in f for f in files)
-
-
-def test_collect_local_non_code_files_excludes_git_directory(tmp_path):
-    """Test that .git directory is excluded by default."""
-    # Create .git directory with files
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
-    (git_dir / "config").write_text("git config")
-    (git_dir / "HEAD").write_text("ref: refs/heads/main")
+    result = filter_non_code_files(scanned_files)
     
-    # Create regular non-code file
-    (tmp_path / "README.md").write_text("# Project")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert any("README.md" in f for f in files)
-    assert not any(".git" in f for f in files)
-
-
-def test_collect_local_non_code_files_excludes_pycache(tmp_path):
-    """Test that __pycache__ directory is excluded."""
-    pycache_dir = tmp_path / "__pycache__"
-    pycache_dir.mkdir()
-    (pycache_dir / "module.pyc").write_bytes(b"bytecode")
-    
-    (tmp_path / "notes.txt").write_text("notes")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert any("notes.txt" in f for f in files)
-    assert not any("__pycache__" in f for f in files)
-
-
-def test_collect_local_non_code_files_excludes_node_modules(tmp_path):
-    """Test that node_modules directory is excluded."""
-    node_modules = tmp_path / "node_modules"
-    node_modules.mkdir()
-    (node_modules / "package.json").write_text("{}")
-    
-    (tmp_path / "README.md").write_text("# Project")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert any("README.md" in f for f in files)
-    assert not any("node_modules" in f for f in files)
-
-
-def test_collect_local_non_code_files_excludes_venv(tmp_path):
-    """Test that virtual environment directories are excluded."""
-    # Test both .venv and venv
-    venv_dir = tmp_path / ".venv"
-    venv_dir.mkdir()
-    (venv_dir / "pyvenv.cfg").write_text("config")
-    
-    venv2_dir = tmp_path / "venv"
-    venv2_dir.mkdir()
-    (venv2_dir / "pyvenv.cfg").write_text("config")
-    
-    (tmp_path / "doc.pdf").write_bytes(b"PDF")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert any("doc.pdf" in f for f in files)
-    assert not any(".venv" in f for f in files)
-    assert not any("venv" in f and "venv" != "venv.txt" for f in files)
-
-
-def test_collect_local_non_code_files_custom_exclusions(tmp_path):
-    """Test custom directory exclusions."""
-    # Create custom directories to exclude
-    build_dir = tmp_path / "build"
-    build_dir.mkdir()
-    (build_dir / "output.pdf").write_bytes(b"PDF")
-    
-    dist_dir = tmp_path / "dist"
-    dist_dir.mkdir()
-    (dist_dir / "package.zip").write_bytes(b"ZIP")
-    
-    (tmp_path / "README.md").write_text("# Project")
-    
-    files = collect_local_non_code_files(tmp_path, exclude_dirs={'build', 'dist'})
-    
-    assert len(files) == 1
-    assert any("README.md" in f for f in files)
-    assert not any("build" in f for f in files)
-    assert not any("dist" in f for f in files)
-
-
-def test_collect_local_non_code_files_empty_directory(tmp_path):
-    """Test behavior with empty directory."""
-    files = collect_local_non_code_files(tmp_path)
-    assert files == []
-
-
-def test_collect_local_non_code_files_only_code_files(tmp_path):
-    """Test directory containing only code files."""
-    (tmp_path / "main.py").write_text("code")
-    (tmp_path / "app.js").write_text("code")
-    (tmp_path / "style.css").write_text("code")
-    
-    files = collect_local_non_code_files(tmp_path)
-    assert files == []
-
-
-def test_collect_local_non_code_files_nonexistent_path(tmp_path):
-    """Test with non-existent directory path."""
-    fake_path = tmp_path / "does_not_exist"
-    files = collect_local_non_code_files(fake_path)
-    assert files == []
-
-
-def test_collect_local_non_code_files_file_instead_of_directory(tmp_path):
-    """Test when root_path points to a file instead of directory."""
-    file_path = tmp_path / "file.txt"
-    file_path.write_text("content")
-    
-    files = collect_local_non_code_files(file_path)
-    assert files == []
-
-
-def test_collect_local_non_code_files_returns_absolute_paths(tmp_path):
-    """Test that returned paths are absolute."""
-    (tmp_path / "doc.pdf").write_bytes(b"PDF")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert Path(files[0]).is_absolute()
-
-
-def test_collect_local_non_code_files_multiple_file_types(tmp_path):
-    """Test collection of various non-code file types."""
-    (tmp_path / "report.pdf").write_bytes(b"PDF")
-    (tmp_path / "presentation.pptx").write_bytes(b"PPTX")
-    (tmp_path / "data.xlsx").write_bytes(b"XLSX")
-    (tmp_path / "video.mp4").write_bytes(b"MP4")
-    (tmp_path / "archive.zip").write_bytes(b"ZIP")
-    (tmp_path / "README.md").write_text("# Readme")
-    (tmp_path / "notes.txt").write_text("notes")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 7
-    extensions = {Path(f).suffix for f in files}
-    assert extensions == {".pdf", ".pptx", ".xlsx", ".mp4", ".zip", ".md", ".txt"}
-
-
-def test_collect_local_non_code_files_mixed_code_and_non_code(tmp_path):
-    """Test directory with mixed code and non-code files."""
-    # Non-code
-    (tmp_path / "README.md").write_text("readme")
-    (tmp_path / "logo.png").write_bytes(b"PNG")
-    (tmp_path / "doc.pdf").write_bytes(b"PDF")
-    
-    # Code
-    (tmp_path / "app.py").write_text("code")
-    (tmp_path / "script.js").write_text("code")
-    (tmp_path / "config.json").write_text("{}")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 3
-    assert any("README.md" in f for f in files)
-    assert any("logo.png" in f for f in files)
-    assert any("doc.pdf" in f for f in files)
-
-
-def test_collect_local_non_code_files_deeply_nested(tmp_path):
-    """Test deeply nested directory structure."""
-    deep_path = tmp_path / "a" / "b" / "c" / "d" / "e"
-    deep_path.mkdir(parents=True)
-    (deep_path / "deep.pdf").write_bytes(b"PDF")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert "deep.pdf" in files[0]
-    assert str(deep_path) in files[0]
-
-
-def test_collect_local_non_code_files_with_hidden_files(tmp_path):
-    """Test handling of hidden files (dotfiles)."""
-    (tmp_path / ".hidden.txt").write_text("hidden")
-    (tmp_path / "visible.txt").write_text("visible")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    # Both should be collected (they're non-code)
-    assert len(files) == 2
-    assert any(".hidden.txt" in f for f in files)
-    assert any("visible.txt" in f for f in files)
-
-
-def test_collect_local_non_code_files_special_characters_in_names(tmp_path):
-    """Test files with special characters in names."""
-    (tmp_path / "my document (2024).pdf").write_bytes(b"PDF")
-    (tmp_path / "image-final_v2.png").write_bytes(b"PNG")
-    (tmp_path / "notes [draft].txt").write_text("notes")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 3
-
-
-def test_collect_local_non_code_files_case_insensitive_extensions(tmp_path):
-    """Test that extensions are matched case-insensitively."""
-    (tmp_path / "document.PDF").write_bytes(b"PDF")
-    (tmp_path / "IMAGE.PNG").write_bytes(b"PNG")
-    (tmp_path / "README.MD").write_text("readme")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 3
-
-
-def test_collect_local_non_code_files_symlinks(tmp_path):
-    """Test behavior with symbolic links."""
-    # Create a real file
-    real_file = tmp_path / "real.pdf"
-    real_file.write_bytes(b"PDF")
-    
-    # Create a symlink (if supported by OS)
-    try:
-        link_file = tmp_path / "link.pdf"
-        link_file.symlink_to(real_file)
-        
-        files = collect_local_non_code_files(tmp_path)
-        
-        # Should include both or handle gracefully
-        assert len(files) >= 1
-        assert any("real.pdf" in f for f in files)
-    except (OSError, NotImplementedError):
-        # Symlinks not supported on this OS
-        pytest.skip("Symlinks not supported")
-
-
-def test_collect_local_non_code_files_empty_exclude_set(tmp_path):
-    """Test with empty exclusion set (should exclude nothing extra)."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
-    (git_dir / "config").write_text("config")
-    
-    (tmp_path / "README.md").write_text("readme")
-    
-    # Pass empty set - should still use defaults
-    files = collect_local_non_code_files(tmp_path, exclude_dirs=set())
-    
-    # With empty set, .git is not excluded
-    # But we should still get README
-    assert any("README.md" in f for f in files)
-
-
-def test_collect_local_non_code_files_preserves_directory_order(tmp_path):
-    """Test that files are collected in a deterministic order."""
-    (tmp_path / "a.pdf").write_bytes(b"PDF")
-    (tmp_path / "b.pdf").write_bytes(b"PDF")
-    (tmp_path / "c.pdf").write_bytes(b"PDF")
-    
-    files1 = collect_local_non_code_files(tmp_path)
-    files2 = collect_local_non_code_files(tmp_path)
-    
-    # Results should be consistent across runs
-    assert len(files1) == len(files2) == 3
-
-
-@pytest.mark.parametrize("dirname", [".git", "__pycache__", "node_modules", ".venv", "venv"])
-def test_collect_local_non_code_files_default_exclusions_parametrized(tmp_path, dirname):
-    """Parametrized test for default exclusions."""
-    excluded_dir = tmp_path / dirname
-    excluded_dir.mkdir()
-    (excluded_dir / "file.txt").write_text("content")
-    
-    (tmp_path / "included.txt").write_text("content")
-    
-    files = collect_local_non_code_files(tmp_path)
-    
-    assert len(files) == 1
-    assert "included.txt" in files[0]
-    assert dirname not in files[0]
+    assert len(result) == 3
+    assert any("README.md" in f for f in result)
+    assert any("logo.png" in f for f in result)
+    assert any("guide.pdf" in f for f in result)
+    assert not any("app.py" in f for f in result)
+    assert not any("main.py" in f for f in result)

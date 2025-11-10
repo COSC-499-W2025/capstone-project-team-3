@@ -1,8 +1,8 @@
 """pytest tests for document parser: text, markdown, docx and pdf."""
 import json
 from pathlib import Path
-
-from app.utils.document_parser import parse_documents_to_json
+from app.utils.non_code_parsing.document_parser import parse_documents_to_json
+from app.utils.non_code_parsing.file_size_checker import is_file_too_large, MAX_FILE_SIZE_MB
 
 
 def test_parse_text_and_markdown(tmp_path=None):
@@ -99,6 +99,25 @@ def test_missing_file_and_unsupported_type(tmp_path=None):
     entry2 = returned2["files"][0]
     assert entry2["success"] is False
     assert "unsupported" in entry2["error"].lower()
+
+def test_file_size_limit(tmp_path=None):
+    if tmp_path is None:
+        from tempfile import mkdtemp
+        tmp_path = Path(mkdtemp())
+    # Create a file slightly larger than MAX_FILE_SIZE_MB
+    too_big_path = tmp_path / "big.txt"
+    # write enough bytes to exceed MAX_FILE_SIZE_MB
+    size_bytes = (MAX_FILE_SIZE_MB + 1) * 1024 * 1024  # MB -> bytes
+    with open(too_big_path, "wb") as f:
+        f.write(b"0" * size_bytes)
+
+    output = tmp_path / "out.json"
+    parsed = parse_documents_to_json([str(too_big_path)], str(output))
+
+    entry = parsed["files"][0]
+    assert entry["success"] is False
+    assert "exceeds" in entry["error"].lower()
+
 
 
 if __name__ == "__main__":

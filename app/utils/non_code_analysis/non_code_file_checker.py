@@ -28,34 +28,35 @@ def is_non_code_file(file_path: Union[str, Path]) -> bool:
     extension = path.suffix.lower()
     return extension in NON_CODE_EXTENSIONS
 
-def collect_local_non_code_files(root_path: Union[str, Path], 
-                                  exclude_dirs: Set[str] = None) -> List[str]:
+
+def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
     """
-    Recursively collect all non-code file paths from a local directory.
+    Filter a list of file paths to return only non-code files.
+    
+    This function is designed to work after scan_project_files() has already
+    filtered out excluded directories and patterns.
     
     Args:
-        root_path: Root directory to scan
-        exclude_dirs: Set of directory names to exclude (e.g., {'.git', 'node_modules'})
+        file_paths: List of file paths (typically from scan_project_files())
         
     Returns:
-        List of absolute paths to non-code files
+        List of absolute paths to non-code files only
+    
+    Example:
+        >>> from app.utils.scan_utils import scan_project_files
+        >>> all_files = scan_project_files('/path/to/project')
+        >>> non_code_files = filter_non_code_files(all_files)
     """
-    if exclude_dirs is None:
-        exclude_dirs = {'.git', '__pycache__', 'node_modules', '.venv', 'venv'}
-    
     non_code_files = []
-    root = Path(root_path)
     
-    if not root.exists() or not root.is_dir():
-        return []
-    
-    for dirpath, dirnames, filenames in os.walk(root):
-        # Remove excluded directories from traversal
-        dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
+    for file_path in file_paths:
+        path = Path(file_path)
         
-        for filename in filenames:
-            file_path = Path(dirpath) / filename
-            if is_non_code_file(file_path):
-                non_code_files.append(str(file_path.resolve()))
+        # Skip if file doesn't exist (safety check)
+        if not path.exists() or not path.is_file():
+            continue
+            
+        if is_non_code_file(path):
+            non_code_files.append(str(path.resolve()))
     
     return non_code_files

@@ -1,0 +1,108 @@
+# Team Log week 9
+
+**Team Name:** Team 3
+
+**Work Performed:**  Nov 3, 2025 → Nov 9, 2025
+
+
+---
+
+## Recap of Milestone Goals
+
+- **Features planned for this milestone:**
+    * Deciding on task priorities for the next 2 weeks+
+    * Consent management and User Setup in WBS (Finishing most features)
+    * Project Input and Initialization in WBS (Finishing most features)
+    * Code and non code analysis in WBS (starting most features)
+    * Extrapolate individual contributions for a given collaboration project
+    * Distinguish individual projects from collaborative projects
+  
+- **Associated project board tasks:**
+    * 227: Implement scanning flow to the project's main
+    * 226: Fix analysis bugs and refactor code - Code Analysis Section
+    * 228: Research and fine tune non LLM analysis - Code Analysis
+    
+---
+
+## Burnup Chart
+
+_Accumulative view of tasks done, tasks in progress, and tasks left to do._  
+Paste chart image or link here:
+
+Progress Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights
+
+Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
+
+---
+
+## Team Members
+
+| Username (GitHub) | Student Name   |
+|-------------------|----------------|
+| @KarimKhalil33    | Karim Khalil   |
+| @kjassani         | Karim Jassani  |
+| @dabby04          | Oluwadabira Omotoso|
+| @PaintedW0lf      | Vanshika Singla|
+| @6s-1             | Shreya Saxena  |
+| @abstractafua     | Afua Frempong  |
+
+---
+
+## Completed Tasks
+
+| Task/Issue ID | Title                  | Username        |
+|---------------|------------------------|-----------------|
+| #226, #227 | Implement scanning flow to the project's main, Fix analysis bugs and refactor code - Code Analysis Section,   | @KarimKhalil33 |
+| #79, #81, #83, #86, #139, #153, #86, #183, #186, #196 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
+| #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
+| #190, #145, #191, #180   |  Extract import statements using tree_sitter libraries, Fix Docker environment interactivity issue, Extract import statements using regex (fallback), Added some of the parsing functions | @dabby04     |
+| #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |
+| #160, #94,  #48, #113, #92, #181    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git)   | @kjassani    |
+
+---
+
+## In Progress Tasks
+
+| Task/Issue ID | Title            | Username |
+|---------------|------------------|----------|
+| #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
+| #186          |  Researching LLM/Non-LLM non-code file analysis methods | @6s1      |
+| #186         |  Researching LLM/Non-LLM non-code file analysis methods | @abstractafua     |
+
+---
+
+## Meeting Notes
+
+### 24th October 2025 – Team Meeting (All members present)
+- Assignment of tasks 
+- Discuss what everyone is working on
+- Clarified what should be stored in the schema for project info and consent
+- Code review the previous week's week done
+
+---
+
+## Test Report
+
+- **Framework used:** `pytest` and `pytest-cov`  
+- **Test run date:** 26 October 2025 
+- **Summary:**  
+  - Total tests run:  70
+  - Passed:   69
+  - Failed:   1
+- **Regression Testing:**  
+  - N/A  
+- **Screenshot or Output:**  
+  
+<img width="649" height="405" alt="t2" src="https://github.com/user-attachments/assets/99c8ef04-a8b7-4c41-ad7e-10c098776c27" />
+
+<img width="948" height="294" alt="t1" src="https://github.com/user-attachments/assets/69f57ab6-c553-4813-84d8-fd01ce0039d6" />
+
+
+---
+
+## Reflection
+
+* This week went well- we delegated tasks and what we will be working on for this week and possibly next week...
+
+## Plan for Next Cycle
+* Continue with code contributions, prioritising and finalising FR1, FR3, FR2, FR4, and FR5.

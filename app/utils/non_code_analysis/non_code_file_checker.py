@@ -1,0 +1,62 @@
+"""
+Non-code file checker - identifies and filters non-code files from repositories and local paths.
+"""
+import os
+from pathlib import Path
+from typing import Set, List, Union
+
+# Extensions considered non-code
+NON_CODE_EXTENSIONS: Set[str] = {
+    ".pdf", ".docx", ".doc", ".txt", ".md", ".markdown",
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg",
+    ".mp4", ".mov", ".avi", ".zip", ".tar", ".gz",
+    ".ppt", ".pptx", ".xls", ".xlsx"
+}
+
+
+def is_non_code_file(file_path: Union[str, Path]) -> bool:
+    """
+    Check if a file is a non-code file based on its extension.
+    
+    Args:
+        file_path: Path to the file
+        
+    Returns:
+        True if file extension is in NON_CODE_EXTENSIONS, False otherwise
+    """
+    path = Path(file_path)
+    extension = path.suffix.lower()
+    return extension in NON_CODE_EXTENSIONS
+
+
+def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
+    """
+    Filter a list of file paths to return only non-code files.
+    
+    This function is designed to work after scan_project_files() has already
+    filtered out excluded directories and patterns.
+    
+    Args:
+        file_paths: List of file paths (typically from scan_project_files())
+        
+    Returns:
+        List of absolute paths to non-code files only
+    
+    Example:
+        >>> from app.utils.scan_utils import scan_project_files
+        >>> all_files = scan_project_files('/path/to/project')
+        >>> non_code_files = filter_non_code_files(all_files)
+    """
+    non_code_files = []
+    
+    for file_path in file_paths:
+        path = Path(file_path)
+        
+        # Skip if file doesn't exist (safety check)
+        if not path.exists() or not path.is_file():
+            continue
+            
+        if is_non_code_file(path):
+            non_code_files.append(str(path.resolve()))
+    
+    return non_code_files

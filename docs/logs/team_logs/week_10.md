@@ -64,7 +64,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | #226, #227 | Implement scanning flow to the project's main, Fix analysis bugs and refactor code - Code Analysis Section,   | @KarimKhalil33 |
 | #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
-| #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
+| #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #170, #205, #219, #220, #186 | Mock PDF and other file types for testing,  Testing for parsing non code, Parse function for non-code files and testing the functioning,File size limit for Successful analysis,Test cases for File size,Colaborating on Researching LLM/non-LLM implementation for non code file analysis.    | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181, #224    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo   | @kjassani    |
@@ -78,7 +78,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
 | #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
 | #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
-| #186         |  Researching LLM/Non-LLM non-code file analysis methods | @abstractafua     |
+| #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization
+    - Aggregate LLM1 Summaries into Unified Project Structure
+    -Generate LLM2 Prompt for Non-Code Analysis | @abstractafua     |
 
 ---
 

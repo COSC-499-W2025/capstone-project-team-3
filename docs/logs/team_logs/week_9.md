@@ -10,9 +10,11 @@
 
 - **Features planned for this milestone:**
     * Deciding on task priorities for the next 2 weeks+
-    * Consent management and User Setup in WBS (starting most features)
-    * Project Input and Initialization in WBS (starting most features)
+    * Consent management and User Setup in WBS (Finishing most features)
+    * Project Input and Initialization in WBS (Finishing most features)
     * Code and non code analysis in WBS (starting most features)
+    * Extrapolate individual contributions for a given collaboration project
+    * Distinguish individual projects from collaborative projects
     
   
 - **Associated project board tasks:**
@@ -31,15 +33,11 @@
     * Consent & User Management #30
     * Consent Model + Storage Layer #29
     * Test Cases #78
-    * Error Handling (I/O, Empty Folders, Retry) #77
-    * Write Metadata to local database #76
-    * Handle Unsupported Types #75
     * Extract Commit Metadata #91
     * Git History Extraction #89
     * Test Cases (Positive/Negative) #87
     * Consent Management #88
     * FR4: File Scanning & Indexing #69
-    * Scan Files paying attention to exclusions and filters #70
     * check zip file #48
     * Project Extraction Logic #152
     * Project Identification from ZIPs #153
@@ -52,6 +50,14 @@
     * Test Cases #86
     * Implement User Flow for inputting file path #185
     * Researching LLM/non-LLM implementation for non code file analysis #186
+    * Added the missing tests for the main.py file for consent management and prompt input.
+    * Extract import statements using tree_sitter libraries #190
+    * Fix Docker environment interactivity issue #145
+    * Extract import statements using regex (fallback) #191
+    * Added some of the parsing functions #180
+    * Map Changes to Files #92
+    * Extract author's code commits (git) #181
+    
 
 
 ---
@@ -84,12 +90,12 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #70, #75 | Scan Files paying attention to exclusions and filters, Handle Unsupported Types | @KarimKhalil33 |
-| #79, #81, #83, #86, #139, #153, #86, #183, #186 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
-| #135, #136          | Expand Db Schema and Add steps to Read.ME, Seed Data with test data    | @abstractafua |
-| #91, #113, #133, #132       | Extract Commit Metadata, Fixed no tests ran result in Docker Env, Methods that return list should be plural     | @dabby04     |
-| #80, #100, #88, #84, #141, #148     | Consent manager, consent form creation and different user scenarios, handling consent decline and saving consent, consent revocation functionality, test cases for revocation  | @PaintedW0lf     |
-| #160, #94,  #48, #113    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo    | @kjassani    |
+| #169 | Code analysis - using AI  | @KarimKhalil33 |
+| #79, #81, #83, #86, #139, #153, #86, #183, #186, #196 | Folder Path Selector (FR2)-achieved 100% test coverage, Implemented User file path input in cli, researching llm/non-llm options for non-code files. | @6s-1 |
+| #97, #179, #85 , #30  | Consent & User Management, Implement Flow for user preference manager, Validation & Local Storage script, FR3: User Preference Selection    | @abstractafua |
+| #190, #145, #191, #180   |  Extract import statements using tree_sitter libraries, Fix Docker environment interactivity issue, Extract import statements using regex (fallback), Added some of the parsing functions | @dabby04     |
+| #164, #165, #170, #186  | Decide project & CLI flow; design reusable utils; integrate overall flow, Implement Consent Manager flow and testing , Parse function for non-code files and testing the functioning, Researching LLM/non-LLM implementation for non code file analysis | @PaintedW0lf     |
+| #160, #94,  #48, #113, #92, #181    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git)   | @kjassani    |
 
 ---
 
@@ -97,11 +103,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| #145          |  Fix Docker environment interactivity issue  | @dabby04      |
 | #186          |  Researching LLM/Non-LLM non-code file analysis methods | @6s1      |
-| #73, #76, #77, #78 | Extract & Store Metadata, Write Metadata to local database, Error Handling, Test Cases | @KarimKhalil33 |
-| #115         | Absolute path for target Dockerr  | @kjassani     |
-| #85         | FR3: User Preference Selection #85  | @abstractafua     |
+| #186         |  Researching LLM/Non-LLM non-code file analysis methods | @abstractafua     |
 
 ---
 

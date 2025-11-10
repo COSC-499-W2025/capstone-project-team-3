@@ -1,6 +1,9 @@
 # 🧾 Personal Log – Shreya Saxena  
 **Week of Nov 3 – Nov 9, 2025**
 
+
+### Type of Tasks Worked On
+![Personal Log](../../../screenshots/Shreya_Saxena_week-10.png)
 ---
 
 ### 🔹 Type of Tasks Worked On

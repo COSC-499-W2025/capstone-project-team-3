@@ -84,3 +84,5 @@ wrapt==1.17.3
 pypdf>=3.0.0
 python-docx==1.2.0
 google-generativeai>=0.8.0
+sumy>=0.11.0
+nltk>=3.8

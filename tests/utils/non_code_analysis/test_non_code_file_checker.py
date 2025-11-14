@@ -1,10 +1,16 @@
 import pytest
 from pathlib import Path
 from app.utils.non_code_analysis.non_code_file_checker import is_non_code_file, filter_non_code_files
-
+from unittest.mock import patch, MagicMock
+from app.utils.non_code_analysis.non_code_file_checker import (
+    is_non_code_file,
+    filter_non_code_files,
+    collect_git_non_code_files_with_metadata,
+    filter_non_code_files_by_collaboration
+)
 
 # ============================================================================
-# Tests for is_non_code_file() - KEEP ALL EXISTING TESTS
+# Tests for is_non_code_file() 
 # ============================================================================
 
 def test_is_non_code_file_pdf():
@@ -486,3 +492,205 @@ def test_filter_non_code_files_integration_pattern(tmp_path):
     assert any("guide.pdf" in f for f in result)
     assert not any("app.py" in f for f in result)
     assert not any("main.py" in f for f in result)
+
+# ============================================================================
+# Tests for collect_git_non_code_files_with_metadata() 
+# ============================================================================
+
+def _make_mock_commit(author_email, files):
+    """Helper to create mock commit objects."""
+    commit = MagicMock()
+    commit.author = MagicMock()
+    commit.author.email = author_email
+    commit.stats = MagicMock()
+    commit.stats.files = files
+    return commit
+
+
+def test_collect_git_non_code_files_basic():
+    """Test basic collection of non-code files from git repo."""
+    commit1 = _make_mock_commit("alice@example.com", {"doc.pdf": {}, "script.py": {}})
+    commit2 = _make_mock_commit("bob@example.com", {"doc.pdf": {}})
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert "doc.pdf" in result
+        assert "script.py" not in result
+        assert len(result["doc.pdf"]["authors"]) == 2
+        assert result["doc.pdf"]["commit_count"] == 2
+
+
+def test_collect_git_non_code_files_single_author():
+    """Test file with single author."""
+    commit = _make_mock_commit("alice@example.com", {"README.md": {}})
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert "README.md" in result
+        assert result["README.md"]["authors"] == ["alice@example.com"]
+        assert result["README.md"]["commit_count"] == 1
+
+
+def test_collect_git_non_code_files_filters_code():
+    """Test that code files are excluded."""
+    commit = _make_mock_commit("alice@example.com", {
+        "script.py": {},
+        "app.js": {},
+        "doc.pdf": {},
+        "image.png": {}
+    })
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert "doc.pdf" in result
+        assert "image.png" in result
+        assert "script.py" not in result
+        assert "app.js" not in result
+
+
+def test_collect_git_non_code_files_invalid_repo():
+    """Test handling of invalid repository."""
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_get_repo.side_effect = Exception("Not a git repo")
+        
+        result = collect_git_non_code_files_with_metadata("/not/a/repo")
+        
+        assert result == {}
+
+
+def test_collect_git_non_code_files_multiple_commits_same_author():
+    """Test multiple commits by same author on same file."""
+    commit1 = _make_mock_commit("alice@example.com", {"doc.pdf": {}})
+    commit2 = _make_mock_commit("alice@example.com", {"doc.pdf": {}})
+    commit3 = _make_mock_commit("alice@example.com", {"doc.pdf": {}})
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2, commit3]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert result["doc.pdf"]["authors"] == ["alice@example.com"]
+        assert result["doc.pdf"]["commit_count"] == 3
+
+
+def test_collect_git_non_code_files_multiple_files_multiple_authors():
+    """Test multiple files with different author combinations."""
+    commit1 = _make_mock_commit("alice@example.com", {"doc1.pdf": {}, "doc2.pdf": {}})
+    commit2 = _make_mock_commit("bob@example.com", {"doc1.pdf": {}})
+    commit3 = _make_mock_commit("charlie@example.com", {"doc2.pdf": {}})
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2, commit3]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert len(result["doc1.pdf"]["authors"]) == 2
+        assert set(result["doc1.pdf"]["authors"]) == {"alice@example.com", "bob@example.com"}
+        assert result["doc1.pdf"]["commit_count"] == 2
+        
+        assert len(result["doc2.pdf"]["authors"]) == 2
+        assert set(result["doc2.pdf"]["authors"]) == {"alice@example.com", "charlie@example.com"}
+        assert result["doc2.pdf"]["commit_count"] == 2
+
+
+def test_collect_git_non_code_files_handles_commit_stats_errors():
+    """Test graceful handling of commits with missing stats."""
+    good_commit = _make_mock_commit("alice@example.com", {"doc.pdf": {}})
+    
+    bad_commit = MagicMock()
+    bad_commit.author.email = "bob@example.com"
+    bad_commit.stats.files = None
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [good_commit, bad_commit]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert "doc.pdf" in result
+        assert result["doc.pdf"]["commit_count"] == 1
+
+
+def test_collect_git_non_code_files_unknown_author():
+    """Test handling of commits with missing author info."""
+    commit = MagicMock()
+    commit.author = MagicMock()
+    commit.author.email = None
+    commit.stats = MagicMock()
+    commit.stats.files = {"doc.pdf": {}}
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert result["doc.pdf"]["authors"] == ["unknown"]
+
+
+def test_collect_git_non_code_files_authors_sorted():
+    """Test that authors are returned in sorted order."""
+    commit1 = _make_mock_commit("zebra@example.com", {"doc.pdf": {}})
+    commit2 = _make_mock_commit("alice@example.com", {"doc.pdf": {}})
+    commit3 = _make_mock_commit("bob@example.com", {"doc.pdf": {}})
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2, commit3]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert result["doc.pdf"]["authors"] == ["alice@example.com", "bob@example.com", "zebra@example.com"]
+
+
+def test_collect_git_non_code_files_empty_repo():
+    """Test empty repository with no commits."""
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = []
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert result == {}
+
+
+def test_collect_git_non_code_files_only_code_in_repo():
+    """Test repo that only contains code files."""
+    commit = _make_mock_commit("alice@example.com", {
+        "app.py": {},
+        "main.js": {},
+        "config.json": {}
+    })
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit]
+        mock_get_repo.return_value = mock_repo
+        
+        result = collect_git_non_code_files_with_metadata("/fake/repo")
+        
+        assert result == {}
+

@@ -63,7 +63,7 @@ def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
     return non_code_files
 
 # ============================================================================
-# PR 3: Collect non-code files from git repo (metadata only, no classification)
+# Collect non-code files from git repo (metadata only, no classification)
 # ============================================================================
 
 def collect_git_non_code_files_with_metadata(repo_path: Union[str, Path]) -> Dict[str, Dict[str, Any]]:

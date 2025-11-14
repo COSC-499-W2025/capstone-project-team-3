@@ -694,3 +694,274 @@ def test_collect_git_non_code_files_only_code_in_repo():
         
         assert result == {}
 
+
+# ============================================================================
+# Tests for filter_non_code_files_by_collaboration() 
+# ============================================================================
+
+def test_filter_by_collaboration_single_author():
+    """Test file with single author is non-collaborative."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com"],
+            "commit_count": 5
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 0
+    assert len(result["non_collaborative"]) == 1
+    assert "/repo/doc.pdf" in result["non_collaborative"]
+
+
+def test_filter_by_collaboration_two_authors():
+    """Test file with 2 authors is collaborative."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 10
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 1
+    assert len(result["non_collaborative"]) == 0
+    assert "/repo/doc.pdf" in result["collaborative"]
+
+
+def test_filter_by_collaboration_mixed():
+    """Test mix of collaborative and non-collaborative files."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 5
+        },
+        "README.md": {
+            "path": "/repo/README.md",
+            "authors": ["alice@example.com"],
+            "commit_count": 2
+        },
+        "logo.png": {
+            "path": "/repo/logo.png",
+            "authors": ["alice@example.com", "charlie@example.com", "dave@example.com"],
+            "commit_count": 8
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 2
+    assert "/repo/doc.pdf" in result["collaborative"]
+    assert "/repo/logo.png" in result["collaborative"]
+    
+    assert len(result["non_collaborative"]) == 1
+    assert "/repo/README.md" in result["non_collaborative"]
+
+
+def test_filter_by_collaboration_custom_threshold():
+    """Test with custom author threshold."""
+    metadata = {
+        "doc1.pdf": {
+            "path": "/repo/doc1.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 5
+        },
+        "doc2.pdf": {
+            "path": "/repo/doc2.pdf",
+            "authors": ["alice@example.com", "bob@example.com", "charlie@example.com"],
+            "commit_count": 8
+        }
+    }
+    
+    # Threshold=2 means need 3+ authors for collaborative
+    result = filter_non_code_files_by_collaboration(metadata, author_threshold=2)
+    
+    assert len(result["collaborative"]) == 1
+    assert "/repo/doc2.pdf" in result["collaborative"]
+    
+    assert len(result["non_collaborative"]) == 1
+    assert "/repo/doc1.pdf" in result["non_collaborative"]
+
+
+def test_filter_by_collaboration_empty_input():
+    """Test with empty metadata."""
+    result = filter_non_code_files_by_collaboration({})
+    
+    assert result["collaborative"] == []
+    assert result["non_collaborative"] == []
+
+
+def test_filter_by_collaboration_all_collaborative():
+    """Test when all files are collaborative."""
+    metadata = {
+        "doc1.pdf": {
+            "path": "/repo/doc1.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 3
+        },
+        "doc2.pdf": {
+            "path": "/repo/doc2.pdf",
+            "authors": ["alice@example.com", "charlie@example.com"],
+            "commit_count": 5
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 2
+    assert len(result["non_collaborative"]) == 0
+
+
+def test_filter_by_collaboration_all_non_collaborative():
+    """Test when all files are non-collaborative."""
+    metadata = {
+        "doc1.pdf": {
+            "path": "/repo/doc1.pdf",
+            "authors": ["alice@example.com"],
+            "commit_count": 3
+        },
+        "doc2.pdf": {
+            "path": "/repo/doc2.pdf",
+            "authors": ["bob@example.com"],
+            "commit_count": 2
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 0
+    assert len(result["non_collaborative"]) == 2
+
+
+def test_filter_by_collaboration_empty_authors_list():
+    """Test handling of empty authors list."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": [],
+            "commit_count": 0
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["non_collaborative"]) == 1
+    assert len(result["collaborative"]) == 0
+
+
+def test_filter_by_collaboration_missing_authors_key():
+    """Test handling of missing authors key."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "commit_count": 5
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["non_collaborative"]) == 1
+    assert len(result["collaborative"]) == 0
+
+
+def test_filter_by_collaboration_many_authors():
+    """Test file with many authors."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": [f"user{i}@example.com" for i in range(10)],
+            "commit_count": 50
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 1
+    assert len(result["non_collaborative"]) == 0
+
+
+def test_filter_by_collaboration_threshold_edge_case():
+    """Test edge case where author count equals threshold."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 5
+        }
+    }
+    
+    # Threshold=2: need MORE than 2 authors
+    result = filter_non_code_files_by_collaboration(metadata, author_threshold=2)
+    
+    # 2 authors is NOT > 2, so non-collaborative
+    assert len(result["non_collaborative"]) == 1
+    assert len(result["collaborative"]) == 0
+
+
+def test_filter_by_collaboration_realistic_scenario():
+    """Test realistic collaborative repo scenario."""
+    metadata = {
+        "shared_design.pdf": {
+            "path": "/repo/shared_design.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "commit_count": 12
+        },
+        "alice_notes.md": {
+            "path": "/repo/alice_notes.md",
+            "authors": ["alice@example.com"],
+            "commit_count": 5
+        },
+        "bob_draft.docx": {
+            "path": "/repo/bob_draft.docx",
+            "authors": ["bob@example.com"],
+            "commit_count": 3
+        },
+        "team_presentation.pptx": {
+            "path": "/repo/team_presentation.pptx",
+            "authors": ["alice@example.com", "bob@example.com", "charlie@example.com"],
+            "commit_count": 20
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert len(result["collaborative"]) == 2
+    assert "/repo/shared_design.pdf" in result["collaborative"]
+    assert "/repo/team_presentation.pptx" in result["collaborative"]
+    
+    assert len(result["non_collaborative"]) == 2
+    assert "/repo/alice_notes.md" in result["non_collaborative"]
+    assert "/repo/bob_draft.docx" in result["non_collaborative"]
+
+
+@pytest.mark.parametrize("author_count,threshold,expected_collaborative", [
+    (1, 1, False),  # 1 author, threshold 1: non-collaborative
+    (2, 1, True),   # 2 authors, threshold 1: collaborative
+    (3, 1, True),   # 3 authors, threshold 1: collaborative
+    (2, 2, False),  # 2 authors, threshold 2: non-collaborative (need >2)
+    (3, 2, True),   # 3 authors, threshold 2: collaborative
+    (5, 3, True),   # 5 authors, threshold 3: collaborative
+])
+def test_filter_by_collaboration_parametrized(author_count, threshold, expected_collaborative):
+    """Parametrized test for various author counts and thresholds."""
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": [f"user{i}@example.com" for i in range(author_count)],
+            "commit_count": 10
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata, author_threshold=threshold)
+    
+    if expected_collaborative:
+        assert len(result["collaborative"]) == 1
+        assert len(result["non_collaborative"]) == 0
+    else:
+        assert len(result["collaborative"]) == 0
+        assert len(result["non_collaborative"]) == 1

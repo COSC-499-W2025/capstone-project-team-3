@@ -113,3 +113,32 @@ def collect_git_non_code_files_with_metadata(repo_path: Union[str, Path]) -> Dic
     
     return result
 
+# ============================================================================
+# Classify and filter by collaboration status (per-file basis)
+# ============================================================================
+
+def filter_non_code_files_by_collaboration(
+    file_metadata: Dict[str, Dict[str, Any]],
+    author_threshold: int = 1
+) -> Dict[str, List[str]]:
+    """
+    Classify non-code files as collaborative or non-collaborative based on author count.
+    A file is collaborative if author_count > author_threshold (default: 2+ authors).
+    
+    Returns: {collaborative: [paths], non_collaborative: [paths]}
+    """
+    collaborative = []
+    non_collaborative = []
+    
+    for file_path, info in file_metadata.items():
+        author_count = len(info.get("authors", []))
+        
+        if author_count > author_threshold:
+            collaborative.append(info["path"])
+        else:
+            non_collaborative.append(info["path"])
+    
+    return {
+        "collaborative": collaborative,
+        "non_collaborative": non_collaborative
+    }

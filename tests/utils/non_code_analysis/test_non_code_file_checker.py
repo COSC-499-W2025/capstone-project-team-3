@@ -493,6 +493,27 @@ def test_filter_non_code_files_integration_pattern(tmp_path):
     assert not any("app.py" in f for f in result)
     assert not any("main.py" in f for f in result)
 
+
+# ============================================================================
+# Tests for is_directory_git_repo()
+# ============================================================================
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+def test_is_directory_git_repo_true(mock_detect_git):
+    """Test detecting a git repository."""
+    mock_detect_git.return_value = True
+    assert is_directory_git_repo('/path/to/repo') is True
+    mock_detect_git.assert_called_once_with('/path/to/repo')
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+def test_is_directory_git_repo_false(mock_detect_git):
+    """Test detecting a non-git directory."""
+    mock_detect_git.return_value = False
+    assert is_directory_git_repo('/path/to/local') is False
+    mock_detect_git.assert_called_once_with('/path/to/local')
+
+
 # ============================================================================
 # Tests for collect_git_non_code_files_with_metadata() 
 # ============================================================================

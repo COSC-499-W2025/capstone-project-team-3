@@ -6,8 +6,7 @@ from app.utils.code_analysis.code_analysis_utils import (
     generate_github_resume_summary, infer_roles_from_file, infer_roles_from_commit_files,
     extract_technical_keywords_from_parsed, extract_technical_keywords_from_github,
     analyze_code_patterns_from_parsed, analyze_github_development_patterns,
-    calculate_advanced_complexity_from_parsed, generate_enhanced_resume_summary_from_parsed,
-    generate_enhanced_github_resume_summary, aggregate_parsed_files_metrics
+    calculate_advanced_complexity_from_parsed, aggregate_parsed_files_metrics, generate_resume_summary_from_parsed
 )
 import logging
 
@@ -391,7 +390,7 @@ def test_enhanced_resume_generation_local():
     metrics["code_patterns"] = analyze_code_patterns_from_parsed(design_pattern_files)
     metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(design_pattern_files)
     
-    summary = generate_enhanced_resume_summary_from_parsed(metrics)
+    summary = generate_resume_summary_from_parsed(metrics)
     
     print_subsection("Professional Resume Bullets", summary)
     
@@ -410,7 +409,7 @@ def test_enhanced_resume_generation_github():
     metrics["technical_keywords"] = extract_technical_keywords_from_github(architectural_commits)
     metrics["development_patterns"] = analyze_github_development_patterns(architectural_commits)
     
-    summary = generate_enhanced_github_resume_summary(metrics)
+    summary = generate_github_resume_summary(metrics)
     
     print_subsection("Professional Resume Bullets", summary)
     
@@ -619,20 +618,3 @@ def test_github_analysis_with_llm():
         summary = analyze_github_project(architectural_commits, llm_client)
         print_subsection("LLM Generated Summary", summary)
         assert summary is not None
-
-# --- Test Summary ---
-def test_summary_report():
-    """Generate a final test summary report"""
-    print_section("📈 TEST SUMMARY REPORT", separator="=")
-    print("✅ All enhanced NLP features tested successfully!")
-    print("✅ Design pattern detection: Factory, Observer, Strategy, Singleton, etc.")
-    print("✅ Architectural pattern detection: Microservices, MVC, SOA, Event-Driven, etc.")
-    print("✅ Framework-agnostic component analysis")  
-    print("✅ Enhanced technical keyword extraction")
-    print("✅ Advanced complexity analysis")
-    print("✅ Professional resume generation")
-    print("✅ Comprehensive role inference")
-    print("✅ Edge case handling and robustness")
-    print("✅ Full integration workflow testing")
-    print("\n🎯 Your enhanced code analysis system is production-ready! 🚀")
-    print("="*80)

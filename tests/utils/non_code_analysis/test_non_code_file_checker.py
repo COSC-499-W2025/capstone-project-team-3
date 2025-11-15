@@ -986,3 +986,48 @@ def test_filter_by_collaboration_parametrized(author_count, threshold, expected_
     else:
         assert len(result["collaborative"]) == 0
         assert len(result["non_collaborative"]) == 1
+
+# ============================================================================
+# Tests for get_git_user_identity()
+# ============================================================================
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_success(mock_get_repo):
+    """Test getting git user identity."""
+    mock_repo = Mock()
+    mock_config = Mock()
+    mock_config.get_value.side_effect = lambda section, key, default="": {
+        ("user", "name"): "Alice Smith",
+        ("user", "email"): "alice@example.com"
+    }.get((section, key), default)
+    
+    mock_repo.config_reader.return_value = mock_config
+    mock_get_repo.return_value = mock_repo
+    
+    result = get_git_user_identity('/path/to/repo')
+    
+    assert result["name"] == "Alice Smith"
+    assert result["email"] == "alice@example.com"
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_not_configured(mock_get_repo):
+    """Test getting identity when git user not configured."""
+    mock_repo = Mock()
+    mock_config = Mock()
+    mock_config.get_value.return_value = ""
+    mock_repo.config_reader.return_value = mock_config
+    mock_get_repo.return_value = mock_repo
+    
+    result = get_git_user_identity('/path/to/repo')
+    
+    assert result["name"] == ""
+    assert result["email"] == ""
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_invalid_repo(mock_get_repo):
+    """Test handling invalid repository."""
+    mock_get_repo.side_effect = Exception("Not a git repo")
+    result = get_git_user_identity('/invalid/path')
+    assert result == {}

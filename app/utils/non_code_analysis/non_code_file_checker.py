@@ -184,3 +184,28 @@ def filter_non_code_files_by_collaboration(
         "collaborative": collaborative,
         "non_collaborative": non_collaborative
     }
+
+def get_git_user_identity(repo_path: Union[str, Path]) -> Dict[str, str]:
+    """
+    Get the current git user's identity (name and email) from the repository.
+    REUSES: get_repo() from git_utils.py
+    
+    Args:
+        repo_path: Path to git repository
+        
+    Returns:
+        Dict with 'name' and 'email' keys, or empty dict if not found
+    """
+    try:
+        repo = get_repo(repo_path)  # REUSED from git_utils.py
+        config_reader = repo.config_reader()
+        
+        name = config_reader.get_value("user", "name", default="")
+        email = config_reader.get_value("user", "email", default="")
+        
+        return {
+            "name": name,
+            "email": email
+        }
+    except Exception:
+        return {}

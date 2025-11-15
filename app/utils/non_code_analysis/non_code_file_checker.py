@@ -8,7 +8,6 @@ from app.utils.git_utils import (
     get_repo, 
     detect_git
 )
-from app.utils.scan_utils import scan_project_files
 
 # Extensions considered non-code
 NON_CODE_EXTENSIONS: Set[str] = {

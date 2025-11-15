@@ -209,3 +209,50 @@ def get_git_user_identity(repo_path: Union[str, Path]) -> Dict[str, str]:
         }
     except Exception:
         return {}
+    
+
+def verify_user_in_files(
+    file_metadata: Dict[str, Dict[str, Any]],
+    user_email: str
+) -> Dict[str, List[str]]:
+    """
+    Verify which files the user actually contributed to vs files by others only.
+    
+    Ensures collaborative files have user + at least 1 other person.
+    Ensures non-collaborative files have ONLY the user.
+    
+    Args:
+        file_metadata: Output from collect_git_non_code_files_with_metadata()
+        user_email: Email of the user to verify
+    
+    Returns:
+        {
+            "user_collaborative": [paths],    # Files with user + at least 1 other
+            "user_solo": [paths],             # Files with ONLY user
+            "others_only": [paths]            # Files WITHOUT user
+        }
+    """
+    user_collaborative = []
+    user_solo = []
+    others_only = []
+    
+    for file_path, info in file_metadata.items():
+        authors = info.get("authors", [])
+        
+        if user_email in authors:
+            # User IS an author
+            if len(authors) == 1:
+                # ONLY user (solo work)
+                user_solo.append(info["path"])
+            else:
+                # User + at least 1 other person (collaborative)
+                user_collaborative.append(info["path"])
+        else:
+            # User is NOT an author (others' work)
+            others_only.append(info["path"])
+    
+    return {
+        "user_collaborative": user_collaborative,
+        "user_solo": user_solo,
+        "others_only": others_only
+    }

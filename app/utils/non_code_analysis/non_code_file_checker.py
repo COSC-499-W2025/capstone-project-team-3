@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import Set, List, Union, Dict, Any
 from app.utils.git_utils import (
     get_repo, 
-    is_collaborative,
-    detect_git,
-    extract_commit_authors
+    detect_git
 )
 from app.utils.scan_utils import scan_project_files
 

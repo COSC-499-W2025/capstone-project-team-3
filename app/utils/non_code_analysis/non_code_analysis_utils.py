@@ -2,48 +2,13 @@ import re
 from pathlib import Path
 from typing import List, Dict
 from collections import Counter
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+from sumy.nlp.stemmers import Stemmer
+from sumy.utils import get_stop_words
 
-# Sumy and NLTK Imports with availability checks
-SUMY_AVAILABLE = False
-NLTK_AVAILABLE = False
-
-try:
-    from sumy.parsers.plaintext import PlaintextParser
-    from sumy.nlp.tokenizers import Tokenizer
-    from sumy.summarizers.lsa import LsaSummarizer
-    from sumy.nlp.stemmers import Stemmer
-    from sumy.utils import get_stop_words
-    SUMY_AVAILABLE = True
-except ImportError:
-    pass
-
-try:
-    import nltk
-    NLTK_AVAILABLE = True
-except ImportError:
-    pass
-
-
-# NLTK Configuration 
-# Resolve the nltk_data path relative to this file to ensure portability across machines
-if NLTK_AVAILABLE:
-    BASE_DIR = Path(__file__).resolve().parent
-    NLTK_DATA_DIR = BASE_DIR / "nltk_data"
-    # Add the path to NLTK's search directories
-    nltk.data.path.append(str(NLTK_DATA_DIR))
-
-
-#TODO Step 1: Check user name matches with the author name in the metadata. TBD if done in analysis or parsing section of pipeline
-def check_authorship(parsed_files):
-    """
-    This function checks if the author name in the metadata of the parsed files matches the user name from the database.
-    If they match, the file is eligible for analysis; otherwise, it is skipped.
-    Returns a list of files eligible for analysis.
-    """
-    pass
-
-
-# Step 2: Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
+# Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
 def pre_process_non_code_files(parsed_files: Dict, max_file_size_mb: float = 5.0, max_content_length: int = 50000, summary_sentences: int = 10,language: str = "english") -> List[Dict]:
@@ -69,10 +34,6 @@ def pre_process_non_code_files(parsed_files: Dict, max_file_size_mb: float = 5.0
         }
     """
     llm1_summaries = []
-    
-    # Check if Sumy is available
-    if not SUMY_AVAILABLE:
-        raise ImportError("Sumy library is required. Install it with: pip install sumy")
     
     # Extract files list from parsed_files
     files = parsed_files.get("files", [])
@@ -141,8 +102,6 @@ def _sumy_lsa_summarize(content: str, num_sentences: int = 10, language: str = "
         ImportError: If Sumy is not available
         Exception: If NLTK tokenizers are missing or other errors occur
     """
-    if not SUMY_AVAILABLE:
-        raise ImportError("Sumy library is required. Install it with: pip install sumy")
     
     try:
         # Create parser from plain text

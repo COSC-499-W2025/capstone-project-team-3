@@ -1,12 +1,14 @@
 import pytest
 from pathlib import Path
-from app.utils.non_code_analysis.non_code_file_checker import is_non_code_file, filter_non_code_files
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock
 from app.utils.non_code_analysis.non_code_file_checker import (
     is_non_code_file,
     filter_non_code_files,
+    is_directory_git_repo,
     collect_git_non_code_files_with_metadata,
-    filter_non_code_files_by_collaboration
+    filter_non_code_files_by_collaboration,
+    get_git_user_identity,
+    verify_user_in_files,
 )
 
 # ============================================================================

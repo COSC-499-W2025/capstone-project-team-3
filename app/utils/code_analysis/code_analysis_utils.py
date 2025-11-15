@@ -63,6 +63,7 @@ def generate_resume_summary_from_parsed(metrics: Dict, llm_client=None) -> Union
             f"{metrics}\n"
             "Generate resume-like bullet points summarizing the user's contributions, "
             "including key activities, skills, technologies, and impact."
+            "Do NOT include any explanations, headings, or options—just the list."
         )
         response = llm_client.generate(prompt)
         return response
@@ -97,7 +98,7 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     
     # File type extensions for classification
     code_exts = {".py", ".js", ".java", ".cpp", ".c", ".ts", ".rb", ".go"}
-    doc_exts = {".md", ".rst", ".txt", ".docx", ".pdf"}
+    doc_exts = {".md"}
     test_exts = {"test_", "_test.py", ".spec.js", ".spec.ts"}
 
     # Collect metrics from each commit
@@ -162,6 +163,7 @@ def generate_github_resume_summary(metrics: Dict, llm_client=None) -> Union[str,
             f"{metrics}\n"
             "Generate resume-like bullet points summarizing the user's contributions, "
             "including key activities, skills, technologies, and impact."
+            "Do NOT include any explanations, headings, or options—just the list."
         )
         response = llm_client.generate(prompt)
         return response

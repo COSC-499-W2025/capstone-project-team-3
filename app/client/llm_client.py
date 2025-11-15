@@ -1,5 +1,8 @@
 # Import the Google Generative AI Python client
 import google.generativeai as genai
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GeminiLLMClient:
     """
@@ -26,4 +29,5 @@ class GeminiLLMClient:
             response = model.generate_content(prompt)
             return response.text
         except Exception as e:
-            return "Invalid Key. Check your key format and Try again"
+            logger.error(f"Gemini API error: {e}")
+            return f"Gemini API error: {e}"

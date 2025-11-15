@@ -1,6 +1,6 @@
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 from datetime import datetime
 import os, json
 from typing import Optional
@@ -291,3 +291,74 @@ def extract_code_commit_content_by_author(
             break
 
     return json.dumps(out, indent=2)
+
+_ALLOWED_EXTS_FOR_README = {"", ".md", ".rst", ".txt", ".markdown", ".adoc", ".org"}
+
+def extract_all_readmes(path: Union[str, Path]) -> Dict[str, str]:
+    """
+    Finds files that start with readme anywhere in repo, skips binary-looking blobs,
+    caps read size, and decodes as UTF-8 (replace on errors).
+    """
+    readmes: Dict[str, str] = {}
+    max_bytes = 2_000_000  # 2MB limit
+
+    try:
+        repo = get_repo(path)
+        if not repo.head.is_valid():
+            return readmes
+
+        for item in repo.head.commit.tree.traverse():
+            if item.type != "blob":
+                continue
+
+            name_lower = item.name.lower()
+            if not name_lower.startswith("readme"):
+                continue
+
+            # Proper extension check
+            ext = Path(name_lower).suffix  # "" if no extension
+            if ext not in _ALLOWED_EXTS_FOR_README:
+                continue
+
+            try:
+                stream = item.data_stream
+                head = stream.read(4096)
+                if _is_binary_heuristic(head):  
+                    continue
+
+                # Clamp to avoid over-read if head already exceeded max_bytes
+                remaining_budget = max(0, max_bytes - len(head))
+                rest = stream.read(remaining_budget)
+                data = head + rest
+
+                text = data.decode("utf-8", errors="replace")
+                readmes[item.path] = text  # repo-relative path
+            except Exception:
+                continue
+
+        return readmes
+
+    except Exception:
+        return readmes
+    
+def _is_binary_heuristic(sample: bytes) -> bool:
+    """
+    Heuristically detects if a file is binary.
+
+    The check follows two simple rules:
+      1. If the sample contains any NUL byte (`b'\\x00'`), it's considered binary.
+      2. Otherwise, count printable ASCII and whitespace characters 
+         (tab, newline, carriage return). If fewer than ~85% of bytes are printable, 
+         it's likely binary.
+
+    This lightweight heuristic reliably filters out images, PDFs, and other 
+    non-text blobs while keeping normal text and Markdown files.
+    """
+    if not sample:
+        return False
+    if b"\x00" in sample:
+        return True
+    textish = sum(c in (9, 10, 13) or 32 <= c <= 126 for c in sample)
+    ratio = textish / len(sample)
+    return ratio < 0.85
+

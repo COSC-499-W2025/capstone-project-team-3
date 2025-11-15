@@ -62,73 +62,6 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
     # Return top keywords by frequency/importance
     return sorted(list(set(filtered_keywords)))[:15]
 
-def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
-    """
-    Extract technical keywords from GitHub commit messages and file changes.
-    """
-    all_messages = []
-    all_file_names = []
-    
-    for commit in commits:
-        # Collect commit messages
-        message = commit.get("message_summary", "") + " " + commit.get("message_full", "")
-        all_messages.append(message.lower())
-        
-        # Collect file names and paths
-        files = commit.get("files", [])
-        for file in files:
-            path = file.get("path_after") or file.get("path_before", "")
-            if path:
-                all_file_names.extend(path.split("/"))
-    
-    # Extract keywords from commit messages
-    tech_terms = set()
-    
-    # Common technical keywords in commit messages
-    tech_patterns = [
-    # Development Actions (present and past tense)
-    r'\b(implement|implemented|add|added|create|created|build|built|develop|developed|design|designed|refactor|refactored|optimize|optimized|fix|fixed|update|updated|enhance|enhanced|improve|improved|integrate|integrated|deploy|deployed|configure|configured|setup|set up|install|installed|remove|removed|delete|deleted|migrate|migrated|upgrade|upgraded|downgrade|downgraded)\b',
-    # Architecture & Components
-    r'\b(api|apis|database|databases|frontend|backend|fullstack|full-stack|component|components|service|services|module|modules|class|classes|function|functions|method|methods|library|libraries|framework|frameworks|middleware|plugin|plugins|extension|extensions|microservice|microservices|monolith)\b',
-    # Testing & Quality
-    r'\b(test|testing|tests|unit|units|integration|e2e|end-to-end|automation|automated|spec|specs|mock|mocks|stub|stubs|coverage|benchmark|benchmarks|performance|profiling|debugging|debug|validation|validate|verification|verify)\b',
-    # DevOps & Infrastructure
-    r'\b(docker|dockerfile|kubernetes|k8s|ci|cd|pipeline|pipelines|jenkins|github|actions|workflow|workflows|deploy|deployment|deployments|infrastructure|cloud|aws|azure|gcp|terraform|ansible|vagrant|nginx|apache|load|balancer|scaling|monitoring|logging|metrics)\b',
-    # Frontend Technologies
-    r'\b(react|reactjs|vue|vuejs|angular|angularjs|svelte|next|nextjs|nuxt|nuxtjs|gatsby|html|css|scss|sass|less|tailwind|bootstrap|jquery|typescript|javascript|js|ts|jsx|tsx|webpack|vite|parcel|babel|eslint|prettier)\b',
-    # Backend Technologies
-    r'\b(node|nodejs|express|expressjs|django|flask|fastapi|spring|springboot|laravel|rails|ruby|python|java|php|golang|go|rust|kotlin|scala|dotnet|csharp|nestjs|koa)\b',
-    # Databases & Storage
-    r'\b(mysql|postgresql|postgres|sqlite|mongodb|mongo|redis|elasticsearch|elastic|cassandra|dynamodb|firebase|firestore|orm|sql|nosql|migration|migrations|schema|schemas|index|indexes|query|queries|transaction|transactions)\b',
-    # Mobile & Desktop
-    r'\b(android|ios|swift|kotlin|flutter|dart|react-native|reactnative|xamarin|ionic|cordova|phonegap|electron|tauri|pwa|mobile|native|cross-platform)\b',
-    # Data & Analytics
-    r'\b(data|analytics|ml|ai|machine|learning|deep|neural|network|pandas|numpy|tensorflow|pytorch|sklearn|jupyter|notebook|visualization|dashboard|etl|pipeline|bigdata|spark|hadoop|kafka|stream|streaming)\b',
-    # Security & Authentication
-    r'\b(auth|authentication|authorization|oauth|jwt|token|tokens|security|secure|encryption|decrypt|encrypt|ssl|tls|https|cors|csrf|xss|hash|hashing|bcrypt|session|sessions|login|logout|signup|password|permissions|role|roles)\b',
-    # Communication & Protocols
-    r'\b(rest|restful|graphql|grpc|websocket|websockets|mqtt|http|https|api|soap|json|xml|yaml|protobuf|messaging|queue|queues|pub|sub|pubsub|webhook|webhooks)\b',
-    # Version Control & Collaboration
-    r'\b(git|github|gitlab|bitbucket|commit|commits|branch|branches|merge|merges|pull|request|requests|pr|fork|clone|push|rebase|cherry-pick|tag|tags|release|releases|version|versioning)\b',
-    # Project Management & Methodologies
-    r'\b(agile|scrum|kanban|sprint|sprints|story|stories|epic|epics|bug|bugs|issue|issues|feature|features|requirement|requirements|specification|specifications|documentation|docs|readme|changelog|license)\b'
-]
-    
-    for message in all_messages:
-        for pattern in tech_patterns:
-            matches = re.findall(pattern, message)
-            tech_terms.update(matches)
-    
-    # Extract meaningful file names
-    for filename in all_file_names:
-        if filename and len(filename) > 2 and not filename.endswith(('.git', '.md')):
-            # Remove extensions and split camelCase
-            name_without_ext = filename.split('.')[0]
-            words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', name_without_ext)
-            tech_terms.update(word.lower() for word in words if len(word) > 2)
-    
-    return sorted(list(tech_terms))[:15]
-
 def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
     """
     Analyze code patterns, architecture, and practices from parsed files.
@@ -389,85 +322,6 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
     
     return patterns
 
-def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
-    """
-    Analyze development patterns from GitHub commit history.
-    """
-    patterns = {
-        "development_workflow": [],
-        "collaboration_patterns": [],
-        "code_practices": [],
-        "project_evolution": []
-    }
-    
-    if not commits:
-        return patterns
-    
-    # Analyze commit messages for patterns
-    commit_types = defaultdict(int)
-    all_messages = []
-    all_files = []
-    
-    for commit in commits:
-        message = commit.get("message_summary", "").lower()
-        all_messages.append(message)
-        
-        # Collect all file paths for additional analysis
-        files = commit.get("files", [])
-        for file in files:
-            path = file.get("path_after") or file.get("path_before", "")
-            if path:
-                all_files.append(path.lower())
-        
-        # Categorize commit types
-        if any(keyword in message for keyword in ['feat:', 'feature', 'add', 'implement']):
-            commit_types['feature'] += 1
-        if any(keyword in message for keyword in ['fix:', 'bug', 'error']):
-            commit_types['bugfix'] += 1
-        if any(keyword in message for keyword in ['refactor:', 'restructure', 'cleanup']):
-            commit_types['refactor'] += 1
-        if any(keyword in message for keyword in ['test:', 'testing', 'spec']):
-            commit_types['testing'] += 1
-        if any(keyword in message for keyword in ['docs:', 'documentation', 'readme']):
-            commit_types['documentation'] += 1
-    
-    total_commits = len(commits)
-    
-    # Calculate ratios and check thresholds
-    if total_commits > 0:
-        testing_ratio = commit_types['testing'] / total_commits
-        refactor_ratio = commit_types['refactor'] / total_commits  
-        doc_ratio = commit_types['documentation'] / total_commits
-        if testing_ratio > 0.1:
-            patterns["code_practices"].append("Test-Driven Development")
-        if refactor_ratio > 0.15:
-            patterns["code_practices"].append("Code Refactoring")
-        
-        if doc_ratio > 0.05:
-            patterns["code_practices"].append("Documentation-Focused")
-    
-    # Analyze file changes for project evolution
-    file_extensions = defaultdict(int)
-    for commit in commits:
-        for file in commit.get("files", []):
-            path = file.get("path_after") or file.get("path_before", "")
-            if path:
-                ext = path.split('.')[-1].lower()
-                file_extensions[ext] += 1
-    
-    if file_extensions:
-        dominant_tech = max(file_extensions, key=file_extensions.get)
-        if dominant_tech in ['js', 'jsx', 'ts', 'tsx']:
-            patterns["project_evolution"].append("JavaScript/Frontend Development")
-        elif dominant_tech in ['py']:
-            patterns["project_evolution"].append("Python Development")
-        elif dominant_tech in ['java']:
-            patterns["project_evolution"].append("Java Development")
-        else:
-            patterns["project_evolution"].append("Multi-technology Development")
-    
-    return patterns
-
 def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
     """
     Calculate advanced complexity metrics from parsed files.
@@ -523,67 +377,6 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
         }
     
     return complexity_metrics
-
-def generate_github_resume_summary(metrics: Dict) -> List[str]:
-    """
-    Generate detailed resume summary using enhanced analysis for GitHub projects.
-    """
-    summary = []
-    
-    # Contribution overview
-    total_commits = metrics.get('total_commits', 0)
-    duration = metrics.get('duration_days', 0)
-    
-    if duration > 0:
-        summary.append(f"Contributed {total_commits} commits over {duration} days, demonstrating consistent development activity")
-    else:
-        summary.append(f"Delivered {total_commits} focused commits in a concentrated development effort")
-    
-    # File and code changes
-    files_added = metrics.get('files_added', 0)
-    files_modified = metrics.get('files_modified', 0)
-    code_files = metrics.get('code_files_changed', 0)
-    
-    if code_files > 0:
-        summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files enhanced")
-    
-    # Development patterns
-    tech_keywords = metrics.get("technical_keywords", [])
-    if tech_keywords:
-        summary.append(f"Focused on key technical areas: {', '.join(tech_keywords[:6])}")
-    
-    dev_patterns = metrics.get("development_patterns", {})
-    practices = dev_patterns.get("code_practices", [])
-    if practices:
-        summary.append(f"Followed industry best practices: {', '.join(practices)}")
-    
-    # Project evolution
-    evolution = dev_patterns.get("project_evolution", [])
-    if evolution:
-        summary.append(f"Led development in: {', '.join(evolution)}")
-    
-    # Testing and documentation
-    test_files = metrics.get('test_files_changed', 0)
-    doc_files = metrics.get('doc_files_changed', 0)
-    
-    quality_aspects = []
-    if test_files > 0:
-        quality_aspects.append(f"testing ({test_files} test files)")
-    if doc_files > 0:
-        quality_aspects.append(f"documentation ({doc_files} docs)")
-    
-    if quality_aspects:
-        summary.append(f"Emphasized code quality through {' and '.join(quality_aspects)}")
-    
-    # Sample impactful commit messages
-    sample_messages = metrics.get('sample_messages', [])
-    if sample_messages:
-        impactful_commits = [msg for msg in sample_messages[:3] if any(keyword in msg.lower() 
-                            for keyword in ['implement', 'add', 'create', 'build', 'develop'])]
-        if impactful_commits:
-            summary.append(f"Key contributions include: {'; '.join(impactful_commits)}")
-    
-    return summary
 
 def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
     """
@@ -696,75 +489,6 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     return metrics
 
 
-# Aggregate metrics from a list of GitHub commits
-def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
-    """
-    Aggregates key metrics from a list of individual commit dicts.
-    Returns a dictionary of contribution statistics.
-    """
-    file_status_counter = Counter()
-    file_types_counter = Counter()
-    authors = set()
-    dates = []
-    messages = []
-    total_files_changed = set()
-    roles = set()
-    
-    # File type extensions for classification
-    code_exts = {".py", ".js", ".java", ".cpp", ".c", ".ts", ".rb", ".go"}
-    doc_exts = {".md"}
-    test_exts = {"test_", "_test.py", ".spec.js", ".spec.ts"}
-
-    # Collect metrics from each commit
-    for commit in commits:
-        authors.add(commit.get("author_name"))
-        dates.append(commit.get("authored_datetime"))
-        messages.append(commit.get("message_summary"))
-        files = commit.get("files", [])
-        for f in files:
-            status = f.get("status")
-            file_status_counter[status] += 1
-            path = f.get("path_after") or f.get("path_before")
-            if path:
-                total_files_changed.add(path)
-                ext = os.path.splitext(path)[1].lower()
-                fname = os.path.basename(path).lower()
-                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts) or "test" in path.lower():
-                    file_types_counter["test"] += 1
-                elif ext in doc_exts:
-                    file_types_counter["docs"] += 1
-                elif ext in code_exts:
-                    file_types_counter["code"] += 1
-                else:
-                    file_types_counter["other"] += 1
-        roles.update(infer_roles_from_commit_files(files))
-        
-    # Calculate duration in days between first and last commit
-    def parse_dt(dt): return datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
-    if dates:
-        dates_sorted = sorted(dates)
-        duration_days = (parse_dt(dates_sorted[-1]) - parse_dt(dates_sorted[0])).days
-    else:
-        duration_days = 0
-
-    metrics = {
-        "authors": list(authors),
-        "total_commits": len(commits),
-        "duration_days": duration_days,
-        "files_added": file_status_counter["A"],
-        "files_modified": file_status_counter["M"],
-        "files_deleted": file_status_counter["D"],
-        "total_files_changed": len(total_files_changed),
-        "code_files_changed": file_types_counter["code"],
-        "doc_files_changed": file_types_counter["docs"],
-        "test_files_changed": file_types_counter["test"],
-        "other_files_changed": file_types_counter["other"],
-        "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages), 
-        "roles": list(roles),
-    }
-    return metrics
-
-
 # --- Role inference for local files ---
 def infer_roles_from_file(file):
     """
@@ -799,38 +523,6 @@ def infer_roles_from_file(file):
 
     return roles
 
-# --- Role inference for GitHub commits ---
-def infer_roles_from_commit_files(files):
-    """
-    Infers roles played based on file types changed in GitHub commits.
-    Returns a set of detected roles.
-    """
-    roles = set()
-    # Define extension sets for each role
-    frontend_exts = {".js", ".jsx", ".ts", ".tsx", ".css", ".html"}
-    backend_exts = {".py", ".java", ".rb", ".go", ".cpp", ".c"}
-    database_exts = {".sql", ".db", ".json"}
-    devops_exts = {".yml", ".yaml", ".sh"}
-    datascience_exts = {".ipynb", ".csv", ".pkl"}
-
-    for f in files:
-        path = f.get("path_after") or f.get("path_before", "")
-        ext = os.path.splitext(path)[1].lower()
-        fname = os.path.basename(path).lower()
-
-        if ext in frontend_exts:
-            roles.add("frontend")
-        if ext in backend_exts:
-            roles.add("backend")
-        if ext in database_exts:
-            roles.add("database")
-        if ext in devops_exts or "dockerfile" in fname:
-            roles.add("devops")
-        if ext in datascience_exts:
-            roles.add("data science")
-
-    return roles
-
 # Main entry point for local project analysis
 def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
     """
@@ -856,27 +548,3 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
         metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(parsed_files)
         return generate_resume_summary_from_parsed(metrics)
     
-
-# Main entry point for Github project analysis
-def analyze_github_project(commits: List[Dict], llm_client=None):
-    """
-    Analyze a project from GitHub commit dicts and return a resume summary.
-    Uses LLM if provided, otherwise returns enhanced NLP analysis.
-    """
-    metrics = aggregate_github_individual_metrics(commits)
-    
-    if llm_client:
-        # Use LLM to generate summary
-        prompt = (
-            "Given these GitHub contribution metrics:\n"
-            f"{metrics}\n"
-            "Generate resume-like bullet points summarizing the user's contributions, "
-            "including key activities, skills, technologies, and impact."
-            "Do NOT include any explanations, headings, or options—just the list."
-        )
-        return llm_client.generate(prompt)
-    else:
-        # Use enhanced NLP analysis
-        metrics["technical_keywords"] = extract_technical_keywords_from_github(commits)
-        metrics["development_patterns"] = analyze_github_development_patterns(commits)
-        return generate_github_resume_summary(metrics)

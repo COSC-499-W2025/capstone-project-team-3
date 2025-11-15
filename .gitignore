@@ -14,7 +14,8 @@ ENV/
 pip-wheel-metadata/
 *.egg-info/
 .eggs/
-app/non_code_analysis/NLP/
+app/utils/non_code_analysis/NLP/*
+
 # Testing / coverage
 app/data/test.py
 .coverage

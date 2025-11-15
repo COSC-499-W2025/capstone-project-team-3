@@ -136,3 +136,35 @@ def calculate_project_score(current_file_signatures: List[str]) -> float:
     already_analyzed = sum(1 for sig in current_file_signatures if sig in db_sigs)
     return round((already_analyzed / len(current_file_signatures)) * 100, 2)
 
+def run_scan_flow(root: str, exclude: list = None) -> list:
+    """
+    Scans the project, stores signatures in DB, and returns the list of files for downstream use.
+    """
+    patterns = EXCLUDE_PATTERNS.copy()
+    if exclude:
+        patterns.extend(exclude)
+    files = scan_project_files(root, exclude_patterns=patterns)
+    if not files:
+        print("No files found to scan in the specified directory. Skipping analysis.")
+        return []
+
+    # Print scanned files for user feedback
+    print(f"Scanned files (excluding patterns {exclude}):")
+    for f in files:
+        print(f)
+
+    # Store signatures in DB (internal use only)
+    file_signatures = [extract_file_signature(f, root) for f in files]
+    signature = get_project_signature(file_signatures)
+    size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
+    name = Path(root).name
+    path = str(Path(root).resolve())
+
+    score = calculate_project_score(file_signatures)
+    print(f"Project analysis score: {score}% of files already analyzed.")
+    if not project_signature_exists(signature):
+        store_project_in_db(signature, name, path, file_signatures, size_bytes)
+        print("Stored project and file signatures in DB.")
+
+    # return the files for downstream processing
+    return files

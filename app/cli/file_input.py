@@ -58,9 +58,9 @@ def main(argv: Optional[list] = None) -> int:
             "projects": projects,
             "count": len(projects),
         })
-
+    #TODO: Call function to extract individual project path and store into projects attribute in results
     print(json.dumps(result, indent=2))
-    return 0
+    return result
 
 if __name__ == "__main__":
     raise SystemExit(main())

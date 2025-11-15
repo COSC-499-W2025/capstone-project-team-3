@@ -1,9 +1,8 @@
-from typing import Dict, Union, List
+from typing import Dict, List
 import os
 from datetime import datetime
 from collections import Counter, defaultdict
 import re
-import math
 
 def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str]:
     """
@@ -525,7 +524,7 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
     
     return complexity_metrics
 
-def generate_enhanced_github_resume_summary(metrics: Dict) -> List[str]:
+def generate_github_resume_summary(metrics: Dict) -> List[str]:
     """
     Generate detailed resume summary using enhanced analysis for GitHub projects.
     """
@@ -586,7 +585,7 @@ def generate_enhanced_github_resume_summary(metrics: Dict) -> List[str]:
     
     return summary
 
-def generate_enhanced_resume_summary_from_parsed(metrics: Dict) -> List[str]:
+def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
     """
     Generate detailed resume summary using enhanced NLP analysis for local projects.
     """
@@ -696,31 +695,6 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     metrics["imports"] = list(metrics["imports"])
     return metrics
 
-# Generate resume summary from parsed file metrics (optionally using LLM)
-def generate_resume_summary_from_parsed(metrics: Dict, llm_client=None, parsed_files: List[Dict] = None) -> Union[str, List[str]]:
-    """
-    Generate resume-like bullet points from aggregated metrics of parsed files.
-    Uses LLM if provided, otherwise returns a basic summary.
-    """
-    if llm_client:
-        # Use LLM to generate a more natural summary
-        prompt = (
-            "Given these aggregated project metrics:\n"
-            f"{metrics}\n"
-            "Generate resume-like bullet points summarizing the user's contributions, "
-            "including key activities, skills, technologies, and impact."
-            "Do NOT include any explanations, headings, or options—just the list."
-        )
-        response = llm_client.generate(prompt)
-        return response
-    else:
-        # Enhanced NLP-based analysis using the raw parsed_files parameter
-        if parsed_files:  # Use the parameter, not metrics.get("parsed_files", [])
-            metrics["technical_keywords"] = extract_technical_keywords_from_parsed(parsed_files)
-            metrics["code_patterns"] = analyze_code_patterns_from_parsed(parsed_files)
-            metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(parsed_files)
-        
-        return generate_enhanced_resume_summary_from_parsed(metrics)
 
 # Aggregate metrics from a list of GitHub commits
 def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
@@ -790,30 +764,6 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     }
     return metrics
 
-# Generate resume summary from GitHub commit metrics (optionally using LLM)
-def generate_github_resume_summary(metrics: Dict, llm_client=None, commits: List[Dict] = None) -> Union[str, List[str]]:
-    """
-    Generate resume-like bullet points from aggregated GitHub commit metrics.
-    Uses LLM if provided, otherwise returns a basic summary.
-    """
-    if llm_client:
-        # Use LLM to generate a more natural summary
-        prompt = (
-            "Given these GitHub contribution metrics:\n"
-            f"{metrics}\n"
-            "Generate resume-like bullet points summarizing the user's contributions, "
-            "including key activities, skills, technologies, and impact."
-            "Do NOT include any explanations, headings, or options—just the list."
-        )
-        response = llm_client.generate(prompt)
-        return response
-    else:
-        # Enhanced analysis using the raw commits
-        if commits:  # Use the actual JSON data you receive
-            metrics["technical_keywords"] = extract_technical_keywords_from_github(commits)
-            metrics["development_patterns"] = analyze_github_development_patterns(commits)
-        
-        return generate_enhanced_github_resume_summary(metrics)
 
 # --- Role inference for local files ---
 def infer_roles_from_file(file):
@@ -885,16 +835,48 @@ def infer_roles_from_commit_files(files):
 def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
     """
     Analyze a project from parsed file dicts and return a resume summary.
-    Uses LLM if provided, otherwise returns a basic summary.
+    Uses LLM if provided, otherwise returns enhanced NLP analysis.
     """
     metrics = aggregate_parsed_files_metrics(parsed_files)
-    return generate_resume_summary_from_parsed(metrics, llm_client, parsed_files)
+    
+    if llm_client:
+        # Use LLM to generate summary
+        prompt = (
+            "Given these aggregated project metrics:\n"
+            f"{metrics}\n"
+            "Generate resume-like bullet points summarizing the user's contributions, "
+            "including key activities, skills, technologies, and impact."
+            "Do NOT include any explanations, headings, or options—just the list."
+        )
+        return llm_client.generate(prompt)
+    else:
+        # Use enhanced NLP analysis
+        metrics["technical_keywords"] = extract_technical_keywords_from_parsed(parsed_files)
+        metrics["code_patterns"] = analyze_code_patterns_from_parsed(parsed_files)
+        metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(parsed_files)
+        return generate_resume_summary_from_parsed(metrics)
+    
 
 # Main entry point for Github project analysis
 def analyze_github_project(commits: List[Dict], llm_client=None):
     """
     Analyze a project from GitHub commit dicts and return a resume summary.
-    Uses LLM if provided, otherwise returns a basic summary.
+    Uses LLM if provided, otherwise returns enhanced NLP analysis.
     """
     metrics = aggregate_github_individual_metrics(commits)
-    return generate_github_resume_summary(metrics, llm_client, commits)
+    
+    if llm_client:
+        # Use LLM to generate summary
+        prompt = (
+            "Given these GitHub contribution metrics:\n"
+            f"{metrics}\n"
+            "Generate resume-like bullet points summarizing the user's contributions, "
+            "including key activities, skills, technologies, and impact."
+            "Do NOT include any explanations, headings, or options—just the list."
+        )
+        return llm_client.generate(prompt)
+    else:
+        # Use enhanced NLP analysis
+        metrics["technical_keywords"] = extract_technical_keywords_from_github(commits)
+        metrics["development_patterns"] = analyze_github_development_patterns(commits)
+        return generate_github_resume_summary(metrics)

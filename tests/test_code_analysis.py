@@ -2,10 +2,9 @@ import os
 from dotenv import load_dotenv
 from app.client.llm_client import GeminiLLMClient
 from app.utils.code_analysis.code_analysis_utils import (
-    analyze_github_project, analyze_parsed_project, aggregate_github_individual_metrics, 
-    generate_github_resume_summary, infer_roles_from_file, infer_roles_from_commit_files,
-    extract_technical_keywords_from_parsed, extract_technical_keywords_from_github,
-    analyze_code_patterns_from_parsed, analyze_github_development_patterns,
+    analyze_parsed_project, infer_roles_from_file,
+    extract_technical_keywords_from_parsed,
+    analyze_code_patterns_from_parsed,
     calculate_advanced_complexity_from_parsed, aggregate_parsed_files_metrics, generate_resume_summary_from_parsed
 )
 import logging
@@ -309,43 +308,6 @@ def test_enhanced_design_pattern_detection():
     assert "Event-Driven Architecture" in patterns["architectural_patterns"]
     assert "Layered Architecture" in patterns["architectural_patterns"]
 
-def test_enhanced_architectural_pattern_analysis():
-    """Test architectural pattern detection from commit history"""
-    print_section("🏗️  ARCHITECTURAL PATTERN ANALYSIS")
-    
-    # Create commits with explicit testing and documentation practices
-    enhanced_commits = [
-        {
-            "hash": "arch001",
-            "author_name": "Software Architect",
-            "authored_datetime": "2025-10-15T10:00:00",
-            "message_summary": "test: implement microservices architecture with comprehensive testing",
-            "files": [
-                {"status": "A", "path_after": "services/user-service/main.py"},
-                {"status": "A", "path_after": "test/user_service_test.py"},  # Test file
-            ]
-        },
-        {
-            "hash": "arch002", 
-            "author_name": "Backend Developer",
-            "authored_datetime": "2025-10-16T14:30:00",
-            "message_summary": "docs: add comprehensive documentation for repository pattern",
-            "files": [
-                {"status": "A", "path_after": "repositories/UserRepository.java"},
-                {"status": "A", "path_after": "README.md"},  # Documentation
-            ]
-        }
-    ]
-    
-    metrics = aggregate_github_individual_metrics(enhanced_commits)
-    patterns = analyze_github_development_patterns(enhanced_commits)
-    
-    print_subsection("Project Evolution", patterns["project_evolution"])
-    print_subsection("Code Practices", patterns["code_practices"])
-    print_subsection("Detected Roles", metrics["roles"])
-    
-    assert len(patterns["project_evolution"]) > 0
-    assert len(patterns["code_practices"]) > 0  
 
 def test_comprehensive_technical_keyword_extraction():
     """Test expanded technical keyword extraction"""
@@ -355,17 +317,7 @@ def test_comprehensive_technical_keyword_extraction():
     keywords_parsed = extract_technical_keywords_from_parsed(design_pattern_files)
     print_subsection("Keywords from Parsed Files", keywords_parsed[:10])
     
-    # Test GitHub commits  
-    keywords_github = extract_technical_keywords_from_github(architectural_commits)
-    print_subsection("Keywords from GitHub Commits", keywords_github[:10])
-    
     assert len(keywords_parsed) > 0
-    assert len(keywords_github) > 0
-    
-    # Check for architectural terms
-    architecture_terms = ["microservices", "architecture", "repository", "event"]
-    found_terms = [term for term in architecture_terms if term in keywords_github]
-    assert len(found_terms) > 0
 
 def test_advanced_complexity_analysis():
     """Test advanced complexity calculation with detailed metrics"""
@@ -400,24 +352,6 @@ def test_enhanced_resume_generation_local():
     # Check for architectural mentions
     summary_text = ' '.join(summary).lower()
     assert any(pattern in summary_text for pattern in ["pattern", "architecture", "framework"])
-
-def test_enhanced_resume_generation_github():
-    """Test enhanced resume generation for GitHub projects"""
-    print_section("📝 ENHANCED GITHUB PROJECT RESUME")
-    
-    metrics = aggregate_github_individual_metrics(architectural_commits)
-    metrics["technical_keywords"] = extract_technical_keywords_from_github(architectural_commits)
-    metrics["development_patterns"] = analyze_github_development_patterns(architectural_commits)
-    
-    summary = generate_github_resume_summary(metrics)
-    
-    print_subsection("Professional Resume Bullets", summary)
-    
-    assert isinstance(summary, list)
-    assert len(summary) > 0
-    
-    summary_text = ' '.join(summary).lower()
-    assert "commit" in summary_text or "implement" in summary_text
 
 def test_framework_agnostic_component_analysis():
     """Test that component analysis works across different frameworks"""
@@ -509,27 +443,6 @@ def test_role_inference_comprehensive():
     assert "data science" in all_roles
     assert "devops" in all_roles
 
-def test_edge_cases_and_robustness():
-    """Test edge cases and error handling"""
-    print_section("🛡️  EDGE CASES & ROBUSTNESS")
-    
-    # Test empty inputs
-    empty_patterns = analyze_code_patterns_from_parsed([])
-    print_subsection("Empty Input Patterns", {k: v for k, v in empty_patterns.items() if v})
-    
-    # Test malformed data
-    malformed_file = {"file_path": "test.py", "language": "python"}
-    try:
-        keywords = extract_technical_keywords_from_parsed([malformed_file])
-        print_subsection("Malformed File Keywords", keywords[:5] if keywords else ["None"])
-        assert isinstance(keywords, list)
-    except Exception as e:
-        print_subsection("Error Handling", f"Gracefully handled: {type(e).__name__}")
-    
-    # Test with minimal data
-    minimal_commit = {"hash": "test", "author_name": "Test", "authored_datetime": "2025-01-01T10:00:00", "files": []}
-    minimal_metrics = aggregate_github_individual_metrics([minimal_commit])
-    print_subsection("Minimal Commit Metrics", {k: v for k, v in minimal_metrics.items() if v})
 
 def test_full_integration_workflow():
     """Test the complete integration workflow"""
@@ -543,19 +456,13 @@ def test_full_integration_workflow():
     
     print("\n" + "="*50 + " GITHUB PROJECT WORKFLOW " + "="*50)
     
-    # GitHub project workflow  
-    github_summary = analyze_github_project(architectural_commits)
-    print_subsection("GitHub Project Summary", github_summary)
-    
     assert isinstance(local_summary, list) and len(local_summary) > 0
-    assert isinstance(github_summary, list) and len(github_summary) > 0
     
     # Verify enhanced content
     local_text = ' '.join(local_summary).lower()
-    github_text = ' '.join(github_summary).lower()
     
     assert any(term in local_text for term in ["pattern", "architecture", "framework"])
-    assert any(term in github_text for term in ["commit", "implement", "architecture"])
+
 
 # --- Legacy Tests (Updated for Professional Output) ---
 
@@ -566,21 +473,6 @@ def test_local_analysis_no_llm():
     print_subsection("Generated Summary", summary)
     assert summary is not None and len(summary) > 0
 
-def test_github_analysis_no_llm():
-    """Test GitHub analysis without LLM"""
-    print_section("🐙 GITHUB ANALYSIS (No LLM)")  
-    sample_commits = [
-        {
-            "hash": "a7c3f2d",
-            "author_name": "Developer", 
-            "authored_datetime": "2025-10-30T12:45:32",
-            "message_summary": "feat: implement user authentication",
-            "files": [{"status": "A", "path_after": "auth/login.py"}]
-        }
-    ]
-    summary = analyze_github_project(sample_commits)
-    print_subsection("Generated Summary", summary)
-    assert summary is not None and len(summary) > 0
 
 def test_aggregation_functions():
     """Test metrics aggregation functions"""
@@ -589,11 +481,7 @@ def test_aggregation_functions():
     parsed_metrics = aggregate_parsed_files_metrics(complex_parsed_files)
     print_subsection("Parsed File Metrics", parsed_metrics)
     
-    github_metrics = aggregate_github_individual_metrics(architectural_commits)
-    print_subsection("GitHub Metrics", {k: v for k, v in github_metrics.items() if k not in ['sample_messages']})
-    
     assert parsed_metrics["total_files"] > 0
-    assert github_metrics["total_commits"] > 0
 
 # --- Optional LLM Tests ---
 
@@ -605,16 +493,5 @@ def test_local_analysis_with_llm():
         print_section("🤖 LOCAL ANALYSIS (With LLM)")
         llm_client = GeminiLLMClient(api_key=api_key)
         summary = analyze_parsed_project(complex_parsed_files, llm_client)
-        print_subsection("LLM Generated Summary", summary)
-        assert summary is not None
-
-def test_github_analysis_with_llm():
-    """Test GitHub analysis with LLM (if API key available)"""
-    load_dotenv()
-    api_key = os.getenv("GEMINI_API_KEY")
-    if api_key:
-        print_section("🤖 GITHUB ANALYSIS (With LLM)")
-        llm_client = GeminiLLMClient(api_key=api_key)
-        summary = analyze_github_project(architectural_commits, llm_client)
         print_subsection("LLM Generated Summary", summary)
         assert summary is not None

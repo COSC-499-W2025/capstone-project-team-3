@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from tree_sitter import Node 
 from unittest.mock import MagicMock, patch
-from app.utils.code.parse_code_utils import (detect_language,
+from app.utils.code_analysis.parse_code_utils import (detect_language,
                                              count_lines_of_code,
                                              count_lines_of_documentation,
                                              extract_contents,
@@ -11,7 +11,8 @@ from app.utils.code.parse_code_utils import (detect_language,
                                             extract_with_treesitter_dynamic,
                                             extract_imports,
                                             extract_libraries,
-                                            map_language_for_treesitter)
+                                            map_language_for_treesitter,
+                                            extract_internal_dependencies)
 
 @pytest.fixture
 def sample_file(tmp_path):
@@ -93,8 +94,8 @@ def test_extract_with_treesitter_dynamic_finds_imports_via_heuristic():
     mock_parser.parse.return_value = mock_tree
 
     # Patch _TS_IMPORT_NODES to be empty for this language (forces heuristic)
-    with patch("app.utils.code.parse_code_utils._TS_IMPORT_NODES", {}):
-        with patch("app.utils.code.parse_code_utils.Parser", return_value=mock_parser):
+    with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_NODES", {}):
+        with patch("app.utils.code_analysis.parse_code_utils.Parser", return_value=mock_parser):
             # Act
             result = extract_with_treesitter_dynamic(
                 file_content, 
@@ -108,7 +109,7 @@ def test_map_language_for_treesitter_maps_known_language():
     mock_mapping_raw = {"Python": "python", "C++": "cpp"}
     mock_mapping = {k.strip().lower(): v for k, v in mock_mapping_raw.items()}
 
-    with patch("app.utils.code.parse_code_utils._TS_LANGUAGE_MAPPING", mock_mapping):
+    with patch("app.utils.code_analysis.parse_code_utils._TS_LANGUAGE_MAPPING", mock_mapping):
 
         # Should match a known language (case-insensitive)
         assert map_language_for_treesitter("PYTHON") == "python"
@@ -120,7 +121,7 @@ def test_map_language_for_treesitter_maps_known_language():
 def test_extract_imports_handles_unsupported_language_gracefully():
     """Test that extract_imports returns empty list when language is unsupported."""
     content = "import x from 'y';"
-    with patch("app.utils.code.parse_code_utils.get_language", side_effect=ValueError("Language not supported")):
+    with patch("app.utils.code_analysis.parse_code_utils.get_language", side_effect=ValueError("Language not supported")):
         result = extract_imports(content, "unknownlang")
     assert result == []
     
@@ -131,14 +132,14 @@ def test_extract_imports_falls_back_to_regex_when_treesitter_fails():
 
     # Mock get_language to succeed (so Tree-sitter is attempted)
     # But mock Tree-sitter to return no imports (e.g., parser fails or finds nothing)
-    with patch("app.utils.code.parse_code_utils.get_language", return_value="mock_js_lang"):
-        with patch("app.utils.code.parse_code_utils.extract_with_treesitter_dynamic", return_value=[]):
+    with patch("app.utils.code_analysis.parse_code_utils.get_language", return_value="mock_js_lang"):
+        with patch("app.utils.code_analysis.parse_code_utils.extract_with_treesitter_dynamic", return_value=[]):
             # Provide a regex config for JavaScript that matches 'require'
             mock_regex_config = [{
                 "language": "javascript",
                 "import_patterns": [r"require\s*\(", r"import\s+.*from"]
             }]
-            with patch("app.utils.code.parse_code_utils._TS_IMPORT_REGEX", mock_regex_config):
+            with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_REGEX", mock_regex_config):
                 result = extract_imports(file_content, language)
     assert result == ["const fs = require('fs');"]
     
@@ -158,8 +159,58 @@ def test_extract_libraries_filters_relative_and_extracts_symbols():
         ]
     }
 
-    with patch("app.utils.code.parse_code_utils._TS_IMPORT_QUERIES", patterns_python):
+    with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_QUERIES", patterns_python):
         result = extract_libraries(import_statements, "python")
         
     expected = {'Optional', 'Path', 'Union', 'json', 'os', 'pathlib', 'typing'}
+    assert set(result) == expected
+
+def test_extract_internal_dependencies():
+    """
+    Test that extract_internal_dependencies:
+    - Keeps only internal deps (relative imports or matching project prefixes)
+    - Expands 'from module import a, b' → 'module.a', 'module.b'
+    - Handles multi-line imports
+    - Ignores external imports
+    """
+
+    import_statements = [
+        "import os, sys",
+        "import app.utils, external_pkg",
+        "from app.core import loader, helpers",
+        "from .local import thing",
+        "from external.mod import ext1, ext2",
+
+        # ---- multi-line / indented import ----
+        """from app.services import (
+            service_a,
+            service_b,
+        )"""
+    ]
+
+    # Mock Tree-sitter regex patterns for Python imports
+    mock_patterns = {
+        "python": [
+            r"\s*import\s+([\w\.]+(?:\s*,\s*[\w\.]+)*)",
+            r"\s*from\s+([\w\.]+)\s+import\s*\(\s*([\w\s,._\*\n\r]+?)\s*\)",
+            r"\s*from\s+([\w\.]+)\s+import\s+([\w\s,._\*]+)"
+        ]
+    }
+
+    with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_QUERIES", mock_patterns):
+        result = extract_internal_dependencies(
+            import_statements,
+            language="python",
+            project_names=["app"]
+        )
+
+    expected = {
+        "app.utils",
+        "app.core.loader",
+        "app.core.helpers",
+        "app.services.service_a",
+        "app.services.service_b",
+        ".local.thing",
+    }
+
     assert set(result) == expected

@@ -1,3 +1,4 @@
+# Sample parsed_files object matching the structure from document_parser
 sample_parsed_files = {
     "files": [
         {

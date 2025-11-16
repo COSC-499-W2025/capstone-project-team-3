@@ -62,32 +62,11 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
     # Return top keywords by frequency/importance
     return sorted(list(set(filtered_keywords)))[:15]
 
-def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
-    """
-    Analyze code patterns, architecture, and practices from parsed files.
-    """
-    patterns = {
-        "frameworks_detected": [],
-        "design_patterns": [],
-        "architectural_patterns": [],
-        "development_practices": [],
-        "technology_stack": []
-    }
-    
-    all_imports = []
-    all_functions = []
-    all_components = []
-    
-    for file in parsed_files:
-        all_imports.extend(file.get("imports", []))
-        all_functions.extend(file.get("functions", []))
-        all_components.extend(file.get("components", []))
-    
-    # Framework Detection
-    import_str = ' '.join(all_imports).lower()
+def _detect_frameworks(imports: List[str]) -> List[str]:
+    """Helper: Detect frameworks from imports."""
+    import_str = ' '.join(imports).lower()
     detected_frameworks = []
     
-    # Detect all frameworks present
     framework_mapping = {
         'react': 'React',
         'vue': 'Vue.js', 
@@ -103,222 +82,216 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
     for framework_key, framework_name in framework_mapping.items():
         if framework_key in import_str:
             detected_frameworks.append(framework_name)
-            patterns["frameworks_detected"].append(framework_name)
     
-    # Generic Component Analysis (works for ANY framework)
-    hooks_found = []
-    state_variables_found = []
-    components_with_props = []
-    
-    for comp in all_components:
-        # Collect hooks (React, Vue Composition API, etc.)
-        hooks_used = comp.get("hooks_used", [])
-        if hooks_used:
-            hooks_found.extend(hooks_used)
-        
-        # Collect state variables (React state, Vue data, Angular properties, etc.)
-        state_vars = comp.get("state_variables", [])
-        if state_vars:
-            state_variables_found.extend(state_vars)
-        
-        # Collect props/inputs (React props, Vue props, Angular inputs, etc.)
-        props = comp.get("props", [])
-        if props:
-            components_with_props.append(comp.get("name", ""))
-    
-    # Add practices based on actual data (not framework-specific)
-    if hooks_found:
-        unique_hooks = set(hooks_found)
-        if detected_frameworks:
-            framework_names = "/".join(detected_frameworks)
-            patterns["development_practices"].append(f"{framework_names} Hooks/Lifecycle ({len(unique_hooks)} types)")
-        else:
-            patterns["development_practices"].append(f"Component Hooks/Lifecycle ({len(unique_hooks)} types)")
-    
-    if state_variables_found:
-        if detected_frameworks:
-            framework_names = "/".join(detected_frameworks)
-            patterns["development_practices"].append(f"{framework_names} State Management")
-        else:
-            patterns["development_practices"].append("Component State Management")
-    
-    if components_with_props:
-        patterns["development_practices"].append(f"Component Props/Data Flow ({len(components_with_props)} components)")
-    
-    # Backend Framework Analysis
-    backend_frameworks = [fw for fw in detected_frameworks if fw in ['Flask', 'Django', 'Express.js', 'Spring', 'Laravel', 'Ruby on Rails']]
-    if backend_frameworks:
-        patterns["architectural_patterns"].append("Web API Development")
-    
-    # Enhanced Design Pattern Detection (more accurate and comprehensive)
-    function_names = [func.get("name", "").lower() for func in all_functions]
-    component_names = [comp.get("name", "").lower() for comp in all_components]
-    function_calls = []
-    for func in all_functions:
-        function_calls.extend([call.lower() for call in func.get("calls", [])])
+    return detected_frameworks
 
-    all_identifiers = function_names + component_names + function_calls
-
-    # Factory Pattern - More specific detection
-    factory_indicators = [
-        "factory", "createfactory", "factorymethod", "abstractfactory",
-        "builder", "createbuilder", "builderfactory",
-        "create", "makecreate", "newcreate", "buildcreate"
-    ]
+def _detect_design_patterns(all_identifiers: List[str], function_names: List[str]) -> List[str]:
+    """Helper: Detect design patterns from code identifiers."""
+    patterns = []
+    
+    # Factory Pattern
+    factory_indicators = ["factory", "createfactory", "factorymethod", "abstractfactory", "builder", "createbuilder"]
     if any(any(indicator in name for indicator in factory_indicators) for name in all_identifiers):
-     # Additional validation - check for actual creation patterns
         creation_patterns = ["create", "make", "build", "new", "construct"]
         if sum(1 for name in function_names if any(pattern in name for pattern in creation_patterns)) >= 2:
-            patterns["design_patterns"].append("Factory Pattern")
-
-# Observer Pattern - More specific detection
-    observer_indicators = [
-        "observer", "observable", "subject", "subscriber", "publisher",
-        "listener", "eventlistener", "watcher", "notify", "notifier",
-        "emit", "emitter", "dispatch", "dispatcher", "broadcast",
-        "subscribe", "unsubscribe", "addlistener", "removelistener"
-    ]
+            patterns.append("Factory Pattern")
+    
+    # Observer Pattern
+    observer_indicators = ["observer", "observable", "subject", "subscriber", "notify", "emit", "subscribe"]
     if any(any(indicator in name for indicator in observer_indicators) for name in all_identifiers):
-    # Validate with multiple observer-related methods
         observer_methods = ["subscribe", "notify", "emit", "listen", "observe", "update"]
         if sum(1 for name in function_names if any(method in name for method in observer_methods)) >= 2:
-            patterns["design_patterns"].append("Observer Pattern")
-
-# Strategy Pattern - More specific detection
-    strategy_indicators = [
-        "strategy", "strategyfactory", "strategypattern",
-        "algorithm", "algorithmstrategy", "context",
-        "handler", "handlerfactory", "processor", "processorfactory"
-    ]
+            patterns.append("Observer Pattern")
+    
+    # Strategy Pattern
+    strategy_indicators = ["strategy", "algorithm", "handler", "processor"]
     if any(any(indicator in name for indicator in strategy_indicators) for name in all_identifiers):
-        # Validate with strategy-like structure
         if any("execute" in name or "process" in name or "handle" in name for name in function_names):
-            patterns["design_patterns"].append("Strategy Pattern")
-
+            patterns.append("Strategy Pattern")
+    
     # Singleton Pattern
-    singleton_indicators = [
-        "singleton", "instance", "getinstance", "createinstance",
-        "shared", "sharedinstance", "default", "defaultinstance"
-    ]
+    singleton_indicators = ["singleton", "instance", "getinstance", "createinstance", "shared"]
     if any(any(indicator in name for indicator in singleton_indicators) for name in all_identifiers):
         if any("getinstance" in name or "instance" in name for name in function_names):
-            patterns["design_patterns"].append("Singleton Pattern")
-
-    # Decorator Pattern
-    decorator_indicators = [
-        "decorator", "wrapper", "wrap", "decorate",
-        "middleware", "interceptor", "proxy"
-    ]
-    if any(any(indicator in name for indicator in decorator_indicators) for name in all_identifiers):
-        patterns["design_patterns"].append("Decorator Pattern")
-
+            patterns.append("Singleton Pattern")
+    
     # Command Pattern
-    command_indicators = [
-        "command", "commandpattern", "execute", "executor",
-        "invoker", "receiver", "undocommand", "redocommand"
-    ]
+    command_indicators = ["command", "execute", "executor", "invoker"]
     if any(any(indicator in name for indicator in command_indicators) for name in all_identifiers):
         if any("execute" in name or "invoke" in name for name in function_names):
-            patterns["design_patterns"].append("Command Pattern")
-
+            patterns.append("Command Pattern")
+    
     # Repository Pattern
-    repository_indicators = [
-        "repository", "repo", "datarepository", "userrepository",
-        "dataaccess", "dal", "datasource"
-    ]
+    repository_indicators = ["repository", "repo", "datarepository", "dataaccess"]
     if any(any(indicator in name for indicator in repository_indicators) for name in all_identifiers):
-        patterns["design_patterns"].append("Repository Pattern")
+        patterns.append("Repository Pattern")
+    
+    return patterns
 
-    # MVC/MVP/MVVM Architecture - More comprehensive
+def _detect_architectural_patterns(all_identifiers: List[str], function_names: List[str], 
+                                 component_names: List[str], import_str: str) -> List[str]:
+    """Helper: Detect architectural patterns."""
+    patterns = []
+    
+    # MVC/MVP/MVVM Architecture
     mvc_indicators = {
         "controller": ["controller", "ctrl", "controllerbase"],
         "model": ["model", "viewmodel", "datamodel", "entity"],
         "view": ["view", "viewcontroller", "presenter", "template"]
     }
-
+    
     mvc_found = {"controller": False, "model": False, "view": False}
     for category, indicators in mvc_indicators.items():
         if any(any(indicator in name for indicator in indicators) 
-            for name in component_names + function_names):
+               for name in component_names + function_names):
             mvc_found[category] = True
-
-    if sum(mvc_found.values()) >= 2:  # At least 2 out of 3 MVC components
+    
+    if sum(mvc_found.values()) >= 2:
         if mvc_found["controller"] and mvc_found["view"]:
-            patterns["architectural_patterns"].append("MVC Architecture")
+            patterns.append("MVC Architecture")
         elif any("presenter" in name for name in component_names):
-            patterns["architectural_patterns"].append("MVP Architecture")
+            patterns.append("MVP Architecture")
         elif any("viewmodel" in name for name in component_names):
-            patterns["architectural_patterns"].append("MVVM Architecture")
-
-    # Service-Oriented Architecture - More specific
-    service_indicators = [
-        "service", "serviceimpl", "servicebase", "webservice",
-        "apiservice", "dataservice", "userservice", "authservice"
-    ]
+            patterns.append("MVVM Architecture")
+    
+    # Service-Oriented Architecture
+    service_indicators = ["service", "serviceimpl", "servicebase", "webservice"]
     service_count = sum(1 for name in function_names + component_names 
-    if any(indicator in name for indicator in service_indicators))
-
-    if service_count >= 2:  # Multiple services indicate SOA
-        patterns["architectural_patterns"].append("Service-Oriented Architecture")
-
+                       if any(indicator in name for indicator in service_indicators))
+    if service_count >= 2:
+        patterns.append("Service-Oriented Architecture")
+    
     # Microservices Architecture
-    microservice_indicators = [
-        "microservice", "service", "api", "gateway", "apigateway",
-        "serviceregistry", "discovery", "circuit", "circuitbreaker"
-    ]
-    # Check imports for microservice frameworks
+    microservice_indicators = ["microservice", "service", "api", "gateway", "apigateway"]
     microservice_frameworks = ["spring", "express", "flask", "fastapi", "gin"]
     has_microservice_framework = any(fw in import_str for fw in microservice_frameworks)
-
     microservice_patterns = sum(1 for name in all_identifiers 
-                        if any(indicator in name for indicator in microservice_indicators))
-
-    if microservice_patterns >= 3 and has_microservice_framework:
-        patterns["architectural_patterns"].append("Microservices Architecture")
-
-    # RESTful API Architecture
-    rest_indicators = [
-        "rest", "restapi", "restcontroller", "api", "endpoint",
-        "resource", "restresource", "httpclient", "webclient"
-    ]
-    http_methods = ["get", "post", "put", "delete", "patch"]
-
-    has_rest_patterns = any(any(indicator in name for indicator in rest_indicators) 
-    for name in all_identifiers)
-    has_http_methods = sum(1 for name in function_names 
-        if any(method in name for method in http_methods)) >= 2
-
-    if has_rest_patterns and has_http_methods:
-        patterns["architectural_patterns"].append("RESTful API Architecture")
-
-    # Event-Driven Architecture
-    event_indicators = [
-        "event", "eventhandler", "eventbus", "eventstore",
-        "message", "messagehandler", "queue", "messagequeue",
-        "pub", "sub", "pubsub", "kafka", "rabbitmq"
-    ]
-    if any(any(indicator in name for indicator in event_indicators) for name in all_identifiers):
-        patterns["architectural_patterns"].append("Event-Driven Architecture")
-
-    # Layered Architecture
-    layer_indicators = [
-        "layer", "presentation", "presentationlayer",
-        "business", "businesslayer", "service", "servicelayer",
-        "data", "datalayer", "repository", "repositorylayer"
-    ]
-    layer_count = sum(1 for name in all_identifiers 
-                 if any(indicator in name for indicator in layer_indicators))
-
-    if layer_count >= 3:  # Multiple layers suggest layered architecture
-        patterns["architectural_patterns"].append("Layered Architecture")
-    # Technology Stack Analysis
-        languages = set()
-        for file in parsed_files:
-            lang = file.get("language", "")
-            if lang:
-                languages.add(lang.title())
+                               if any(indicator in name for indicator in microservice_indicators))
     
-        patterns["technology_stack"] = list(languages)
+    if microservice_patterns >= 3 and has_microservice_framework:
+        patterns.append("Microservices Architecture")
+    
+    # RESTful API Architecture
+    rest_indicators = ["rest", "restapi", "restcontroller", "api", "endpoint"]
+    http_methods = ["get", "post", "put", "delete", "patch"]
+    has_rest_patterns = any(any(indicator in name for indicator in rest_indicators) 
+                           for name in all_identifiers)
+    has_http_methods = sum(1 for name in function_names 
+                          if any(method in name for method in http_methods)) >= 2
+    
+    if has_rest_patterns and has_http_methods:
+        patterns.append("RESTful API Architecture")
+    
+    # Event-Driven Architecture
+    event_indicators = ["event", "eventhandler", "message", "queue", "pubsub", "kafka"]
+    if any(any(indicator in name for indicator in event_indicators) for name in all_identifiers):
+        patterns.append("Event-Driven Architecture")
+    
+    # Layered Architecture
+    layer_indicators = ["layer", "presentation", "business", "service", "data", "repository"]
+    layer_count = sum(1 for name in all_identifiers 
+                     if any(indicator in name for indicator in layer_indicators))
+    if layer_count >= 3:
+        patterns.append("Layered Architecture")
+    
+    return patterns
+
+def _analyze_development_practices(all_components: List[Dict], detected_frameworks: List[str]) -> List[str]:
+    """Helper: Analyze development practices from components."""
+    practices = []
+    
+    hooks_found = []
+    state_variables_found = []
+    components_with_props = []
+    
+    for comp in all_components:
+        hooks_used = comp.get("hooks_used", [])
+        if hooks_used:
+            hooks_found.extend(hooks_used)
+        
+        state_vars = comp.get("state_variables", [])
+        if state_vars:
+            state_variables_found.extend(state_vars)
+        
+        props = comp.get("props", [])
+        if props:
+            components_with_props.append(comp.get("name", ""))
+    
+    # Add practices based on actual data
+    if hooks_found:
+        unique_hooks = set(hooks_found)
+        if detected_frameworks:
+            framework_names = "/".join(detected_frameworks)
+            practices.append(f"{framework_names} Hooks/Lifecycle ({len(unique_hooks)} types)")
+        else:
+            practices.append(f"Component Hooks/Lifecycle ({len(unique_hooks)} types)")
+    
+    if state_variables_found:
+        if detected_frameworks:
+            framework_names = "/".join(detected_frameworks)
+            practices.append(f"{framework_names} State Management")
+        else:
+            practices.append("Component State Management")
+    
+    if components_with_props:
+        practices.append(f"Component Props/Data Flow ({len(components_with_props)} components)")
+    
+    return practices
+
+def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
+    """
+    Analyze code patterns, architecture, and practices from parsed files.
+    Now refactored into focused helper functions for maintainability.
+    """
+    patterns = {
+        "frameworks_detected": [],
+        "design_patterns": [],
+        "architectural_patterns": [],
+        "development_practices": [],
+        "technology_stack": []
+    }
+    
+    # Collect all data
+    all_imports = []
+    all_functions = []
+    all_components = []
+    
+    for file in parsed_files:
+        all_imports.extend(file.get("imports", []))
+        all_functions.extend(file.get("functions", []))
+        all_components.extend(file.get("components", []))
+    
+    # Extract identifiers
+    function_names = [func.get("name", "").lower() for func in all_functions]
+    component_names = [comp.get("name", "").lower() for comp in all_components]
+    function_calls = []
+    for func in all_functions:
+        function_calls.extend([call.lower() for call in func.get("calls", [])])
+    
+    all_identifiers = function_names + component_names + function_calls
+    import_str = ' '.join(all_imports).lower()
+    
+    # Use helper functions for focused analysis
+    patterns["frameworks_detected"] = _detect_frameworks(all_imports)
+    patterns["design_patterns"] = _detect_design_patterns(all_identifiers, function_names)
+    patterns["architectural_patterns"] = _detect_architectural_patterns(
+        all_identifiers, function_names, component_names, import_str)
+    patterns["development_practices"] = _analyze_development_practices(
+        all_components, patterns["frameworks_detected"])
+    
+    # Add backend API detection
+    backend_frameworks = [fw for fw in patterns["frameworks_detected"] 
+                         if fw in ['Flask', 'Django', 'Express.js', 'Spring', 'Laravel', 'Ruby on Rails']]
+    if backend_frameworks:
+        patterns["architectural_patterns"].append("Web API Development")
+    
+    # Technology stack
+    languages = set()
+    for file in parsed_files:
+        lang = file.get("language", "")
+        if lang:
+            languages.add(lang.title())
+    patterns["technology_stack"] = list(languages)
     
     return patterns
 

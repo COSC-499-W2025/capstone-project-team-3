@@ -149,20 +149,26 @@ def test_extract_libraries_filters_relative_and_extracts_symbols():
         "import os, json",
         "import ./local_module",
         "from pathlib import Path",
-        "from typing import Optional,Union"
+        "from typing import Optional,Union",
+        "from app.utils import detect_git"
     ]
 
     patterns_python = {
         "python": [
-            r"from\s+([\w\.]+)\s+import\s+([*\w\.\s,]+)",
-            r"import\s+([\w\.]+(?:\s*,\s*[\w\.]+)*)"
+            r"^\s*import\s+([\w\.]+(?:\s*,\s*[\w\.]+)*)",
+            r"^\s*from\s+([\w\.]+)\s+import\s*\(\s*([\w\s,._\*\n\r]+?)\s*\)",
+            r"^\s*from\s+([\w\.]+)\s+import\s+([\w\s,._\*]+)"
         ]
     }
 
     with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_QUERIES", patterns_python):
-        result = extract_libraries(import_statements, "python")
+        result = extract_libraries(
+            import_statements,
+            language="python",
+            project_names=["app"]
+        )
         
-    expected = {'Optional', 'Path', 'Union', 'json', 'os', 'pathlib', 'typing'}
+    expected = {'json', 'os', 'pathlib', 'typing'}
     assert set(result) == expected
 
 def test_extract_internal_dependencies():

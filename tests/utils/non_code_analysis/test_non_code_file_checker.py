@@ -8,6 +8,7 @@ from app.utils.non_code_analysis.non_code_file_checker import (
     filter_non_code_files_by_collaboration,
     get_git_user_identity,
     verify_user_in_files,
+    classify_non_code_files_with_user_verification
 )
 
 # ============================================================================
@@ -1074,3 +1075,498 @@ def test_verify_user_in_files_empty_metadata():
     assert result["user_collaborative"] == []
     assert result["user_solo"] == []
     assert result["others_only"] == []
+
+# ============================================================================
+# Tests for classify_non_code_files_with_user_verification()
+# ============================================================================
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_with_user_basic(mock_collect, mock_identity, mock_detect_git):
+    """Test basic classification in a git repo with user verification."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "collab.pdf": {
+            "path": "/repo/collab.pdf",
+            "authors": ["alice@example.com", "bob@example.com"]
+        },
+        "solo.md": {
+            "path": "/repo/solo.md",
+            "authors": ["alice@example.com"]
+        },
+        "others.docx": {
+            "path": "/repo/others.docx",
+            "authors": ["bob@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert result["is_git_repo"] is True
+    assert result["user_identity"]["email"] == "alice@example.com"
+    assert len(result["collaborative"]) == 1
+    assert "/repo/collab.pdf" in result["collaborative"]
+    assert len(result["non_collaborative"]) == 1
+    assert "/repo/solo.md" in result["non_collaborative"]
+    assert len(result["excluded"]) == 1
+    assert "/repo/others.docx" in result["excluded"]
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_all_collaborative(mock_collect, mock_identity, mock_detect_git):
+    """Test when all files are collaborative."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "doc1.pdf": {
+            "path": "/repo/doc1.pdf",
+            "authors": ["alice@example.com", "bob@example.com"]
+        },
+        "doc2.md": {
+            "path": "/repo/doc2.md",
+            "authors": ["alice@example.com", "charlie@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert len(result["collaborative"]) == 2
+    assert len(result["non_collaborative"]) == 0
+    assert len(result["excluded"]) == 0
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_all_solo(mock_collect, mock_identity, mock_detect_git):
+    """Test when all user's files are solo work."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "notes.txt": {
+            "path": "/repo/notes.txt",
+            "authors": ["alice@example.com"]
+        },
+        "draft.md": {
+            "path": "/repo/draft.md",
+            "authors": ["alice@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert len(result["collaborative"]) == 0
+    assert len(result["non_collaborative"]) == 2
+    assert len(result["excluded"]) == 0
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_all_excluded(mock_collect, mock_identity, mock_detect_git):
+    """Test when user hasn't contributed to any files."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "bob_file.pdf": {
+            "path": "/repo/bob_file.pdf",
+            "authors": ["bob@example.com"]
+        },
+        "charlie_file.md": {
+            "path": "/repo/charlie_file.md",
+            "authors": ["charlie@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert len(result["collaborative"]) == 0
+    assert len(result["non_collaborative"]) == 0
+    assert len(result["excluded"]) == 2
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+def test_classify_git_repo_no_user_identity(mock_identity, mock_detect_git):
+    """Test handling when git user identity cannot be determined."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "", "email": ""}
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert result["is_git_repo"] is True
+    assert "error" in result
+    assert result["error"] == "Could not determine git user identity"
+    assert result["collaborative"] == []
+    assert result["non_collaborative"] == []
+    assert result["excluded"] == []
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_with_custom_email(mock_collect, mock_detect_git):
+    """Test classification with custom user email provided."""
+    mock_detect_git.return_value = True
+    
+    mock_collect.return_value = {
+        "file.pdf": {
+            "path": "/repo/file.pdf",
+            "authors": ["custom@example.com", "other@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification(
+        '/path/to/repo',
+        user_email="custom@example.com"
+    )
+    
+    assert result["user_identity"]["email"] == "custom@example.com"
+    assert result["user_identity"]["name"] == ""
+    assert len(result["collaborative"]) == 1
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_git_repo_empty_metadata(mock_collect, mock_identity, mock_detect_git):
+    """Test when git repo has no non-code files."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    mock_collect.return_value = {}
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert result["is_git_repo"] is True
+    assert result["collaborative"] == []
+    assert result["non_collaborative"] == []
+    assert result["excluded"] == []
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_directory_basic(mock_filter, mock_scan, mock_detect_git, tmp_path):
+    """Test classifying files in a non-git directory."""
+    mock_detect_git.return_value = False
+    mock_scan.return_value = [
+        str(tmp_path / "doc.pdf"),
+        str(tmp_path / "script.py"),
+        str(tmp_path / "readme.md")
+    ]
+    mock_filter.return_value = [
+        str(tmp_path / "doc.pdf"),
+        str(tmp_path / "readme.md")
+    ]
+    
+    result = classify_non_code_files_with_user_verification(tmp_path)
+    
+    assert result["is_git_repo"] is False
+    assert result["user_identity"] == {}
+    assert result["collaborative"] == []
+    assert len(result["non_collaborative"]) == 2
+    assert result["excluded"] == []
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_directory_empty(mock_filter, mock_scan, mock_detect_git, tmp_path):
+    """Test non-git directory with no non-code files."""
+    mock_detect_git.return_value = False
+    mock_scan.return_value = [str(tmp_path / "script.py")]
+    mock_filter.return_value = []
+    
+    result = classify_non_code_files_with_user_verification(tmp_path)
+    
+    assert result["is_git_repo"] is False
+    assert result["non_collaborative"] == []
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_directory_only_non_code(mock_filter, mock_scan, mock_detect_git, tmp_path):
+    """Test non-git directory with only non-code files."""
+    mock_detect_git.return_value = False
+    
+    files = [
+        str(tmp_path / "doc1.pdf"),
+        str(tmp_path / "doc2.md"),
+        str(tmp_path / "image.png")
+    ]
+    mock_scan.return_value = files
+    mock_filter.return_value = files
+    
+    result = classify_non_code_files_with_user_verification(tmp_path)
+    
+    assert len(result["non_collaborative"]) == 3
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_multiple_authors_on_file(mock_collect, mock_identity, mock_detect_git):
+    """Test file with multiple authors including user."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "team_doc.pdf": {
+            "path": "/repo/team_doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com", "charlie@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert len(result["collaborative"]) == 1
+    assert "/repo/team_doc.pdf" in result["collaborative"]
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_realistic_mixed_scenario(mock_collect, mock_identity, mock_detect_git):
+    """Test realistic scenario with mix of all categories."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        # Collaborative (user + others)
+        "design_doc.pdf": {
+            "path": "/repo/design_doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"]
+        },
+        "presentation.pptx": {
+            "path": "/repo/presentation.pptx",
+            "authors": ["alice@example.com", "charlie@example.com", "dave@example.com"]
+        },
+        # Solo (user only)
+        "alice_notes.txt": {
+            "path": "/repo/alice_notes.txt",
+            "authors": ["alice@example.com"]
+        },
+        "my_draft.md": {
+            "path": "/repo/my_draft.md",
+            "authors": ["alice@example.com"]
+        },
+        # Others only
+        "bob_report.docx": {
+            "path": "/repo/bob_report.docx",
+            "authors": ["bob@example.com"]
+        },
+        "team_diagram.png": {
+            "path": "/repo/team_diagram.png",
+            "authors": ["charlie@example.com", "dave@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert len(result["collaborative"]) == 2
+    assert "/repo/design_doc.pdf" in result["collaborative"]
+    assert "/repo/presentation.pptx" in result["collaborative"]
+    
+    assert len(result["non_collaborative"]) == 2
+    assert "/repo/alice_notes.txt" in result["non_collaborative"]
+    assert "/repo/my_draft.md" in result["non_collaborative"]
+    
+    assert len(result["excluded"]) == 2
+    assert "/repo/bob_report.docx" in result["excluded"]
+    assert "/repo/team_diagram.png" in result["excluded"]
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_user_email_case_sensitive(mock_collect, mock_identity, mock_detect_git):
+    """Test that user email matching is case-sensitive (as git stores it)."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    
+    mock_collect.return_value = {
+        "file1.pdf": {
+            "path": "/repo/file1.pdf",
+            "authors": ["alice@example.com"]  # Exact match
+        },
+        "file2.pdf": {
+            "path": "/repo/file2.pdf",
+            "authors": ["Alice@example.com"]  # Different case - won't match
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    # Only exact match should be in user's files
+    assert len(result["non_collaborative"]) == 1
+    assert "/repo/file1.pdf" in result["non_collaborative"]
+    assert len(result["excluded"]) == 1
+    assert "/repo/file2.pdf" in result["excluded"]
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_with_pathlib_path(mock_collect, mock_identity, mock_detect_git, tmp_path):
+    """Test that function works with Path objects."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    mock_collect.return_value = {}
+    
+    # Pass Path object instead of string
+    result = classify_non_code_files_with_user_verification(tmp_path)
+    
+    assert result["is_git_repo"] is True
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_with_pathlib_path(mock_filter, mock_scan, mock_detect_git, tmp_path):
+    """Test non-git classification with Path objects."""
+    mock_detect_git.return_value = False
+    mock_scan.return_value = []
+    mock_filter.return_value = []
+    
+    # Pass Path object
+    result = classify_non_code_files_with_user_verification(tmp_path)
+    
+    assert result["is_git_repo"] is False
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+def test_classify_git_repo_custom_email_empty_string(mock_detect_git):
+    """Test with custom email as empty string."""
+    mock_detect_git.return_value = True
+    
+    result = classify_non_code_files_with_user_verification(
+        '/path/to/repo',
+        user_email=""
+    )
+    
+    assert "error" in result
+    assert result["error"] == "Could not determine git user identity"
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_ignores_user_email(mock_filter, mock_scan, mock_detect_git):
+    """Test that user_email is ignored for non-git directories."""
+    mock_detect_git.return_value = False
+    mock_scan.return_value = []
+    mock_filter.return_value = []
+    
+    # user_email should be ignored
+    result = classify_non_code_files_with_user_verification(
+        '/path/to/local',
+        user_email="any@example.com"
+    )
+    
+    assert result["is_git_repo"] is False
+    assert result["user_identity"] == {}
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_returns_all_expected_keys(mock_collect, mock_identity, mock_detect_git):
+    """Test that result contains all expected keys."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
+    mock_collect.return_value = {}
+    
+    result = classify_non_code_files_with_user_verification('/path/to/repo')
+    
+    assert "is_git_repo" in result
+    assert "user_identity" in result
+    assert "collaborative" in result
+    assert "non_collaborative" in result
+    assert "excluded" in result
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.scan_project_files')
+@patch('app.utils.non_code_analysis.non_code_file_checker.filter_non_code_files')
+def test_classify_non_git_returns_all_expected_keys(mock_filter, mock_scan, mock_detect_git):
+    """Test that non-git result contains all expected keys."""
+    mock_detect_git.return_value = False
+    mock_scan.return_value = []
+    mock_filter.return_value = []
+    
+    result = classify_non_code_files_with_user_verification('/path/to/local')
+    
+    assert "is_git_repo" in result
+    assert "user_identity" in result
+    assert "collaborative" in result
+    assert "non_collaborative" in result
+    assert "excluded" in result
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_integration_example(mock_collect, mock_identity, mock_detect_git):
+    """Test example from docstring."""
+    mock_detect_git.return_value = True
+    mock_identity.return_value = {"name": "Shreya", "email": "shreya@example.com"}
+    
+    mock_collect.return_value = {
+        "design.pdf": {
+            "path": "/capstone/docs/design.pdf",
+            "authors": ["shreya@example.com", "teammate@example.com"]
+        },
+        "notes.txt": {
+            "path": "/capstone/notes.txt",
+            "authors": ["shreya@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification('/capstone')
+    
+    # Should match example behavior
+    assert len(result["collaborative"]) >= 1
+    assert len(result["non_collaborative"]) >= 1
+
+
+@pytest.mark.parametrize("user_email,expected_collab,expected_solo", [
+    ("alice@example.com", 1, 1),  # Alice has both types
+    ("bob@example.com", 1, 1),    # Bob has both types
+    ("charlie@example.com", 0, 0), # Charlie has no files
+])
+@patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
+@patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
+def test_classify_parametrized_users(mock_collect, mock_detect_git, user_email, expected_collab, expected_solo):
+    """Parametrized test for different users."""
+    mock_detect_git.return_value = True
+    
+    mock_collect.return_value = {
+        "shared.pdf": {
+            "path": "/repo/shared.pdf",
+            "authors": ["alice@example.com", "bob@example.com"]
+        },
+        "alice_solo.md": {
+            "path": "/repo/alice_solo.md",
+            "authors": ["alice@example.com"]
+        },
+        "bob_solo.txt": {
+            "path": "/repo/bob_solo.txt",
+            "authors": ["bob@example.com"]
+        }
+    }
+    
+    result = classify_non_code_files_with_user_verification(
+        '/path/to/repo',
+        user_email=user_email
+    )
+    
+    assert len(result["collaborative"]) == expected_collab
+    assert len(result["non_collaborative"]) == expected_solo

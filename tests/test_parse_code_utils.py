@@ -165,7 +165,7 @@ def test_extract_libraries_filters_relative_and_extracts_symbols():
     expected = {'Optional', 'Path', 'Union', 'json', 'os', 'pathlib', 'typing'}
     assert set(result) == expected
 
-def test_extract_internal_dependencies_filters_and_expands_imports():
+def test_extract_internal_dependencies():
     """
     Test that extract_internal_dependencies:
     - Keeps only internal deps (relative imports or matching project prefixes)

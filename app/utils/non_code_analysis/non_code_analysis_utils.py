@@ -11,7 +11,7 @@ from sumy.utils import get_stop_words
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
-def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 50000,language: str = "english") -> List[Dict]:
+def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 50000, language: str = "english") -> List[Dict]:
     """
     This function pre-processes parsed project data using Sumy LSA summarizer to generate 
     concise file summaries and extract key topics for the second LLM to use.
@@ -223,7 +223,7 @@ def create_non_code_analysis_prompt(aggregated_project, llm2_metrics):
     """
     pass
 
-#TODO Step 5:  Analyze summries using the second LLM
+#TODO Step 5: Analyze summries using the second LLM
 def generate_non_code_insights(PROMPT):
     """
     Generates llm2_metrics by calling LLM2 with the formatted prompt.
@@ -380,9 +380,7 @@ if __name__ == "__main__":
     try:
         results = pre_process_non_code_files(
             sample_parsed_files,
-            max_file_size_mb=5.0,
             max_content_length=50000,
-            summary_sentences=10,
             language="english"
         )
         

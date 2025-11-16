@@ -207,16 +207,58 @@ def _extract_key_topics_frequency(content: str, num_topics: int = 5) -> List[str
     
     return formatted_topics
 
+#TODO Implement further metric deduction functions as needed
+def _calculate_readability_metrics(content: str) -> Dict[str, float]:
+    """
+    Calculate readability metrics for the given content.
+    
+    Args:
+        content: Document content
+
+    Returns:
+        Readability metrics dictionary 
+    return metrics"""
+    pass
+
+
 #TODO Step 3: Aggregate non code summaries into a single analyzable project
 def aggregate_non_code_summaries(llm1_summary):
     """
     This function aggregates the preprocssed llm1 summary of non-code files into one single project for
     the second LLM to analyze.
-    Returns aggregated_project.
+    Creates aggregated_project and sends it to the second LLM.
     """
     
+    #Extract Project Name from file path 
+    if llm1_summary and "file_path" in llm1_summary[0]:
+        first_file_path = Path(llm1_summary[0]["file_path"])
+        project_name = first_file_path.parent.name
+    else:
+        project_name = "Unnamed Project"  # Fallback if no files are present
     
-    pass
+    #This is the project object to be sent to LLM2
+    aggregated_project = {
+        "Project_Name": project_name, #Project Name extracted from file path
+        "files": [], #object of all file names 
+        "summary": [], #combined listed summaries of all files
+        "key_topics": [] #combined listed key topics of all files
+    }
+
+   # Iterate through each summary and append data to the aggregated project
+    for summary in llm1_summary:
+        # Add the file name to the files list
+        aggregated_project["files"].append(summary["file_name"])
+
+        # Add the file summary to the summary list
+        aggregated_project["summary"].append(summary["summary"])
+
+        # Extend the key topics list with topics from the current file
+        aggregated_project["key_topics"].extend(summary["key_topics"])
+
+        # Deduplicate key topics
+        aggregated_project["key_topics"] = list(set(aggregated_project["key_topics"]))
+
+    return aggregated_project
 
 #TODO Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
 def create_non_code_analysis_prompt(aggregated_project, llm2_metrics):
@@ -264,7 +306,7 @@ def analyze_non_code_files(parsed_files):
 
 # Hardcoded function for CLI run
 if __name__ == "__main__":
-    # Sample parsed_files object matching the structure from document_parser
+    
 
     print("\n" + "=" * 80)
     print("Running pre_process_non_code_files...")
@@ -289,8 +331,10 @@ if __name__ == "__main__":
             print(f"\nKey Topics ({len(result['key_topics'])} topics):")
             for j, topic in enumerate(result['key_topics'], 1):
                 print(f"  {j}. {topic}")
+                
+        aggregate_non_code_summaries(results)
         
-        
+     
     except Exception as e:
         print(f"\n✗ Error during execution: {e}")
         import traceback

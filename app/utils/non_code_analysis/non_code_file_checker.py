@@ -66,20 +66,6 @@ def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
     return non_code_files
 
 
-def is_directory_git_repo(directory: Union[str, Path]) -> bool:
-    """
-    Check if a directory is a git repository.
-    REUSES: detect_git() from git_utils.py
-    
-    Args:
-        directory: Path to directory to check  
-        
-    Returns:
-        True if directory is a git repo, False otherwise
-    """
-    return detect_git(directory)
-
-
 def collect_git_non_code_files_with_metadata(
     repo_path: Union[str, Path]
 ) -> Dict[str, Dict[str, Any]]:

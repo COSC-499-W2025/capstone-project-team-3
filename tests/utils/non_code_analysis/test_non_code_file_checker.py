@@ -1,12 +1,13 @@
 import pytest
 from pathlib import Path
-from app.utils.non_code_analysis.non_code_file_checker import is_non_code_file, filter_non_code_files
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock
 from app.utils.non_code_analysis.non_code_file_checker import (
     is_non_code_file,
     filter_non_code_files,
     collect_git_non_code_files_with_metadata,
-    filter_non_code_files_by_collaboration
+    filter_non_code_files_by_collaboration,
+    get_git_user_identity,
+    verify_user_in_files,
 )
 
 # ============================================================================
@@ -493,6 +494,7 @@ def test_filter_non_code_files_integration_pattern(tmp_path):
     assert not any("app.py" in f for f in result)
     assert not any("main.py" in f for f in result)
 
+
 # ============================================================================
 # Tests for collect_git_non_code_files_with_metadata() 
 # ============================================================================
@@ -965,3 +967,110 @@ def test_filter_by_collaboration_parametrized(author_count, threshold, expected_
     else:
         assert len(result["collaborative"]) == 0
         assert len(result["non_collaborative"]) == 1
+
+# ============================================================================
+# Tests for get_git_user_identity()
+# ============================================================================
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_success(mock_get_repo):
+    """Test getting git user identity."""
+    mock_repo = Mock()
+    mock_config = Mock()
+    mock_config.get_value.side_effect = lambda section, key, default="": {
+        ("user", "name"): "Alice Smith",
+        ("user", "email"): "alice@example.com"
+    }.get((section, key), default)
+    
+    mock_repo.config_reader.return_value = mock_config
+    mock_get_repo.return_value = mock_repo
+    
+    result = get_git_user_identity('/path/to/repo')
+    
+    assert result["name"] == "Alice Smith"
+    assert result["email"] == "alice@example.com"
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_not_configured(mock_get_repo):
+    """Test getting identity when git user not configured."""
+    mock_repo = Mock()
+    mock_config = Mock()
+    mock_config.get_value.return_value = ""
+    mock_repo.config_reader.return_value = mock_config
+    mock_get_repo.return_value = mock_repo
+    
+    result = get_git_user_identity('/path/to/repo')
+    
+    assert result["name"] == ""
+    assert result["email"] == ""
+
+
+@patch('app.utils.non_code_analysis.non_code_file_checker.get_repo')
+def test_get_git_user_identity_invalid_repo(mock_get_repo):
+    """Test handling invalid repository."""
+    mock_get_repo.side_effect = Exception("Not a git repo")
+    result = get_git_user_identity('/invalid/path')
+    assert result == {}
+
+
+
+# ============================================================================
+# Tests for verify_user_in_files()
+# ============================================================================
+
+def test_verify_user_in_files_mixed():
+    """Test verifying user in files with mixed authorship."""
+    metadata = {
+        "collab.pdf": {
+            "path": "/path/collab.pdf",
+            "authors": ["user@example.com", "other@example.com"]
+        },
+        "solo.md": {
+            "path": "/path/solo.md",
+            "authors": ["user@example.com"]
+        },
+        "others.docx": {
+            "path": "/path/others.docx",
+            "authors": ["other@example.com", "another@example.com"]
+        }
+    }
+    
+    result = verify_user_in_files(metadata, "user@example.com")
+    
+    assert len(result["user_collaborative"]) == 1
+    assert "/path/collab.pdf" in result["user_collaborative"]
+    
+    assert len(result["user_solo"]) == 1
+    assert "/path/solo.md" in result["user_solo"]
+    
+    assert len(result["others_only"]) == 1
+    assert "/path/others.docx" in result["others_only"]
+
+
+def test_verify_user_in_files_user_not_in_any():
+    """Test when user hasn't contributed to any files."""
+    metadata = {
+        "file1.pdf": {
+            "path": "/path/file1.pdf",
+            "authors": ["other@example.com"]
+        },
+        "file2.md": {
+            "path": "/path/file2.md",
+            "authors": ["another@example.com"]
+        }
+    }
+    
+    result = verify_user_in_files(metadata, "user@example.com")
+    
+    assert result["user_collaborative"] == []
+    assert result["user_solo"] == []
+    assert len(result["others_only"]) == 2
+
+
+def test_verify_user_in_files_empty_metadata():
+    """Test verifying user with empty metadata."""
+    result = verify_user_in_files({}, "user@example.com")
+    assert result["user_collaborative"] == []
+    assert result["user_solo"] == []
+    assert result["others_only"] == []

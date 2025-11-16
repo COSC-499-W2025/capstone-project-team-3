@@ -1,10 +1,13 @@
 """
 Non-code file checker - identifies and filters non-code files from repositories and local paths.
+Reuses functions from git_utils.py for consistency.
 """
-import os
 from pathlib import Path
 from typing import Set, List, Union, Dict, Any
-from app.utils.git_utils import get_repo, is_collaborative
+from app.utils.git_utils import (
+    get_repo, 
+    detect_git
+)
 
 # Extensions considered non-code
 NON_CODE_EXTENSIONS: Set[str] = {
@@ -62,24 +65,36 @@ def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
     
     return non_code_files
 
-# ============================================================================
-# Collect non-code files from git repo (metadata only, no classification)
-# ============================================================================
 
-def collect_git_non_code_files_with_metadata(repo_path: Union[str, Path]) -> Dict[str, Dict[str, Any]]:
+def collect_git_non_code_files_with_metadata(
+    repo_path: Union[str, Path]
+) -> Dict[str, Dict[str, Any]]:
     """
     Collect non-code files from a git repository with author and commit metadata.
-    Does NOT classify collaboration - that's done by filter_non_code_files_by_collaboration().
+    REUSES: get_repo() from git_utils.py
     
-    Returns: {file_path: {path: str, authors: [emails], commit_count: int}}
+    Args:
+        repo_path: Path to git repository
+    
+    Returns:
+        Dictionary mapping file paths to metadata:
+        {
+            file_path: {
+                "path": str,              # Absolute path to file
+                "authors": [emails],      # List of author emails who committed
+                "commit_count": int,      # Total number of commits
+                "is_collaborative": bool  # True if >1 author
+            }
+        }
     """
     try:
-        repo = get_repo(repo_path)
+        repo = get_repo(repo_path)  # REUSED from git_utils.py
     except Exception:
         return {}
     
     file_info: Dict[str, Dict[str, Any]] = {}
     
+    # Iterate through all commits in all branches (same pattern as git_utils.py)
     for commit in repo.iter_commits(rev="--all"):
         author_email = getattr(commit.author, "email", None) or "unknown"
         
@@ -89,9 +104,11 @@ def collect_git_non_code_files_with_metadata(repo_path: Union[str, Path]) -> Dic
             continue
         
         for file_path in files.keys():
+            # Check if it's a non-code file
             if not is_non_code_file(file_path):
                 continue
             
+            # Initialize file info if first time seeing this file
             if file_path not in file_info:
                 file_info[file_path] = {
                     "path": str((Path(repo_path) / file_path).resolve()),
@@ -99,33 +116,41 @@ def collect_git_non_code_files_with_metadata(repo_path: Union[str, Path]) -> Dic
                     "commit_count": 0
                 }
             
+            # Add author and increment commit count
             file_info[file_path]["authors"].add(author_email)
             file_info[file_path]["commit_count"] += 1
     
-    # Convert sets to lists for JSON serialization
+    # Convert sets to lists and add is_collaborative flag
     result = {}
     for file_path, info in file_info.items():
         result[file_path] = {
             "path": info["path"],
             "authors": sorted(list(info["authors"])),
-            "commit_count": info["commit_count"]
+            "commit_count": info["commit_count"],
+            "is_collaborative": len(info["authors"]) > 1
         }
     
     return result
 
-# ============================================================================
-# Classify and filter by collaboration status (per-file basis)
-# ============================================================================
 
 def filter_non_code_files_by_collaboration(
     file_metadata: Dict[str, Dict[str, Any]],
     author_threshold: int = 1
 ) -> Dict[str, List[str]]:
     """
-    Classify non-code files as collaborative or non-collaborative based on author count.
-    A file is collaborative if author_count > author_threshold (default: 2+ authors).
+    Filter non-code files into collaborative and non-collaborative categories.
     
-    Returns: {collaborative: [paths], non_collaborative: [paths]}
+    Args:
+        file_metadata: Output from collect_git_non_code_files_with_metadata()
+        author_threshold: Minimum number of authors for a file to be considered collaborative
+                         Default is 1, meaning files with 2+ authors are collaborative
+    
+    Returns:
+        Dictionary with two keys:
+        {
+            "collaborative": [list of file paths with >author_threshold authors],
+            "non_collaborative": [list of file paths with <=author_threshold authors]
+        }
     """
     collaborative = []
     non_collaborative = []
@@ -141,4 +166,76 @@ def filter_non_code_files_by_collaboration(
     return {
         "collaborative": collaborative,
         "non_collaborative": non_collaborative
+    }
+
+def get_git_user_identity(repo_path: Union[str, Path]) -> Dict[str, str]:
+    """
+    Get the current git user's identity (name and email) from the repository.
+    REUSES: get_repo() from git_utils.py
+    
+    Args:
+        repo_path: Path to git repository
+        
+    Returns:
+        Dict with 'name' and 'email' keys, or empty dict if not found
+    """
+    try:
+        repo = get_repo(repo_path)  # REUSED from git_utils.py
+        config_reader = repo.config_reader()
+        
+        name = config_reader.get_value("user", "name", default="")
+        email = config_reader.get_value("user", "email", default="")
+        
+        return {
+            "name": name,
+            "email": email
+        }
+    except Exception:
+        return {}
+    
+
+def verify_user_in_files(
+    file_metadata: Dict[str, Dict[str, Any]],
+    user_email: str
+) -> Dict[str, List[str]]:
+    """
+    Verify which files the user actually contributed to vs files by others only.
+    
+    Ensures collaborative files have user + at least 1 other person.
+    Ensures non-collaborative files have ONLY the user.
+    
+    Args:
+        file_metadata: Output from collect_git_non_code_files_with_metadata()
+        user_email: Email of the user to verify
+    
+    Returns:
+        {
+            "user_collaborative": [paths],    # Files with user + at least 1 other
+            "user_solo": [paths],             # Files with ONLY user
+            "others_only": [paths]            # Files WITHOUT user
+        }
+    """
+    user_collaborative = []
+    user_solo = []
+    others_only = []
+    
+    for file_path, info in file_metadata.items():
+        authors = info.get("authors", [])
+        
+        if user_email in authors:
+            # User IS an author
+            if len(authors) == 1:
+                # ONLY user (solo work)
+                user_solo.append(info["path"])
+            else:
+                # User + at least 1 other person (collaborative)
+                user_collaborative.append(info["path"])
+        else:
+            # User is NOT an author (others' work)
+            others_only.append(info["path"])
+    
+    return {
+        "user_collaborative": user_collaborative,
+        "user_solo": user_solo,
+        "others_only": others_only
     }

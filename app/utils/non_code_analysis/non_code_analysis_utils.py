@@ -86,15 +86,17 @@ def pre_process_non_code_files(parsed_files: Dict, language: str = "english") ->
             # Generate summary using Sumy LSA
             summary = _sumy_lsa_summarize(content, num_sentences=summary_sentences, language=language)
             if not summary:
-                raise ValueError("Could not extract summary from content")
                 summary = ["N/A"]  # Fallback
+                raise ValueError("Could not extract summary from content")
+                
 
             # Extract key topics using frequency analysis
             key_topics = _extract_key_topics_(content, num_topics=5)
         
             if not key_topics:
-                raise ValueError("Could not extract key topics from content")
                 key_topics = ["N/A"]  # Fallback 
+                raise ValueError("Could not extract key topics from content")
+                
 
             llm1_summary = {
                 "file_name": file_name,

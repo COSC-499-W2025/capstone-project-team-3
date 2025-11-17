@@ -261,7 +261,11 @@ def get_unique_key_topics(llm1_results):
 def get_file_type_distribution(llm1_results):
     # Get file type distribution across all files
     if llm1_results:
-        file_types = [summary["file_type"] for summary in llm1_results if "file_type" in summary]
+        file_types = [
+            summary.get("fileType") or summary.get("file_type")
+            for summary in llm1_results
+            if "fileType" in summary or "file_type" in summary
+        ]
         return dict(Counter(file_types))
     return {}
 
@@ -271,7 +275,7 @@ def get_named_entities(llm1_results):
     if llm1_results:
         entities = set()
         for summary in llm1_results:
-            content = summary.get("content", "")
+            content = summary.get("summary", "")
             doc = nlp(content)
             entities.update(ent.text for ent in doc.ents)
         return list(entities)

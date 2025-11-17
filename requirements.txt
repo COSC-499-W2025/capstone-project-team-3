@@ -86,3 +86,4 @@ python-docx==1.2.0
 google-generativeai>=0.8.0
 sumy>=0.11.0
 textstat==0.7.3
+pytest-mock>=3.12.0

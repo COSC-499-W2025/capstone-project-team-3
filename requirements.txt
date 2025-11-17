@@ -85,3 +85,4 @@ pypdf>=3.0.0
 python-docx==1.2.0
 google-generativeai>=0.8.0
 sumy>=0.11.0
+pytest-mock>=3.12.0

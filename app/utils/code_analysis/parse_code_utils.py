@@ -8,13 +8,13 @@
 #   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
 #  Imports only returns full import statements, working to only extract the library...
 
-#   "dependencies_internal": ["string"],   // Local imports within the project
+#   "dependencies_internal": ["string"] --done,   // Local imports within the project
 #   "top_keywords": ["string"],            // Most frequent meaningful identifiers
 #   "entities": { FileEntities },          // Structural elements (functions, classes, etc.)
 #   "metrics": { FileMetrics },            // Per-file stats
 
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 import json 
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
@@ -221,7 +221,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
 
     return imports
 
-def extract_libraries(import_statements: List[str], language: str) -> List[str]:
+def extract_libraries(import_statements: List[str], language: str, project_names: Optional[List[str]] = None) -> List[str]:
     """
     Extract library/module names from a list of import statements.
 
@@ -247,7 +247,92 @@ def extract_libraries(import_statements: List[str], language: str) -> List[str]:
                 parts = re.split(r"\s*,\s*", match)
                 for lib in parts:
                     lib = lib.strip().strip('\'"')
-                    if lib and not lib.startswith((".", "/")):
-                        libraries.add(lib)
+                    if not lib or lib.startswith((".", "/")):
+                        continue
+
+                    # Skip libraries that belong to project_names
+                    if project_names:
+                        normalized_lib = lib.replace("/", ".")
+                        if any(p in normalized_lib for p in project_names):
+                            continue
+
+                    libraries.add(lib)
 
     return list(libraries)
+
+def extract_internal_dependencies(import_statements: List[str], language: str, project_names: Optional[List[str]] = None) -> List[str]:
+    """
+    Extract internal/project dependencies from import statements.
+    Internal = relative imports or imports starting with known project prefixes.
+    For 'from ... import ...', returns fully qualified names like 'module.symbol'.
+    
+    Args:
+        import_statements: List of raw import lines.
+        language: Language name (e.g. 'python', 'javascript').
+        project_names: Optional list of known project prefixes, like ['app', 'src', 'mycompany'].
+    """
+    language = map_language_for_treesitter(language)
+    patterns = _TS_IMPORT_QUERIES.get(language, [])
+    internal = set()
+
+    for stmt in import_statements:
+        for pattern in patterns:
+            # Find all matches
+            matches = re.findall(pattern, stmt, re.MULTILINE | re.DOTALL)
+            
+            for match in matches:
+                module = None
+                imported_names = []
+
+                # Case 1: The regex returned a single string match (e.g., simple import like 'import os, sys')
+                # Split by commas to handle multiple imports on one line
+                if isinstance(match, str):
+                    # If match is a simple string, split by commas (multiple imports in one line)
+                    imported_names = [name.strip() for name in match.split(",") if name.strip()]
+                    for name in imported_names:
+                        dep = name.strip().strip('\'"')  # remove any quotes around module name
+                        if dep:
+                            internal.add(dep)
+                            
+                # Case 2: The regex returned a tuple (e.g., 'from module import name1, name2')
+                elif isinstance(match, tuple):
+                    if len(match) == 1:
+                        # Rare case: tuple with single element, just add it as dependency
+                        candidate = match[0].strip()
+                        if candidate:
+                            internal.add(candidate)
+                    elif len(match) >= 2:
+                        # Typical 'from module import name1, name2' pattern
+                        module = match[0].strip()
+                        raw_names = match[1].strip()
+
+                        for part in re.split(r"\s*,\s*", raw_names):
+                            name = part.strip().rstrip(",")  # handle trailing commas
+                            if name and not name.startswith("*"):  # skip 'import *'
+                                # Build fully qualified name: module.name
+                                fq_name = f"{module}.{name}"
+                                internal.add(fq_name)
+    
+                # Case 3: Unexpected match type (not str or tuple), skip it
+                else:
+                    continue
+
+    result = set()
+    for dep in internal:
+        dep_clean = dep.strip('\'"') # final cleanup of quotes
+        if not dep_clean:
+            continue
+
+        # Keep relative imports (starting with '.' or '/')
+        if dep_clean.startswith((".", "/")):
+            result.add(dep_clean)
+            continue
+
+        # Keep dependencies that match known project prefixes
+        if project_names:
+            if any(
+                dep_clean.startswith(prefix + ".") or dep_clean == prefix
+                for prefix in project_names
+            ):
+                result.add(dep_clean)
+    return list(result)

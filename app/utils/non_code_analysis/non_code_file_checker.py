@@ -8,6 +8,7 @@ from app.utils.git_utils import (
     get_repo, 
     detect_git
 )
+from app.utils.scan_utils import scan_project_files
 
 # Extensions considered non-code
 NON_CODE_EXTENSIONS: Set[str] = {
@@ -239,3 +240,90 @@ def verify_user_in_files(
         "user_solo": user_solo,
         "others_only": others_only
     }
+
+def classify_non_code_files_with_user_verification(
+    directory: Union[str, Path],
+    user_email: str = None
+) -> Dict[str, Any]:
+    """
+    Classify non-code files as collaborative or non-collaborative with user verification.
+    REUSES: detect_git(), get_repo() from git_utils.py
+           scan_project_files() from scan_utils.py
+           filter_non_code_files() from this module
+    
+    Classification logic:
+    - COLLABORATIVE: Git repo + 2+ authors + user is one of them
+    - NON-COLLABORATIVE: 
+        * Git repo + only 1 author (user) 
+        * OR local files (non-git)
+    
+    Args:
+        directory: Path to directory/repository
+        user_email: Email of user (if None, gets from git config for git repos)
+    
+    Returns:
+        {
+            "is_git_repo": bool,
+            "user_identity": {"name": str, "email": str} or {},
+            "collaborative": [paths],        # Git + 2+ authors + user is author
+            "non_collaborative": [paths],    # Git + user only OR local files
+            "excluded": [paths]              # Git + user NOT author
+        }
+    
+    Example:
+        # Git repo with user verification
+        >>> result = classify_non_code_files_with_user_verification('/path/to/git/repo')
+        >>> print(f"Collaborative (you + others): {len(result['collaborative'])}")
+        >>> print(f"Non-collaborative (solo or local): {len(result['non_collaborative'])}")
+        
+        # Non-git directory (all files are non-collaborative)
+        >>> result = classify_non_code_files_with_user_verification('/path/to/local')
+        >>> print(f"All local files (non-collaborative): {len(result['non_collaborative'])}")
+    """
+    directory = Path(directory)
+    
+    # REUSED: detect_git() from git_utils.py
+    if detect_git(directory):
+        # Git repository - get user identity
+        if user_email is None:
+            user_identity = get_git_user_identity(directory)
+            user_email = user_identity.get("email", "")
+        else:
+            user_identity = {"name": "", "email": user_email}
+        
+        if not user_email:
+            # Can't determine user - treat as error case
+            return {
+                "is_git_repo": True,
+                "user_identity": {},
+                "collaborative": [],
+                "non_collaborative": [],
+                "excluded": [],
+                "error": "Could not determine git user identity"
+            }
+        
+        # Collect git metadata (uses get_repo internally)
+        metadata = collect_git_non_code_files_with_metadata(directory)
+        
+        # Verify user in files
+        verified = verify_user_in_files(metadata, user_email)
+        
+        return {
+            "is_git_repo": True,
+            "user_identity": user_identity,
+            "collaborative": verified["user_collaborative"],      # Git + 2+ authors + user
+            "non_collaborative": verified["user_solo"],           # Git + user only
+            "excluded": verified["others_only"]                   # Git + user NOT author
+        }
+    else:
+        # Non-git directory - REUSE scan_project_files + filter_non_code_files
+        all_files = scan_project_files(str(directory))
+        local_files = filter_non_code_files(all_files)
+        
+        return {
+            "is_git_repo": False,
+            "user_identity": {},
+            "collaborative": [],                                  # No git = no collaboration
+            "non_collaborative": local_files,                     # All local files
+            "excluded": []
+        }

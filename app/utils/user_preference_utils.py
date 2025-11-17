@@ -56,7 +56,26 @@ class UserPreferenceStore:
             ( name, email, github_user, education, industry, job_title),
         )
         self.conn.commit()
-
+    # Optimized static functions to get latest industry/job/education preferences without email lookup
+    @staticmethod
+    def get_latest_preferences_no_email():
+        store = UserPreferenceStore()
+        cur = store.conn.cursor()
+        cur.execute(
+            """
+            SELECT industry, job_title, education
+            FROM USER_PREFERENCES
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        store.close()
+        if not row:
+            return None
+        keys = ["industry", "job_title", "education"]
+        return dict(zip(keys, row))
+    
     # Close the DB connection
     def close(self):
         try:

@@ -221,8 +221,7 @@ def extract_imports(file_content: str, language: str) -> List[str]:
 
     return imports
 
-#TODO: update this method to exclude imports with project names... (internal dependency)
-def extract_libraries(import_statements: List[str], language: str) -> List[str]:
+def extract_libraries(import_statements: List[str], language: str, project_names: Optional[List[str]] = None) -> List[str]:
     """
     Extract library/module names from a list of import statements.
 
@@ -248,8 +247,16 @@ def extract_libraries(import_statements: List[str], language: str) -> List[str]:
                 parts = re.split(r"\s*,\s*", match)
                 for lib in parts:
                     lib = lib.strip().strip('\'"')
-                    if lib and not lib.startswith((".", "/")):
-                        libraries.add(lib)
+                    if not lib or lib.startswith((".", "/")):
+                        continue
+
+                    # Skip libraries that belong to project_names
+                    if project_names:
+                        normalized_lib = lib.replace("/", ".")
+                        if any(p in normalized_lib for p in project_names):
+                            continue
+
+                    libraries.add(lib)
 
     return list(libraries)
 

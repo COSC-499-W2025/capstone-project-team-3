@@ -188,3 +188,65 @@ GEMINI_API_KEY=AIzaSy...your-gemini-api-key-here...
 ---
 
 **Now you can use all LLM features in the project!**
+
+
+---
+
+## 🛠️ Troubleshooting (Sumy + NLTK Integration)
+
+### ⚠️ **1. Missing `punkt` Tokenizer**
+
+If you see this warning:
+
+```
+  NLTK 'punkt' tokenizer not found locally.
+```
+
+It means your NLTK data folder is missing or was not cloned correctly.
+
+**Fix:**
+
+1. Verify the tokenizer exists at:
+
+   ```
+   app/utils/non_code_analysis/nltk_data/tokenizers/punkt
+   ```
+2. If missing, download manually once:
+
+   ```bash
+   python3 -c "import nltk; nltk.download('punkt', download_dir='app/utils/non_code_analysis/nltk_data')"
+   ```
+3. Re-run:
+
+   ```bash
+   python3 -m app.utils.non_code_analysis.non_code_analysis_utils
+   ```
+
+---
+
+### 🧩 **2. SSL or Certificate Errors**
+
+If you encounter an error like:
+
+```
+[nltk_data] Error loading punkt: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED]>
+```
+
+You don’t need to fix your SSL certificates — this project already runs **offline**.
+Just ensure you’re using the local copy of `nltk_data` provided in the repo (as configured in the code).
+
+---
+
+### 🧠 **3. Import Errors for `sumy`**
+
+If running the module throws:
+
+```
+ModuleNotFoundError: No module named 'sumy'
+```
+
+Install dependencies:
+
+```bash
+pip install requirements.txt
+```

@@ -247,6 +247,7 @@ def get_file_names(llm1_results):
     # Get list of all file names
     if llm1_results:
         return [summary["file_name"] for summary in llm1_results]
+    return []
 
 def get_readability_metrics(llm1_results):
     # Calculate average readability score across all files
@@ -266,7 +267,7 @@ def get_file_type_distribution(llm1_results):
         file_types = [
             summary.get("fileType") or summary.get("file_type")
             for summary in llm1_results
-            if "fileType" in summary or "file_type" in summary
+            if "fileType" in summary or "file_type" in summary is not None
         ]
         return dict(Counter(file_types))
     return {}
@@ -281,6 +282,7 @@ def get_named_entities(llm1_results):
             doc = nlp(content)
             entities.update(ent.text for ent in doc.ents)
         return list(entities)
+    return []
 
 #Step 3: Aggregate non code summaries into a single analyzable project
 def aggregate_non_code_summaries(llm1_results):

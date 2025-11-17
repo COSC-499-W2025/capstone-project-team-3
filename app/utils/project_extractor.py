@@ -3,6 +3,17 @@ from pathlib import Path
 from typing import Union, List
 
 from app.utils.path_utils import extract_zipped_contents, is_zip_file
+import os
+
+EXCLUDE_PATTERNS = [
+    "__pycache__", ".git", ".env", ".venv", "node_modules", "env", "venv",
+    "build", "dist", ".pytest_cache", ".github", ".idea", ".vscode",
+    ".mypy_cache", ".ruff_cache", ".tox", ".nox", "target", "_build", "deps",
+    ".stack-work", ".dart_tool", "Pods", ".swiftpm", ".gradle", "gradle",
+    "coverage", ".cache", ".parcel-cache", ".next", ".nuxt", "elm-stuff",
+    ".svelte-kit", ".astro", ".serverless", ".terraform", "vendor", ".bazel",
+    "bazel-bin", "bazel-out", "bazel-testlogs", "__pypackages__", ".uv"
+]
 
 def extract_and_list_projects(zip_path: Union[str, Path]) -> dict:
     """
@@ -66,3 +77,30 @@ def _identify_projects(root_dir: Union[str, Path]) -> List[str]:
                 projects.append(str(item))
     
     return projects
+
+
+def get_project_top_level_dirs(root: Union[str, Path], exclude_patterns: List[str] = EXCLUDE_PATTERNS) -> list[str]:
+    """
+    Extracts high-level project names from a given folder path.
+    A 'project' is defined as a top-level directory.
+    """
+    try:
+        contents = os.listdir(root)
+    except Exception:
+        # Path invalid, inaccessible, or unreadable
+        return []
+
+    ignore_dirs = exclude_patterns
+    project_names = []
+
+    for item in contents:
+        full_path = os.path.join(root, item)
+
+        try:
+            if os.path.isdir(full_path) and item not in ignore_dirs:
+                project_names.append(item)
+        except Exception:
+            # In case of permission errors on specific items
+            continue
+
+    return sorted(project_names)

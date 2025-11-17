@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List, Dict
 from collections import Counter
 from app.shared.text.parsed_input_text import sample_parsed_files
-from app.utils.user_preference_utils import UserPreferenceStore
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -15,7 +14,7 @@ import spacy
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
-def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 50000, language: str = "english") -> List[Dict]:
+def pre_process_non_code_files(parsed_files: Dict, language: str = "english") -> List[Dict]:
     """
     This function pre-processes parsed project data using Sumy LSA summarizer to generate 
     concise file summaries and extract key topics for the second LLM to use.
@@ -52,17 +51,13 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
         content = file_data.get("content", "")
         
         # Check file size
-        # TODO : Intergrate file size check rather than content length if needed
-        # Check content length
-        if len(content) > max_content_length:
-            print(f"Warning: Content for {file_name} exceeds {max_content_length} characters. Truncating...")
-            content = content[:max_content_length] + "... [truncated]"
+        # TODO : Intergrate file size checker here
         
         # Skip empty content
         if not content or not content.strip():
             continue
         
-        # Dynamically determine the number of summary sentences
+        # Dynamically determine the number of summary sentences needed based on content length
         content_length = len(content)
         if content_length < 1000:
             summary_sentences = 3
@@ -91,15 +86,17 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
             # Generate summary using Sumy LSA
             summary = _sumy_lsa_summarize(content, num_sentences=summary_sentences, language=language)
             if not summary:
-                raise ValueError("Could not extract summary from content")
                 summary = ["N/A"]  # Fallback
+                raise ValueError("Could not extract summary from content")
+                
 
             # Extract key topics using frequency analysis
             key_topics = _extract_key_topics_(content, num_topics=5)
         
             if not key_topics:
-                raise ValueError("Could not extract key topics from content")
                 key_topics = ["N/A"]  # Fallback 
+                raise ValueError("Could not extract key topics from content")
+                
 
             llm1_summary = {
                 "file_name": file_name,
@@ -250,6 +247,7 @@ def get_file_names(llm1_results):
     # Get list of all file names
     if llm1_results:
         return [summary["file_name"] for summary in llm1_results]
+    return []
 
 def get_readability_metrics(llm1_results):
     # Calculate average readability score across all files
@@ -269,7 +267,7 @@ def get_file_type_distribution(llm1_results):
         file_types = [
             summary.get("fileType") or summary.get("file_type")
             for summary in llm1_results
-            if "fileType" in summary or "file_type" in summary
+            if "fileType" in summary or "file_type" in summary is not None
         ]
         return dict(Counter(file_types))
     return {}
@@ -284,6 +282,7 @@ def get_named_entities(llm1_results):
             doc = nlp(content)
             entities.update(ent.text for ent in doc.ents)
         return list(entities)
+    return []
 
 #Step 3: Aggregate non code summaries into a single analyzable project
 def aggregate_non_code_summaries(llm1_results):

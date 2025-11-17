@@ -45,6 +45,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
+# Download NLTK data
+RUN python -m nltk.downloader punkt_tab -d /usr/local/share/nltk_data
+
 # Fix ownership so appuser can write to /app
 RUN chown -R appuser:appuser /app
 

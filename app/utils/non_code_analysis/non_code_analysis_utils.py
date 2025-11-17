@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Dict
 from collections import Counter
 from app.shared.text.parsed_input_text import sample_parsed_files
+from app.utils.user_preference_utils import UserPreferenceStore
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -335,9 +336,20 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     Create a structured prompt for AI analysis using the aggregated llm1 project summaries.
     Returns formatted prompt string that follows the structure of llm2_metrics.
     """
-    industry = "N/A"  # TODO: Fetch from user profile/preferences
-    aspiring_job_title = "N/A"  # TODO: Fetch from user profile/preferences
-    education = "N/A"  # TODO: Fetch from user profile/preferences
+    user_prefs = UserPreferenceStore.get_latest_preferences_no_email()
+    print("DEBUG user_prefs:", user_prefs)
+
+    # Fetch user preferences from DB if available
+    if UserPreferenceStore.get_latest_preferences_no_email() is not None:
+        user_prefs = UserPreferenceStore.get_latest_preferences_no_email()
+        industry = user_prefs.get("industry")
+        aspiring_job_title = user_prefs.get("job_title")
+        education = user_prefs.get("education")
+        
+    else:   
+        industry = "N/A"  # TODO: Fetch from user profile/preferences
+        aspiring_job_title = "N/A"  # TODO: Fetch from user profile/preferences
+        education = "N/A"  # TODO: Fetch from user profile/preferences
 
     # Base prompt structure
     PROMPT = f"""
@@ -347,14 +359,23 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     Ensure the skills and resume bullet points are relevant to the project content provided.
    
     Project Name: {aggregated_project_metrics["Project_Name"]}
+    
     Total Files: {aggregated_project_metrics["totalFiles"]}
+    
     File Names: {", ".join(aggregated_project_metrics["fileNames"])}
+    
     Average Readability Score: {aggregated_project_metrics["averageReadabilityScore"]}
+    
     Unique Key Topics: {", ".join(aggregated_project_metrics["uniqueKeyTopics"])}
+    
     File Type Distribution: {aggregated_project_metrics["fileTypeDistribution"]}
+    
     Named Entities: {", ".join(aggregated_project_metrics["namedEntities"])}
+    
     Industry: {industry}
+    
     Aspiring Job Title: {aspiring_job_title}
+    
     Education: {education}
     """
 
@@ -362,13 +383,21 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     file_details = []
     for file in aggregated_project_metrics.get("files", []):
         file_details.append(f"""
+                            
         File Name: {file.get("file_name")}
+        
         File Type: {file.get("file_type")}
+        
         Word Count: {file.get("word_count")}
+        
         Sentence Count: {file.get("sentence_count")}
+        
         Readability Score: {file.get("readability_score")}
+        
         Summary: {file.get("summary")}
+        
         Key Topics: {", ".join(file.get("key_topics", []))}
+        
         """)
 
     # Append file-level details to the prompt

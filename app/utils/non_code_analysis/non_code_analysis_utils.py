@@ -15,7 +15,7 @@ import spacy
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
-def pre_process_non_code_files(parsed_files: Dict, language: str = "english") -> List[Dict]:
+def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 50000, language: str = "english") -> List[Dict]:
     """
     This function pre-processes parsed project data using Sumy LSA summarizer to generate 
     concise file summaries and extract key topics for the second LLM to use.
@@ -52,13 +52,17 @@ def pre_process_non_code_files(parsed_files: Dict, language: str = "english") ->
         content = file_data.get("content", "")
         
         # Check file size
-        # TODO : Intergrate file size checker here
+        # TODO : Intergrate file size check rather than content length if needed
+        # Check content length
+        if len(content) > max_content_length:
+            print(f"Warning: Content for {file_name} exceeds {max_content_length} characters. Truncating...")
+            content = content[:max_content_length] + "... [truncated]"
         
         # Skip empty content
         if not content or not content.strip():
             continue
         
-        # Dynamically determine the number of summary sentences needed based on content length
+        # Dynamically determine the number of summary sentences
         content_length = len(content)
         if content_length < 1000:
             summary_sentences = 3

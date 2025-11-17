@@ -331,19 +331,20 @@ def aggregate_non_code_summaries(llm1_results):
 
 #TODO Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
 def create_non_code_analysis_prompt(aggregated_project_metrics):
-
-    # industry = TODO: Fetch from user profile/preferences from DB
-    # aspiring_job_title = TODO: Fetch from user profile/preferences from DB
-    # education = TODO: Fetch from user profile/preferences from DB
-
     """
     Create a structured prompt for AI analysis using the aggregated llm1 project summaries.
     Returns formatted prompt string that follows the structure of llm2_metrics.
     """
+    industry = "N/A"  # TODO: Fetch from user profile/preferences
+    aspiring_job_title = "N/A"  # TODO: Fetch from user profile/preferences
+    education = "N/A"  # TODO: Fetch from user profile/preferences
+
+    # Base prompt structure
     PROMPT = f"""
     You are a precise and detail-oriented Analyst. 
-    Your task is to Analyze the following project and generate accurate, concise skills and resume bullet points based on the following metrics and context information provided. 
-    Take into account the industry, aspiring job title and education if available. Ensure the skills and resume bullet points are relevant to the project content provided.
+    Your task is to analyze the following project and generate accurate, concise skills and resume bullet points based on the metrics and context information provided. 
+    Take into account the industry, aspiring job title, and education if available.   
+    Ensure the skills and resume bullet points are relevant to the project content provided.
    
     Project Name: {aggregated_project_metrics["Project_Name"]}
     Total Files: {aggregated_project_metrics["totalFiles"]}
@@ -352,37 +353,45 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     Unique Key Topics: {", ".join(aggregated_project_metrics["uniqueKeyTopics"])}
     File Type Distribution: {aggregated_project_metrics["fileTypeDistribution"]}
     Named Entities: {", ".join(aggregated_project_metrics["namedEntities"])}
-    Files Details: {aggregated_project_metrics["files"]}
     Industry: {industry}
     Aspiring Job Title: {aspiring_job_title}
-    Education: {education}  
-    
-
-    Return your analysis in the following format: {
-        "skills": [
-            "Skill 1",
-            "Skill 2"
-        ],
-        "resume_bullets": [
-            "Bullet point 1",
-            "Bullet point 2"
-        ]
-    }
-    Provide only the JSON object as output without any additional text.
+    Education: {education}
     """
 
     # Add file-level details
+    file_details = []
     for file in aggregated_project_metrics.get("files", []):
-        PROMPT += f"""
+        file_details.append(f"""
         File Name: {file.get("file_name")}
         File Type: {file.get("file_type")}
         Word Count: {file.get("word_count")}
         Sentence Count: {file.get("sentence_count")}
         Readability Score: {file.get("readability_score")}
         Summary: {file.get("summary")}
-        Key Topics: {", ".join(file.get("keyTopics", []))}
-        """
+        Key Topics: {", ".join(file.get("key_topics", []))}
+        """)
 
+    # Append file-level details to the prompt
+    PROMPT += "\nFile Details:\n" + "\n".join(file_details)
+
+    # Specify the required output format
+    PROMPT += """
+    Return your analysis in the following format: {
+        "skills": [
+            "Skill 1",
+            "Skill 2", 
+            "Skill 3",
+            ...
+        ],
+        "resume_bullets": [
+            "Bullet point 1",
+            "Bullet point 2",
+            "Bullet point 3",
+            ...
+        ]
+    }
+    Provide only the JSON object as output without any additional text.
+    """
     return PROMPT
 
 #TODO Step 5: Analyze summries using the second LLM

@@ -2,7 +2,9 @@ import re
 from pathlib import Path
 from typing import List, Dict
 from collections import Counter
+from app.client.llm_client import GeminiLLMClient
 from app.shared.text.parsed_input_text import sample_parsed_files
+from app.utils.user_preference_utils import UserPreferenceStore
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -432,7 +434,9 @@ def generate_non_code_insights(PROMPT):
     Generates llm2_metrics by calling LLM2 with the formatted prompt.
     Returns Final_Result
     """
-    pass
+    LLM2 = GeminiLLMClient()
+    response = LLM2.generate(PROMPT)
+    return response
 
 #TODO Step 6: Store results
 def store_non_code_analysis_results(final_result):
@@ -487,6 +491,12 @@ def run_pipeline():
         prompt = create_non_code_analysis_prompt(project_metrics)
         print(prompt)
         print("\n✓ Prompt generation completed successfully")
+        
+        # Step 4: Call LLM2 for analysis 
+        llm2_results = generate_non_code_insights(prompt)
+        print("\nLLM2 Results:")
+        print(llm2_results)
+        print("\n✓ LLM2 analysis completed successfully")
 
     except Exception as e:
         print(f"\n✗ Error during pipeline execution: {e}")

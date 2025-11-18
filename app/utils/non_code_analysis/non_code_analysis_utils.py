@@ -35,8 +35,8 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
     """
     llm1_summaries = []
     
-    # Extract files list from parsed_files
-    files = parsed_files.get("files", [])
+    # Extract files list from parsed_files (supports both "files" and "parsed_files" keys)
+    files = parsed_files.get("parsed_files", parsed_files.get("files", []))
     
     for file_data in files:
         # Skip files that weren't successfully parsed
@@ -242,28 +242,31 @@ def analyze_non_code_files(parsed_files):
     """
     Entry & Main Flow: pre-process files (NLP), aggregate summaries, generate prompt,
     call LLM2, store analysis results.
+    INTEGRATES: with parsed_input_text() from document_parser.py
     """
-    # 1. Pre-Process files (Use LLM1)
-    pre_process_non_code_files(parsed_files)
+    # 1. Pre-Process files using existing Sumy LSA infrastructure
+    llm1_summary = pre_process_non_code_files(parsed_files)
 
     # 2. Aggregate summaries 
-    aggregate_non_code_summaries(llm1_summary)
+    aggregated_project = aggregate_non_code_summaries(llm1_summary)
     
     # 3. Generate Analysis Prompt
-    create_non_code_analysis_prompt(aggregated_project)
+    prompt = create_non_code_analysis_prompt(aggregated_project, {})
     
     # 4. Call LLM2 for Analysis
-    generate_non_code_insights(PROMPT)
+    final_result = generate_non_code_insights(prompt)
 
     # 5. Store Data
-    store_non_code_analysis_results(Final_Result)
+    store_non_code_analysis_results(final_result)
+    
+    return final_result
 
 
 # Hardcoded function for CLI run
 if __name__ == "__main__":
     # Sample parsed_files object matching the structure from document_parser
     sample_parsed_files = {
-        "files": [
+        "parsed_files": [
             {
                 "path": "/test/project_proposal.pdf",
                 "name": "project_proposal.pdf",

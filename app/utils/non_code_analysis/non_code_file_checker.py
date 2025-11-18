@@ -241,6 +241,54 @@ def verify_user_in_files(
         "others_only": others_only
     }
 
+def parse_classified_non_code_files(
+    directory: Union[str, Path],
+    user_email: str = None
+) -> Dict[str, Any]:
+    """
+    Classify and parse non-code files in one step.
+    REUSES: classify_non_code_files_with_user_verification() 
+    REUSES: parsed_input_text() from document_parser.py
+    
+    Args:
+        directory: Path to directory/repository
+        user_email: Email of user (if None, gets from git config for git repos)
+    
+    Returns:
+        {
+            "parsed_files": [...],           # Parsed content from collaborative + non_collaborative
+            "classification": {
+                "is_git_repo": bool,
+                "user_identity": {...},
+                "collaborative_count": int,
+                "non_collaborative_count": int,
+                "excluded_count": int
+            }
+        }
+    """
+    from ..non_code_parsing.document_parser import parsed_input_text
+    
+    # Existing classification function
+    classification = classify_non_code_files_with_user_verification(directory, user_email)
+    
+    # Get files to parse (collaborative + non_collaborative, skip excluded)
+    files_to_parse = classification["collaborative"] + classification["non_collaborative"]
+    
+    # parsed_input_text 
+    parsed_result = parsed_input_text(files_to_parse)
+    
+    # Add classification metadata
+    parsed_result["classification"] = {
+        "is_git_repo": classification["is_git_repo"],
+        "user_identity": classification["user_identity"],
+        "collaborative_count": len(classification["collaborative"]),
+        "non_collaborative_count": len(classification["non_collaborative"]),
+        "excluded_count": len(classification["excluded"])
+    }
+    
+    return parsed_result
+
+
 def classify_non_code_files_with_user_verification(
     directory: Union[str, Path],
     user_email: str = None

@@ -87,3 +87,20 @@ google-generativeai>=0.8.0
 sumy>=0.11.0
 pytest-mock>=3.12.0
 textstat==0.7.3
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
+spacy==3.8.7
+spacy-legacy==3.0.12
+spacy-loggers==1.0.5
+
+# NLP Libraries for Non-Code Analysis
+spacy>=3.7.0
+nltk>=3.8.1
+textblob>=0.17.1
+keybert>=0.8.4
+sumy>=0.11.0
+
+# spaCy Language Model (small English model)
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+
+# Additional dependencies for KeyBERT
+sentence-transformers>=2.2.2

@@ -51,6 +51,10 @@ RUN python -m nltk.downloader punkt_tab -d /usr/local/share/nltk_data
 # Fix ownership so appuser can write to /app
 RUN chown -R appuser:appuser /app
 
+# Download NLP models and data (as root before switching users)
+RUN python -m spacy download en_core_web_sm
+RUN python -m nltk.downloader punkt_tab cmudict stopwords -d /usr/local/share/nltk_data
+
 # Switch to the non-privileged user to run the application.
 USER appuser
 

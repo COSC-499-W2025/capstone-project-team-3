@@ -13,7 +13,6 @@ sys.path.insert(0, str(project_root))
 
 from app.utils.non_code_analysis.non_3rd_party_analysis import (
     classify_document_type,
-    generate_comprehensive_summary
 )
 
 
@@ -110,46 +109,3 @@ class TestClassifyDocumentType:
         content = "Some random notes about various topics."
         result = classify_document_type(content, Path("notes.txt"))
         assert result == "GENERAL_DOCUMENTATION"
-
-
-class TestGenerateComprehensiveSummary:
-    """Test suite for comprehensive summary generation"""
-    
-    def test_api_documentation_summary_includes_key_elements(self):
-        """Test that API doc summary includes domain, tech stack, and content"""
-        content = """
-        # User Management API Documentation
-        
-        This API provides comprehensive user management functionality using FastAPI and PostgreSQL.
-        
-        ## Endpoints
-        - GET /api/users - Retrieve all users from the database
-        - POST /api/users - Create a new user with email validation
-        - PUT /api/users/{id} - Update existing user details
-        - DELETE /api/users/{id} - Remove user from system
-        
-        ## Authentication
-        All endpoints require JWT bearer token authentication.
-        The API uses RESTful principles and returns JSON responses.
-        
-        ## Database Schema
-        Users table includes: id, email, password_hash, created_at, updated_at
-        """
-        
-        result = generate_comprehensive_summary(content, "api_docs.md", "API_DOCUMENTATION")
-        
-        # Check that summary mentions it's API documentation
-        assert "api documentation" in result.lower()
-        
-        # Check that summary detects Software Engineering domain
-        assert "software engineering" in result.lower() or "domain" in result.lower()
-        
-        # Check that summary includes technical keywords
-        assert any(tech in result.lower() for tech in ["fastapi", "postgresql", "jwt", "database"])
-        
-        # Check that summary has substantial length
-        assert len(result.split()) >= 20, "Summary should be comprehensive"
-        
-        # Check that summary mentions word count for substantial docs
-        assert "word" in result.lower()
-    

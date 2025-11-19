@@ -19,5 +19,6 @@ def extract_rule_names(grammar_path: Path) -> List[str]:
     # Handles: rule_name: $ => ..., rule_name: seq(...), rule_name: ...
     rule_names = re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", rules_block)
 
-    # Remove duplicates and internal rule names starting with "_"
     return list(dict.fromkeys(rule_names))
+
+print(extract_rule_names(Path("app/shared/grammars/python.js")))

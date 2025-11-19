@@ -133,11 +133,6 @@ def extract_class_names(node: Node, text: str) -> List[str]:
 def extract_doc_blocks_from_text(file_path: Path, file_content: str) -> List[str]:
     """
     Extract documentation blocks from raw source text using Pygments lexical analysis.
-
-    This function provides a language-agnostic way to detect documentation comments
-    (Javadoc, JSdoc, Rustdoc, GoDoc, PHPDoc, etc.) as well as Python/Ruby-style
-    docstring literals, without relying on Tree-sitter grammars.
-
     """
     # Let Pygments decide an appropriate lexer for this file
     lexer = guess_lexer_for_filename(file_path.name, file_content)

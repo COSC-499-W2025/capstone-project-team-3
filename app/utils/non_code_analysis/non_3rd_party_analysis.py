@@ -1,39 +1,30 @@
 """
 Non-code file analyzer - Using offline NLP libraries.
-Provides: Summary, Bullet Points, Skills, Completeness Score, Readability Score
-
-Libraries used:
-- spaCy: Entity recognition, POS tagging
-- NLTK: Readability scores
-- TextBlob: Sentiment analysis
-- KeyBERT: Keyword extraction
-- sumy: Text summarization
 """
 from pathlib import Path
 from typing import Dict, List, Any
 import re
 from collections import Counter
 
-# NLP Libraries - Direct imports (no try-except)
+# NLP Libraries - Direct imports
 import spacy
 from nltk.tokenize import sent_tokenize, word_tokenize
 from textblob import TextBlob
-from keybert import KeyBERT
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
+from keybert import KeyBERT
 
-# Load models
+# Load only spaCy at import
 nlp = spacy.load("en_core_web_sm")
-kw_model = KeyBERT()
+kw_model = None  # Lazy load
 
-# Load models
-nlp = spacy.load("en_core_web_sm")
-kw_model = KeyBERT()
-
-# Reuse existing utilities
-from app.utils.non_code_parsing.document_parser import parse_documents_to_json
-from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
+def get_keybert_model():
+    """Lazy load KeyBERT model only when needed."""
+    global kw_model
+    if kw_model is None:
+        kw_model = KeyBERT()
+    return kw_model
 
 # Reuse code analysis patterns
 # ============================================================================
@@ -192,14 +183,13 @@ def generate_comprehensive_summary(content: str, file_name: str, doc_type: str) 
     return ". ".join(summary_parts) + "."
 
 # ADD THESE FUNCTIONS BEFORE generate_comprehensive_summary:
-
 def extract_technical_keywords(content: str, top_n: int = 10) -> List[str]:
-    """Extract technical keywords using KeyBERT."""
     if not content or len(content.strip()) < 50:
         return []
     
     try:
-        keywords = kw_model.extract_keywords(
+        model = get_keybert_model()  # Load here instead
+        keywords = model.extract_keywords(
             content,
             keyphrase_ngram_range=(1, 2),
             stop_words='english',

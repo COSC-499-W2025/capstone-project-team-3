@@ -9,55 +9,27 @@ Libraries used:
 - KeyBERT: Keyword extraction
 - sumy: Text summarization
 """
-
 from pathlib import Path
-from typing import Dict, List, Any, Union
-import json
+from typing import Dict, List, Any
 import re
 from collections import Counter
 
-# NLP Libraries
-try:
-    import spacy
-    nlp = spacy.load("en_core_web_sm")
-    SPACY_AVAILABLE = True
-except:
-    SPACY_AVAILABLE = False
-    print("⚠️ spaCy not available")
+# NLP Libraries - Direct imports (no try-except)
+import spacy
+from nltk.tokenize import sent_tokenize, word_tokenize
+from textblob import TextBlob
+from keybert import KeyBERT
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
 
-try:
-    import nltk
-    from nltk.tokenize import sent_tokenize, word_tokenize
-    nltk.download('punkt', quiet=True)
-    nltk.download('cmudict', quiet=True)
-    NLTK_AVAILABLE = True
-except:
-    NLTK_AVAILABLE = False
-    print("⚠️ NLTK not available")
+# Load models
+nlp = spacy.load("en_core_web_sm")
+kw_model = KeyBERT()
 
-try:
-    from textblob import TextBlob
-    TEXTBLOB_AVAILABLE = True
-except:
-    TEXTBLOB_AVAILABLE = False
-    print("⚠️ TextBlob not available")
-
-try:
-    from keybert import KeyBERT
-    kw_model = KeyBERT()
-    KEYBERT_AVAILABLE = True
-except:
-    KEYBERT_AVAILABLE = False
-    print("⚠️ KeyBERT not available")
-
-try:
-    from sumy.parsers.plaintext import PlaintextParser
-    from sumy.nlp.tokenizers import Tokenizer
-    from sumy.summarizers.lsa import LsaSummarizer
-    SUMY_AVAILABLE = True
-except:
-    SUMY_AVAILABLE = False
-    print("⚠️ Sumy not available")
+# Load models
+nlp = spacy.load("en_core_web_sm")
+kw_model = KeyBERT()
 
 # Reuse existing utilities
 from app.utils.non_code_parsing.document_parser import parse_documents_to_json
@@ -219,3 +191,61 @@ def generate_comprehensive_summary(content: str, file_name: str, doc_type: str) 
     
     return ". ".join(summary_parts) + "."
 
+# ADD THESE FUNCTIONS BEFORE generate_comprehensive_summary:
+
+def extract_technical_keywords(content: str, top_n: int = 10) -> List[str]:
+    """Extract technical keywords using KeyBERT."""
+    if not content or len(content.strip()) < 50:
+        return []
+    
+    try:
+        keywords = kw_model.extract_keywords(
+            content,
+            keyphrase_ngram_range=(1, 2),
+            stop_words='english',
+            top_n=top_n
+        )
+        return [kw[0] for kw in keywords]
+    except Exception as e:
+        print(f"⚠️ KeyBERT extraction failed: {e}")
+        return []
+
+
+def extract_key_topics_from_content(content: str) -> List[str]:
+    """Extract key topics using spaCy NER and noun phrases."""
+    if not content or len(content.strip()) < 50:
+        return []
+    
+    try:
+        doc = nlp(content[:5000])  # Limit for performance
+        
+        # Extract noun phrases (topics)
+        noun_phrases = [chunk.text.lower() for chunk in doc.noun_chunks]
+        
+        # Count frequency and get top topics
+        topic_counts = Counter(noun_phrases)
+        top_topics = [topic for topic, _ in topic_counts.most_common(5)]
+        
+        return top_topics
+    except Exception as e:
+        print(f"⚠️ Topic extraction failed: {e}")
+        return []
+
+
+def extract_important_sentences(content: str, num_sentences: int = 3) -> List[str]:
+    """Extract most important sentences using Sumy LSA summarizer."""
+    if not content or len(content.strip()) < 100:
+        sentences = content.split('.')[:num_sentences]
+        return [s.strip() + '.' for s in sentences if s.strip()]
+    
+    try:
+        parser = PlaintextParser.from_string(content, Tokenizer("english"))
+        summarizer = LsaSummarizer()
+        summary_sentences = summarizer(parser.document, num_sentences)
+        return [str(sentence) for sentence in summary_sentences]
+    except Exception as e:
+        print(f"⚠️ Sentence extraction failed: {e}")
+        # Fallback: return first few sentences
+        sentences = content.split('.')[:num_sentences]
+        return [s.strip() + '.' for s in sentences if s.strip()]
+    

@@ -99,7 +99,7 @@ def extract_single_class(node: Node, text: str, file_path: Path) -> dict:
     # 2. Extract docstring (Python/JS etc)
     docstring = extract_docstrings(node, text, file_path)
 
-    # 3. Extract methods (to be implemented later)
+    # 3. TODO: Extract methods (to be implemented later)
     methods = []
 
     return {
@@ -172,6 +172,7 @@ def match_docs_to_node(node: Node, text: str, doc_blocks: List[str]) -> Optional
     Match documentation blocks (extracted from raw text) to a specific Tree-sitter node.
     """
     
+    # TODO: might need to improve matching
     node_start = node.start_byte
     results = []
 

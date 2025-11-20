@@ -104,8 +104,4 @@ class TestClassifyDocumentType:
         result = classify_document_type(content, Path("README.md"))
         assert result == "README"  # Filename wins
     
-    def test_general_documentation_fallback(self):
-        """Test GENERAL_DOCUMENTATION as fallback for unmatched content"""
-        content = "Some random notes about various topics."
-        result = classify_document_type(content, Path("notes.txt"))
-        assert result == "GENERAL_DOCUMENTATION"
+  

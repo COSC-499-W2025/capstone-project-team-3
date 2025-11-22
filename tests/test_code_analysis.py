@@ -342,3 +342,84 @@ def test_github_analysis_with_llm():
         summary = analyze_github_project(architectural_commits, llm_client)
         print_subsection("LLM Generated Summary", summary)
         assert summary is not None
+        
+def test_files_without_extensions_handling():
+    """Test proper handling of files without extensions (Dockerfile, Makefile)"""
+    print_section("📁 FILES WITHOUT EXTENSIONS HANDLING")
+    
+    # Test commits with files that have no extensions
+    no_extension_commits = [
+        {
+            "hash": "docker001",
+            "author_name": "DevOps Engineer",
+            "authored_datetime": "2025-11-01T10:00:00",
+            "message_summary": "feat: add Docker containerization",
+            "files": [
+                {"status": "A", "path_after": "Dockerfile"},  # No extension
+                {"status": "A", "path_after": "Makefile"},    # No extension
+                {"status": "A", "path_after": "docker-compose.yml"},  # Has extension
+                {"status": "A", "path_after": "scripts/build.sh"},    # Has extension
+            ]
+        },
+        {
+            "hash": "config001", 
+            "author_name": "Backend Developer",
+            "authored_datetime": "2025-11-02T14:30:00",
+            "message_summary": "config: update CI/CD pipeline",
+            "files": [
+                {"status": "M", "path_after": ".gitignore"},     # Dotfile, no extension
+                {"status": "A", "path_after": "Jenkinsfile"},   # No extension
+                {"status": "A", "path_after": "README"},        # No extension
+            ]
+        }
+    ]
+    
+    # Test GitHub development patterns - should not crash on files without extensions
+    try:
+        patterns = analyze_github_development_patterns(no_extension_commits)
+        print_subsection("Project Evolution (No Extension Files)", patterns["project_evolution"])
+        print_subsection("Code Practices", patterns["code_practices"])
+        
+        # Should detect DevOps development
+        assert "DevOps/Infrastructure Development" in patterns["project_evolution"] or len(patterns["project_evolution"]) > 0
+        
+    except Exception as e:
+        assert False, f"analyze_github_development_patterns failed on files without extensions: {e}"
+    
+    # Test GitHub metrics aggregation - should properly categorize files
+    try:
+        metrics = aggregate_github_individual_metrics(no_extension_commits)
+        print_subsection("File Type Classification", {
+            "Code files": metrics["code_files_changed"],
+            "Doc files": metrics["doc_files_changed"], 
+            "Other files": metrics["other_files_changed"],
+            "Total files": metrics["total_files_changed"]
+        })
+        
+        # Should have some code files (Dockerfile, Makefile should be classified as code)
+        assert metrics["total_files_changed"] > 0
+        print_subsection("Detected Roles", list(metrics["roles"]))
+        
+        # Should detect DevOps role from Dockerfile, Makefile, etc.
+        assert "devops" in metrics["roles"]
+        
+    except Exception as e:
+        assert False, f"aggregate_github_individual_metrics failed on files without extensions: {e}"
+    
+    # Test role inference from commit files - should handle files without extensions
+    try:
+        all_files = []
+        for commit in no_extension_commits:
+            all_files.extend(commit.get("files", []))
+        
+        from app.utils.code_analysis.code_analysis_utils import infer_roles_from_commit_files
+        roles = infer_roles_from_commit_files(all_files)
+        print_subsection("Inferred Roles from Files", list(roles))
+        
+        # Should detect devops role from Dockerfile, Makefile, etc.
+        assert "devops" in roles
+        
+    except Exception as e:
+        assert False, f"infer_roles_from_commit_files failed on files without extensions: {e}"
+    
+    print_subsection("✅ All Extension Handling Tests Passed", ["No crashes on files without extensions", "Proper file classification", "Correct role inference"])

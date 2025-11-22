@@ -1,13 +1,62 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 import os
 from datetime import datetime
 from collections import Counter, defaultdict
 import re
+from .patterns.tech_patterns import TechnicalPatterns
 
+
+def _split_camelcase_and_filter(text: str, min_length: int = 2) -> Set[str]:
+    """
+    Helper: Split camelCase/snake_case text and filter by length.
+    Shared logic for both GitHub and parsed file keyword extraction.
+    """
+    if not text or len(text) <= min_length:
+        return set()
+    
+    # Split camelCase and snake_case
+    words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', text)
+    
+    # Filter by length and common terms
+    filtered_words = {
+        word.lower() for word in words 
+        if len(word) > min_length and word.lower() not in TechnicalPatterns.COMMON_TERMS
+    }
+    
+    return filtered_words
+
+def _extract_meaningful_filename_keywords(filenames: List[str]) -> Set[str]:
+    """
+    Helper: Extract meaningful keywords from file names and paths.
+    Shared logic for processing file paths.
+    """
+    tech_terms = set()
+    
+    for filename in filenames:
+        if not filename or len(filename) <= 2:
+            continue
+            
+        # Skip git and markdown files
+        if filename.endswith(('.git', '.md')):
+            continue
+        
+        # Remove extension and process
+        name_without_ext = filename.split('.')[0]
+        tech_terms.update(_split_camelcase_and_filter(name_without_ext))
+    
+    return tech_terms
+
+def _get_top_keywords(keywords: Set[str], limit: int = 15) -> List[str]:
+    """
+    Helper: Get top keywords sorted alphabetically.
+    Shared logic for returning final keyword lists.
+    """
+    return sorted(list(keywords))[:limit]
 
 def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
     """
     Extract technical keywords from GitHub commit messages and file changes.
+    Optimized with set-based lookup for performance.
     """
     all_messages = []
     all_file_names = []
@@ -24,58 +73,25 @@ def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
             if path:
                 all_file_names.extend(path.split("/"))
     
-    # Extract keywords from commit messages
+    # Fast set-based keyword extraction from commit messages
     tech_terms = set()
     
-    # Common technical keywords in commit messages
-    tech_patterns = [
-    # Development Actions (present and past tense)
-    r'\b(implement|implemented|add|added|create|created|build|built|develop|developed|design|designed|refactor|refactored|optimize|optimized|fix|fixed|update|updated|enhance|enhanced|improve|improved|integrate|integrated|deploy|deployed|configure|configured|setup|set up|install|installed|remove|removed|delete|deleted|migrate|migrated|upgrade|upgraded|downgrade|downgraded)\b',
-    # Architecture & Components
-    r'\b(api|apis|database|databases|frontend|backend|fullstack|full-stack|component|components|service|services|module|modules|class|classes|function|functions|method|methods|library|libraries|framework|frameworks|middleware|plugin|plugins|extension|extensions|microservice|microservices|monolith)\b',
-    # Testing & Quality
-    r'\b(test|testing|tests|unit|units|integration|e2e|end-to-end|automation|automated|spec|specs|mock|mocks|stub|stubs|coverage|benchmark|benchmarks|performance|profiling|debugging|debug|validation|validate|verification|verify)\b',
-    # DevOps & Infrastructure
-    r'\b(docker|dockerfile|kubernetes|k8s|ci|cd|pipeline|pipelines|jenkins|github|actions|workflow|workflows|deploy|deployment|deployments|infrastructure|cloud|aws|azure|gcp|terraform|ansible|vagrant|nginx|apache|load|balancer|scaling|monitoring|logging|metrics)\b',
-    # Frontend Technologies
-    r'\b(react|reactjs|vue|vuejs|angular|angularjs|svelte|next|nextjs|nuxt|nuxtjs|gatsby|html|css|scss|sass|less|tailwind|bootstrap|jquery|typescript|javascript|js|ts|jsx|tsx|webpack|vite|parcel|babel|eslint|prettier)\b',
-    # Backend Technologies
-    r'\b(node|nodejs|express|expressjs|django|flask|fastapi|spring|springboot|laravel|rails|ruby|python|java|php|golang|go|rust|kotlin|scala|dotnet|csharp|nestjs|koa)\b',
-    # Databases & Storage
-    r'\b(mysql|postgresql|postgres|sqlite|mongodb|mongo|redis|elasticsearch|elastic|cassandra|dynamodb|firebase|firestore|orm|sql|nosql|migration|migrations|schema|schemas|index|indexes|query|queries|transaction|transactions)\b',
-    # Mobile & Desktop
-    r'\b(android|ios|swift|kotlin|flutter|dart|react-native|reactnative|xamarin|ionic|cordova|phonegap|electron|tauri|pwa|mobile|native|cross-platform)\b',
-    # Data & Analytics
-    r'\b(data|analytics|ml|ai|machine|learning|deep|neural|network|pandas|numpy|tensorflow|pytorch|sklearn|jupyter|notebook|visualization|dashboard|etl|pipeline|bigdata|spark|hadoop|kafka|stream|streaming)\b',
-    # Security & Authentication
-    r'\b(auth|authentication|authorization|oauth|jwt|token|tokens|security|secure|encryption|decrypt|encrypt|ssl|tls|https|cors|csrf|xss|hash|hashing|bcrypt|session|sessions|login|logout|signup|password|permissions|role|roles)\b',
-    # Communication & Protocols
-    r'\b(rest|restful|graphql|grpc|websocket|websockets|mqtt|http|https|api|soap|json|xml|yaml|protobuf|messaging|queue|queues|pub|sub|pubsub|webhook|webhooks)\b',
-    # Version Control & Collaboration
-    r'\b(git|github|gitlab|bitbucket|commit|commits|branch|branches|merge|merges|pull|request|requests|pr|fork|clone|push|rebase|cherry-pick|tag|tags|release|releases|version|versioning)\b',
-    # Project Management & Methodologies
-    r'\b(agile|scrum|kanban|sprint|sprints|story|stories|epic|epics|bug|bugs|issue|issues|feature|features|requirement|requirements|specification|specifications|documentation|docs|readme|changelog|license)\b'
-]
-    
     for message in all_messages:
-        for pattern in tech_patterns:
-            matches = re.findall(pattern, message)
-            tech_terms.update(matches)
+        # Split message into words and find intersection with tech keywords
+        message_words = set(message.lower().split())
+        tech_terms.update(message_words & TechnicalPatterns.GITHUB_TECH_KEYWORDS)
     
-    # Extract meaningful file names
-    for filename in all_file_names:
-        if filename and len(filename) > 2 and not filename.endswith(('.git', '.md')):
-            # Remove extensions and split camelCase
-            name_without_ext = filename.split('.')[0]
-            words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', name_without_ext)
-            tech_terms.update(word.lower() for word in words if len(word) > 2)
+    # Extract meaningful file name keywords using shared helper
+    filename_keywords = _extract_meaningful_filename_keywords(all_file_names)
+    tech_terms.update(filename_keywords)
     
-    return sorted(list(tech_terms))[:15]
+    return _get_top_keywords(tech_terms)
+
 
 
 def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str]:
     """
-    Extract meaningful technical keywords from parsed files using NLP techniques.
+    Extract meaningful technical keywords from parsed files using shared helpers.
     """
     all_identifiers = []
     all_imports = []
@@ -100,7 +116,7 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
         
         all_imports.extend(imports)
     
-    # Clean and filter technical terms
+    # Clean and filter technical terms using shared helpers
     tech_keywords = set()
     
     # Process imports for frameworks/libraries
@@ -113,42 +129,18 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
         else:
             tech_keywords.add(imp)
     
-    # Process identifiers
+    # Process identifiers using shared camelCase splitting
     for identifier in all_identifiers:
-        if identifier and len(identifier) > 2:
-            # Split camelCase and snake_case
-            words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', identifier)
-            tech_keywords.update(word.lower() for word in words if len(word) > 2)
+        tech_keywords.update(_split_camelcase_and_filter(identifier))
     
-    # Filter out common programming terms
-    common_terms = {
-        "function", "component", "state", "props", "data", "user", "name", 
-        "get", "set", "add", "remove", "update", "delete", "create", "main"
-    }
-    
-    filtered_keywords = [kw for kw in tech_keywords if kw not in common_terms and len(kw) > 2]
-    
-    # Return top keywords by frequency/importance
-    return sorted(list(set(filtered_keywords)))[:15]
+    return _get_top_keywords(tech_keywords)
 
 def _detect_frameworks(imports: List[str]) -> List[str]:
     """Helper: Detect frameworks from imports."""
     import_str = ' '.join(imports).lower()
     detected_frameworks = []
     
-    framework_mapping = {
-        'react': 'React',
-        'vue': 'Vue.js', 
-        'angular': 'Angular',
-        'flask': 'Flask',
-        'django': 'Django',
-        'express': 'Express.js',
-        'spring': 'Spring',
-        'laravel': 'Laravel',
-        'rails': 'Ruby on Rails'
-    }
-    
-    for framework_key, framework_name in framework_mapping.items():
+    for framework_key, framework_name in TechnicalPatterns.FRAMEWORK_MAPPING.items():
         if framework_key in import_str:
             detected_frameworks.append(framework_name)
     
@@ -211,13 +203,19 @@ def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
         if doc_ratio > 0.05:
             patterns["code_practices"].append("Documentation-Focused")
     
-    # Analyze file changes for project evolution
+    # Analyze file changes for project evolution - FIXED EXTENSION HANDLING
     file_extensions = defaultdict(int)
     for commit in commits:
         for file in commit.get("files", []):
             path = file.get("path_after") or file.get("path_before", "")
             if path:
-                ext = path.split('.')[-1].lower()
+                # Handle files without extensions (Dockerfile, Makefile)
+                if '.' in path:
+                    ext = path.split('.')[-1].lower()
+                else:
+                    # Use filename as extension for files without extensions
+                    ext = os.path.basename(path).lower()
+                
                 file_extensions[ext] += 1
     
     if file_extensions:
@@ -228,6 +226,8 @@ def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
             patterns["project_evolution"].append("Python Development")
         elif dominant_tech in ['java']:
             patterns["project_evolution"].append("Java Development")
+        elif dominant_tech in ['dockerfile', 'makefile']:
+            patterns["project_evolution"].append("DevOps/Infrastructure Development")
         else:
             patterns["project_evolution"].append("Multi-technology Development")
     
@@ -248,13 +248,23 @@ def generate_github_resume_summary(metrics: Dict) -> List[str]:
     else:
         summary.append(f"Delivered {total_commits} focused commits in a concentrated development effort")
     
-    # File and code changes
+    # File and code changes - FIXED FALLBACK
     files_added = metrics.get('files_added', 0)
     files_modified = metrics.get('files_modified', 0)
     code_files = metrics.get('code_files_changed', 0)
+    total_files = metrics.get('total_files_changed', 0)
     
     if code_files > 0:
         summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files enhanced")
+    elif total_files > 0:
+        # FALLBACK: If no code files detected, mention total files changed
+        summary.append(f"Modified {total_files} project files, including {files_added} new additions and {files_modified} enhancements")
+    elif files_added > 0 or files_modified > 0:
+        # FALLBACK: If only file operations detected
+        summary.append(f"Contributed {files_added} new files and enhanced {files_modified} existing project assets")
+    else:
+        # FINAL FALLBACK: If no files detected at all
+        summary.append(f"Made {total_commits} focused contributions to project development and maintenance")
     
     # Development patterns
     tech_keywords = metrics.get("technical_keywords", [])

@@ -29,8 +29,11 @@ def classify_node_types(rule_names: List[str]) -> Tuple[List[str], List[str], Li
     for rule in rule_names:
         rl = rule.lower()
 
-        # Exclude common false positives
-        if rl.endswith("_pattern") or rl.endswith("_type") or rl.startswith("_"):
+        # Exclude common false positives & structural/container/helper rules
+        if (
+            rl.endswith("_pattern") or rl.endswith("_type") or rl.startswith("_") or
+            any(bad in rl for bad in ["parameter", "argument", "attribute", "property", "identifier", "name_list", "decorator_list", "annotation_list"])
+        ):
             continue
 
         # Class nodes
@@ -38,8 +41,13 @@ def classify_node_types(rule_names: List[str]) -> Tuple[List[str], List[str], Li
             class_nodes.append(rule)
             continue
 
-        # Function nodes
-        if any(key in rl for key in function_keywords):
+        # Skip decorated wrappers from function types (they should be treated as wrappers)
+        # e.g @classmethod
+        if rl.startswith("decorated_"):
+            continue
+
+        # Function nodes (narrow to actual definitions, skip pure name tokens)
+        if any(key in rl for key in function_keywords) and not rl.endswith("_name") and not rl.endswith("decorated_definition"):
             function_nodes.append(rule)
             continue
 
@@ -185,19 +193,27 @@ def extract_classes(root: Node, file_content: str, class_node_types: List[str], 
     """
     results: List[dict] = []
     walk_class_nodes(root, file_content, set(class_node_types), set(function_node_types), results, file_path)
-    return results
+    # Deduplicate classes by (name, docstring) to reduce false repeats (language-agnostic heuristic)
+    dedup = []
+    seen = set()
+    for cls in results:
+        key = (cls.get("name"), cls.get("docstring"))
+        if key not in seen:
+            seen.add(key)
+            dedup.append(cls)
+    return dedup
 
 def extract_entities(tree: Tree, file_content: str, class_node_types: List[str], function_node_types: List[str], component_node_types: List[str], file_path: Path)->Dict[str, List[dict]]:
     """
     Main entry point for extracting structured entities from a single file.
     """
-
     class_entities = extract_classes(tree.root_node, file_content, class_node_types, function_node_types, file_path)
+    function_entities = extract_functions(tree.root_node, file_content, function_node_types, class_node_types, file_path)
 
-    # TODO: add functions and components
+    # TODO: add components extraction
     return {
         "classes": class_entities,
-        "functions": [],
+        "functions": function_entities,
         "components": []
     }
     
@@ -208,21 +224,50 @@ def extract_methods_from_class(class_node: Node, text: str, function_types: set,
     """
     methods: List[dict] = []
     
-    # Iterate over all direct children of the class node
-    for child in class_node.children:
-        # If the child node directly represents a function/method, extract it
-        if child.type in function_types:
-            methods.append(extract_single_method(child, text, file_path))
+    CLASS_BODY_TYPES = {"class_body", "block", "suite", "member_declaration_list"}
+    WRAPPER_TYPES = {"decorated_definition", "annotation", "attribute_declaration"}
+
+    def handle_child(n: Node):
+        # Direct function definition
+        if n.type in function_types:
+            methods.append(extract_single_method(n, text, file_path))
+            return
+        # Decorator/annotation wrapper: search only immediate children for function
+        if n.type in WRAPPER_TYPES:
+            for ch in n.children:
+                if ch.type in function_types:
+                    methods.append(extract_single_method(ch, text, file_path))
+                    return
+
+    # Iterate over the class's children
+    for child in class_node.children: 
+        # If this node represents a body block, process its inner nodes
+        if child.type in CLASS_BODY_TYPES:
+            for grand in child.children:
+                handle_child(grand)
         else:
-            # Some grammars nest methods inside wrapper nodes (e.g., 'class_body'),
-            # so we check their children as well.
-            for grand in getattr(child, 'children', []):
-                if grand.type in function_types:
-                    methods.append(extract_single_method(grand, text, file_path))
-    return methods
+            # Otherwise process the node directly
+            handle_child(child)
+
+    # Deduplicate by (name, span)
+    dedup: List[dict] = []
+    seen = set()
+    for m in methods:
+        key = (m.get("name"), m.get("lines_of_code"))
+        if key not in seen:
+            seen.add(key)
+            dedup.append(m)
+    return dedup
 
 def extract_single_method(method_node: Node, text: str, file_path: Path) -> dict:
     """Build method entity dictionary including name, params, LOC, complexity, docstring, calls."""
+    
+    if method_node.type == "decorated_definition": #checking that the node identified have definitions like @staticmethod
+        for ch in method_node.children:
+            # Common underlying function node type names across grammars
+            if ch.type in {"function_definition", "method_definition", "function_declaration", "method_declaration"}:
+                method_node = ch
+                break
     name = extract_method_name(method_node, text)
     params = extract_method_parameters(method_node, text)
     loc = (method_node.end_point[0] - method_node.start_point[0]) + 1
@@ -369,8 +414,52 @@ def extract_method_calls(method_node: Node, text: str) -> List[str]:
     seen = set()
     for c in calls:
         c_clean = c.strip()
+        # Filter obvious non-call identifiers (single char, purely numeric)
+        if not c_clean or len(c_clean) == 1 or c_clean.isdigit():
+            continue
         if c_clean and c_clean not in seen:
             seen.add(c_clean)
             dedup.append(c_clean)
 
     return dedup
+
+# ---------------- New helper methods for free-standing function extraction -----------------
+def walk_function_nodes(node: Node, text: str, function_types: set, class_types: set, in_class: bool, out: List[dict], file_path: Path):
+    """Collect free-standing functions (not linked to a class)"""
+    WRAPPER_TYPES = {"decorated_definition", "annotation", "attribute_declaration"}
+
+    if not in_class:
+        if node.type in WRAPPER_TYPES:
+            for ch in node.children:
+                if ch.type in function_types:
+                    out.append(extract_single_method(ch, text, file_path))
+                    return
+        elif node.type in function_types:
+            out.append(extract_single_method(node, text, file_path))
+
+    # Structural fallback: if classification missed function types, detect by presence of parameter & body containers
+    if not in_class and node.type not in function_types:
+        PARAM_HINTS = {"parameters", "parameter_list", "formal_parameters"}
+        BODY_HINTS = {"block", "suite", "body", "compound_statement"}
+        has_params = any(ch.type in PARAM_HINTS for ch in node.children)
+        has_body = any(ch.type in BODY_HINTS for ch in node.children)
+        if has_params and has_body:
+            out.append(extract_single_method(node, text, file_path))
+            return
+
+    next_in_class = in_class or (node.type in class_types)
+    # Limit descent: do not descend inside function definitions
+    # Do not retrieve nested functions
+    if node.type in function_types:
+        return
+    for child in node.children:
+        walk_function_nodes(child, text, function_types, class_types, next_in_class, out, file_path)
+
+def extract_functions(root: Node, file_content: str, function_node_types: List[str], class_node_types: List[str], file_path: Path) -> List[dict]:
+    """
+    Extract free-standing (module-level) functions.
+    Free-standing: it is not nested inside any class
+    """
+    results: List[dict] = []
+    walk_function_nodes(root, file_content, set(function_node_types), set(class_node_types), False, results, file_path)
+    return results

@@ -1,12 +1,97 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 import os
 from datetime import datetime
 from collections import Counter, defaultdict
 import re
+from .patterns.tech_patterns import TechnicalPatterns
+
+
+def _split_camelcase_and_filter(text: str, min_length: int = 2) -> Set[str]:
+    """
+    Helper: Split camelCase/snake_case text and filter by length.
+    Shared logic for both GitHub and parsed file keyword extraction.
+    """
+    if not text or len(text) <= min_length:
+        return set()
+    
+    # Split camelCase and snake_case
+    words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', text)
+    
+    # Filter by length and common terms
+    filtered_words = {
+        word.lower() for word in words 
+        if len(word) > min_length and word.lower() not in TechnicalPatterns.COMMON_TERMS
+    }
+    
+    return filtered_words
+
+def _extract_meaningful_filename_keywords(filenames: List[str]) -> Set[str]:
+    """
+    Helper: Extract meaningful keywords from file names and paths.
+    Shared logic for processing file paths.
+    """
+    tech_terms = set()
+    
+    for filename in filenames:
+        if not filename or len(filename) <= 2:
+            continue
+            
+        # Skip git and markdown files
+        if filename.endswith(('.git', '.md')):
+            continue
+        
+        # Remove extension and process
+        name_without_ext = filename.split('.')[0]
+        tech_terms.update(_split_camelcase_and_filter(name_without_ext))
+    
+    return tech_terms
+
+def _get_top_keywords(keywords: Set[str], limit: int = 15) -> List[str]:
+    """
+    Helper: Get top keywords sorted alphabetically.
+    Shared logic for returning final keyword lists.
+    """
+    return sorted(list(keywords))[:limit]
+
+def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
+    """
+    Extract technical keywords from GitHub commit messages and file changes.
+    Optimized with set-based lookup for performance.
+    """
+    all_messages = []
+    all_file_names = []
+    
+    for commit in commits:
+        # Collect commit messages
+        message = commit.get("message_summary", "") + " " + commit.get("message_full", "")
+        all_messages.append(message.lower())
+        
+        # Collect file names and paths
+        files = commit.get("files", [])
+        for file in files:
+            path = file.get("path_after") or file.get("path_before", "")
+            if path:
+                all_file_names.extend(path.split("/"))
+    
+    # Fast set-based keyword extraction from commit messages
+    tech_terms = set()
+    
+    for message in all_messages:
+        # Split message into words and find intersection with tech keywords
+        message_words = set(message.lower().split())
+        tech_terms.update(message_words & TechnicalPatterns.GITHUB_TECH_KEYWORDS)
+    
+    # Extract meaningful file name keywords using shared helper
+    filename_keywords = _extract_meaningful_filename_keywords(all_file_names)
+    tech_terms.update(filename_keywords)
+    
+    return _get_top_keywords(tech_terms)
+
+
 
 def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str]:
     """
-    Extract meaningful technical keywords from parsed files using NLP techniques.
+    Extract meaningful technical keywords from parsed files using shared helpers.
     """
     all_identifiers = []
     all_imports = []
@@ -31,7 +116,7 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
         
         all_imports.extend(imports)
     
-    # Clean and filter technical terms
+    # Clean and filter technical terms using shared helpers
     tech_keywords = set()
     
     # Process imports for frameworks/libraries
@@ -44,46 +129,280 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
         else:
             tech_keywords.add(imp)
     
-    # Process identifiers
+    # Process identifiers using shared camelCase splitting
     for identifier in all_identifiers:
-        if identifier and len(identifier) > 2:
-            # Split camelCase and snake_case
-            words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', identifier)
-            tech_keywords.update(word.lower() for word in words if len(word) > 2)
+        tech_keywords.update(_split_camelcase_and_filter(identifier))
     
-    # Filter out common programming terms
-    common_terms = {
-        "function", "component", "state", "props", "data", "user", "name", 
-        "get", "set", "add", "remove", "update", "delete", "create", "main"
-    }
-    
-    filtered_keywords = [kw for kw in tech_keywords if kw not in common_terms and len(kw) > 2]
-    
-    # Return top keywords by frequency/importance
-    return sorted(list(set(filtered_keywords)))[:15]
+    return _get_top_keywords(tech_keywords)
 
 def _detect_frameworks(imports: List[str]) -> List[str]:
     """Helper: Detect frameworks from imports."""
     import_str = ' '.join(imports).lower()
     detected_frameworks = []
     
-    framework_mapping = {
-        'react': 'React',
-        'vue': 'Vue.js', 
-        'angular': 'Angular',
-        'flask': 'Flask',
-        'django': 'Django',
-        'express': 'Express.js',
-        'spring': 'Spring',
-        'laravel': 'Laravel',
-        'rails': 'Ruby on Rails'
-    }
-    
-    for framework_key, framework_name in framework_mapping.items():
+    for framework_key, framework_name in TechnicalPatterns.FRAMEWORK_MAPPING.items():
         if framework_key in import_str:
             detected_frameworks.append(framework_name)
     
     return detected_frameworks
+
+def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
+    """
+    Analyze development patterns from GitHub commit history.
+    """
+    patterns = {
+        "development_workflow": [],
+        "collaboration_patterns": [],
+        "code_practices": [],
+        "project_evolution": []
+    }
+    
+    if not commits:
+        return patterns
+    
+    # Analyze commit messages for patterns
+    commit_types = defaultdict(int)
+    all_messages = []
+    all_files = []
+    
+    for commit in commits:
+        message = commit.get("message_summary", "").lower()
+        all_messages.append(message)
+        
+        # Collect all file paths for additional analysis
+        files = commit.get("files", [])
+        for file in files:
+            path = file.get("path_after") or file.get("path_before", "")
+            if path:
+                all_files.append(path.lower())
+        
+        # Categorize commit types
+        if any(keyword in message for keyword in ['feat:', 'feature', 'add', 'implement']):
+            commit_types['feature'] += 1
+        if any(keyword in message for keyword in ['fix:', 'bug', 'error']):
+            commit_types['bugfix'] += 1
+        if any(keyword in message for keyword in ['refactor:', 'restructure', 'cleanup']):
+            commit_types['refactor'] += 1
+        if any(keyword in message for keyword in ['test:', 'testing', 'spec']):
+            commit_types['testing'] += 1
+        if any(keyword in message for keyword in ['docs:', 'documentation', 'readme']):
+            commit_types['documentation'] += 1
+    
+    total_commits = len(commits)
+    
+    # Calculate ratios and check thresholds
+    if total_commits > 0:
+        testing_ratio = commit_types['testing'] / total_commits
+        refactor_ratio = commit_types['refactor'] / total_commits  
+        doc_ratio = commit_types['documentation'] / total_commits
+        if testing_ratio > 0.1:
+            patterns["code_practices"].append("Test-Driven Development")
+        if refactor_ratio > 0.15:
+            patterns["code_practices"].append("Code Refactoring")
+        
+        if doc_ratio > 0.05:
+            patterns["code_practices"].append("Documentation-Focused")
+    
+    # Analyze file changes for project evolution - FIXED EXTENSION HANDLING
+    file_extensions = defaultdict(int)
+    for commit in commits:
+        for file in commit.get("files", []):
+            path = file.get("path_after") or file.get("path_before", "")
+            if path:
+                # Handle files without extensions (Dockerfile, Makefile)
+                if '.' in path:
+                    ext = path.split('.')[-1].lower()
+                else:
+                    # Use filename as extension for files without extensions
+                    ext = os.path.basename(path).lower()
+                
+                file_extensions[ext] += 1
+    
+    if file_extensions:
+        dominant_tech = max(file_extensions, key=file_extensions.get)
+        if dominant_tech in ['js', 'jsx', 'ts', 'tsx']:
+            patterns["project_evolution"].append("JavaScript/Frontend Development")
+        elif dominant_tech in ['py']:
+            patterns["project_evolution"].append("Python Development")
+        elif dominant_tech in ['java']:
+            patterns["project_evolution"].append("Java Development")
+        elif dominant_tech in ['dockerfile', 'makefile']:
+            patterns["project_evolution"].append("DevOps/Infrastructure Development")
+        else:
+            patterns["project_evolution"].append("Multi-technology Development")
+    
+    return patterns
+
+def generate_github_resume_summary(metrics: Dict) -> List[str]:
+    """
+    Generate detailed resume summary using enhanced analysis for GitHub projects.
+    """
+    summary = []
+    
+    # Contribution overview
+    total_commits = metrics.get('total_commits', 0)
+    duration = metrics.get('duration_days', 0)
+    
+    if duration > 0:
+        summary.append(f"Contributed {total_commits} commits over {duration} days, demonstrating consistent development activity")
+    else:
+        summary.append(f"Delivered {total_commits} focused commits in a concentrated development effort")
+    
+    # File and code changes - FIXED FALLBACK
+    files_added = metrics.get('files_added', 0)
+    files_modified = metrics.get('files_modified', 0)
+    code_files = metrics.get('code_files_changed', 0)
+    total_files = metrics.get('total_files_changed', 0)
+    
+    if code_files > 0:
+        summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files enhanced")
+    elif total_files > 0:
+        # FALLBACK: If no code files detected, mention total files changed
+        summary.append(f"Modified {total_files} project files, including {files_added} new additions and {files_modified} enhancements")
+    elif files_added > 0 or files_modified > 0:
+        # FALLBACK: If only file operations detected
+        summary.append(f"Contributed {files_added} new files and enhanced {files_modified} existing project assets")
+    else:
+        # FINAL FALLBACK: If no files detected at all
+        summary.append(f"Made {total_commits} focused contributions to project development and maintenance")
+    
+    # Development patterns
+    tech_keywords = metrics.get("technical_keywords", [])
+    if tech_keywords:
+        summary.append(f"Focused on key technical areas: {', '.join(tech_keywords[:6])}")
+    
+    dev_patterns = metrics.get("development_patterns", {})
+    practices = dev_patterns.get("code_practices", [])
+    if practices:
+        summary.append(f"Followed industry best practices: {', '.join(practices)}")
+    
+    # Project evolution
+    evolution = dev_patterns.get("project_evolution", [])
+    if evolution:
+        summary.append(f"Led development in: {', '.join(evolution)}")
+    
+    # Testing and documentation
+    test_files = metrics.get('test_files_changed', 0)
+    doc_files = metrics.get('doc_files_changed', 0)
+    
+    quality_aspects = []
+    if test_files > 0:
+        quality_aspects.append(f"testing ({test_files} test files)")
+    if doc_files > 0:
+        quality_aspects.append(f"documentation ({doc_files} docs)")
+    
+    if quality_aspects:
+        summary.append(f"Emphasized code quality through {' and '.join(quality_aspects)}")
+    
+    # Sample impactful commit messages
+    sample_messages = metrics.get('sample_messages', [])
+    if sample_messages:
+        impactful_commits = [msg for msg in sample_messages[:3] if any(keyword in msg.lower() 
+                            for keyword in ['implement', 'add', 'create', 'build', 'develop'])]
+        if impactful_commits:
+            summary.append(f"Key contributions include: {'; '.join(impactful_commits)}")
+    
+    return summary
+    
+# Aggregate metrics from a list of GitHub commits
+def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
+    """
+    Aggregates key metrics from a list of individual commit dicts.
+    Returns a dictionary of contribution statistics.
+    """
+    file_status_counter = Counter()
+    file_types_counter = Counter()
+    authors = set()
+    dates = []
+    messages = []
+    total_files_changed = set()
+    roles = set()
+    
+    # File type extensions for classification
+    code_exts = {".py", ".js", ".java", ".cpp", ".c", ".ts", ".rb", ".go"}
+    doc_exts = {".md"}
+    test_exts = {"test_", "_test.py", ".spec.js", ".spec.ts"}
+
+    # Collect metrics from each commit
+    for commit in commits:
+        authors.add(commit.get("author_name"))
+        dates.append(commit.get("authored_datetime"))
+        messages.append(commit.get("message_summary"))
+        files = commit.get("files", [])
+        for f in files:
+            status = f.get("status")
+            file_status_counter[status] += 1
+            path = f.get("path_after") or f.get("path_before")
+            if path:
+                total_files_changed.add(path)
+                ext = os.path.splitext(path)[1].lower()
+                fname = os.path.basename(path).lower()
+                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts) or "test" in path.lower():
+                    file_types_counter["test"] += 1
+                elif ext in doc_exts:
+                    file_types_counter["docs"] += 1
+                elif ext in code_exts:
+                    file_types_counter["code"] += 1
+                else:
+                    file_types_counter["other"] += 1
+        roles.update(infer_roles_from_commit_files(files))
+        
+    # Calculate duration in days between first and last commit
+    def parse_dt(dt): return datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
+    if dates:
+        dates_sorted = sorted(dates)
+        duration_days = (parse_dt(dates_sorted[-1]) - parse_dt(dates_sorted[0])).days
+    else:
+        duration_days = 0
+
+    metrics = {
+        "authors": list(authors),
+        "total_commits": len(commits),
+        "duration_days": duration_days,
+        "files_added": file_status_counter["A"],
+        "files_modified": file_status_counter["M"],
+        "files_deleted": file_status_counter["D"],
+        "total_files_changed": len(total_files_changed),
+        "code_files_changed": file_types_counter["code"],
+        "doc_files_changed": file_types_counter["docs"],
+        "test_files_changed": file_types_counter["test"],
+        "other_files_changed": file_types_counter["other"],
+        "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages), 
+        "roles": list(roles),
+    }
+    return metrics
+
+# --- Role inference for GitHub commits ---
+def infer_roles_from_commit_files(files):
+    """
+    Infers roles played based on file types changed in GitHub commits.
+    Returns a set of detected roles.
+    """
+    roles = set()
+    # Define extension sets for each role
+    frontend_exts = {".js", ".jsx", ".ts", ".tsx", ".css", ".html"}
+    backend_exts = {".py", ".java", ".rb", ".go", ".cpp", ".c"}
+    database_exts = {".sql", ".db", ".json"}
+    devops_exts = {".yml", ".yaml", ".sh"}
+    datascience_exts = {".ipynb", ".csv", ".pkl"}
+
+    for f in files:
+        path = f.get("path_after") or f.get("path_before", "")
+        ext = os.path.splitext(path)[1].lower()
+        fname = os.path.basename(path).lower()
+
+        if ext in frontend_exts:
+            roles.add("frontend")
+        if ext in backend_exts:
+            roles.add("backend")
+        if ext in database_exts:
+            roles.add("database")
+        if ext in devops_exts or "dockerfile" in fname:
+            roles.add("devops")
+        if ext in datascience_exts:
+            roles.add("data science")
+
+    return roles
 
 def _detect_design_patterns(all_identifiers: List[str], function_names: List[str]) -> List[str]:
     """Helper: Detect design patterns from code identifiers."""
@@ -520,4 +839,27 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
         metrics["code_patterns"] = analyze_code_patterns_from_parsed(parsed_files)
         metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(parsed_files)
         return generate_resume_summary_from_parsed(metrics)
+
+# Main entry point for Github project analysis
+def analyze_github_project(commits: List[Dict], llm_client=None):
+    """
+    Analyze a project from GitHub commit dicts and return a resume summary.
+    Uses LLM if provided, otherwise returns enhanced NLP analysis.
+    """
+    metrics = aggregate_github_individual_metrics(commits)
     
+    if llm_client:
+        # Use LLM to generate summary
+        prompt = (
+            "Given these GitHub contribution metrics:\n"
+            f"{metrics}\n"
+            "Generate resume-like bullet points summarizing the user's contributions, "
+            "including key activities, skills, technologies, and impact."
+            "Do NOT include any explanations, headings, or options—just the list."
+        )
+        return llm_client.generate(prompt)
+    else:
+        # Use enhanced NLP analysis
+        metrics["technical_keywords"] = extract_technical_keywords_from_github(commits)
+        metrics["development_patterns"] = analyze_github_development_patterns(commits)
+        return generate_github_resume_summary(metrics)

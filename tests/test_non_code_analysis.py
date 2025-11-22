@@ -10,6 +10,7 @@ from app.utils.non_code_analysis.non_code_analysis_utils import (
     get_readability_metrics,
     get_unique_key_topics,
     get_named_entities,
+    create_non_code_analysis_prompt
 )
 
 # ---------- Pre-Processing Unit Tests ----------------- #
@@ -85,6 +86,53 @@ def test_aggregate_non_code_summaries():
     assert project_metrics["fileTypeDistribution"] == {"pdf": 1, "txt": 1}
     assert "files" in project_metrics
     assert len(project_metrics["files"]) == 2
+
+# ------------ PROMPT Generation Tests ----------------- #
+def test_generate_prompt_structure():
+    """Test prompt structure generation from aggregated metrics."""
+    aggregated_metrics = {
+        "Project_Name": "test_project",
+        "totalFiles": 2,
+        "fileTypeDistribution": {"pdf": 1, "txt": 1},
+        "fileNames": ["file1.pdf", "file2.txt"],
+        "averageReadabilityScore": 11.25,
+        "uniqueKeyTopics": ["Topic1", "Topic2", "Topic3", "Topic4"],
+        "namedEntities": ["LLM2", "2025"],
+        "files": [
+            {
+                "file_name": "file1.pdf",
+                "file_path": "/test/file1.pdf",
+                "file_type": "pdf",
+                "word_count": 100,
+                "sentence_count": 10,
+                "readability_score": 12.5,
+                "summary": "This is a summary of file1.",
+                "key_topics": ["Topic1", "Topic2"],
+            },
+            {
+                "file_name": "file2.txt",
+                "file_path": "/test/file2.txt",
+                "file_type": "txt",
+                "word_count": 200,
+                "sentence_count": 20,
+                "readability_score": 10.0,
+                "summary": "This is a summary of file2.",
+                "key_topics": ["Topic3", "Topic4"],
+            },
+        ],
+    }
+
+    prompt = create_non_code_analysis_prompt(aggregated_metrics)
+
+    # Assertions
+    assert prompt is not None
+    assert isinstance(prompt, str)
+    assert "Project Name: test_project" in prompt
+    assert "Total Files: 2" in prompt
+    assert "File Type Distribution:" in prompt
+    assert "Average Readability Score:" in prompt
+    assert "Unique Key Topics:" in prompt
+    assert "Named Entities:" in prompt
 
 
 def test_get_file_type_distribution():

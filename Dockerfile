@@ -1,32 +1,32 @@
 # syntax=docker/dockerfile:1
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
-
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
 ARG PYTHON_VERSION=3.11
 FROM python:${PYTHON_VERSION}-slim AS base
 
-# Install git CLI (required for GitPython)
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# Install git and sqlite3
+RUN apt-get update && apt-get install -y \
+    git \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install sqlite3 CLI
-RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
-
-# Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
-
-# Keeps Python from buffering stdout and stderr to avoid situations where
-# the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
+# Set NLTK data directory (BEFORE creating user)
+ENV NLTK_DATA=/usr/local/share/nltk_data
+
+# Set HuggingFace cache directory
+ENV HF_HOME=/app/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/app/.cache/huggingface/transformers
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
+
 WORKDIR /app
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
+# Create cache directories
+RUN mkdir -p /app/.cache/huggingface/transformers /app/.cache/sentence-transformers
+
+# Create non-privileged user
 ARG UID=10001
 RUN adduser \
     --disabled-password \
@@ -37,28 +37,29 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
-# Leverage a bind mount to requirements.txt to avoid having to copy them into
-# into this layer.
+# Install Python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
-# Download NLTK data
-RUN python -m nltk.downloader punkt_tab -d /usr/local/share/nltk_data
+# Download NLP models BEFORE switching users
+RUN python -m spacy download en_core_web_sm
+RUN python -m nltk.downloader punkt_tab punkt cmudict stopwords -d /usr/local/share/nltk_data
 
-# Fix ownership so appuser can write to /app
-RUN chown -R appuser:appuser /app
+# Pre-download sentence-transformers model as root
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
-# Switch to the non-privileged user to run the application.
-USER appuser
-
-# Copy the source code into the container.
+# Copy source code
 COPY . /app
 
-# Expose the port that the application listens on.
+# Fix ownership (including cache directories)
+RUN chown -R appuser:appuser /app
+
+# Switch to non-privileged user
+USER appuser
+
+# Expose port
 EXPOSE 8000
 
-# Run the application.
+# Run application
 CMD ["python", "-m", "app.main"]

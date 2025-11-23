@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 from pygments import lex
 from pygments.lexers import guess_lexer_for_filename
+from pygments.util import ClassNotFound
 from pygments.token import Comment, Literal
 # Commented out imports below because it is used during manual testing
 # from app.utils.code_analysis.grammar_loader import extract_rule_names
@@ -113,37 +114,40 @@ def extract_doc_blocks_from_text(file_path: Path, file_content: str) -> List[str
     Extract documentation blocks from raw source text using Pygments lexical analysis.
     """
     # Let Pygments decide an appropriate lexer for this file
-    lexer = guess_lexer_for_filename(file_path.name, file_content)
+    try:
+        lexer = guess_lexer_for_filename(file_path.name, file_content)
 
-    doc_blocks = []
-    current = []
+        doc_blocks = []
+        current = []
 
-    # Tokenize the text with Pygments
-    for tok_type, tok_value in lex(file_content, lexer):
-        # Identify doc-related tokens in a language-agnostic way
-        is_doc = (
-            tok_type in Comment or 
-            tok_type in Literal.String.Doc or
-            tok_value.strip().startswith("/**") or
-            tok_value.strip().startswith("///") or
-            tok_value.strip().startswith("'''") or
-            tok_value.strip().startswith('"""')
-        )
+        # Tokenize the text with Pygments
+        for tok_type, tok_value in lex(file_content, lexer):
+            # Identify doc-related tokens in a language-agnostic way
+            is_doc = (
+                tok_type in Comment or 
+                tok_type in Literal.String.Doc or
+                tok_value.strip().startswith("/**") or
+                tok_value.strip().startswith("///") or
+                tok_value.strip().startswith("'''") or
+                tok_value.strip().startswith('"""')
+            )
 
-        if is_doc:
-            # Add to the current documentation block
-            current.append(tok_value)
-        else:
-            # If we just finished a doc block, store it
-            if current:
-                doc_blocks.append("".join(current))
-                current = []
+            if is_doc:
+                # Add to the current documentation block
+                current.append(tok_value)
+            else:
+                # If we just finished a doc block, store it
+                if current:
+                    doc_blocks.append("".join(current))
+                    current = []
 
-    # If a block is still open at end-of-file, close it
-    if current:
-        doc_blocks.append("".join(current))
+        # If a block is still open at end-of-file, close it
+        if current:
+            doc_blocks.append("".join(current))
 
-    return doc_blocks
+        return doc_blocks
+    except ClassNotFound:
+        return None
 
 def match_docs_to_node(node: Node, text: str, doc_blocks: List[str]) -> Optional[List[str]]:
     """

@@ -67,6 +67,70 @@ def parse_documents_to_json(file_paths, output_path):
     # Return the parsed object in JSON format
     return output_data
 
+
+def parsed_input_text(file_paths):
+    """
+    Parse multiple non-code files and return aggregated results for non-code analysis pipeline.
+    REUSES: All existing parsing logic from parse_documents_to_json without file I/O.
+    
+    Args:
+        file_paths: List of file paths to parse
+        
+    Returns:
+        Dictionary with parsed_files array matching expected output structure:
+        {
+            "parsed_files": [
+                {
+                    "path": "string",
+                    "name": "string", 
+                    "type": "string",  # e.g., "pdf", "txt", "docx"
+                    "content": "string",  # raw extracted text
+                    "success": bool,
+                    "error": "string"  # error message if any
+                }
+            ]
+        }
+    """
+    if not file_paths:
+        return {"parsed_files": []}
+    
+    results = []
+    
+    for file_path_str in file_paths:
+        file_path = Path(file_path_str)
+        result = {
+            "path": str(file_path.resolve()),
+            "name": file_path.name,
+            "type": file_path.suffix.lower().lstrip('.') if file_path.suffix else "unknown",
+            "content": "",
+            "success": False,
+            "error": ""
+        }
+
+        try:
+            # REUSE existing validation and parsing logic
+            if not file_path.exists():
+                result["error"] = "File does not exist"
+            elif is_file_too_large(file_path):
+                result["error"] = f"File size exceeds {MAX_FILE_SIZE_MB} MB limit"
+            elif file_path.suffix.lower() == '.pdf':
+                result["content"] = _extract_pdf_text(file_path)
+                result["success"] = True
+            elif file_path.suffix.lower() in ['.docx', '.doc']:
+                result["content"] = _extract_word_text(file_path)
+                result["success"] = True
+            elif file_path.suffix.lower() in ['.txt', '.md', '.markdown']:
+                result["content"] = _extract_text_file(file_path)
+                result["success"] = True
+            else:
+                result["error"] = f"Unsupported file type: {file_path.suffix}"
+        except Exception as e:
+            result["error"] = str(e)
+
+        results.append(result)
+    
+    return {"parsed_files": results}
+
 def _extract_pdf_text(file_path):
     """Extract text from PDF file."""
     try:

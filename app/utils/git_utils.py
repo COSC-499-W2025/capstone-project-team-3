@@ -1,8 +1,8 @@
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Union, Dict
+from typing import Tuple, Union, Dict
 from datetime import datetime
-import os, json
+import os, json, re, requests
 from typing import Optional
 
 
@@ -362,3 +362,92 @@ def _is_binary_heuristic(sample: bytes) -> bool:
     ratio = textish / len(sample)
     return ratio < 0.85
 
+GITHUB_API_URL = "https://api.github.com"
+
+# --- Helper to parse remote URL (NEW) ---
+def _parse_remote_url(repo) -> Optional[Tuple[str, str]]:
+    """
+    Parses the repository owner and name from the 'origin' remote URL.
+    Returns (owner, repo_name) or None if parsing fails or not a GitHub repo.
+    """
+    try:
+        # Get the URL for the 'origin' remote
+        url = repo.remotes.origin.url
+    except AttributeError:
+        # No 'origin' remote found
+        return None
+
+    # Regex to capture owner and repo name from common GitHub URL formats (HTTPS or SSH)
+    match = re.search(r'(?:github\.com[/:])([a-zA-Z0-9_-]+)/([a-zA-Z0-9_.-]+?)(\.git)?$', url)
+
+    if match:
+        owner, repo_name = match.groups()[0], match.groups()[1]
+        return owner, repo_name
+    
+    return None
+
+# --- Helper for API calls (NEW) ---
+def _make_github_api_request(url: str, token: str) -> Optional[dict]:
+    """Handles GitHub API GET requests with authentication and basic error checking."""
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"GitHub API Error for {url}: {e}")
+        return None
+    
+def _fetch_all_search_results(url: str, token: str) -> int:
+    """
+    Fetches the total_count from the GitHub Search API, handling pagination 
+    up to a reasonable limit if needed, but primarily relying on total_count.
+    The GitHub Search API returns the total_count directly, making this efficient.
+    """
+    # GitHub Search API total_count is often accurate, we rely on it.
+    data = _make_github_api_request(url, token)
+    return data.get('total_count', 0) if data else 0
+
+def extract_pull_request_metrics(
+    path: Union[str, Path], 
+    author: str, 
+    github_token: str
+) -> Dict[str, int]:
+    """
+    Calculates the number of Pull Requests merged and reviewed by an author 
+    by querying the GitHub Search API for maximum efficiency.
+    """
+    # 1. Setup and Remote Info Retrieval
+    # Assumes 'get_repo' is available in the scope
+    repo = get_repo(path) 
+    remote_info = _parse_remote_url(repo)
+    
+    if not remote_info:
+        # print("Could not parse remote URL or repository is not hosted on GitHub.")
+        return {"prs_merged": 0, "prs_reviewed": 0}
+        
+    owner, repo_name = remote_info
+    
+    # --- PRs Merged (Authored Contributions) ---
+    # Metric 1: Count of PRs authored by user that were merged.
+    # Uses the single, efficient Search API call.
+    merged_search_query = f"repo:{owner}/{repo_name} is:pr is:merged author:{author}"
+    merged_url = f"{GITHUB_API_URL}/search/issues?q={merged_search_query}"
+    
+    prs_merged = _fetch_all_search_results(merged_url, github_token)
+
+    # --- PRs Reviewed (Collaborative Contributions) ---
+    # Metric 2: Count of unique PRs reviewed by the user.
+    # GitHub's 'reviewed-by' operator automatically handles uniqueness and review status.
+    reviewed_search_query = f"repo:{owner}/{repo_name} is:pr reviewed-by:{author}"
+    reviewed_url = f"{GITHUB_API_URL}/search/issues?q={reviewed_search_query}"
+    
+    prs_reviewed = _fetch_all_search_results(reviewed_url, github_token)
+            
+    return {
+        "prs_merged": prs_merged, 
+        "prs_reviewed": prs_reviewed
+    }

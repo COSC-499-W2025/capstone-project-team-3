@@ -13,7 +13,8 @@ from app.utils.git_utils import (detect_git,
     extract_branches_for_author
     ,is_collaborative,
     extract_code_commit_content_by_author,
-    extract_all_readmes)
+    extract_all_readmes,
+    extract_pull_request_metrics)
 from git import Repo, Actor
 from pathlib import Path
 import time, json, pytest, os
@@ -472,3 +473,121 @@ def test_large_readme_respects_max_size(tmp_path):
     assert len(content.encode("utf-8")) <= 2_000_000
     # Content should look correct (still valid text, not binary)
     assert all(ch == "A" for ch in content[:1000])
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_success(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests successful calculation by mocking the external Git and API calls.
+    Verifies the final dictionary structure and the correct arguments for API calls.
+    """
+    # 1. Arrange the mocks
+    
+    # Mock GitRepo and Owner Info
+    mock_get_repo.return_value = MagicMock() # Return a fake repo object
+    MOCK_OWNER = "MockOrg"
+    MOCK_REPO = "mock-project"
+    MOCK_AUTHOR = "testuser"
+    MOCK_TOKEN = "fake_pat_123"
+    mock_parse_remote_url.return_value = (MOCK_OWNER, MOCK_REPO)
+
+    # Mock API responses (The core of the test!)
+    # Mock the count for merged PRs
+    MOCK_MERGED_COUNT = 15
+    # Mock the count for reviewed PRs
+    MOCK_REVIEWED_COUNT = 42
+
+    # Configure the mock to return different values based on the URL (merged vs reviewed)
+    def side_effect_fetch_results(url, token):
+        # 1. Verify the token is passed correctly
+        assert token == MOCK_TOKEN
+        
+        # 2. Return the mocked count based on the URL query
+        if "is:merged" in url:
+            assert f"repo:{MOCK_OWNER}/{MOCK_REPO}" in url
+            assert f"author:{MOCK_AUTHOR}" in url
+            return MOCK_MERGED_COUNT
+        elif "reviewed-by" in url:
+            assert f"repo:{MOCK_OWNER}/{MOCK_REPO}" in url
+            assert f"reviewed-by:{MOCK_AUTHOR}" in url
+            return MOCK_REVIEWED_COUNT
+        return 0 # Should not happen
+
+    mock_fetch_results.side_effect = side_effect_fetch_results
+
+    # 2. Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author=MOCK_AUTHOR,
+        github_token=MOCK_TOKEN
+    )
+
+    # 3. Assert
+    # Verify the final returned metrics
+    assert result == {
+        "prs_merged": MOCK_MERGED_COUNT,
+        "prs_reviewed": MOCK_REVIEWED_COUNT
+    }
+    
+    # Verify that the two search functions were called exactly twice (once for merged, once for reviewed)
+    assert mock_fetch_results.call_count == 2
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_no_remote_info(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests the fallback case when the remote URL cannot be parsed (e.g., not a GitHub repo 
+    or no 'origin' remote).
+    """
+    # Arrange
+    mock_get_repo.return_value = MagicMock()
+    # Simulate failed parsing (no GitHub remote found)
+    mock_parse_remote_url.return_value = None 
+
+    # Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author="anyuser",
+        github_token="anytoken"
+    )
+
+    # Assert
+    # Should return zero counts without attempting any API call
+    assert result == {"prs_merged": 0, "prs_reviewed": 0}
+    assert mock_fetch_results.call_count == 0
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_zero_contributions(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests the case where the user has no contributions (API returns 0 for both metrics).
+    """
+    # Arrange
+    mock_get_repo.return_value = MagicMock()
+    mock_parse_remote_url.return_value = ("TestOwner", "TestRepo")
+
+    # Simulate both API calls returning 0 total_count
+    mock_fetch_results.return_value = 0
+
+    # Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author="unknownuser",
+        github_token="validtoken"
+    )
+
+    # Assert
+    assert result == {"prs_merged": 0, "prs_reviewed": 0}
+    assert mock_fetch_results.call_count == 2

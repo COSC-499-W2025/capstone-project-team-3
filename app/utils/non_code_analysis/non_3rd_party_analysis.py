@@ -16,6 +16,7 @@ from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
 
 # Load only spaCy at import
+SPACY_AVAILABLE = True
 nlp = spacy.load("en_core_web_sm")
 kw_model = None  # Lazy load
 
@@ -182,7 +183,6 @@ def generate_comprehensive_summary(content: str, file_name: str, doc_type: str) 
     
     return ". ".join(summary_parts) + "."
 
-# ADD THESE FUNCTIONS BEFORE generate_comprehensive_summary:
 def extract_technical_keywords(content: str, top_n: int = 10) -> List[str]:
     if not content or len(content.strip()) < 50:
         return []
@@ -238,4 +238,138 @@ def extract_important_sentences(content: str, num_sentences: int = 3) -> List[st
         # Fallback: return first few sentences
         sentences = content.split('.')[:num_sentences]
         return [s.strip() + '.' for s in sentences if s.strip()]
-    
+ # ============================================================================
+# 3. IN-DEPTH BULLET POINTS (UPDATED — 3 to 5 bullets, less restrictive)
+# ============================================================================
+def extract_literal_tech_keywords(content: str) -> List[str]:
+    techs = {
+        "python","javascript","typescript","react","vue","angular","java",
+        "fastapi","flask","django","node","node.js","spring",
+        "docker","kubernetes","aws","azure","gcp","mongodb","postgresql",
+        "mysql","redis","sqlite","git"
+    }
+    text = content.lower()
+    return [t.title() for t in techs if re.search(rf"\b{re.escape(t)}\b", text)][:5]
+
+def clean_content_for_bullets(text: str) -> str:
+    # Remove lines that contain ONLY a number with optional dot and spaces
+    text = re.sub(r"^\s*\d+\s*\.?\s*$", "", text, flags=re.MULTILINE)
+
+    # Remove ANY line that is only indentation + a number + dot
+    text = re.sub(r"^\s*\d+\.\s*$", "", text, flags=re.MULTILINE)
+
+    # Remove lines that are just punctuation or dashes
+    text = re.sub(r"^\s*[\.\-–]+\s*$", "", text, flags=re.MULTILINE)
+
+    return text
+
+
+def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str, Any]) -> List[str]:
+    """
+    SAFE bullet extraction – 3–5 bullets ONLY.
+    Avoids unrelated text from PDFs (e.g., political, societal, critic sentences).
+    """
+    bullets = []
+
+    # Restrict analysis to first part of document (user-written content)
+    cleaned = clean_content_for_bullets(content)
+
+    limited_content = cleaned[:1500]
+    # Techs
+    techs = extract_literal_tech_keywords(limited_content)
+    tech_str = ", ".join(techs) if techs else None
+
+    # High-level bullet by type
+    type_bullets = {
+        "API_DOCUMENTATION": "Created structured API documentation outlining endpoints and request/response behavior.",
+        "DESIGN_DOCUMENT": "Designed system architecture with clear components, flows, and rationale.",
+        "REQUIREMENTS_DOCUMENT": "Defined functional and non-functional requirements with clear scope.",
+        "TUTORIAL": "Created a step-by-step tutorial with instructions and examples.",
+        "README": "Authored a complete README including setup, usage, and project structure.",
+    }
+    bullets.append(type_bullets.get(
+        doc_type, "Produced organized documentation explaining concepts and implementation details."
+    ))
+
+    if tech_str:
+        bullets.append(f"Documented technical components and workflows involving {tech_str}.")
+
+    # --- SAFE ACTION SENTENCE EXTRACTION ---
+    if SPACY_AVAILABLE:
+        doc = nlp(limited_content)
+        action_verbs = {"develop", "design", "create", "build", "implement", "document"}
+
+        # patterns we want to block
+        banned_keywords = [
+            "government", "critic", "echo chamber", "politic",
+            "media", "society", "internet", "global", "consumer",
+            "marketplace", "regulation", "framework"
+        ]
+
+        for sent in doc.sents:
+            txt = sent.text.strip()
+
+            # skip if too short/long
+            if not (6 <= len(txt.split()) <= 25):
+                continue
+
+            # skip if any banned keyword appears
+            if any(bad in txt.lower() for bad in banned_keywords):
+                continue
+
+            # must contain an action verb
+            if not any(token.lemma_ in action_verbs for token in sent):
+                continue
+
+            # final cleanup
+            if not txt.endswith("."):
+                txt += "."
+            if not txt.endswith("."):
+              txt += "."
+             # Remove trailing numbers and whitespace
+            txt = re.sub(r'\s*\d+\s*\.*$', '', txt).strip()
+            bullets.append(txt)
+
+            if len(bullets) >= 5:
+                break
+
+    # ensure at least 3 bullets
+    if len(bullets) < 3:
+        bullets.append("Provided clear explanations to support better understanding.")
+
+    return bullets[:5]
+
+
+
+# ============================================================================
+# MAIN EXECUTION (unchanged)
+# ============================================================================
+
+if __name__ == "__main__":
+    import json
+    from app.shared.test_data.parsed_input_text import sample_parsed_files
+
+    for file_data in sample_parsed_files["files"]:
+        print("="*60)
+        print(f"File: {file_data['name']}")
+        print(f"Type: {file_data['type']}")
+        print(f"Success: {file_data['success']}")
+        if not file_data["success"]:
+            print(f"Error: {file_data['error']}")
+            continue
+        content = file_data["content"]
+        file_path = Path(file_data["path"])
+        doc_type = classify_document_type(content, file_path)
+        metrics = {
+            "word_count": len(content.split()),
+            "heading_count": len(re.findall(r'^#{1,6}\s+.+$', content, re.MULTILINE)),
+            "code_snippet_count": len(re.findall(r'```[\w]*\n.*?```', content, re.DOTALL))
+        }
+        bullets = extract_contribution_bullets(content, doc_type, metrics)
+        summary = generate_comprehensive_summary(content, file_data["name"], doc_type)
+        print("SUMMARY:")
+        print(summary)
+        print("IN-DEPTH BULLET POINTS:")
+        for bullet in bullets:
+            print("•", bullet)
+        print()

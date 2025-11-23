@@ -2,9 +2,9 @@ from tree_sitter import Parser, Node, Query, Tree, Language
 from tree_sitter_language_pack import get_language
 from typing import Dict, List, Tuple, Optional
 from pathlib import Path
-from pygments import lex
-from pygments.lexers import guess_lexer_for_filename
-from pygments.token import Comment, Literal
+
+from app.utils.code_analysis.grammar_loader import extract_rule_names
+from app.utils.code_analysis.parse_code_utils import detect_language,map_language_for_treesitter,extract_contents
 
 def classify_node_types(rule_names: List[str]) -> Tuple[List[str], List[str], List[str]]:
     """
@@ -154,8 +154,7 @@ def extract_entities(tree: Tree, file_content: str, class_node_types: List[str],
         loc = f.get("lines_of_code", 0)
         params = f.get("parameters", [])
         calls = f.get("calls", [])
-        # Treat as trivial if only 1 LOC, no params, and either no calls or calls all single-lower tokens (e.g. decorators / annotations)
-        if loc <= 1 and not params and (not calls or all(len(c) <= 1 for c in calls)):
+        if loc == 0 and not params and not calls:
             return True
         return False
     function_entities = [f for f in function_entities if not _is_trivial_function(f)]
@@ -689,3 +688,132 @@ def extract_component_from_node_type(node: Node, file_content: str) -> Optional[
         "state_variables": [],
         "hooks_used": []
     }
+    
+language=detect_language(Path("tests/utils/code_analysis/test_parse_code_utils.py"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("tests/utils/code_analysis/test_parse_code_utils.py"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("tests/utils/code_analysis/test_parse_code_utils.py")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/flick.py"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/flick.py"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/flick.py")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/MainApp.java"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/MainApp.java"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/MainApp.java")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/mapper.cpp"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/mapper.cpp"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/mapper.cpp")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/mapper.cs"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/mapper.cs"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/mapper.cs")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/user-card.component.ts"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/user-card.component.ts"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/user-card.component.ts")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/UserCard.jsx"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/UserCard.jsx"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/UserCard.jsx")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/testing.vue"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/testing.vue"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/testing.vue")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/app.component.ts"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/app.component.ts"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/app.component.ts")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)
+
+print()
+language=detect_language(Path("app/utils/code/example.tsx"))
+language=map_language_for_treesitter(language)
+file_content=extract_contents(Path("app/utils/code/example.tsx"))
+rule_names = extract_rule_names(Path(f"app/shared/grammars/{language}.js"))
+class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+
+ts_lang = get_language(language)
+tree = get_parser(file_content, ts_lang)
+file_path= Path("app/utils/code/example.tsx")
+entities=extract_entities(tree, file_content, class_nodes,func_nodes,component_nodes,file_path)
+print(entities)

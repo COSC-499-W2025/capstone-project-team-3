@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 from pygments import lex
 from pygments.lexers import guess_lexer_for_filename
+from pygments.util import ClassNotFound
 from pygments.token import Comment, Literal
 # Commented out imports below because it is used during manual testing
 # from app.utils.code_analysis.grammar_loader import extract_rule_names

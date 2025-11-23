@@ -61,8 +61,7 @@ def main():
             print(f"Ready to analyze {len(files)} files.")
     
     print("App started successfully")
-    seed_db()  # automatically populate test data
-    print("Database started")
+
 
     
 # Create FastAPI app

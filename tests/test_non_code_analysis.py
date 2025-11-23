@@ -161,7 +161,7 @@ def test_pre_process_non_code_files_content_length_limit():
 
 
 def test_pre_process_non_code_files_custom_summary_sentences():
-    """Test with custom number of summary sentences."""
+    """Test that summary is generated for short content."""
     sample_parsed_files = {
         "files": [
             {
@@ -179,13 +179,10 @@ def test_pre_process_non_code_files_custom_summary_sentences():
         ]
     }
     
-    results = pre_process_non_code_files(
-        sample_parsed_files,
-        summary_sentences=2
-    )
+    results = pre_process_non_code_files(sample_parsed_files)
     
     assert len(results) == 1
-    # Summary should exist (exact sentence count may vary due to LSA)
+    # Summary should exist (exact sentence count may vary due to dynamic calculation)
     assert len(results[0]["summary"]) > 0
 
 

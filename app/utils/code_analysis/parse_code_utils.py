@@ -3,7 +3,6 @@
 # Tracking TODOs:
 #  "detect_language":"str" --done
 #   "lines_of_code": "integer",    ---done      
-#   "docstring_count": "integer", ---done
 
 #   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
 #  Imports only returns full import statements, working to only extract the library...
@@ -84,12 +83,6 @@ def count_lines_of_code(file_path: Path) -> int:
     """Return the number of lines of code in the given source file."""
     analysis= SourceAnalysis.from_file(str(file_path),"pygount")
     count = analysis.code_count
-    return count
-
-def count_lines_of_documentation(file_path: Path) -> int:
-    """Return the number of documentation lines in the given source file."""
-    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
-    count = analysis.documentation_count
     return count
 
 def extract_contents(file_path: Path) -> str:
@@ -256,7 +249,10 @@ def extract_libraries(import_statements: List[str], language: str, project_names
                         if any(p in normalized_lib for p in project_names):
                             continue
 
-                    libraries.add(lib)
+                    normalized = normalize_library(lib, language)
+                    if normalized:
+                        libraries.add(normalized)
+
 
     return list(libraries)
 
@@ -331,8 +327,47 @@ def extract_internal_dependencies(import_statements: List[str], language: str, p
         # Keep dependencies that match known project prefixes
         if project_names:
             if any(
-                dep_clean.startswith(prefix + ".") or dep_clean == prefix
+                dep_clean.startswith(prefix + ".")
+                or dep_clean == prefix
+                or f".{prefix}." in dep_clean  # embedded segment e.g. com.mycompany.app.utils
+                or dep_clean.split(".")[0] == prefix  # first segment matches short project name
                 for prefix in project_names
             ):
                 result.add(dep_clean)
     return list(result)
+
+def normalize_library(lib: str, language: str) -> str:
+    """
+    Normalize a library/module path
+
+    Rules:
+      - Drop the last segment of a dotted path (java.util.List -> java.util)
+      - Drop the last segment of slash paths except Go (lodash/array -> lodash)
+      - Preserve single-segment libraries (pytest, pathlib, mongoose)
+      - Ignore 'static' and similar keywords
+    """
+
+    if not lib or lib.lower() in {"static", "import", "require"}:
+        return None
+
+    #  Languages like with dot paths like Python, Java, ...
+    if "." in lib:
+        parts = lib.split(".")
+        if len(parts) > 1:
+            return ".".join(parts[:-1])
+        return lib
+
+    #  Languages with slash paths like JavaScript/TypeScript...
+    if "/" in lib and not lib.startswith("."):
+        parts = lib.split("/")
+        if len(parts) > 1:
+            # universal behavior: keep top-level package
+            return parts[0]
+        return lib
+
+    #  Go special-case (keep full import path)
+    if language in ("go", "golang"):
+        return lib
+
+    # Single-segment library: keep as-is
+    return lib

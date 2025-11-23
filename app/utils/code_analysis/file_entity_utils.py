@@ -77,20 +77,16 @@ def walk_class_nodes(node: Node, text: str, class_types: set, function_types: se
         walk_class_nodes(child, text, class_types, function_types, out, file_path)
         
 def extract_single_class(node: Node, text: str, function_types: set, file_path: Path) -> dict:
-    """Extract class name + docstring + methods using provided function_types."""
+    """Extract class name + methods using provided function_types."""
 
     # Get class names
     class_names = extract_class_names(node, text)
 
-    # 2. Extract docstring (Python/JS etc)
-    docstring = extract_docstrings(node, text, file_path)
-
-    # 3. Extract methods
+    # 2. Extract methods
     methods = extract_methods_from_class(node, text, function_types, file_path)
 
     return {
         "name": class_names[0] if class_names else None,
-        "docstring": docstring[0] if docstring else None,
         "methods": methods
     }
     
@@ -115,89 +111,17 @@ def extract_class_names(node: Node, text: str) -> List[str]:
                         names.append(name)
     return names
 
-# -------- Helper methods for docstring extraction --------- 
-def extract_doc_blocks_from_text(file_path: Path, file_content: str) -> List[str]:
-    """
-    Extract documentation blocks from raw source text using Pygments lexical analysis.
-    """
-    # Let Pygments decide an appropriate lexer for this file
-    lexer = guess_lexer_for_filename(file_path.name, file_content)
-
-    doc_blocks = []
-    current = []
-
-    # Tokenize the text with Pygments
-    for tok_type, tok_value in lex(file_content, lexer):
-        # Identify doc-related tokens in a language-agnostic way
-        is_doc = (
-            tok_type in Comment or 
-            tok_type in Literal.String.Doc or
-            tok_value.strip().startswith("/**") or
-            tok_value.strip().startswith("///") or
-            tok_value.strip().startswith("'''") or
-            tok_value.strip().startswith('"""')
-        )
-
-        if is_doc:
-            # Add to the current documentation block
-            current.append(tok_value)
-        else:
-            # If we just finished a doc block, store it
-            if current:
-                doc_blocks.append("".join(current))
-                current = []
-
-    # If a block is still open at end-of-file, close it
-    if current:
-        doc_blocks.append("".join(current))
-
-    return doc_blocks
-
-def match_docs_to_node(node: Node, text: str, doc_blocks: List[str]) -> Optional[List[str]]:
-    """
-    Match documentation blocks (extracted from raw text) to a specific Tree-sitter node.
-    """
-    
-    # TODO: might need to improve matching
-    node_start = node.start_byte
-    results = []
-
-    for block in doc_blocks:
-        # Find the documentation block in the raw text
-        idx = text.find(block)
-        if idx == -1:
-            continue
-        end = idx + len(block)
-
-        # Leading documentation — comment block ends right before the node
-        if end <= node_start and node_start - end < 3:  # allow whitespace
-            results.append(block)
-
-        # Inline documentation — block appears inside the node e.g Python
-        if idx > node_start and idx < node.end_byte:
-            results.append(block)
-
-    return results or None
-
-# -------- End of Helper methods of docstring extraction ---------  
-def extract_docstrings(node: Node, text: str, file_path: str) -> Optional[List[str]]:
-    """ Extract documentation associated with a specific Tree-sitter AST node. """
-    blocks = extract_doc_blocks_from_text(file_path, text)
-    docs = match_docs_to_node(node, text, blocks)
-    return docs
-       
-# ---- End of helper methods -----
 def extract_classes(root: Node, file_content: str, class_node_types: List[str], function_node_types: List[str], file_path: Path)->List[dict]:
     """
-    Extract class-level entities (name, docstring, methods list).
+    Extract class-level entities (name, methods list).
     """
     results: List[dict] = []
     walk_class_nodes(root, file_content, set(class_node_types), set(function_node_types), results, file_path)
-    # Deduplicate classes by (name, docstring) to reduce false repeats (language-agnostic heuristic)
+    # Deduplicate classes by (name) to reduce false repeats (language-agnostic heuristic)
     dedup = []
     seen = set()
     for cls in results:
-        key = (cls.get("name"), cls.get("docstring"))
+        key = (cls.get("name"), tuple(sorted(m.get("name") for m in cls.get("methods", []))))
         if key not in seen:
             seen.add(key)
             dedup.append(cls)
@@ -224,7 +148,7 @@ def extract_methods_from_class(class_node: Node, text: str, function_types: set,
     """
     methods: List[dict] = []
     
-    CLASS_BODY_TYPES = {"class_body", "block", "suite", "member_declaration_list"}
+    CLASS_BODY_TYPES = {"class_body", "block", "suite", "member_declaration_list", "declaration_list"}
     WRAPPER_TYPES = {"decorated_definition", "annotation", "attribute_declaration"}
 
     def handle_child(n: Node):
@@ -260,7 +184,7 @@ def extract_methods_from_class(class_node: Node, text: str, function_types: set,
     return dedup
 
 def extract_single_method(method_node: Node, text: str, file_path: Path) -> dict:
-    """Build method entity dictionary including name, params, LOC, complexity, docstring, calls."""
+    """Build method entity dictionary including name, params, LOC, calls."""
     
     if method_node.type == "decorated_definition": #checking that the node identified have definitions like @staticmethod
         for ch in method_node.children:
@@ -271,15 +195,11 @@ def extract_single_method(method_node: Node, text: str, file_path: Path) -> dict
     name = extract_method_name(method_node, text)
     params = extract_method_parameters(method_node, text)
     loc = (method_node.end_point[0] - method_node.start_point[0]) + 1
-    complexity = estimate_cyclomatic_complexity(method_node, text)
-    docstring = extract_docstrings(method_node, text, file_path)
     calls = extract_method_calls(method_node, text)
     return {
         "name": name,
         "parameters": params,
         "lines_of_code": loc,
-        "complexity": complexity,
-        "docstring": docstring[0] if docstring else None,
         "calls": calls
     }
 
@@ -352,25 +272,6 @@ def extract_method_parameters(method_node: Node, text: str) -> List[str]:
             cleaned.append(p_clean)
 
     return cleaned
-
-def estimate_cyclomatic_complexity(method_node: Node, text: str) -> Optional[int]:
-    """Estimate cyclomatic complexity (very coarse) for a method.
-
-    Text heuristic:
-      - Start at 1 (baseline path)
-      - +1 per occurrence of decision keyword: if, for, while, case, catch,
-        elif, switch
-      - +1 per logical operator '&&' or '||'
-
-    Returns an integer >= 1. Replace with AST node-based counting for accuracy.
-    """
-    snippet = text[method_node.start_byte:method_node.end_byte]
-    keywords = ["if", "for", "while", "case", "catch", "elif", "switch"]
-    count = 1
-    for kw in keywords:
-        count += len(__import__('re').findall(rf"\b{kw}\b", snippet))
-    count += snippet.count("&&") + snippet.count("||")
-    return count
 
 def extract_method_calls(method_node: Node, text: str) -> List[str]:
     """

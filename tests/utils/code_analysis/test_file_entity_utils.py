@@ -4,9 +4,6 @@ from unittest.mock import MagicMock
 from app.utils.code_analysis.file_entity_utils import (
     classify_node_types,
     extract_class_names,
-    extract_doc_blocks_from_text,
-    match_docs_to_node,
-    extract_docstrings,
     walk_class_nodes,
     extract_single_class,
     extract_classes,
@@ -55,67 +52,6 @@ def test_extract_class_names_simple():
 
     assert result == ["Foo"]
 
-def test_extract_doc_blocks_from_text_python():
-    """Verify Python triple-quoted docstring blocks are extracted."""
-    content = '''
-        """Class doc"""
-        class Foo:
-            pass
-    '''
-    blocks = extract_doc_blocks_from_text(Path("foo.py"), content)
-
-    assert len(blocks) == 1
-    assert "Class doc" in blocks[0]
-
-
-def test_extract_doc_blocks_from_text_comments():
-    """Verify comment blocks are grouped together as documentation."""
-    content = """
-        // This is a comment
-        // Another comment
-        class Foo {}
-    """
-    blocks = extract_doc_blocks_from_text(Path("foo.js"), content)
-    assert len(blocks) >= 1
-    combined = blocks[0]
-    assert "This is a comment" in combined
-
-def test_match_docs_to_node_attaches_preceding_block():
-    """Ensure doc blocks immediately preceding a node are attached to it."""
-    text = """
-    /** Doc block */ class Foo {}
-    """
-    doc_blocks = ["/** Doc block */"]
-
-    node = make_node("class", text, text.index("class"), text.index("class") + 5)
-
-    matched = match_docs_to_node(node, text, doc_blocks)
-
-    assert matched is not None
-    assert doc_blocks[0] in matched
-
-
-def test_match_docs_to_node_none():
-    """Verify no docs are matched when unrelated blocks exist."""
-    text = "class Foo {}"
-    result = match_docs_to_node(
-        make_node("class", text, 0, len(text)), text, ["// unrelated"]
-    )
-
-    assert result is None
-
-def test_extract_docstrings_integration():
-    """Ensure extract_docstrings wires block extraction + matching."""
-    content = '''
-        /** Doc for Foo */ class Foo {}
-    '''
-    node = make_node("class", content, content.index("class"), len(content))
-
-    docs = extract_docstrings(node, content, Path("foo.js"))
-
-    assert docs is not None
-    assert "Doc for Foo" in docs[0]
-
 def test_walk_class_nodes_collects_classes():
     """Verify DFS walk finds class nodes and extracts them."""
     text = "class Foo {}"
@@ -138,7 +74,6 @@ def test_extract_classes():
 
     assert len(results) == 1
     assert "name" in results[0]
-    assert "docstring" in results[0]
 
 def test_extract_single_class_structure():
     """Verify extract_single_class returns the correct structured fields."""
@@ -150,7 +85,6 @@ def test_extract_single_class_structure():
 
     assert isinstance(extracted, dict)
     assert "name" in extracted
-    assert "docstring" in extracted
     assert "methods" in extracted
     assert extracted["methods"] == []
 
@@ -184,7 +118,6 @@ def test_extract_single_class_with_method():
     assert method['parameters'] == ['x']
     assert method['lines_of_code'] == 1
     assert 'calls' in method and method['calls'] == ['baz']
-    assert method['complexity'] >= 2  # "if" adds complexity
 
 def test_extract_single_method_direct():
     """Directly test method entity extraction utility."""
@@ -209,4 +142,3 @@ def test_extract_single_method_direct():
     assert method_entity['name'] == 'qux'
     assert method_entity['parameters'] == ['y']
     assert method_entity['calls'] == ['alpha', 'beta']
-    assert method_entity['complexity'] >= 2  # "if" keyword counted

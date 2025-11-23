@@ -4,7 +4,6 @@ from tree_sitter import Node
 from unittest.mock import MagicMock, patch
 from app.utils.code_analysis.parse_code_utils import (detect_language,
                                              count_lines_of_code,
-                                             count_lines_of_documentation,
                                              extract_contents,
                                              collect_node_types,
                                             traverse_imports,
@@ -37,14 +36,6 @@ def test_count_lines_of_code(sample_file):
     file_path, _ = sample_file
     count = count_lines_of_code(file_path)
     assert count == 1  # Only the print line is code
-
-def test_count_lines_of_documentation(sample_file):
-    """
-    Test for counting the number of documentation lines in a file.
-    """
-    file_path, _ = sample_file
-    count = count_lines_of_documentation(file_path)
-    assert count == 3  # Docstring lines
 
 def test_extract_contents(sample_file):
     """

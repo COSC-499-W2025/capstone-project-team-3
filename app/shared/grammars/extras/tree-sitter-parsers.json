@@ -1,0 +1,4120 @@
+{
+  "ada": [
+    {
+      "url": "https://github.com/TamaMcGlinn/tree-sitter-ada",
+      "last commit date": "2022-06-25",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/briot/tree-sitter-ada",
+      "last commit date": "2024-05-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "agda": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-agda",
+      "last commit date": "2024-11-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "angular": [
+    {
+      "url": "https://github.com/dlvandenberg/tree-sitter-angular",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "apex": [
+    {
+      "url": "https://github.com/Ziemniakoss/tree-sitter-apex",
+      "last commit date": "2022-04-16",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/jsuarez-chipiron/tree-sitter-apex",
+      "last commit date": "2023-05-12",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/aheber/tree-sitter-sfapex",
+      "last commit date": "2025-02-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "arduino": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-arduino",
+      "last commit date": "2025-07-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "asciidoc": [
+    {
+      "url": "https://github.com/cathaysia/tree-sitter-asciidoc",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "asciidoc_inline": [
+    {
+      "url": "https://github.com/cathaysia/tree-sitter-asciidoc",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "asm": [
+    {
+      "url": "https://github.com/rush-rs/tree-sitter-asm",
+      "last commit date": "2025-03-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "astro": [
+    {
+      "url": "https://github.com/virchau13/tree-sitter-astro",
+      "last commit date": "2025-04-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "authzed": [
+    {
+      "url": "https://github.com/mleonidas/tree-sitter-authzed",
+      "last commit date": "2023-10-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "awk": [
+    {
+      "url": "https://github.com/Beaglefoot/tree-sitter-awk",
+      "last commit date": "2024-11-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "bash": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-bash",
+      "last commit date": "2025-06-04",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "bass": [
+    {
+      "url": "https://github.com/vito/tree-sitter-bass",
+      "last commit date": "2024-05-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "bazelrc": [
+    {
+      "url": "https://github.com/zaucy/tree-sitter-bazelrc",
+      "last commit date": "2024-04-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "beancount": [
+    {
+      "url": "https://github.com/zwpaper/tree-sitter-beancount",
+      "last commit date": "2022-03-01",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/yagebu/tree-sitter-beancount",
+      "last commit date": "2025-06-05",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/polarmutex/tree-sitter-beancount",
+      "last commit date": "2025-07-20",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "bibtex": [
+    {
+      "url": "https://github.com/latex-lsp/tree-sitter-bibtex",
+      "last commit date": "2025-04-19",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "bicep": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-bicep",
+      "last commit date": "2024-12-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "bison": [
+    {
+      "url": "https://gitlab.com/btuin2/tree-sitter-bison",
+      "last commit date": "2024-01-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "bitbake": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-bitbake",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "blueprint": [
+    {
+      "url": "https://gitlab.com/gabmus/tree-sitter-blueprint.git",
+      "last commit date": "2025-07-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "bp": [
+    {
+      "url": "https://github.com/ambroisie/tree-sitter-bp",
+      "last commit date": "2025-04-02",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "brightscript": [
+    {
+      "url": "https://github.com/ajdelcimmuto/tree-sitter-brightscript",
+      "last commit date": "2025-07-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "c": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-c",
+      "last commit date": "2025-05-24",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "c3": [
+    {
+      "url": "https://github.com/zweimach/tree-sitter-c3",
+      "last commit date": "2024-02-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/c3lang/tree-sitter-c3",
+      "last commit date": "2025-07-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "c_sharp": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-c-sharp",
+      "last commit date": "2025-02-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "caddy": [
+    {
+      "url": "https://github.com/opa-oz/tree-sitter-caddy",
+      "last commit date": "2025-01-26",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cairo": [
+    {
+      "url": "https://github.com/JoranHonig/tree-sitter-cairo",
+      "last commit date": "2022-12-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-cairo",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "capnp": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-capnp",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cedar": [
+    {
+      "url": "https://github.com/chrnorm/tree-sitter-cedar",
+      "last commit date": "2024-07-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cel": [
+    {
+      "url": "https://github.com/bufbuild/tree-sitter-cel",
+      "last commit date": "2024-02-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cfengine": [
+    {
+      "url": "https://github.com/olehermanse/tree-sitter-cfengine",
+      "last commit date": "2025-06-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "chatito": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-chatito",
+      "last commit date": "2025-07-20",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "chatl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-chatito",
+      "last commit date": "2025-07-20",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "circom": [
+    {
+      "url": "https://github.com/Decurity/tree-sitter-circom",
+      "last commit date": "2024-09-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "clojure": [
+    {
+      "url": "https://github.com/sogaiu/tree-sitter-clojure",
+      "last commit date": "2025-06-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cmake": [
+    {
+      "url": "https://github.com/uyha/tree-sitter-cmake",
+      "last commit date": "2025-05-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cobol": [
+    {
+      "url": "https://github.com/Neppord/tree-sitter-cobol",
+      "last commit date": "2020-07-06",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/yutaro-sakamoto/tree-sitter-cobol",
+      "last commit date": "2024-12-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "comment": [
+    {
+      "url": "https://github.com/stsewd/tree-sitter-comment",
+      "last commit date": "2025-05-03",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "commonlisp": [
+    {
+      "url": "https://github.com/theHamsta/tree-sitter-commonlisp",
+      "last commit date": "2025-03-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "context": [
+    {
+      "url": "https://github.com/pmazaitis/tree-sitter-context_en",
+      "last commit date": "2024-08-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cooklang": [
+    {
+      "url": "https://github.com/addcninblue/tree-sitter-cooklang",
+      "last commit date": "2024-05-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "core_schema": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml",
+      "last commit date": "2025-05-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "corn": [
+    {
+      "url": "https://github.com/jakestanger/tree-sitter-corn",
+      "last commit date": "2024-06-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cpon": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-cpon",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cpp": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-cpp",
+      "last commit date": "2025-07-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cql": [
+    {
+      "url": "https://github.com/shotover/tree-sitter-cql",
+      "last commit date": "2024-05-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/ricomariani/tree-sitter-cgsql",
+      "last commit date": "2025-03-08",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "crystal": [
+    {
+      "url": "https://github.com/will/tree-sitter-crystal",
+      "last commit date": "2021-09-02",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/keidax/tree-sitter-crystal",
+      "last commit date": "2024-12-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "css": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-css",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "csv": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-csv",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "cuda": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-cuda",
+      "last commit date": "2025-03-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cue": [
+    {
+      "url": "https://github.com/eonpatapon/tree-sitter-cue",
+      "last commit date": "2025-02-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "cylc": [
+    {
+      "url": "https://github.com/elliotfontaine/tree-sitter-cylc",
+      "last commit date": "2025-06-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "d": [
+    {
+      "url": "https://github.com/gdamore/tree-sitter-d",
+      "last commit date": "2025-06-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "dart": [
+    {
+      "url": "https://github.com/UserNobody14/tree-sitter-dart",
+      "last commit date": "2025-02-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "desktop": [
+    {
+      "url": "https://github.com/ValdezFOmar/tree-sitter-desktop",
+      "last commit date": "2025-07-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "devicetree": [
+    {
+      "url": "https://github.com/joelspadin/tree-sitter-devicetree",
+      "last commit date": "2025-02-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "dhall": [
+    {
+      "url": "https://github.com/jbellerb/tree-sitter-dhall",
+      "last commit date": "2025-04-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "diff": [
+    {
+      "url": "https://github.com/vigoux/tree-sitter-diff",
+      "last commit date": "2020-09-29",
+      "abi": "12",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-diff",
+      "last commit date": "2025-01-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "disassembly": [
+    {
+      "url": "https://github.com/ColinKennedy/tree-sitter-disassembly",
+      "last commit date": "2023-12-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "djot": [
+    {
+      "url": "https://github.com/treeman/tree-sitter-djot",
+      "last commit date": "2025-02-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "dockerfile": [
+    {
+      "url": "https://github.com/camdencheek/tree-sitter-dockerfile",
+      "last commit date": "2025-01-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "dot": [
+    {
+      "url": "https://github.com/rydesun/tree-sitter-dot",
+      "last commit date": "2022-08-25",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "doxygen": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-doxygen",
+      "last commit date": "2024-06-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "dtd": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-xml",
+      "last commit date": "2025-06-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "earthfile": [
+    {
+      "url": "https://github.com/glehmann/tree-sitter-earthfile",
+      "last commit date": "2025-05-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ebnf": [
+    {
+      "url": "https://github.com/RubixDev/ebnf",
+      "last commit date": "2023-02-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "editorconfig": [
+    {
+      "url": "https://github.com/ValdezFOmar/tree-sitter-editorconfig",
+      "last commit date": "2025-07-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "eds": [
+    {
+      "url": "https://github.com/uyha/tree-sitter-eds",
+      "last commit date": "2024-10-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "eex": [
+    {
+      "url": "https://github.com/connorlay/tree-sitter-eex",
+      "last commit date": "2022-01-12",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "elisp": [
+    {
+      "url": "https://github.com/tpeacock19/tree-sitter-elisp",
+      "last commit date": "2022-10-10",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/Wilfred/tree-sitter-elisp",
+      "last commit date": "2024-06-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "elixir": [
+    {
+      "url": "https://github.com/elixir-lang/tree-sitter-elixir",
+      "last commit date": "2025-04-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "elm": [
+    {
+      "url": "https://github.com/elm-tooling/tree-sitter-elm",
+      "last commit date": "2025-05-04",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "elsa": [
+    {
+      "url": "https://github.com/glapa-grossklag/tree-sitter-elsa",
+      "last commit date": "2023-02-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "elvish": [
+    {
+      "url": "https://github.com/elves/tree-sitter-elvish",
+      "last commit date": "2023-07-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "embedded_template": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-embedded-template",
+      "last commit date": "2025-01-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "enforce": [
+    {
+      "url": "https://github.com/simonvic/tree-sitter-enforce",
+      "last commit date": "2025-07-17",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "erlang": [
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-erlang",
+      "last commit date": "2025-02-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/WhatsApp/tree-sitter-erlang",
+      "last commit date": "2025-06-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "eventrule": [
+    {
+      "url": "https://github.com/3p3r/tree-sitter-eventrule",
+      "last commit date": "2025-06-06",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "facility": [
+    {
+      "url": "https://github.com/FacilityApi/tree-sitter-facility",
+      "last commit date": "2025-01-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "faust": [
+    {
+      "url": "https://github.com/khiner/tree-sitter-faust",
+      "last commit date": "2025-06-30",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "fennel": [
+    {
+      "url": "https://github.com/sogaiu/tree-sitter-fennel",
+      "last commit date": "2022-02-19",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/TravonteD/tree-sitter-fennel",
+      "last commit date": "2024-02-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/alexmozaidze/tree-sitter-fennel",
+      "last commit date": "2025-07-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "fidl": [
+    {
+      "url": "https://github.com/google/tree-sitter-fidl",
+      "last commit date": "2024-02-26",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "firrtl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-firrtl",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "fish": [
+    {
+      "url": "https://github.com/ram02z/tree-sitter-fish",
+      "last commit date": "2025-06-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "fluentbit": [
+    {
+      "url": "https://github.com/sh-cho/tree-sitter-fluentbit",
+      "last commit date": "2025-07-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "foam": [
+    {
+      "url": "https://github.com/FoamScience/tree-sitter-foam",
+      "last commit date": "2024-11-10",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "formula": [
+    {
+      "url": "https://github.com/siraben/tree-sitter-formula",
+      "last commit date": "2022-05-05",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "forth": [
+    {
+      "url": "https://github.com/AlexanderBrevig/tree-sitter-forth",
+      "last commit date": "2023-11-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "fortran": [
+    {
+      "url": "https://github.com/stadelmanma/tree-sitter-fortran",
+      "last commit date": "2025-07-08",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "fsh": [
+    {
+      "url": "https://github.com/mgramigna/tree-sitter-fsh",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "fsharp": [
+    {
+      "url": "https://github.com/baronfel/tree-sitter-fsharp",
+      "last commit date": "2023-02-13",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/ionide/tree-sitter-fsharp",
+      "last commit date": "2025-07-05",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "fsharp_signature": [
+    {
+      "url": "https://github.com/ionide/tree-sitter-fsharp",
+      "last commit date": "2025-07-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "func": [
+    {
+      "url": "https://github.com/akifoq/tree-sitter-func",
+      "last commit date": "2022-04-02",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-func",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "fusion": [
+    {
+      "url": "https://gitlab.com/jirgn/tree-sitter-fusion.git",
+      "last commit date": "2021-12-29",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gap": [
+    {
+      "url": "https://github.com/gap-system/tree-sitter-gap",
+      "last commit date": "2025-04-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gaptst": [
+    {
+      "url": "https://github.com/gap-system/tree-sitter-gaptst",
+      "last commit date": "2024-12-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gdscript": [
+    {
+      "url": "https://github.com/PrestonKnopp/tree-sitter-gdscript",
+      "last commit date": "2025-07-25",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gdshader": [
+    {
+      "url": "https://github.com/GodOfAvacyn/tree-sitter-gdshader",
+      "last commit date": "2024-02-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gemini": [
+    {
+      "url": "https://git.sr.ht/~nbsp/tree-sitter-gemini",
+      "last commit date": "2023-11-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gemtext": [
+    {
+      "url": "https://github.com/pebbe/tree-sitter-gemtext",
+      "last commit date": "2024-12-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ghccore": [
+    {
+      "url": "https://github.com/bgamari/tree-sitter-ghc-core",
+      "last commit date": "2023-01-30",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "git_commit": [
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-git-commit",
+      "last commit date": "2025-06-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "git_config": [
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-git-config",
+      "last commit date": "2025-05-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "git_rebase": [
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-git-rebase",
+      "last commit date": "2024-07-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gitattributes": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-gitattributes",
+      "last commit date": "2025-05-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gitcommit": [
+    {
+      "url": "https://github.com/gbprod/tree-sitter-gitcommit",
+      "last commit date": "2025-03-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gitignore": [
+    {
+      "url": "https://github.com/shunsambongi/tree-sitter-gitignore",
+      "last commit date": "2022-05-04",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gleam": [
+    {
+      "url": "https://github.com/gleam-lang/tree-sitter-gleam",
+      "last commit date": "2025-07-21",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "glimmer": [
+    {
+      "url": "https://github.com/ember-tooling/tree-sitter-glimmer",
+      "last commit date": "2024-08-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "glimmer_javascript": [
+    {
+      "url": "https://github.com/NullVoxPopuli/tree-sitter-glimmer-javascript",
+      "last commit date": "2025-04-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "glimmer_typescript": [
+    {
+      "url": "https://github.com/NullVoxPopuli/tree-sitter-glimmer-typescript",
+      "last commit date": "2025-04-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "glsl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-glsl",
+      "last commit date": "2025-03-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gn": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-gn",
+      "last commit date": "2023-10-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gnuplot": [
+    {
+      "url": "https://github.com/dpezto/tree-sitter-gnuplot",
+      "last commit date": "2024-12-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "go": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-go",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "goctl": [
+    {
+      "url": "https://github.com/chaozwn/tree-sitter-goctl",
+      "last commit date": "2024-08-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "godot_resource": [
+    {
+      "url": "https://github.com/PrestonKnopp/tree-sitter-godot-resource",
+      "last commit date": "2025-05-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "gomod": [
+    {
+      "url": "https://github.com/camdencheek/tree-sitter-go-mod",
+      "last commit date": "2025-01-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gosum": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-go-sum",
+      "last commit date": "2025-07-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gotmpl": [
+    {
+      "url": "https://github.com/dannylongeuay/tree-sitter-go-template",
+      "last commit date": "2022-07-19",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/ngalaiko/tree-sitter-go-template",
+      "last commit date": "2025-01-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gowork": [
+    {
+      "url": "https://github.com/omertuc/tree-sitter-go-work",
+      "last commit date": "2022-10-04",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gpg": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-gpg-config",
+      "last commit date": "2025-07-19",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "graphql": [
+    {
+      "url": "https://github.com/bkegley/tree-sitter-graphql",
+      "last commit date": "2021-05-10",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gren": [
+    {
+      "url": "https://github.com/MaeBrooks/tree-sitter-gren",
+      "last commit date": "2025-05-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "groovy": [
+    {
+      "url": "https://github.com/Decodetalkers/tree-sitter-groovy",
+      "last commit date": "2024-05-16",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/murtaza64/tree-sitter-groovy",
+      "last commit date": "2025-01-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "groq": [
+    {
+      "url": "https://github.com/ajrussellaudio/tree-sitter-groq",
+      "last commit date": "2025-07-18",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gstlaunch": [
+    {
+      "url": "https://github.com/theHamsta/tree-sitter-gstlaunch",
+      "last commit date": "2024-04-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "gularen": [
+    {
+      "url": "https://github.com/noorwachid/tree-sitter-gularen",
+      "last commit date": "2025-01-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "hack": [
+    {
+      "url": "https://github.com/slackhq/tree-sitter-hack",
+      "last commit date": "2025-01-22",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "hare": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-hare",
+      "last commit date": "2024-07-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "haskell": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-haskell",
+      "last commit date": "2025-01-31",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "haskell_persistent": [
+    {
+      "url": "https://github.com/MercuryTechnologies/tree-sitter-haskell-persistent",
+      "last commit date": "2023-09-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "haxe": [
+    {
+      "url": "https://github.com/vantreeseba/tree-sitter-haxe",
+      "last commit date": "2024-09-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "hcl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-hcl",
+      "last commit date": "2025-06-15",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "heex": [
+    {
+      "url": "https://github.com/connorlay/tree-sitter-heex",
+      "last commit date": "2024-12-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "helm": [
+    {
+      "url": "https://github.com/ngalaiko/tree-sitter-go-template",
+      "last commit date": "2025-01-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "helma": [
+    {
+      "url": "https://github.com/kevinkeckeis/tree-sitter-helma",
+      "last commit date": "2023-02-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hjson": [
+    {
+      "url": "https://github.com/winston0410/tree-sitter-hjson",
+      "last commit date": "2021-08-02",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hlsl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-hlsl",
+      "last commit date": "2025-03-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "hlsplaylist": [
+    {
+      "url": "https://github.com/Freed-Wu/tree-sitter-hlsplaylist",
+      "last commit date": "2024-08-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hocon": [
+    {
+      "url": "https://github.com/antosha417/tree-sitter-hocon",
+      "last commit date": "2022-11-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hoon": [
+    {
+      "url": "https://github.com/urbit-pilled/tree-sitter-hoon",
+      "last commit date": "2024-12-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "html": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-html",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/EmranMR/tree-sitter-blade",
+      "last commit date": "2025-07-11",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "htmldjango": [
+    {
+      "url": "https://github.com/interdependence/tree-sitter-htmldjango",
+      "last commit date": "2025-04-16",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "http": [
+    {
+      "url": "https://github.com/PasiSalenius/tree-sitter-http",
+      "last commit date": "2022-07-27",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/rest-nvim/tree-sitter-http",
+      "last commit date": "2025-03-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hurl": [
+    {
+      "url": "https://github.com/pfeiferj/tree-sitter-hurl",
+      "last commit date": "2024-09-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "hyprlang": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-hyprlang",
+      "last commit date": "2025-06-03",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ibmhlasm": [
+    {
+      "url": "https://github.com/janus-llm/tree-sitter-ibmhlasm",
+      "last commit date": "2024-03-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "idl": [
+    {
+      "url": "https://github.com/cathaysia/tree-sitter-idl",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "idris": [
+    {
+      "url": "https://github.com/kayhide/tree-sitter-idris",
+      "last commit date": "2024-11-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "idris2": [
+    {
+      "url": "https://github.com/gwerbin/tree-sitter-idris2",
+      "last commit date": "2022-04-14",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "iex": [
+    {
+      "url": "https://github.com/elixir-lang/tree-sitter-iex",
+      "last commit date": "2022-01-08",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ini": [
+    {
+      "url": "https://github.com/justinmk/tree-sitter-ini",
+      "last commit date": "2025-06-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "inko": [
+    {
+      "url": "https://github.com/inko-lang/tree-sitter-inko",
+      "last commit date": "2025-02-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ispc": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-ispc",
+      "last commit date": "2023-08-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jack": [
+    {
+      "url": "https://github.com/nverno/tree-sitter-jack",
+      "last commit date": "2024-10-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jakt": [
+    {
+      "url": "https://github.com/demizer/tree-sitter-jakt",
+      "last commit date": "2025-03-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "janet": [
+    {
+      "url": "https://github.com/GrayJack/tree-sitter-janet",
+      "last commit date": "2021-07-19",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "janet_simple": [
+    {
+      "url": "https://github.com/sogaiu/tree-sitter-janet-simple",
+      "last commit date": "2025-05-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "java": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-java",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "javadoc": [
+    {
+      "url": "https://github.com/rmuir/tree-sitter-javadoc",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "javascript": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-javascript",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "jinja2": [
+    {
+      "url": "https://github.com/dbt-labs/tree-sitter-jinja2",
+      "last commit date": "2025-02-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jpp": [
+    {
+      "url": "https://github.com/nitreojs/tree-sitter-jpp",
+      "last commit date": "2022-11-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jq": [
+    {
+      "url": "https://github.com/nverno/tree-sitter-jq",
+      "last commit date": "2025-02-26",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/flurie/tree-sitter-jq",
+      "last commit date": "2025-05-10",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jsdoc": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-jsdoc",
+      "last commit date": "2025-01-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "json": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-json",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "json5": [
+    {
+      "url": "https://github.com/Joakker/tree-sitter-json5",
+      "last commit date": "2024-04-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "json_schema": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml",
+      "last commit date": "2025-05-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jsonc": [
+    {
+      "url": "https://gitlab.com/WhyNotHugo/tree-sitter-jsonc",
+      "last commit date": "2021-03-07",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "jsonnet": [
+    {
+      "url": "https://github.com/sourcegraph/tree-sitter-jsonnet",
+      "last commit date": "2024-08-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "julia": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-julia",
+      "last commit date": "2025-06-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "just": [
+    {
+      "url": "https://github.com/IndianBoy42/tree-sitter-just",
+      "last commit date": "2025-01-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "kcl": [
+    {
+      "url": "https://github.com/kcl-lang/tree-sitter-kcl",
+      "last commit date": "2025-02-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "kconfig": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-kconfig",
+      "last commit date": "2024-12-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "kdl": [
+    {
+      "url": "https://github.com/spaarmann/tree-sitter-kdl",
+      "last commit date": "2024-02-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-kdl",
+      "last commit date": "2024-06-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "koka": [
+    {
+      "url": "https://github.com/mtoohey31/tree-sitter-koka",
+      "last commit date": "2025-01-26",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "kotlin": [
+    {
+      "url": "https://github.com/fwcd/tree-sitter-kotlin",
+      "last commit date": "2025-04-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "koto": [
+    {
+      "url": "https://github.com/koto-lang/tree-sitter-koto",
+      "last commit date": "2025-07-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "kusto": [
+    {
+      "url": "https://github.com/Willem-J-an/tree-sitter-kusto",
+      "last commit date": "2023-11-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "lalrpop": [
+    {
+      "url": "https://github.com/traxys/tree-sitter-lalrpop",
+      "last commit date": "2025-03-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "latex": [
+    {
+      "url": "https://github.com/latex-lsp/tree-sitter-latex",
+      "last commit date": "2025-07-05",
+      "abi": "-",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "lean": [
+    {
+      "url": "https://github.com/Julian/tree-sitter-lean",
+      "last commit date": "2024-12-25",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ledger": [
+    {
+      "url": "https://github.com/cbarrete/tree-sitter-ledger",
+      "last commit date": "2025-03-31",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "legacy_schema": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml",
+      "last commit date": "2025-05-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "leo": [
+    {
+      "url": "https://github.com/r001/tree-sitter-leo",
+      "last commit date": "2025-01-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "lilypond": [
+    {
+      "url": "https://github.com/tristanperalta/tree-sitter-lilypond",
+      "last commit date": "2023-09-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "linkerscript": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-linkerscript",
+      "last commit date": "2023-11-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "liquid": [
+    {
+      "url": "https://github.com/Shopify/tree-sitter-liquid",
+      "last commit date": "2023-11-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/hankthetank27/tree-sitter-liquid",
+      "last commit date": "2025-05-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "liquidsoap": [
+    {
+      "url": "https://github.com/savonet/tree-sitter-liquidsoap",
+      "last commit date": "2025-07-12",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "llvm": [
+    {
+      "url": "https://github.com/benwilliamgraham/tree-sitter-llvm",
+      "last commit date": "2025-07-20",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "llvm_mir": [
+    {
+      "url": "https://github.com/Flakebi/tree-sitter-llvm-mir",
+      "last commit date": "2024-10-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "lua": [
+    {
+      "url": "https://github.com/Azganoth/tree-sitter-lua",
+      "last commit date": "2022-08-14",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tjdevries/tree-sitter-lua",
+      "last commit date": "2024-10-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-lua",
+      "last commit date": "2025-05-17",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "luadoc": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-luadoc",
+      "last commit date": "2024-02-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "luap": [
+    {
+      "url": "https://github.com/vhyrro/tree-sitter-luap",
+      "last commit date": "2022-03-12",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-luap",
+      "last commit date": "2024-06-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "luau": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-luau",
+      "last commit date": "2024-12-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/polychromatist/tree-sitter-luau",
+      "last commit date": "2025-03-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "m68k": [
+    {
+      "url": "https://github.com/grahambates/tree-sitter-m68k",
+      "last commit date": "2024-07-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "magik": [
+    {
+      "url": "https://github.com/krn-robin/tree-sitter-magik",
+      "last commit date": "2025-07-21",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "mail": [
+    {
+      "url": "https://github.com/stevenxxiu/tree-sitter-mail",
+      "last commit date": "2025-05-26",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "make": [
+    {
+      "url": "https://github.com/alemuller/tree-sitter-make",
+      "last commit date": "2021-12-16",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-make",
+      "last commit date": "2024-12-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "mal": [
+    {
+      "url": "https://github.com/sogaiu/tree-sitter-mal",
+      "last commit date": "2022-12-22",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "mandbconfig": [
+    {
+      "url": "https://github.com/TornaxO7/tree-sitter-man-db-config",
+      "last commit date": "2024-11-01",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "markdown": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown",
+      "last commit date": "2025-03-23",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "markdown_inline": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown",
+      "last commit date": "2025-03-23",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "math": [
+    {
+      "url": "https://github.com/DerekStride/tree-sitter-math",
+      "last commit date": "2021-07-31",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "matlab": [
+    {
+      "url": "https://github.com/mstanciu552/tree-sitter-matlab",
+      "last commit date": "2023-04-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/acristoffers/tree-sitter-matlab",
+      "last commit date": "2025-07-19",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "menhir": [
+    {
+      "url": "https://github.com/Kerl13/tree-sitter-menhir",
+      "last commit date": "2023-07-17",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "mermaid": [
+    {
+      "url": "https://github.com/monaqa/tree-sitter-mermaid",
+      "last commit date": "2024-04-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "meson": [
+    {
+      "url": "https://github.com/staysail/tree-sitter-meson",
+      "last commit date": "2022-11-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/Decodetalkers/tree-sitter-meson",
+      "last commit date": "2025-07-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "mlir": [
+    {
+      "url": "https://github.com/artagnon/tree-sitter-mlir",
+      "last commit date": "2025-07-18",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "modelica": [
+    {
+      "url": "https://github.com/modelicahub/tree-sitter-modelica",
+      "last commit date": "2024-09-10",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "monkey": [
+    {
+      "url": "https://github.com/jamestrew/tree-sitter-monkey",
+      "last commit date": "2022-11-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "move": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-move",
+      "last commit date": "2023-02-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "muttrc": [
+    {
+      "url": "https://github.com/neomutt/tree-sitter-muttrc",
+      "last commit date": "2024-08-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "nasm": [
+    {
+      "url": "https://github.com/naclsn/tree-sitter-nasm",
+      "last commit date": "2024-11-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "nginx": [
+    {
+      "url": "https://github.com/opa-oz/tree-sitter-nginx",
+      "last commit date": "2025-01-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://gitlab.com/joncoole/tree-sitter-nginx",
+      "last commit date": "2024-10-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "nickel": [
+    {
+      "url": "https://github.com/nickel-lang/tree-sitter-nickel",
+      "last commit date": "2025-06-02",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "nim": [
+    {
+      "url": "https://github.com/alaviss/tree-sitter-nim",
+      "last commit date": "2025-06-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "nim_format_string": [
+    {
+      "url": "https://github.com/aMOPel/tree-sitter-nim-format-string",
+      "last commit date": "2023-10-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ninja": [
+    {
+      "url": "https://github.com/alemuller/tree-sitter-ninja",
+      "last commit date": "2022-01-07",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "nix": [
+    {
+      "url": "https://github.com/nix-community/tree-sitter-nix",
+      "last commit date": "2025-07-18",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "noir": [
+    {
+      "url": "https://github.com/hhamud/tree-sitter-noir",
+      "last commit date": "2023-10-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "nois": [
+    {
+      "url": "https://github.com/nois-lang/tree-sitter-nois",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "norg_meta": [
+    {
+      "url": "https://github.com/nvim-neorg/tree-sitter-norg-meta",
+      "last commit date": "2024-04-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "nqc": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-nqc",
+      "last commit date": "2023-08-31",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "nu": [
+    {
+      "url": "https://github.com/LhKipp/tree-sitter-nu",
+      "last commit date": "2025-02-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/fdncred/tree-sitter-nu",
+      "last commit date": "2025-03-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/nushell/tree-sitter-nu",
+      "last commit date": "2025-07-16",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "objc": [
+    {
+      "url": "https://github.com/jiyee/tree-sitter-objc",
+      "last commit date": "2022-08-11",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-objc",
+      "last commit date": "2025-01-31",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "objdump": [
+    {
+      "url": "https://github.com/ColinKennedy/tree-sitter-objdump",
+      "last commit date": "2023-11-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ocaml": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-ocaml",
+      "last commit date": "2025-05-31",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ocaml_interface": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-ocaml",
+      "last commit date": "2025-05-31",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ocaml_type": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-ocaml",
+      "last commit date": "2025-05-31",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ocamllex": [
+    {
+      "url": "https://github.com/atom-ocaml/tree-sitter-ocamllex",
+      "last commit date": "2025-05-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "odin": [
+    {
+      "url": "https://github.com/MineBill/tree-sitter-odin",
+      "last commit date": "2022-11-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-odin",
+      "last commit date": "2024-12-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ohm": [
+    {
+      "url": "https://github.com/novusnota/tree-sitter-ohm",
+      "last commit date": "2024-03-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "openscad": [
+    {
+      "url": "https://github.com/bollian/tree-sitter-openscad",
+      "last commit date": "2024-03-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "org": [
+    {
+      "url": "https://github.com/milisims/tree-sitter-org",
+      "last commit date": "2023-06-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "p4": [
+    {
+      "url": "https://github.com/ace-design/tree-sitter-p4",
+      "last commit date": "2024-01-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "papyrus": [
+    {
+      "url": "https://github.com/open-papyrus/tree-sitter-papyrus",
+      "last commit date": "2022-11-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "pascal": [
+    {
+      "url": "https://github.com/Isopod/tree-sitter-pascal",
+      "last commit date": "2025-05-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "passwd": [
+    {
+      "url": "https://github.com/ath3/tree-sitter-passwd",
+      "last commit date": "2022-12-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "pem": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-pem",
+      "last commit date": "2025-07-18",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "perl": [
+    {
+      "url": "https://github.com/ganezdragon/tree-sitter-perl",
+      "last commit date": "2025-03-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-perl/tree-sitter-perl",
+      "last commit date": "2025-05-18",
+      "abi": "-",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "pgn": [
+    {
+      "url": "https://github.com/rolandwalker/tree-sitter-pgn",
+      "last commit date": "2024-10-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "php": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-php",
+      "last commit date": "2025-06-12",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "php_only": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-php",
+      "last commit date": "2025-06-12",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "phpdoc": [
+    {
+      "url": "https://github.com/claytonrcarter/tree-sitter-phpdoc",
+      "last commit date": "2025-04-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "pioasm": [
+    {
+      "url": "https://github.com/leo60228/tree-sitter-pioasm",
+      "last commit date": "2024-10-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "pkl": [
+    {
+      "url": "https://github.com/apple/tree-sitter-pkl",
+      "last commit date": "2025-05-05",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "plantuml": [
+    {
+      "url": "https://github.com/lyndsysimon/tree-sitter-plantuml",
+      "last commit date": "2021-12-09",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/Decodetalkers/tree_sitter_plantuml",
+      "last commit date": "2023-09-01",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "po": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-po",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "pod": [
+    {
+      "url": "https://github.com/tree-sitter-perl/tree-sitter-pod",
+      "last commit date": "2024-08-23",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": true
+    }
+  ],
+  "poe_filter": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-poe-filter",
+      "last commit date": "2025-06-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "pony": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-pony",
+      "last commit date": "2024-04-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "powershell": [
+    {
+      "url": "https://github.com/airbus-cert/tree-sitter-powershell",
+      "last commit date": "2025-07-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "printf": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-printf",
+      "last commit date": "2025-07-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "prisma": [
+    {
+      "url": "https://github.com/victorhqc/tree-sitter-prisma",
+      "last commit date": "2025-01-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "problog": [
+    {
+      "url": "https://codeberg.org/foxy/tree-sitter-prolog",
+      "last commit date": "2025-03-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "prolog": [
+    {
+      "url": "https://github.com/Rukiza/tree-sitter-prolog",
+      "last commit date": "2023-12-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://codeberg.org/foxy/tree-sitter-prolog",
+      "last commit date": "2025-03-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "promela": [
+    {
+      "url": "https://github.com/siraben/tree-sitter-promela",
+      "last commit date": "2022-02-11",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "promql": [
+    {
+      "url": "https://github.com/MichaHoffmann/tree-sitter-promql",
+      "last commit date": "2023-08-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "properties": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-properties",
+      "last commit date": "2025-07-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "proto": [
+    {
+      "url": "https://github.com/mitchellh/tree-sitter-proto",
+      "last commit date": "2021-06-12",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/treywood/tree-sitter-proto",
+      "last commit date": "2023-08-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "prql": [
+    {
+      "url": "https://github.com/PRQL/tree-sitter-prql",
+      "last commit date": "2023-07-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "psv": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-csv",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "pug": [
+    {
+      "url": "https://github.com/zealot128/tree-sitter-pug",
+      "last commit date": "2024-11-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "puppet": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-puppet",
+      "last commit date": "2024-12-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "purescript": [
+    {
+      "url": "https://github.com/postsolar/tree-sitter-purescript",
+      "last commit date": "2025-06-17",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "pymanifest": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-pymanifest",
+      "last commit date": "2025-07-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "python": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-python",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ql": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-ql",
+      "last commit date": "2024-11-10",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "qmldir": [
+    {
+      "url": "https://github.com/Decodetalkers/tree-sitter-qmldir",
+      "last commit date": "2023-03-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "qmljs": [
+    {
+      "url": "https://github.com/yuja/tree-sitter-qmljs",
+      "last commit date": "2025-04-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "quakec": [
+    {
+      "url": "https://github.com/vkazanov/tree-sitter-quakec",
+      "last commit date": "2024-07-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "query": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-query",
+      "last commit date": "2025-06-15",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "r": [
+    {
+      "url": "https://github.com/r-lib/tree-sitter-r",
+      "last commit date": "2025-06-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "racket": [
+    {
+      "url": "https://github.com/6cdh/tree-sitter-racket",
+      "last commit date": "2025-05-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ralph": [
+    {
+      "url": "https://github.com/alephium/tree-sitter-ralph",
+      "last commit date": "2024-06-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "rasi": [
+    {
+      "url": "https://github.com/Fymyte/tree-sitter-rasi",
+      "last commit date": "2025-04-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "razor": [
+    {
+      "url": "https://github.com/tris203/tree-sitter-razor",
+      "last commit date": "2025-02-17",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "rbs": [
+    {
+      "url": "https://github.com/joker1007/tree-sitter-rbs",
+      "last commit date": "2025-01-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "re2c": [
+    {
+      "url": "https://github.com/alemuller/tree-sitter-re2c",
+      "last commit date": "2021-12-31",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-re2c",
+      "last commit date": "2024-09-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "readline": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-readline",
+      "last commit date": "2024-10-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "rec": [
+    {
+      "url": "https://github.com/amaanq/tree-sitter-rec",
+      "last commit date": "2022-05-20",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "regex": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-regex",
+      "last commit date": "2025-01-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "rego": [
+    {
+      "url": "https://github.com/FallenAngel97/tree-sitter-rego",
+      "last commit date": "2024-06-12",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "requirements": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-requirements",
+      "last commit date": "2025-07-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "rescript": [
+    {
+      "url": "https://github.com/rescript-lang/tree-sitter-rescript",
+      "last commit date": "2025-03-03",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "rnoweb": [
+    {
+      "url": "https://github.com/bamonroe/tree-sitter-rnoweb",
+      "last commit date": "2022-10-20",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "robot": [
+    {
+      "url": "https://github.com/Hubro/tree-sitter-robot",
+      "last commit date": "2025-05-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "robots": [
+    {
+      "url": "https://github.com/opa-oz/tree-sitter-robots-txt",
+      "last commit date": "2024-06-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "roc": [
+    {
+      "url": "https://github.com/faldor20/tree-sitter-roc",
+      "last commit date": "2025-06-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ron": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-ron",
+      "last commit date": "2024-05-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "rst": [
+    {
+      "url": "https://github.com/stsewd/tree-sitter-rst",
+      "last commit date": "2025-02-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "rtf": [
+    {
+      "url": "https://github.com/GoodNotes/tree-sitter-rtf",
+      "last commit date": "2024-10-16",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "ruby": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-ruby",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "runescript": [
+    {
+      "url": "https://github.com/2004Scape/tree-sitter-runescript",
+      "last commit date": "2024-11-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "rust": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-rust",
+      "last commit date": "2025-04-02",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "satysfi": [
+    {
+      "url": "https://github.com/monaqa/tree-sitter-satysfi",
+      "last commit date": "2023-04-09",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "scala": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-scala",
+      "last commit date": "2025-06-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "scfg": [
+    {
+      "url": "https://git.sr.ht/~rockorager/tree-sitter-scfg",
+      "last commit date": "2024-07-10",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/rockorager/tree-sitter-scfg",
+      "last commit date": "2025-01-23",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "scheme": [
+    {
+      "url": "https://github.com/6cdh/tree-sitter-scheme",
+      "last commit date": "2025-05-25",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "scilab": [
+    {
+      "url": "https://github.com/nicolas-graves/tree-sitter-scilab",
+      "last commit date": "2025-01-10",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "scss": [
+    {
+      "url": "https://github.com/serenadeai/tree-sitter-scss",
+      "last commit date": "2022-02-03",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "sdml": [
+    {
+      "url": "https://github.com/sdm-lang/tree-sitter-sdml",
+      "last commit date": "2025-05-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sexp": [
+    {
+      "url": "https://github.com/AbstractMachinesLab/tree-sitter-sexp",
+      "last commit date": "2020-12-05",
+      "abi": "12",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sflog": [
+    {
+      "url": "https://github.com/aheber/tree-sitter-sfapex",
+      "last commit date": "2025-02-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "slang": [
+    {
+      "url": "https://github.com/theHamsta/tree-sitter-slang",
+      "last commit date": "2025-06-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "slim": [
+    {
+      "url": "https://github.com/theoo/tree-sitter-slim",
+      "last commit date": "2025-06-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "slint": [
+    {
+      "url": "https://github.com/slint-ui/slint",
+      "last commit date": "2025-06-20",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/slint-ui/tree-sitter-slint",
+      "last commit date": "2025-07-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "smali": [
+    {
+      "url": "https://git.sr.ht/~yotam/tree-sitter-smali",
+      "last commit date": "2023-05-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-smali",
+      "last commit date": "2024-05-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "smallbasic": [
+    {
+      "url": "https://github.com/comom87/tree-sitter-smallbasic",
+      "last commit date": "2025-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "smalltalk": [
+    {
+      "url": "https://github.com/tom95/tree-sitter-smalltalk",
+      "last commit date": "2023-10-05",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "smarty": [
+    {
+      "url": "https://github.com/Kibadda/tree-sitter-smarty",
+      "last commit date": "2023-11-15",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "smithy": [
+    {
+      "url": "https://github.com/indoorvivants/tree-sitter-smithy",
+      "last commit date": "2025-05-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sml": [
+    {
+      "url": "https://github.com/MatthewFluet/tree-sitter-sml",
+      "last commit date": "2025-05-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "snakemake": [
+    {
+      "url": "https://github.com/osthomas/tree-sitter-snakemake",
+      "last commit date": "2025-01-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "solidity": [
+    {
+      "url": "https://github.com/JoranHonig/tree-sitter-solidity",
+      "last commit date": "2025-01-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "soql": [
+    {
+      "url": "https://github.com/aheber/tree-sitter-sfapex",
+      "last commit date": "2025-02-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sosl": [
+    {
+      "url": "https://github.com/aheber/tree-sitter-sfapex",
+      "last commit date": "2025-02-12",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "souffle": [
+    {
+      "url": "https://github.com/langston-barrett/tree-sitter-souffle",
+      "last commit date": "2022-10-24",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sourcepawn": [
+    {
+      "url": "https://github.com/nilshelmig/tree-sitter-sourcepawn",
+      "last commit date": "2025-06-14",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "sparql": [
+    {
+      "url": "https://github.com/GordianDziwis/tree-sitter-sparql",
+      "last commit date": "2024-06-24",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "sql": [
+    {
+      "url": "https://github.com/tjdevries/tree-sitter-sql",
+      "last commit date": "2021-04-06",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/DerekStride/tree-sitter-sql",
+      "last commit date": "2025-04-11",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": true
+    }
+  ],
+  "sql_bigquery": [
+    {
+      "url": "https://github.com/takegue/tree-sitter-sql-bigquery",
+      "last commit date": "2025-01-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "sqlite": [
+    {
+      "url": "https://github.com/dhcmrlchtdj/tree-sitter-sqlite",
+      "last commit date": "2023-06-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "squirrel": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-squirrel",
+      "last commit date": "2024-07-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "ssh_client_config": [
+    {
+      "url": "https://github.com/metio/tree-sitter-ssh-client-config",
+      "last commit date": "2025-07-18",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ssh_config": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-ssh-config",
+      "last commit date": "2025-06-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "stan": [
+    {
+      "url": "https://github.com/WardBrian/tree-sitter-stan",
+      "last commit date": "2024-10-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "starlark": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-starlark",
+      "last commit date": "2024-12-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "strace": [
+    {
+      "url": "https://github.com/sigmaSd/tree-sitter-strace",
+      "last commit date": "2023-10-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "styled": [
+    {
+      "url": "https://github.com/mskelton/tree-sitter-styled",
+      "last commit date": "2025-02-24",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "supercollider": [
+    {
+      "url": "https://github.com/madskjeldgaard/tree-sitter-supercollider",
+      "last commit date": "2024-09-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "superhtml": [
+    {
+      "url": "https://github.com/kristoff-it/superhtml",
+      "last commit date": "2025-07-15",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "surface": [
+    {
+      "url": "https://github.com/connorlay/tree-sitter-surface",
+      "last commit date": "2022-01-18",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "surrealdb": [
+    {
+      "url": "https://github.com/DariusCorvus/tree-sitter-surrealdb",
+      "last commit date": "2024-02-20",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "svelte": [
+    {
+      "url": "https://github.com/Himujjal/tree-sitter-svelte",
+      "last commit date": "2024-09-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-svelte",
+      "last commit date": "2024-10-19",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "sway": [
+    {
+      "url": "https://github.com/FuelLabs/tree-sitter-sway",
+      "last commit date": "2024-11-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "swift": [
+    {
+      "url": "https://github.com/alex-pinkus/tree-sitter-swift",
+      "last commit date": "2025-07-20",
+      "abi": "-",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "sxhkdrc": [
+    {
+      "url": "https://github.com/RaafatTurki/tree-sitter-sxhkdrc",
+      "last commit date": "2022-08-31",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "systemrdl": [
+    {
+      "url": "https://github.com/SystemRDL/tree-sitter-systemrdl",
+      "last commit date": "2024-05-12",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    }
+  ],
+  "systemtap": [
+    {
+      "url": "https://github.com/ok-ryoko/tree-sitter-systemtap",
+      "last commit date": "2024-08-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "systemverilog": [
+    {
+      "url": "https://github.com/gmlarumbe/tree-sitter-systemverilog",
+      "last commit date": "2025-07-24",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "t32": [
+    {
+      "url": "https://codeberg.org/xasc/tree-sitter-t32",
+      "last commit date": "2025-07-19",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tablegen": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-tablegen",
+      "last commit date": "2024-05-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/Flakebi/tree-sitter-tablegen",
+      "last commit date": "2024-10-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tact": [
+    {
+      "url": "https://github.com/tact-lang/tree-sitter-tact",
+      "last commit date": "2025-05-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "tcl": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-tcl",
+      "last commit date": "2025-04-08",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "teal": [
+    {
+      "url": "https://github.com/euclidianAce/tree-sitter-teal",
+      "last commit date": "2025-05-14",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "templ": [
+    {
+      "url": "https://github.com/vrischmann/tree-sitter-templ",
+      "last commit date": "2025-06-15",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tera": [
+    {
+      "url": "https://github.com/uncenter/tree-sitter-tera",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "terraform": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-hcl",
+      "last commit date": "2025-06-15",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "textproto": [
+    {
+      "url": "https://github.com/PorterAtGoogle/tree-sitter-textproto",
+      "last commit date": "2024-10-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "thrift": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-thrift",
+      "last commit date": "2023-10-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "tiger": [
+    {
+      "url": "https://github.com/ambroisie/tree-sitter-tiger",
+      "last commit date": "2025-03-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tlaplus": [
+    {
+      "url": "https://github.com/tlaplus-community/tree-sitter-tlaplus",
+      "last commit date": "2025-05-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tmux": [
+    {
+      "url": "https://github.com/Freed-Wu/tree-sitter-tmux",
+      "last commit date": "2024-08-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "todotxt": [
+    {
+      "url": "https://github.com/arnarg/tree-sitter-todotxt",
+      "last commit date": "2024-01-15",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "toml": [
+    {
+      "url": "https://github.com/ikatyang/tree-sitter-toml",
+      "last commit date": "2021-05-11",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-toml",
+      "last commit date": "2024-12-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tsq": [
+    {
+      "url": "https://github.com/the-mikedavis/tree-sitter-tsq",
+      "last commit date": "2022-07-03",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-tsq",
+      "last commit date": "2024-02-24",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "tsv": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-csv",
+      "last commit date": "2024-04-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "tsx": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-typescript",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "tucan": [
+    {
+      "url": "https://github.com/mrnugget/tree-sitter-tucan",
+      "last commit date": "2022-10-28",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "tucanir": [
+    {
+      "url": "https://github.com/mrnugget/tree-sitter-tucanir",
+      "last commit date": "2022-06-19",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "turtle": [
+    {
+      "url": "https://github.com/GordianDziwis/tree-sitter-turtle",
+      "last commit date": "2024-07-02",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "twig": [
+    {
+      "url": "https://github.com/kaermorchen/tree-sitter-twig",
+      "last commit date": "2025-05-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/gbprod/tree-sitter-twig",
+      "last commit date": "2025-07-16",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "twitchchat": [
+    {
+      "url": "https://github.com/rockerBOO/tree-sitter-twitchchat",
+      "last commit date": "2020-12-04",
+      "abi": "12",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "typescript": [
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-typescript",
+      "last commit date": "2025-01-30",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "typespec": [
+    {
+      "url": "https://github.com/happenslol/tree-sitter-typespec",
+      "last commit date": "2025-06-21",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "typoscript": [
+    {
+      "url": "https://github.com/Teddytrombone/tree-sitter-typoscript",
+      "last commit date": "2025-03-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "typst": [
+    {
+      "url": "https://github.com/SeniorMars/tree-sitter-typst",
+      "last commit date": "2023-04-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/uben0/tree-sitter-typst",
+      "last commit date": "2025-02-10",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "udev": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-udev",
+      "last commit date": "2025-07-18",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ungrammar": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-ungrammar",
+      "last commit date": "2023-02-27",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "unifieddiff": [
+    {
+      "url": "https://github.com/monaqa/tree-sitter-unifieddiff",
+      "last commit date": "2022-12-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "unison": [
+    {
+      "url": "https://github.com/kylegoetz/tree-sitter-unison",
+      "last commit date": "2025-03-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "usd": [
+    {
+      "url": "https://github.com/ColinKennedy/tree-sitter-usd",
+      "last commit date": "2024-04-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "uxntal": [
+    {
+      "url": "https://github.com/Jummit/tree-sitter-uxntal",
+      "last commit date": "2024-03-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-uxntal",
+      "last commit date": "2024-05-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "v": [
+    {
+      "url": "https://github.com/nedpals/tree-sitter-v",
+      "last commit date": "2022-10-30",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/vlang/vls",
+      "last commit date": "2024-02-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/vlang/v-analyzer",
+      "last commit date": "2025-07-08",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vala": [
+    {
+      "url": "https://github.com/vala-lang/tree-sitter-vala",
+      "last commit date": "2024-10-30",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vbnet": [
+    {
+      "url": "https://github.com/CodeAnt-AI/tree-sitter-vb-dotnet",
+      "last commit date": "2025-07-24",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vento": [
+    {
+      "url": "https://github.com/ventojs/tree-sitter-vento",
+      "last commit date": "2024-12-29",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "verilog": [
+    {
+      "url": "https://github.com/gmlarumbe/tree-sitter-verilog",
+      "last commit date": "2023-01-20",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter/tree-sitter-verilog",
+      "last commit date": "2024-11-11",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vespa": [
+    {
+      "url": "https://github.com/bartek/tree-sitter-vespa",
+      "last commit date": "2023-02-07",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vhdl": [
+    {
+      "url": "https://github.com/alemuller/tree-sitter-vhdl",
+      "last commit date": "2022-01-08",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/jpt13653903/tree-sitter-vhdl",
+      "last commit date": "2025-07-22",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "vhs": [
+    {
+      "url": "https://github.com/charmbracelet/tree-sitter-vhs",
+      "last commit date": "2025-03-26",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vim": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-vim",
+      "last commit date": "2025-07-12",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "vimdoc": [
+    {
+      "url": "https://github.com/neovim/tree-sitter-vimdoc",
+      "last commit date": "2025-05-16",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vrl": [
+    {
+      "url": "https://github.com/belltoy/tree-sitter-vrl",
+      "last commit date": "2024-07-31",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "vue": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-vue",
+      "last commit date": "2023-07-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "wast": [
+    {
+      "url": "https://github.com/wasm-lsp/tree-sitter-wasm",
+      "last commit date": "2022-05-17",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "wat": [
+    {
+      "url": "https://github.com/wasm-lsp/tree-sitter-wasm",
+      "last commit date": "2022-05-17",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "wgsl": [
+    {
+      "url": "https://github.com/gpuweb/tree-sitter-wgsl",
+      "last commit date": "2025-09-10",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/mehmetoguzderin/tree-sitter-wgsl",
+      "last commit date": "2022-06-14",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/szebniok/tree-sitter-wgsl",
+      "last commit date": "2023-01-09",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "wgsl_bevy": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-wgsl-bevy",
+      "last commit date": "2024-06-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "wing": [
+    {
+      "url": "https://github.com/winglang/tree-sitter-wing",
+      "last commit date": "2024-09-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/winglang/wing",
+      "last commit date": "2025-02-03",
+      "abi": "-",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "wit": [
+    {
+      "url": "https://github.com/hh9527/tree-sitter-wit",
+      "last commit date": "2022-10-31",
+      "abi": "14",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/bytecodealliance/tree-sitter-wit",
+      "last commit date": "2025-06-30",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "x86asm": [
+    {
+      "url": "https://github.com/bearcove/tree-sitter-x86asm",
+      "last commit date": "2023-10-08",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "xcompose": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-xcompose",
+      "last commit date": "2025-07-17",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "xml": [
+    {
+      "url": "https://github.com/dorgnarg/tree-sitter-xml",
+      "last commit date": "2021-02-14",
+      "abi": "12",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/panicinc/tree-sitter-xml",
+      "last commit date": "2025-04-22",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-xml",
+      "last commit date": "2025-06-03",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "xquery": [
+    {
+      "url": "https://github.com/grantmacken/tree-sitter-xquery",
+      "last commit date": "2023-06-06",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "xresources": [
+    {
+      "url": "https://github.com/ValdezFOmar/tree-sitter-xresources",
+      "last commit date": "2025-07-13",
+      "abi": "15",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "yaml": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml",
+      "last commit date": "2025-05-28",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "yang": [
+    {
+      "url": "https://github.com/Hubro/tree-sitter-yang",
+      "last commit date": "2022-11-21",
+      "abi": "13",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "yuck": [
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-yuck",
+      "last commit date": "2024-05-05",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": true
+    }
+  ],
+  "zathurarc": [
+    {
+      "url": "https://github.com/Freed-Wu/tree-sitter-zathurarc",
+      "last commit date": "2024-08-04",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "zeek": [
+    {
+      "url": "https://github.com/zeek/tree-sitter-zeek",
+      "last commit date": "2025-07-01",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "zig": [
+    {
+      "url": "https://github.com/ziglibs/tree-sitter-zig",
+      "last commit date": "2023-09-27",
+      "abi": "-",
+      "grammar.json": false,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/GrayJack/tree-sitter-zig",
+      "last commit date": "2024-05-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/maxxnino/tree-sitter-zig",
+      "last commit date": "2024-10-13",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    },
+    {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-zig",
+      "last commit date": "2024-12-21",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ziggy": [
+    {
+      "url": "https://github.com/kristoff-it/ziggy",
+      "last commit date": "2025-07-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ],
+  "ziggy_schema": [
+    {
+      "url": "https://github.com/kristoff-it/ziggy",
+      "last commit date": "2025-07-23",
+      "abi": "14",
+      "grammar.json": true,
+      "external scanner": false
+    }
+  ]
+}

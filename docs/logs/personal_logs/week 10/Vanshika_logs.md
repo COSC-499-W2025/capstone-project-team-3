@@ -36,6 +36,7 @@
 ### Features Assigned to Me
 #170: Develop and test the parsing function for non-code files
 #205: Implement and execute parsing validation tests
+#219: Add and validate file size limits in the analysis pipeline
 
 ### Extra bonus tasks i worked for the enchancement 
 #219: Add and validate file size limits in the analysis pipeline

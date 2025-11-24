@@ -4,6 +4,8 @@ from typing import Tuple, Union, Dict
 from datetime import datetime
 import os, json, re, requests
 from typing import Optional
+from urllib.parse import quote
+
 
 
 def detect_git(path: Union[str, Path]) -> bool:
@@ -430,11 +432,12 @@ def extract_pull_request_metrics(
         return {"prs_merged": 0, "prs_reviewed": 0}
         
     owner, repo_name = remote_info
+    encoded_author = quote(author)
     
     # --- PRs Merged (Authored Contributions) ---
     # Metric 1: Count of PRs authored by user that were merged.
     # Uses the single, efficient Search API call.
-    merged_search_query = f"repo:{owner}/{repo_name} is:pr is:merged author:{author}"
+    merged_search_query = f"repo:{owner}/{repo_name} is:pr is:merged author:{encoded_author}"
     merged_url = f"{GITHUB_API_URL}/search/issues?q={merged_search_query}"
     
     prs_merged = _fetch_all_search_results(merged_url, github_token)

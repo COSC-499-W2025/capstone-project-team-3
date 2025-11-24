@@ -80,6 +80,15 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 ---
 
 ## In Progress Tasks
+| Task/Issue ID | Title            | Username |
+|---------------|------------------|----------|
+| #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
+| #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
+| #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
+| #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization
+    - Aggregate LLM1 Summaries into Unified Project Structure
+    -Generate LLM2 Prompt for Non-Code Analysis | @abstractafua     |
+| #164          | Integrate the overall project flow | @PaintedW0lf |
 
  
 

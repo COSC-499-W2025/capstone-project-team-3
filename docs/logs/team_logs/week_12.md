@@ -44,7 +44,13 @@
     * Integrate non code parsing flow into non code analysis #254
     * Integrate the overall project flow #164
     * Added functionality to calculate PR metrics #301
-    
+    * Create extract project names	#265
+    * Grammar loader	#282
+    * Template for `file_entity_utils`	#283
+    * Extract Classes	#284
+    * Extract Functions	#297
+    * Extract components	#298
+    * Extract Metrics	#312
 ---
 
 ## Burnup Chart
@@ -78,7 +84,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
 | #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
 | #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
-| #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
+|#210, #284, #283, #297,#298,| Extract File Entities, Extract Classes, Template for file_entity_utils, Extract functions, Extract components | @dabby04 |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
 
@@ -88,7 +94,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
-| #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
+| #312, #174       |  Extract metrics, and Parse code files (non-git)- Implementation of flow | @dabby04     |
 | #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
 | #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization
     - Aggregate LLM1 Summaries into Unified Project Structure
@@ -101,7 +107,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Meeting Notes
 
-### 4th November 2025 – Team Meeting (All members present)
+### 21st November 2025 – Team Meeting (All members present)
 - Code review session and clarifying any doubts
 
 ---

@@ -2,7 +2,7 @@
 Unit tests for non_3rd_party_analysis.py
 Tests document classification based on filename patterns and content analysis.
 """
-
+import re
 import pytest
 import sys
 from pathlib import Path
@@ -13,6 +13,7 @@ sys.path.insert(0, str(project_root))
 
 from app.utils.non_code_analysis.non_3rd_party_analysis import (
     classify_document_type,
+    extract_contribution_bullets
 )
 
 
@@ -103,5 +104,37 @@ class TestClassifyDocumentType:
         content = "API documentation with endpoints. API design guide. API reference."
         result = classify_document_type(content, Path("README.md"))
         assert result == "README"  # Filename wins
-    
-  
+ 
+def test_extract_contribution_bullets_api():
+    content = "Developed a RESTful API using FastAPI and PostgreSQL. Implemented JWT authentication for secure endpoints."
+    doc_type = "API_DOCUMENTATION"
+    metrics = {"word_count": len(content.split()), "heading_count": 1, "code_snippet_count": 0}
+    bullets = extract_contribution_bullets(content, doc_type, metrics)
+    assert any("Created structured API documentation outlining endpoints and request/response behavior." in b for b in bullets)
+    assert any("Fastapi" in b and "Postgresql" in b for b in bullets)
+    for b in bullets:
+        assert not re.search(r"\s+\d+\s*\.*$", b)
+
+def test_extract_contribution_bullets_proposal():
+    content = "Proposed a cloud migration strategy for legacy systems. Designed scalable architecture using AWS services."
+    doc_type = "PROPOSAL"
+    metrics = {"word_count": len(content.split()), "heading_count": 1, "code_snippet_count": 0}
+    bullets = extract_contribution_bullets(content, doc_type, metrics)
+    assert any(
+        "Developed project proposal outlining objectives, approach, and expected outcomes" in b or
+        "Produced organized documentation explaining concepts and implementation details." in b
+        for b in bullets
+    )
+    assert any("AWS" in b for b in bullets)
+    for b in bullets:
+        assert not re.search(r"\s+\d+\s*\.*$", b)
+
+def test_extract_contribution_bullets_readme():
+    content = "This project uses Python and Docker. Setup instructions are provided."
+    doc_type = "README"
+    metrics = {"word_count": len(content.split()), "heading_count": 1, "code_snippet_count": 0}
+    bullets = extract_contribution_bullets(content, doc_type, metrics)
+    assert any("Authored a complete README including setup, usage, and project structure." in b for b in bullets)
+    assert any("Python" in b and "Docker" in b for b in bullets)
+    for b in bullets:
+        assert not re.search(r"\s+\d+\s*\.*$", b)

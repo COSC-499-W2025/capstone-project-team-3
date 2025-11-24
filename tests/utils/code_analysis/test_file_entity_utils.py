@@ -4,13 +4,16 @@ from unittest.mock import MagicMock
 from app.utils.code_analysis.file_entity_utils import (
     classify_node_types,
     extract_class_names,
-    extract_doc_blocks_from_text,
-    match_docs_to_node,
-    extract_docstrings,
     walk_class_nodes,
     extract_single_class,
     extract_classes,
     extract_single_method,
+    extract_methods_from_class,
+    extract_method_name,
+    extract_method_parameters,
+    extract_method_calls,
+    extract_functions,
+    extract_entities,
 )
 
 def test_classify_node_types():
@@ -55,67 +58,6 @@ def test_extract_class_names_simple():
 
     assert result == ["Foo"]
 
-def test_extract_doc_blocks_from_text_python():
-    """Verify Python triple-quoted docstring blocks are extracted."""
-    content = '''
-        """Class doc"""
-        class Foo:
-            pass
-    '''
-    blocks = extract_doc_blocks_from_text(Path("foo.py"), content)
-
-    assert len(blocks) == 1
-    assert "Class doc" in blocks[0]
-
-
-def test_extract_doc_blocks_from_text_comments():
-    """Verify comment blocks are grouped together as documentation."""
-    content = """
-        // This is a comment
-        // Another comment
-        class Foo {}
-    """
-    blocks = extract_doc_blocks_from_text(Path("foo.js"), content)
-    assert len(blocks) >= 1
-    combined = blocks[0]
-    assert "This is a comment" in combined
-
-def test_match_docs_to_node_attaches_preceding_block():
-    """Ensure doc blocks immediately preceding a node are attached to it."""
-    text = """
-    /** Doc block */ class Foo {}
-    """
-    doc_blocks = ["/** Doc block */"]
-
-    node = make_node("class", text, text.index("class"), text.index("class") + 5)
-
-    matched = match_docs_to_node(node, text, doc_blocks)
-
-    assert matched is not None
-    assert doc_blocks[0] in matched
-
-
-def test_match_docs_to_node_none():
-    """Verify no docs are matched when unrelated blocks exist."""
-    text = "class Foo {}"
-    result = match_docs_to_node(
-        make_node("class", text, 0, len(text)), text, ["// unrelated"]
-    )
-
-    assert result is None
-
-def test_extract_docstrings_integration():
-    """Ensure extract_docstrings wires block extraction + matching."""
-    content = '''
-        /** Doc for Foo */ class Foo {}
-    '''
-    node = make_node("class", content, content.index("class"), len(content))
-
-    docs = extract_docstrings(node, content, Path("foo.js"))
-
-    assert docs is not None
-    assert "Doc for Foo" in docs[0]
-
 def test_walk_class_nodes_collects_classes():
     """Verify DFS walk finds class nodes and extracts them."""
     text = "class Foo {}"
@@ -138,7 +80,6 @@ def test_extract_classes():
 
     assert len(results) == 1
     assert "name" in results[0]
-    assert "docstring" in results[0]
 
 def test_extract_single_class_structure():
     """Verify extract_single_class returns the correct structured fields."""
@@ -150,7 +91,6 @@ def test_extract_single_class_structure():
 
     assert isinstance(extracted, dict)
     assert "name" in extracted
-    assert "docstring" in extracted
     assert "methods" in extracted
     assert extracted["methods"] == []
 
@@ -184,7 +124,6 @@ def test_extract_single_class_with_method():
     assert method['parameters'] == ['x']
     assert method['lines_of_code'] == 1
     assert 'calls' in method and method['calls'] == ['baz']
-    assert method['complexity'] >= 2  # "if" adds complexity
 
 def test_extract_single_method_direct():
     """Directly test method entity extraction utility."""
@@ -209,4 +148,164 @@ def test_extract_single_method_direct():
     assert method_entity['name'] == 'qux'
     assert method_entity['parameters'] == ['y']
     assert method_entity['calls'] == ['alpha', 'beta']
-    assert method_entity['complexity'] >= 2  # "if" keyword counted
+
+
+def test_extract_methods_from_class_including_decorated():
+    """Ensure extract_methods_from_class finds direct and decorated methods inside various body node types."""
+    text = (
+        'class Foo:\n'
+        '    @decor\n'
+        '    def bar(a, self): pass\n'
+        '    def baz(x): pass'
+    )
+    # bar method (decorated definition wrapper)
+    bar_name_idx = text.index('bar')
+    bar_name = make_node('identifier', text, bar_name_idx, bar_name_idx + 3)
+    bar_param_a_idx = text.index('(a') + 1
+    bar_param_a = make_node('identifier', text, bar_param_a_idx, bar_param_a_idx + 1)
+    bar_param_self_idx = text.index('self')
+    bar_param_self = make_node('identifier', text, bar_param_self_idx, bar_param_self_idx + 4)
+    bar_param_list = make_node('parameter_list', text, text.index('('), text.index(')') + 1, [bar_param_a, bar_param_self])
+    inner_bar_fn = make_node('function_definition', text, text.index('def bar'), text.index('pass') + 4, [bar_name, bar_param_list], start_line=1, end_line=1)
+    decorated_bar = make_node('decorated_definition', text, text.index('@decor'), text.index('pass') + 4, [inner_bar_fn])
+    # baz method
+    baz_name_idx = text.index('baz(')
+    baz_name = make_node('identifier', text, baz_name_idx, baz_name_idx + 3)
+    baz_param_x_idx = text.index('x)')
+    baz_param_x = make_node('identifier', text, baz_param_x_idx, baz_param_x_idx + 1)
+    baz_param_list = make_node('parameter_list', text, text.index('('), text.index(')') + 1, [baz_param_x])
+    baz_fn = make_node('function_definition', text, text.index('def baz'), text.rindex('pass') + 4, [baz_name, baz_param_list], start_line=2, end_line=2)
+    # class body container
+    class_body = make_node('class_body', text, text.index('\n    @decor'), len(text), [decorated_bar, baz_fn])
+    class_node = make_node('class_declaration', text, 0, len(text), [class_body])
+    methods = extract_methods_from_class(class_node, text, {'function_definition'}, Path('foo.py'))
+    names = sorted(m['name'] for m in methods)
+    assert names == ['bar', 'baz']
+    # ensure implicit receiver 'self' removed, 'a' kept
+    bar_entity = next(m for m in methods if m['name'] == 'bar')
+    assert bar_entity['parameters'] == ['a']
+
+
+def test_extract_method_name_nested():
+    """Method name nested one level deep should be found."""
+    text = 'def wrapper;'
+    inner_name_idx = text.index('wrapper')
+    inner_name = make_node('identifier', text, inner_name_idx, inner_name_idx + 7)
+    wrapper = make_node('declarator', text, inner_name_idx, inner_name_idx + 7, [inner_name])
+    fn = make_node('function_definition', text, 0, len(text), [wrapper])
+    assert extract_method_name(fn, text) == 'wrapper'
+
+
+def test_extract_method_parameters_nested_and_cleanup():
+    """Parameters nested under wrapper and implicit receivers removed and deduplicated."""
+    text = 'def f(self, this, a, a): pass'
+    a1_idx = text.index('a, a')
+    a1 = make_node('identifier', text, a1_idx, a1_idx + 1)
+    a2_idx = a1_idx + 3
+    a2 = make_node('identifier', text, a2_idx, a2_idx + 1)
+    self_idx = text.index('self')
+    self_node = make_node('identifier', text, self_idx, self_idx + 4)
+    this_idx = text.index('this')
+    this_node = make_node('identifier', text, this_idx, this_idx + 4)
+    inner_container = make_node('parameter_list', text, text.index('('), text.index(')') + 1, [self_node, this_node, a1, a2])
+    wrapper = make_node('declarator', text, text.index('('), text.index(')') + 1, [inner_container])
+    fn = make_node('function_definition', text, 0, len(text), [wrapper])
+    params = extract_method_parameters(fn, text)
+    assert params == ['a']
+
+
+def test_extract_method_calls_variants_and_filters():
+    """Extract calls from direct, nested attribute, and filter duplicates/single char/numeric."""
+    text = 'alpha(); obj.beta(); gamma(); alpha(); a(); 123();'
+    # Direct alpha call
+    alpha_idx = text.index('alpha(')
+    alpha_id = make_node('identifier', text, alpha_idx, alpha_idx + 5)
+    alpha_call = make_node('call_expression', text, alpha_idx, alpha_idx + 7, [alpha_id])
+    # Attribute call obj.beta()
+    beta_idx = text.index('beta(')
+    beta_id = make_node('property_identifier', text, beta_idx, beta_idx + 4)
+    attr_expr = make_node('attribute_expression', text, beta_idx, beta_idx + 4, [beta_id])
+    beta_call = make_node('call_expression', text, beta_idx, beta_idx + 6, [attr_expr])
+    # gamma call
+    gamma_idx = text.index('gamma(')
+    gamma_id = make_node('identifier', text, gamma_idx, gamma_idx + 5)
+    gamma_call = make_node('call_expression', text, gamma_idx, gamma_idx + 7, [gamma_id])
+    # duplicate alpha second occurrence
+    alpha2_idx = text.rindex('alpha(')
+    alpha2_id = make_node('identifier', text, alpha2_idx, alpha2_idx + 5)
+    alpha2_call = make_node('call_expression', text, alpha2_idx, alpha2_idx + 7, [alpha2_id])
+    # single char a()
+    a_idx = text.index('a();')
+    a_id = make_node('identifier', text, a_idx, a_idx + 1)
+    a_call = make_node('call_expression', text, a_idx, a_idx + 4, [a_id])
+    # numeric 123() should be ignored
+    n_idx = text.index('123(')
+    n_id = make_node('identifier', text, n_idx, n_idx + 3)
+    n_call = make_node('call_expression', text, n_idx, n_idx + 5, [n_id])
+    fn = make_node('function_definition', text, 0, len(text), [alpha_call, beta_call, gamma_call, alpha2_call, a_call, n_call])
+    calls = extract_method_calls(fn, text)
+    assert calls == ['alpha', 'beta', 'gamma']
+
+
+def test_extract_functions_free_standing_and_fallback():
+    """Verify free-standing functions detected and fallback heuristic catches unknown types."""
+    text = 'def foo(x): pass\nfunction bar(y): pass'
+    # foo function (recognized type)
+    foo_name_idx = text.index('foo')
+    foo_name = make_node('identifier', text, foo_name_idx, foo_name_idx + 3)
+    foo_param_idx = text.index('x')
+    foo_param = make_node('identifier', text, foo_param_idx, foo_param_idx + 1)
+    foo_param_list = make_node('parameter_list', text, text.index('('), text.index(')') + 1, [foo_param])
+    foo_fn = make_node('function_definition', text, text.index('def'), text.index('pass') + 4, [foo_name, foo_param_list], start_line=0, end_line=0)
+    # bar function (fallback detection: unknown node type with params + body)
+    bar_name_idx = text.index('bar')
+    bar_name = make_node('identifier', text, bar_name_idx, bar_name_idx + 3)
+    bar_param_idx = text.index('y')
+    bar_param = make_node('identifier', text, bar_param_idx, bar_param_idx + 1)
+    bar_param_list = make_node('parameters', text, text.index('(y'), text.index('(y') + 3, [bar_param])
+    body_block = make_node('block', text, text.index('bar'), text.rindex('pass') + 4, [])
+    bar_unknown = make_node('unknown_wrapper', text, text.index('function'), text.rindex('pass') + 4, [bar_name, bar_param_list, body_block], start_line=1, end_line=1)
+    root = make_node('root', text, 0, len(text), [foo_fn, bar_unknown])
+    funcs = extract_functions(root, text, ['function_definition'], ['class_declaration'], Path('foo.py'))
+    names = sorted(f['name'] for f in funcs if f['name'])
+    assert names == ['bar', 'foo']
+
+
+def test_extract_functions_no_nested_inside_class():
+    """Ensure functions inside class are not returned as free-standing."""
+    text = 'class C { def inner(): pass } def outer(): pass'
+    inner_name_idx = text.index('inner')
+    inner_name = make_node('identifier', text, inner_name_idx, inner_name_idx + 5)
+    inner_param_list = make_node('parameter_list', text, text.index('()'), text.index('()') + 2, [])
+    inner_fn = make_node('function_definition', text, text.index('def inner'), text.index('pass') + 4, [inner_name, inner_param_list])
+    class_node = make_node('class_declaration', text, text.index('class'), text.index('}') + 1, [inner_fn])
+    outer_name_idx = text.index('outer')
+    outer_name = make_node('identifier', text, outer_name_idx, outer_name_idx + 5)
+    outer_param_list = make_node('parameter_list', text, text.rindex('()'), text.rindex('()') + 2, [])
+    outer_fn = make_node('function_definition', text, text.index('def outer'), len(text), [outer_name, outer_param_list])
+    root = make_node('root', text, 0, len(text), [class_node, outer_fn])
+    funcs = extract_functions(root, text, ['function_definition'], ['class_declaration'], Path('foo.py'))
+    names = [f['name'] for f in funcs if f['name']]
+    assert names == ['outer']
+
+
+def test_extract_entities_structure():
+    """Extract entities returns expected structured keys and includes both classes & functions."""
+    text = 'class D { def m(): pass } def f(): pass'
+    m_name_idx = text.index('m')
+    m_name = make_node('identifier', text, m_name_idx, m_name_idx + 1)
+    m_param_list = make_node('parameter_list', text, text.index('()'), text.index('()') + 2, [])
+    m_fn = make_node('function_definition', text, text.index('def m'), text.index('pass') + 4, [m_name, m_param_list])
+    class_node = make_node('class_declaration', text, text.index('class'), text.index('}') + 1, [m_fn])
+    f_name_idx = text.index('f():')
+    f_name = make_node('identifier', text, f_name_idx, f_name_idx + 1)
+    f_param_list = make_node('parameter_list', text, text.rindex('()'), text.rindex('()') + 2, [])
+    f_fn = make_node('function_definition', text, text.index('def f'), len(text), [f_name, f_param_list])
+    root = make_node('root', text, 0, len(text), [class_node, f_fn])
+    tree_mock = MagicMock()
+    tree_mock.root_node = root
+    entities = extract_entities(tree_mock, text, ['class_declaration'], ['function_definition'], [], Path('foo.py'))
+    assert set(entities.keys()) == {'classes', 'functions', 'components'}
+    assert entities['components'] == []
+    assert len(entities['classes']) == 1
+    assert len(entities['functions']) == 1

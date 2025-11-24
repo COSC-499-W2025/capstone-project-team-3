@@ -3,7 +3,6 @@
 # Tracking TODOs:
 #  "detect_language":"str" --done
 #   "lines_of_code": "integer",    ---done      
-#   "docstring_count": "integer", ---done
 
 #   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
 #  Imports only returns full import statements, working to only extract the library...

@@ -13,9 +13,9 @@ from app.utils.scan_utils import scan_project_files
 # Extensions considered non-code
 NON_CODE_EXTENSIONS: Set[str] = {
     ".pdf", ".docx", ".doc", ".txt", ".md", ".markdown",
-    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg",
-    ".mp4", ".mov", ".avi", ".zip", ".tar", ".gz",
-    ".ppt", ".pptx", ".xls", ".xlsx"
+    ".jpg", ".jpeg", ".gif", ".bmp", ".svg",
+    ".mp4", ".mov", ".avi", ".tar", ".gz",
+    ".ppt", ".pptx"
 }
 
 

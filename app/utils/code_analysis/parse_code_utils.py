@@ -1,17 +1,3 @@
-# Question: do we want a project structure too?
-
-# Tracking TODOs:
-#  "detect_language":"str" --done
-#   "lines_of_code": "integer",    ---done      
-
-#   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
-#  Imports only returns full import statements, working to only extract the library...
-
-#   "dependencies_internal": ["string"] --done,   // Local imports within the project
-#   "top_keywords": ["string"],            // Most frequent meaningful identifiers
-#   "entities": { FileEntities },          // Structural elements (functions, classes, etc.)
-#   "metrics": { FileMetrics },            // Per-file stats
-
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 import json 
@@ -19,7 +5,7 @@ from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from pygount import SourceAnalysis
 from tree_sitter import Parser, Node, Query
-from tree_sitter_language_pack import get_language, get_parser
+from tree_sitter_language_pack import get_language
 from typing import List, Set
 import importlib.resources as pkg_resources
 import re
@@ -255,7 +241,10 @@ def extract_libraries(import_statements: List[str], language: str, project_names
                         if any(p in normalized_lib for p in project_names):
                             continue
 
-                    libraries.add(lib)
+                    normalized = normalize_library(lib, language)
+                    if normalized:
+                        libraries.add(normalized)
+
 
     return list(libraries)
 
@@ -333,6 +322,42 @@ def extract_internal_dependencies(import_statements: List[str], language: str, p
             if any(prefix in normalized_dep for prefix in project_names):
                 result.add(dep_clean)
     return list(result)
+
+def normalize_library(lib: str, language: str) -> str:
+    """
+    Normalize a library/module path
+
+    Rules:
+      - Drop the last segment of a dotted path (java.util.List -> java.util)
+      - Drop the last segment of slash paths except Go (lodash/array -> lodash)
+      - Preserve single-segment libraries (pytest, pathlib, mongoose)
+      - Ignore 'static' and similar keywords
+    """
+
+    if not lib or lib.lower() in {"static", "import", "require"}:
+        return None
+
+    #  Languages like with dot paths like Python, Java, ...
+    if "." in lib:
+        parts = lib.split(".")
+        if len(parts) > 1:
+            return ".".join(parts[:-1])
+        return lib
+
+    #  Languages with slash paths like JavaScript/TypeScript...
+    if "/" in lib and not lib.startswith("."):
+        parts = lib.split("/")
+        if len(parts) > 1:
+            # universal behavior: keep top-level package
+            return parts[0]
+        return lib
+
+    #  Go special-case (keep full import path)
+    if language in ("go", "golang"):
+        return lib
+
+    # Single-segment library: keep as-is
+    return lib
 
 def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, float]:
     """

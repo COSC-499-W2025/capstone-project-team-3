@@ -3,7 +3,12 @@
 **Team Name:** Team 3
 
 **Work Performed:** 
-
+- **Enhanced GitHub Analysis**: Implemented comprehensive commit analysis with pattern detection, technical keyword extraction, and resume generation capabilities
+- **Updated Analysis Architecture**: Modified code analysis system to support new JSON structure from parsing team while maintaining backward compatibility
+- **Non-Code Analysis Research**: Continued research and implementation of non-LLM analysis methods for non-code files
+- **Parsing Enhancements**: Added entity extraction, dependency mapping, and improved language detection
+- **CI/CD Improvements**: Implemented security scanning, automated testing pipelines, and workflow optimization
+- **Git Integration**: Enhanced git history extraction and collaboration detection features
 ---
 
 ## Recap of Milestone Goals
@@ -68,7 +73,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #226, #227 | Implement scanning flow to the project's main, Fix analysis bugs and refactor code - Code Analysis Section,   | @KarimKhalil33 |
+| #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
 | #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
 | #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
@@ -81,7 +86,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
+| #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
 | #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
 | #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
 | #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization

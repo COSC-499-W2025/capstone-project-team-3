@@ -44,6 +44,13 @@
     * Integrate non code parsing flow into non code analysis #254
     * Integrate the overall project flow #164
     * Added functionality to calculate PR metrics #301
+    * Add git metadata collection & collaboration filtering #251
+    * User identity & contribution verification (Pt-4) #255
+    * Final classification orchestrator (Pt-5) #267
+    * Document identification via analysis #279
+    * Summary generation (offline NLP) #280
+    * Extract technical keywords using KeyBERT #281
+    * Generate bullet points (offline) #315
 
     
 ---

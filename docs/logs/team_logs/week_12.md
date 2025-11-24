@@ -15,6 +15,7 @@
     * Code and non code analysis in WBS (starting most features)
     * Extrapolate individual contributions for a given collaboration project
     * Distinguish individual projects from collaborative projects
+    * Project Ranking based on user contributions
   
 - **Associated project board tasks:**
     * 227: Implement scanning flow to the project's main
@@ -37,6 +38,7 @@
     * Testing for Non Code Parsing Flow into Non-code Analysis #274
     * Integrate non code parsing flow into non code analysis #254
     * Integrate the overall project flow #164
+    * Added functionality to calculate PR metrics #301
     
 ---
 
@@ -73,12 +75,11 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
-| #160, #94,  #48, #113, #92, #181, #224    | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo   | @kjassani    |
+| #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
 
 ---
 
 ## In Progress Tasks
-
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #228          |  Research and fine tune non LLM analysis - Code Analysis | @KarimKhalil33      |
@@ -88,6 +89,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
     - Aggregate LLM1 Summaries into Unified Project Structure
     -Generate LLM2 Prompt for Non-Code Analysis | @abstractafua     |
 | #164          | Integrate the overall project flow | @PaintedW0lf |
+
+ 
 
 ---
 

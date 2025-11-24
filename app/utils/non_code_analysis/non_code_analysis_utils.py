@@ -1,9 +1,10 @@
+import os
 import re
 from pathlib import Path
 from typing import List, Dict
 from collections import Counter
 from app.client.llm_client import GeminiLLMClient
-from app.shared.text.parsed_input_text import sample_parsed_files
+from app.shared.test_data.parsed_input_text import sample_parsed_files
 from app.utils.user_preference_utils import UserPreferenceStore
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
@@ -11,6 +12,7 @@ from sumy.summarizers.lsa import LsaSummarizer
 from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
 import textstat
+import json
 import spacy
 
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
@@ -432,11 +434,39 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
 def generate_non_code_insights(PROMPT):
     """
     Generates llm2_metrics by calling LLM2 with the formatted prompt.
-    Returns Final_Result
+    Returns Response
     """
-    LLM2 = GeminiLLMClient()
-    response = LLM2.generate(PROMPT)
+    env_path = Path(__file__).resolve().parent / ".env"
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+    LLM2 = None
+    if GeminiLLMClient().__init__:
+        LLM2 = GeminiLLMClient(GEMINI_API_KEY)
+        response = clean_response(LLM2.generate(PROMPT))
+    else:
+        
+        response = {}
+        raise EnvironmentError("No LLM2 client is available for non-code analysis.")
+    
     return response
+
+def clean_response(response):
+    """
+    Clean and parse the response from LLM2 to ensure it is valid JSON.
+    """
+    try:
+        # Attempt to parse the response directly
+        result = json.loads(response)
+        return result
+    except json.JSONDecodeError:
+        # If direct parsing fails, try to extract JSON from the response
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            try:
+                result = json.loads(json_match.group(0))
+                return result
+            except json.JSONDecodeError:
+                pass
+    raise ValueError("Failed to parse LLM2 response as JSON")
 
 #TODO Step 6: Store results
 def store_non_code_analysis_results(final_result):
@@ -465,121 +495,6 @@ def analyze_non_code_files(parsed_files):
     # 5. Store Data
     #store_non_code_analysis_results(Final_Result)
 
-
-# Hardcoded function for CLI run
-if __name__ == "__main__":
-    # Sample parsed_files object matching the structure from document_parser
-    sample_parsed_files = {
-        "parsed_files": [
-            {
-                "path": "/test/project_proposal.pdf",
-                "name": "project_proposal.pdf",
-                "type": "pdf",
-                "content": """Project Overview: This proposal outlines a comprehensive event-driven analytics platform for Team 3. 
-                The system will ingest non-code artifacts to derive resume-ready highlights and map extracted content to skills and contributions.
-                
-                System Architecture: The platform uses an event-driven architecture with queue-based decoupling. 
-                This design ensures scalability and maintainability. The system consists of multiple microservices that communicate through message queues.
-                
-                Key Features: The platform includes document parsing capabilities for PDF, DOCX, and text files. 
-                It implements natural language processing for skill extraction and contribution analysis. 
-                The system provides a dashboard for visualizing project insights and generating resume summaries.
-                
-                Milestones: The project is divided into four main milestones. 
-                M1 focuses on requirements gathering and system design. 
-                M2 implements core parsing and analysis functionality. 
-                M3 adds advanced NLP and visualization features. 
-                M4 focuses on testing, optimization, and deployment.
-                
-                Risks and Mitigation: Key risks include data latency issues and OCR quality concerns. 
-                We will mitigate these through careful system design and robust error handling. 
-                Performance testing will be conducted throughout development.
-                
-                Team Roles: The team consists of backend developers, frontend developers, and a project manager. 
-                Each member has specific responsibilities aligned with their expertise areas.""",
-                "success": True,
-                "error": ""
-            },
-            {
-                "path": "/test/requirements_doc.txt",
-                "name": "requirements_doc.txt",
-                "type": "txt",
-                "content": """Requirements Document for Analytics Platform
-                
-                Functional Requirements:
-                1. The system must parse PDF, DOCX, and text files
-                2. The system must extract key topics and generate summaries
-                3. The system must identify skills and contributions from documents
-                4. The system must provide a user-friendly dashboard interface
-                
-                Non-Functional Requirements:
-                1. The system must process documents within 5 seconds
-                2. The system must support files up to 5MB in size
-                3. The system must maintain 99% uptime
-                4. The system must be secure and protect user data
-                
-                Technical Stack: Python, FastAPI, React, PostgreSQL, Docker
-                Development Timeline: 12 weeks with 4 major milestones
-                Success Criteria: All functional requirements met, positive user feedback""",
-                "success": True,
-                "error": ""
-            },
-            {
-
-                "path":   "/files/file_three.txt",
-                "name": "file_three.pdf",
-                "type": "txt",
-                "content" : """Artificial intelligence (AI) has transformed nearly every industry in the 21st century. 
-                From self-driving cars to medical diagnostics, AI-driven systems are capable of processing 
-                vast amounts of data and identifying complex patterns that humans might overlook. 
-                However, while the potential of AI is immense, the challenges that accompany it are equally significant. 
-                Issues surrounding ethics, data privacy, and algorithmic bias have sparked debates among 
-                technologists, policymakers, and philosophers alike.
-
-                One of the most visible impacts of AI can be seen in healthcare. Machine learning models can now 
-                detect anomalies in medical imaging, predict patient outcomes, and even recommend treatment plans. 
-                In many cases, AI tools have matched or exceeded the accuracy of human specialists. 
-                Yet, this progress also raises important questions: who is responsible when an AI system makes a mistake? 
-                Should patients have the right to refuse treatment recommendations generated by an algorithm?
-
-                In business, AI is being used to automate repetitive tasks and analyze customer behavior at scale. 
-                Recommendation systems on streaming platforms and online stores are prime examples of this technology 
-                in action. These systems continuously learn from user interactions, adapting to provide more personalized 
-                experiences. Still, critics argue that such systems often create “echo chambers,” limiting exposure to 
-                diverse perspectives or products.
-
-                Education is another domain undergoing transformation. Adaptive learning platforms can tailor lessons to 
-                each students progress, providing real-time feedback and helping educators identify areas where students 
-                struggle most. But with this customization comes concern over data collection. How much information should 
-                educational institutions collect about their students? And who ensures that sensitive data is not misused?
-
-                As AI continues to evolve, regulation becomes increasingly critical. Many governments have proposed or 
-                implemented frameworks aimed at ensuring transparency and fairness. The European Union, for instance, 
-                has introduced legislation requiring companies to explain the decisions made by their AI systems. 
-                This push toward explainable AI reflects a growing global consensus: powerful algorithms must remain accountable.
-
-                Looking ahead, the role of AI in creative industries is set to expand dramatically. From generating 
-                artwork and composing music to writing articles and screenplays, AI is blurring the boundaries between 
-                human and machine creativity. This evolution presents both an opportunity and a challenge — can AI truly 
-                be creative, or is it merely reflecting the creativity of its human programmers?
-
-                In conclusion, while AI offers revolutionary benefits, its responsible development and use will determine 
-                whether it serves humanity as a tool for progress or becomes a source of division and control. 
-                Balancing innovation with ethics, privacy, and accountability remains the central challenge in the 
-                next era of technological advancement.""",
-                "success" : True,
-                "error" : ""},
-            {
-                "path": "/test/failed_file.pdf",
-                "name": "failed_file.pdf",
-                "type": "pdf",
-                "content": "",
-                "success": False,
-                "error": "File parsing failed"
-            }
-        ]
-    }
-    
 def run_pipeline():
     """
     Main pipeline to process non-code files, aggregate summaries, and generate project metrics.

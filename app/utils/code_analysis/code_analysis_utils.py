@@ -92,29 +92,47 @@ def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
 def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str]:
     """
     Extract meaningful technical keywords from parsed files using shared helpers.
+    Updated to handle new JSON structure with entities.
     """
     all_identifiers = []
     all_imports = []
     
     for file in parsed_files:
-        # Collect function names, component names, and other identifiers
-        functions = file.get("functions", [])
-        components = file.get("components", [])
-        imports = file.get("imports", [])
+        # Handle both old and new structure for backward compatibility
+        entities = file.get("entities", {})
         
-        # Extract function names and calls
+        # Extract from functions (new structure: entities.functions, old: functions)
+        functions = entities.get("functions", []) or file.get("functions", [])
         for func in functions:
             all_identifiers.append(func.get("name", ""))
             all_identifiers.extend(func.get("calls", []))
         
-        # Extract component names, props, and hooks
+        # Extract from components (new structure: entities.components, old: components)  
+        components = entities.get("components", []) or file.get("components", [])
         for comp in components:
             all_identifiers.append(comp.get("name", ""))
             all_identifiers.extend(comp.get("props", []))
             all_identifiers.extend(comp.get("state_variables", []))
             all_identifiers.extend(comp.get("hooks_used", []))
         
-        all_imports.extend(imports)
+        # Extract from classes (new structure only)
+        classes = entities.get("classes", [])
+        for cls in classes:
+            class_name = cls.get("name")
+            if class_name:  # Skip null class names
+                all_identifiers.append(class_name)
+            
+            # Extract methods from classes
+            methods = cls.get("methods", [])
+            for method in methods:
+                method_name = method.get("name")
+                if method_name:  # Skip null method names
+                    all_identifiers.append(method_name)
+                    all_identifiers.extend(method.get("calls", []))
+        
+        # Handle imports and internal dependencies
+        all_imports.extend(file.get("imports", []))
+        all_imports.extend(file.get("dependencies_internal", []))
     
     # Clean and filter technical terms using shared helpers
     tech_keywords = set()
@@ -255,7 +273,7 @@ def generate_github_resume_summary(metrics: Dict) -> List[str]:
     total_files = metrics.get('total_files_changed', 0)
     
     if code_files > 0:
-        summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files enhanced")
+        summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files modified")
     elif total_files > 0:
         # FALLBACK: If no code files detected, mention total files changed
         summary.append(f"Modified {total_files} project files, including {files_added} new additions and {files_modified} enhancements")
@@ -404,6 +422,7 @@ def infer_roles_from_commit_files(files):
 
     return roles
 
+
 def _detect_design_patterns(all_identifiers: List[str], function_names: List[str]) -> List[str]:
     """Helper: Detect design patterns from code identifiers."""
     patterns = []
@@ -415,12 +434,22 @@ def _detect_design_patterns(all_identifiers: List[str], function_names: List[str
         if sum(1 for name in function_names if any(pattern in name for pattern in creation_patterns)) >= 2:
             patterns.append("Factory Pattern")
     
-    # Observer Pattern
-    observer_indicators = ["observer", "observable", "subject", "subscriber", "notify", "emit", "subscribe"]
-    if any(any(indicator in name for indicator in observer_indicators) for name in all_identifiers):
-        observer_methods = ["subscribe", "notify", "emit", "listen", "observe", "update"]
-        if sum(1 for name in function_names if any(method in name for method in observer_methods)) >= 2:
-            patterns.append("Observer Pattern")
+    # Observer Pattern - FIXED LOGIC
+    observer_indicators = ["observer", "observable", "subject", "subscriber", "notify", "emit", "subscribe", "broadcast", "update"]
+    observer_count = 0
+    
+    # Check for observer-related identifiers
+    for identifier in all_identifiers:
+        if any(indicator in identifier.lower() for indicator in observer_indicators):
+            observer_count += 1
+    
+    # Check for observer-related method names
+    observer_methods = ["subscribe", "notify", "emit", "listen", "observe", "update", "broadcast", "notify_subscribers"]
+    observer_method_count = sum(1 for name in function_names if any(method in name.lower() for method in observer_methods))
+    
+    # If we have multiple observer indicators or at least one clear observer method
+    if observer_count >= 2 or observer_method_count >= 1:
+        patterns.append("Observer Pattern")
     
     # Strategy Pattern
     strategy_indicators = ["strategy", "algorithm", "handler", "processor"]
@@ -560,7 +589,7 @@ def _analyze_development_practices(all_components: List[Dict], detected_framewor
 def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
     """
     Analyze code patterns, architecture, and practices from parsed files.
-    Now refactored into focused helper functions for maintainability.
+    Updated to handle new JSON structure with entities.
     """
     patterns = {
         "frameworks_detected": [],
@@ -570,31 +599,60 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
         "technology_stack": []
     }
     
-    # Collect all data
+    # Collect all data from both old and new structures
     all_imports = []
     all_functions = []
     all_components = []
+    all_classes = []
     
     for file in parsed_files:
         all_imports.extend(file.get("imports", []))
-        all_functions.extend(file.get("functions", []))
-        all_components.extend(file.get("components", []))
+        all_imports.extend(file.get("dependencies_internal", []))
+        
+        entities = file.get("entities", {})
+        
+        # Handle functions (new: entities.functions, old: functions)
+        functions = entities.get("functions", []) or file.get("functions", [])
+        all_functions.extend(functions)
+        
+        # Handle components (new: entities.components, old: components)
+        components = entities.get("components", []) or file.get("components", [])
+        all_components.extend(components)
+        
+        # Handle classes (new structure only)
+        classes = entities.get("classes", [])
+        all_classes.extend([cls for cls in classes if cls.get("name")])  # Filter out null names
     
-    # Extract identifiers
-    function_names = [func.get("name", "").lower() for func in all_functions]
-    component_names = [comp.get("name", "").lower() for comp in all_components]
+    # Extract identifiers from all sources
+    function_names = []
     function_calls = []
+        # From standalone functions
     for func in all_functions:
-        function_calls.extend([call.lower() for call in func.get("calls", [])])
+        name = func.get("name", "")
+        if name:
+            function_names.append(name.lower())
+            function_calls.extend([call.lower() for call in func.get("calls", [])])
     
-    all_identifiers = function_names + component_names + function_calls
+    # From class methods
+    for cls in all_classes:
+        methods = cls.get("methods", [])
+        for method in methods:
+            name = method.get("name", "")
+            if name:
+                function_names.append(name.lower())
+                function_calls.extend([call.lower() for call in method.get("calls", [])])
+    
+    component_names = [comp.get("name", "").lower() for comp in all_components if comp.get("name")]
+    class_names = [cls.get("name", "").lower() for cls in all_classes if cls.get("name")]
+    
+    all_identifiers = function_names + component_names + class_names + function_calls
     import_str = ' '.join(all_imports).lower()
     
     # Use helper functions for focused analysis
     patterns["frameworks_detected"] = _detect_frameworks(all_imports)
     patterns["design_patterns"] = _detect_design_patterns(all_identifiers, function_names)
     patterns["architectural_patterns"] = _detect_architectural_patterns(
-        all_identifiers, function_names, component_names, import_str)
+        all_identifiers, function_names, component_names + class_names, import_str)
     patterns["development_practices"] = _analyze_development_practices(
         all_components, patterns["frameworks_detected"])
     
@@ -603,8 +661,7 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
                          if fw in ['Flask', 'Django', 'Express.js', 'Spring', 'Laravel', 'Ruby on Rails']]
     if backend_frameworks:
         patterns["architectural_patterns"].append("Web API Development")
-    
-    # Technology stack
+        # Technology stack
     languages = set()
     for file in parsed_files:
         lang = file.get("language", "")
@@ -617,23 +674,26 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
 def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
     """
     Calculate advanced complexity metrics from parsed files.
+    Updated to handle new JSON structure with entities.
     """
     complexity_metrics = {
         "function_complexity": [],
         "component_complexity": [],
+        "class_complexity": [],  # New for classes
         "maintainability_factors": {}
     }
     
     total_functions = 0
     total_components = 0
+    total_classes = 0
     total_lines = 0
     
     for file in parsed_files:
         total_lines += file.get("lines_of_code", 0)
-        functions = file.get("functions", [])
-        components = file.get("components", [])
+        entities = file.get("entities", {})
         
-        # Analyze function complexity
+        # Handle functions (new: entities.functions, old: functions)
+        functions = entities.get("functions", []) or file.get("functions", [])
         for func in functions:
             total_functions += 1
             func_lines = func.get("lines_of_code", 0)
@@ -644,28 +704,51 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
             complexity_score = func_lines + calls + (params * 2)
             complexity_metrics["function_complexity"].append(complexity_score)
         
-        # Analyze component complexity
+        # Handle components (new: entities.components, old: components)
+        components = entities.get("components", []) or file.get("components", [])
         for comp in components:
             total_components += 1
             props = len(comp.get("props", []))
             state_vars = len(comp.get("state_variables", []))
             hooks = len(comp.get("hooks_used", []))
             
-            # Component complexity score
+                        # Component complexity score
             comp_complexity = props + (state_vars * 2) + hooks
             complexity_metrics["component_complexity"].append(comp_complexity)
+        
+        # Handle classes (new structure only)
+        classes = entities.get("classes", [])
+        for cls in classes:
+            if not cls.get("name"):  # Skip null class names
+                continue
+                
+            total_classes += 1
+            methods = cls.get("methods", [])
+            total_class_lines = 0
+            total_class_calls = 0
+            
+            for method in methods:
+                if method.get("name"):  # Skip null method names
+                    total_class_lines += method.get("lines_of_code", 0)
+                    total_class_calls += len(method.get("calls", []))
+            
+            # Class complexity based on methods, lines, and calls
+            class_complexity = len(methods) + (total_class_lines // 10) + total_class_calls
+            complexity_metrics["class_complexity"].append(class_complexity)
     
     # Calculate maintainability factors
-    if complexity_metrics["function_complexity"]:
-        avg_func_complexity = sum(complexity_metrics["function_complexity"]) / len(complexity_metrics["function_complexity"])
-        high_complexity_funcs = sum(1 for c in complexity_metrics["function_complexity"] if c > 50)
+    all_complexities = complexity_metrics["function_complexity"] + complexity_metrics["class_complexity"]
+    
+    if all_complexities:
+        avg_complexity = sum(all_complexities) / len(all_complexities)
+        high_complexity_items = sum(1 for c in all_complexities if c > 50)
         
         complexity_metrics["maintainability_factors"] = {
-            "average_function_complexity": round(avg_func_complexity, 2),
-            "high_complexity_functions": high_complexity_funcs,
-            "complexity_ratio": round(high_complexity_funcs / max(total_functions, 1), 2),
-            "functions_per_file": round(total_functions / max(len(parsed_files), 1), 2),
-            "lines_per_function": round(total_lines / max(total_functions, 1), 2) if total_functions > 0 else 0
+            "average_function_complexity": round(avg_complexity, 2),
+            "high_complexity_functions": high_complexity_items,
+            "complexity_ratio": round(high_complexity_items / max(len(all_complexities), 1), 2),
+            "functions_per_file": round((total_functions + total_classes) / max(len(parsed_files), 1), 2),
+            "lines_per_function": round(total_lines / max(total_functions + total_classes, 1), 2) if (total_functions + total_classes) > 0 else 0
         }
     
     return complexity_metrics
@@ -673,6 +756,7 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
 def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
     """
     Generate detailed resume summary using enhanced NLP analysis for local projects.
+    Updated to handle new metrics including classes and internal dependencies.
     """
     summary = []
     
@@ -718,26 +802,39 @@ def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
         elif avg_complexity < 50:
             summary.append("Achieved good code maintainability with moderate complexity functions")
     
-    # Component and function metrics
+    # Component, function, and class metrics (updated for new structure)
     functions = metrics.get('functions', 0)
     components = metrics.get('components', 0)
+    classes = metrics.get('classes', 0)
     
-    if functions > 0:
-        summary.append(f"Architected {functions} functions" + (f" and {components} components" if components > 0 else ""))
+    if functions > 0 or components > 0 or classes > 0:
+        architecture_parts = []
+        if functions > 0:
+            architecture_parts.append(f"{functions} functions")
+        if classes > 0:
+            architecture_parts.append(f"{classes} classes")
+        if components > 0:
+            architecture_parts.append(f"{components} components")
+        
+        summary.append(f"Architected {' and '.join(architecture_parts)}")
     
-    # Import analysis
+    # Import and dependency analysis (updated for new structure)
     imports = metrics.get('imports', [])
+    internal_deps = metrics.get('dependencies_internal', [])
+    
     if len(imports) > 5:
         summary.append(f"Integrated {len(imports)} external libraries and dependencies for enhanced functionality")
     
+    if len(internal_deps) > 3:
+        summary.append(f"Designed modular architecture with {len(internal_deps)} internal dependencies promoting code reusability")
+    
     return summary
-
 
 # Aggregate metrics from parsed source files
 def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     """
     Aggregates key metrics from a list of parsed file dicts.
-    Returns a dictionary of project-level statistics.
+    Updated to handle new JSON structure with entities.
     """
     metrics = {
         "languages": set(),
@@ -745,8 +842,10 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         "total_lines": 0,
         "functions": 0,
         "components": 0,
+        "classes": 0,  # New for classes
         "roles": set(),
         "imports": set(),
+        "dependencies_internal": set(),  # New for internal dependencies
         "average_function_length": [],
         "comment_ratios": [],
     }
@@ -756,10 +855,30 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         metrics["languages"].add(file.get("language"))
         metrics["total_files"] += 1
         metrics["total_lines"] += file.get("lines_of_code", 0)
-        metrics["functions"] += len(file.get("functions", []))
-        metrics["components"] += len(file.get("components", []))
-        metrics["roles"].update(infer_roles_from_file(file))
+        
+        # Handle imports and internal dependencies
         metrics["imports"].update(file.get("imports", []))
+        metrics["dependencies_internal"].update(file.get("dependencies_internal", []))
+        
+        entities = file.get("entities", {})
+        
+        # Count functions (new: entities.functions, old: functions)
+        functions = entities.get("functions", []) or file.get("functions", [])
+        metrics["functions"] += len(functions)
+        
+        # Count components (new: entities.components, old: components)
+        components = entities.get("components", []) or file.get("components", [])
+        metrics["components"] += len(components)
+        
+        # Count classes (new structure only) - exclude null names
+        classes = entities.get("classes", [])
+        valid_classes = [cls for cls in classes if cls.get("name")]
+        metrics["classes"] += len(valid_classes)
+        
+        # Infer roles from file
+        metrics["roles"].update(infer_roles_from_file(file))
+        
+        # Handle metrics
         if "metrics" in file:
             if "average_function_length" in file["metrics"]:
                 metrics["average_function_length"].append(file["metrics"]["average_function_length"])
@@ -778,6 +897,7 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     metrics["languages"] = list(metrics["languages"])
     metrics["roles"] = list(metrics["roles"])
     metrics["imports"] = list(metrics["imports"])
+    metrics["dependencies_internal"] = list(metrics["dependencies_internal"])
     return metrics
 
 

@@ -1,7 +1,7 @@
 """pytest tests for document parser: text, markdown, docx and pdf."""
 import json
 from pathlib import Path
-from app.utils.non_code_parsing.document_parser import parse_documents_to_json
+from app.utils.non_code_parsing.document_parser import parse_documents_to_json, parsed_input_text
 from app.utils.non_code_parsing.file_size_checker import is_file_too_large, MAX_FILE_SIZE_MB
 
 
@@ -120,6 +120,52 @@ def test_file_size_limit(tmp_path=None):
 
 
 
+def test_parsed_input_text_basic(tmp_path=None):
+    """Test parsed_input_text function with text and markdown files."""
+    if tmp_path is None:
+        from tempfile import mkdtemp
+        tmp_path = Path(mkdtemp())
+    
+    # Create test files
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Hello world")
+    
+    md_file = tmp_path / "readme.md"
+    md_file.write_text("# Title\nContent here")
+    
+    # Test parsing
+    result = parsed_input_text([str(txt_file), str(md_file)])
+    
+    # Verify structure
+    assert "parsed_files" in result
+    assert len(result["parsed_files"]) == 2
+    
+    # Verify all required fields exist
+    for file_result in result["parsed_files"]:
+        assert "path" in file_result
+        assert "name" in file_result
+        assert "type" in file_result
+        assert "content" in file_result
+        assert "success" in file_result
+        assert "error" in file_result
+
+
+def test_parsed_input_text_missing_file(tmp_path=None):
+    """Test parsed_input_text with missing files."""
+    result = parsed_input_text(["/nonexistent/file.txt"])
+    
+    assert len(result["parsed_files"]) == 1
+    file_result = result["parsed_files"][0]
+    assert file_result["success"] is False
+    assert "does not exist" in file_result["error"].lower()
+
+
+def test_parsed_input_text_empty_list(tmp_path=None):
+    """Test parsed_input_text with empty file list."""
+    result = parsed_input_text([])
+    assert result == {"parsed_files": []}
+
+
 if __name__ == "__main__":
     # run tests directly
     test_parse_text_and_markdown()
@@ -134,3 +180,13 @@ if __name__ == "__main__":
         print('test_parse_pdf passed')
     except Exception as e:
         print('test_parse_pdf failed:', e)
+    
+    # Test new parsed_input_text function
+    test_parsed_input_text_basic()
+    print('test_parsed_input_text_basic passed')
+    
+    test_parsed_input_text_missing_file()
+    print('test_parsed_input_text_missing_file passed')
+    
+    test_parsed_input_text_empty_list()
+    print('test_parsed_input_text_empty_list passed')

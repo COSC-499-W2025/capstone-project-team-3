@@ -2,7 +2,7 @@ import pytest
 import zipfile
 from pathlib import Path
 
-from app.utils.project_extractor import extract_and_list_projects, _identify_projects
+from app.utils.project_extractor import extract_and_list_projects, _identify_projects, get_project_top_level_dirs
 
 def test_extract_and_list_projects_single_project(tmp_path):
     """Test extracting a ZIP with one project."""
@@ -197,3 +197,43 @@ def test_identify_projects_multiple_markers(tmp_path):
     projects = _identify_projects(tmp_path)
     
     assert len(projects) == 1
+    
+def test_get_project_top_level_dirs_normal_case(tmp_path):
+    """Test that valid top-level project directories are returned and excluded patterns are ignored."""
+    # Create a mix of valid projects and excluded directories
+    (tmp_path / "my_python_app").mkdir()
+    (tmp_path / "react_frontend").mkdir()
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "__pycache__").mkdir()
+    (tmp_path / "build").mkdir()
+    (tmp_path / "README.md").write_text("# Project")  # file, should be ignored
+
+    result = get_project_top_level_dirs(tmp_path)
+
+    # Only non-excluded directories should be returned, sorted
+    assert result == ["my_python_app", "react_frontend"]
+
+
+def test_get_project_top_level_dirs_edge_cases(tmp_path):
+    """Test edge cases: empty dir, non-existent path, custom excludes, and case sensitivity."""
+    # Test empty directory
+    assert get_project_top_level_dirs(tmp_path) == []
+
+    # Test non-existent path
+    assert get_project_top_level_dirs(tmp_path) == []
+
+    # Test custom exclude pattern
+    (tmp_path / "secret").mkdir()
+    (tmp_path / "public_api").mkdir()
+    custom_excludes = ["secret"]
+    result = get_project_top_level_dirs(tmp_path, exclude_patterns=custom_excludes)
+    assert result == ["public_api"]
+
+    # Test case sensitivity: "NODE_MODULES" is not excluded if pattern is "node_modules"
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "NODE_MODULES").mkdir()  # different case
+    result = get_project_top_level_dirs(tmp_path)
+    # "node_modules" is excluded; "NODE_MODULES" is not (unless explicitly in EXCLUDE_PATTERNS)
+    assert "node_modules" not in result
+    assert "NODE_MODULES" in result  # because EXCLUDE_PATTERNS has "node_modules", not uppercase

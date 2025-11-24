@@ -324,8 +324,6 @@ def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str,
             # final cleanup
             if not txt.endswith("."):
                 txt += "."
-            if not txt.endswith("."):
-              txt += "."
              # Remove trailing numbers and whitespace
             txt = re.sub(r'\s*\d+\s*\.*$', '', txt).strip()
             bullets.append(txt)

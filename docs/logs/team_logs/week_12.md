@@ -5,7 +5,7 @@
 **Work Performed:** 
 - **Enhanced GitHub Analysis**: Implemented comprehensive commit analysis with pattern detection, technical keyword extraction, and resume generation capabilities
 - **Updated Analysis Architecture**: Modified code analysis system to support new JSON structure from parsing team while maintaining backward compatibility
-- **Non-Code Analysis Research**: Continued research and implementation of non-LLM analysis methods for non-code files
+- **Non-Code Analysis**: Continued implementation of non-LLM and LLM analysis methods for non-code files
 - **Parsing Enhancements**: Added entity extraction, dependency mapping, and improved language detection
 - **CI/CD Improvements**: Implemented security scanning, automated testing pipelines, and workflow optimization
 - **Git Integration**: Enhanced git history extraction and collaboration detection features
@@ -44,6 +44,10 @@
     * Integrate non code parsing flow into non code analysis #254
     * Integrate the overall project flow #164
     * Added functionality to calculate PR metrics #301
+    * Non code pre-processing and summarization #233
+    * Aggregate LLM1 Summaries into Unified Project Structure #234
+    * Generate LLM2 Prompt for Non-Code Analysis #235
+    * Researching Ai/non-Ai implementation for non code file analysis #186
     
 ---
 
@@ -77,7 +81,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
 | #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
-| #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
+| #233, #234, #235, #186 | Generate LLM2 Prompt for Non-Code Analysis, Aggregate LLM1 Summaries into Unified Project Structure,Implementing Non-Code Analysis LLM1 Pre-Processing, Researching Ai/non-Ai implementation for non code file analysis | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
@@ -90,9 +94,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
 | #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
 | #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
-| #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization
-    - Aggregate LLM1 Summaries into Unified Project Structure
-    -Generate LLM2 Prompt for Non-Code Analysis | @abstractafua     |
+| #236, #237         | Store Final Non-Code Analysis Results in Local Database, Call llm_client.py and Generate Insights for Non-Code Analysis| @abstractafua     |
 | #164          | Integrate the overall project flow | @PaintedW0lf |
 
  
@@ -101,7 +103,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Meeting Notes
 
-### 4th November 2025 – Team Meeting (All members present)
+### 9th November 2025 – Team Meeting (All members present)
 - Code review session and clarifying any doubts
 
 ---
@@ -124,7 +126,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Reflection
 
-* This week went well- we delegated tasks and what we will be working on for this week and possibly next week...
+* This week went well-we delegated tasks and what we will be working on for this week and possibly next week.
+* This week we are ensuring that we are all aligned in order to deliver the remaining requirements for Milestone 1
 
 ## Plan for Next Cycle
 * Continue with code contributions, prioritising and finalising FR1, FR3, FR2, FR4, and FR5.

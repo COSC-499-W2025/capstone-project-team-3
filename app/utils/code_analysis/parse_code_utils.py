@@ -326,13 +326,8 @@ def extract_internal_dependencies(import_statements: List[str], language: str, p
 
         # Keep dependencies that match known project prefixes
         if project_names:
-            if any(
-                dep_clean.startswith(prefix + ".")
-                or dep_clean == prefix
-                or f".{prefix}." in dep_clean  # embedded segment e.g. com.mycompany.app.utils
-                or dep_clean.split(".")[0] == prefix  # first segment matches short project name
-                for prefix in project_names
-            ):
+            normalized_dep = dep_clean.replace("/", ".")
+            if any(prefix in normalized_dep for prefix in project_names):
                 result.add(dep_clean)
     return list(result)
 

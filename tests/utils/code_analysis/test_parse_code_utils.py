@@ -12,7 +12,8 @@ from app.utils.code_analysis.parse_code_utils import (detect_language,
                                             extract_imports,
                                             extract_libraries,
                                             map_language_for_treesitter,
-                                            extract_internal_dependencies)
+                                            extract_internal_dependencies,
+                                            extract_metrics)
 
 @pytest.fixture
 def sample_file(tmp_path):
@@ -220,3 +221,70 @@ def test_extract_internal_dependencies():
     }
 
     assert set(result) == expected
+
+def test_extract_metrics_computes_average_and_ratio(tmp_path):
+    """
+    Test extract_metrics:
+    - Computes average function length across free + class methods
+    - Computes comment/doc ratio
+    - Handles entities format correctly
+    """
+
+    # --- Create a temporary file ---
+    file_path = tmp_path / "metrics_test.py"
+    content = '''
+        """
+        Doc line 1
+        Doc line 2
+        """
+        def a():
+            x = 1
+            return x
+
+        def b():
+            pass
+
+        class C:
+            def m1(self):
+                y = 2
+                y += 3
+                return y
+    '''
+    
+    file_path.write_text(content.strip() + "\n")
+
+    # --- Mock entity data as produced by extract_entities ---
+    entities = {
+        "classes": [
+            {
+                "name": "C",
+                "methods": [
+                    {"name": "m1", "parameters":["jump"], "lines_of_code": 3, 'calls': []}
+                ]
+            }
+        ],
+         "functions": [
+            {"name": "a", "parameters":["add"], "lines_of_code": 2, 'calls': []},
+            {"name": "b", "parameters":["ball"], "lines_of_code": 1, 'calls': []},
+        ],
+         "components":[]
+    }
+
+    # --- Expected values ---
+    # total LOC in functions/methods = 2 + 1 + 3 = 6
+    # number of functions = 3 → average = 6/3 = 2.0
+    expected_avg = 2.0
+
+    # Count doc lines (3) and code lines (rest)
+    # extract_metrics internally calls pygount — we patch this to avoid dependency cost
+    with patch(
+        "app.utils.code_analysis.parse_code_utils.count_lines_of_code",
+        return_value=6
+    ), patch(
+        "app.utils.code_analysis.parse_code_utils.count_lines_of_documentation",
+        return_value=3
+    ):
+        result = extract_metrics(file_path, entities)
+
+    assert result["average_function_length"] == expected_avg
+    assert result["comment_ratio"] == round(3 / (6 + 3), 2)  # 3 of 9 total lines

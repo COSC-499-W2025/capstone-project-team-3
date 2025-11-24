@@ -334,3 +334,38 @@ def extract_internal_dependencies(import_statements: List[str], language: str, p
             if any(prefix in normalized_dep for prefix in project_names):
                 result.add(dep_clean)
     return list(result)
+
+def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, float]:
+    """
+    Compute per-file metrics including class methods + free functions.
+    """
+    # Collect all function-like bodies
+    free_funcs = entities.get("functions", [])
+    class_methods = [
+        m for cls in entities.get("classes", [])
+        for m in cls.get("methods", [])
+    ]
+    all_funcs = free_funcs + class_methods
+
+    try:
+        code_lines = count_lines_of_code(file_path)
+    except Exception:
+        code_lines = 0
+    try:
+        doc_lines = count_lines_of_documentation(file_path)
+    except Exception:
+        doc_lines = 0
+
+    if all_funcs:
+        total_loc = sum(f.get("lines_of_code", 0) for f in all_funcs)
+        avg_func_length = round(total_loc / len(all_funcs), 2)
+    else:
+        avg_func_length = 0.0
+
+    total_lines = code_lines + doc_lines
+    comment_ratio = round(doc_lines / total_lines, 2) if total_lines else 0.0
+
+    return {
+        "average_function_length": avg_func_length,
+        "comment_ratio": comment_ratio
+    }

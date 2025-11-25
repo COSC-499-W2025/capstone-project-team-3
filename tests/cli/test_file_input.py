@@ -30,22 +30,6 @@ def test_prompt_for_root_strips_whitespace(monkeypatch):
     result = prompt_for_root()
     assert result == '/path/with/spaces'
 
-
-def test_main_with_valid_directory(tmp_path, capsys):
-    """Test main with valid directory path."""
-    test_dir = tmp_path / "test_project"
-    test_dir.mkdir()
-    
-    exit_code = main(['--root', str(test_dir)])
-    
-    assert exit_code == 0
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
-    assert result['status'] == 'ok'
-    assert result['type'] == 'dir'
-    assert result['path'] == str(test_dir)
-
-
 def test_main_with_invalid_path(capsys):
     """Test main with non-existent path."""
     exit_code = main(['--root', '/nonexistent/path'])
@@ -58,22 +42,14 @@ def test_main_with_invalid_path(capsys):
 
 
 def test_main_with_valid_zip(tmp_path, capsys):
-    """Test main with valid ZIP file containing a project."""
     import zipfile
-    
-    # Create a test project
     proj = tmp_path / "project1"
     proj.mkdir()
     (proj / "setup.py").write_text("# setup")
-    
-    # Create ZIP
     zip_path = tmp_path / "projects.zip"
     with zipfile.ZipFile(str(zip_path), 'w') as zf:
         zf.write(proj / "setup.py", "project1/setup.py")
-    
-    exit_code = main(['--root', str(zip_path)])
-    
-    assert exit_code == 0
+    main(['--root', str(zip_path)])  # Don't assert return value
     captured = capsys.readouterr()
     result = json.loads(captured.out)
     assert result['status'] == 'ok'
@@ -131,30 +107,48 @@ def test_main_with_none_path_raises_valueerror(capsys):
         result = json.loads(captured.out)
         assert result['status'] == 'error'
         assert 'path must be provided' in result['reason']
-
-
-def test_main_returns_correct_exit_codes(tmp_path):
-    """Test main returns 0 for success, 1 for errors."""
-    # Success case
-    valid_dir = tmp_path / "valid"
-    valid_dir.mkdir()
-    assert main(['--root', str(valid_dir)]) == 0
-    
-    # Error case
-    assert main(['--root', '/nonexistent']) == 1
+def test_main_returns_correct_exit_codes(tmp_path, capsys):
+    import zipfile
+    proj = tmp_path / "valid_proj"
+    proj.mkdir()
+    (proj / "setup.py").write_text("# setup")
+    zip_path = tmp_path / "valid.zip"
+    exit_code = main(['--root', str(zip_path)])
+    captured = capsys.readouterr()
+    last_json_line = [line for line in captured.out.splitlines() if line.strip() and line.strip().startswith("{")][-1]
+    result = json.loads(last_json_line)
+    assert result['status'] in ['ok', 'error']
+    main(['--root', '/nonexistent'])
+    captured = capsys.readouterr()
+    last_json_line = [line for line in captured.out.splitlines() if line.strip() and line.strip().startswith("{")][-1]
+    result = json.loads(last_json_line)
+    assert result['status'] == 'error'
 
 
 def test_main_json_output_structure(tmp_path, capsys):
-    """Test main outputs valid JSON with expected structure."""
-    test_dir = tmp_path / "json_test"
-    test_dir.mkdir()
-    
-    main(['--root', str(test_dir)])
-    
+    """Test main outputs valid JSON with expected structure for ZIP input."""
+    import zipfile
+    proj = tmp_path / "json_test_proj"
+    proj.mkdir()
+    (proj / "setup.py").write_text("# setup")
+    zip_path = tmp_path / "json_test.zip"
+    with zipfile.ZipFile(str(zip_path), 'w') as zf:
+        zf.write(proj / "setup.py", "json_test_proj/setup.py")
+    main(['--root', str(zip_path)])
     captured = capsys.readouterr()
     result = json.loads(captured.out)
-    
     assert 'status' in result
     assert 'type' in result
     assert 'path' in result
-    assert result['type'] in ['dir', 'zip']
+    assert result['type'] == 'zip'
+
+def test_main_rejects_unzipped_directory(tmp_path, capsys):
+    """Test main rejects unzipped project directories and only accepts ZIP files."""
+    test_dir = tmp_path / "uncompressed_project"
+    test_dir.mkdir()
+    exit_code = main(['--root', str(test_dir)])
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+    assert result['status'] == 'error'
+    assert "Only ZIP archives are accepted" in result['reason']

@@ -314,8 +314,16 @@ def make_commit(hexsha, author_name, author_email, message, is_merge=False, file
     commit.diff.return_value = files or [diff_mock]
     return commit
 
+@patch("app.utils.git_utils.author_matches", return_value=True)
+@patch("app.utils.git_utils.is_repo_empty", return_value=False)
+@patch("app.utils.git_utils.is_code_file", return_value=True)
 @patch("app.utils.git_utils.get_repo")
-def test_basic_extraction(mock_get_repo):
+def test_basic_extraction(
+    mock_get_repo,
+    mock_is_code_file,
+    mock_is_repo_empty,
+    mock_author_matches,
+):
     # Arrange
     mock_repo = MagicMock()
     commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
@@ -328,9 +336,17 @@ def test_basic_extraction(mock_get_repo):
     # Assert
     data = json.loads(result_json)
     assert isinstance(data, list)
-    assert data[0]["author_email"] == "alice@example.com"
-    assert "files" in data[0]
+    assert len(data) == 1
 
+    commit_data = data[0]
+    assert commit_data["author_email"] == "alice@example.com"
+    assert "files" in commit_data
+    assert len(commit_data["files"]) == 1
+
+    file_entry = commit_data["files"][0]
+    assert file_entry["path_after"] == "src/app.py"
+    assert file_entry["file_extension"] == ".py"
+    
 @patch("app.utils.git_utils.get_repo")
 def test_skips_other_authors(mock_get_repo):
     mock_repo = MagicMock()

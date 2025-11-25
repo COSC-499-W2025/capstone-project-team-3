@@ -66,7 +66,7 @@ def detect_language(file_path: Path) -> str | None:
         language = re.split(r'\+(?=[A-Za-z])', language)[0].strip()
         language = language.split()[0]
         return language
-    except ClassNotFound:
+    except (ClassNotFound, FileNotFoundError, UnicodeDecodeError, OSError):
         return None
 
 def count_lines_of_code(file_path: Path) -> int:
@@ -403,31 +403,38 @@ def parse_code_flow(file_paths: List[Path]) -> List[Dict]:
     parsed_files = []
     
     for file_path in file_paths:
-        language = detect_language(file_path)
-        
-        
-        if(language):
-            parse = {}
+        try:
+            language = detect_language(file_path)
+            if not language:
+                continue  # skip files where language could not be detected
+
             lines_of_code = count_lines_of_code(file_path)
             contents = extract_contents(file_path)
             import_statements = extract_imports(contents, language)
-            project_top_level_dir = get_project_top_level_dirs(file_path)
-            libraries = extract_libraries(import_statements, language, project_top_level_dir )
-            dependencies = extract_internal_dependencies(import_statements, language, project_top_level_dir)
-           
-            mapped_language=map_language_for_treesitter(language)
-            
+            project_top_level_dir = []
             try:
-                rule_names = extract_rule_names(Path(f"app/shared/grammars/{mapped_language}.js"))
-                class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+                project_top_level_dir = get_project_top_level_dirs(file_path) or []
+            except Exception:
+                project_top_level_dir = []
+            libraries = extract_libraries(import_statements, language, project_top_level_dir)
+            dependencies = extract_internal_dependencies(import_statements, language, project_top_level_dir)
 
-                ts_lang = get_language(mapped_language)
-                tree = get_parser(contents, ts_lang)
-                entities=extract_entities(tree, contents, class_nodes,func_nodes,component_nodes,file_path)
-            except (FileNotFoundError, LookupError, ModuleNotFoundError):
-                entities = {}
-                
-            # Use the discovered top-level project directory names to create relative path
+            mapped_language = map_language_for_treesitter(language)
+            entities: Dict = {}
+            if mapped_language:
+                try:
+                    grammar_path = Path(f"app/shared/grammars/{mapped_language}.js")
+                    rule_names = extract_rule_names(grammar_path)
+                    class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+                    ts_lang = get_language(mapped_language)
+                    tree = get_parser(contents, ts_lang)
+                    entities = extract_entities(tree, contents, class_nodes, func_nodes, component_nodes, file_path)
+                except (FileNotFoundError, LookupError, ModuleNotFoundError, ValueError):
+                    entities = {}
+                except Exception:
+                    entities = {}
+
+            # Build relative path using discovered top-level names
             relative_path = None
             top_level_names = project_top_level_dir if project_top_level_dir else []
             parts = file_path.parts
@@ -437,20 +444,22 @@ def parse_code_flow(file_paths: List[Path]) -> List[Dict]:
                     if part in top_level_names:
                         relative_path = "/".join(parts[idx:])
                         break
-            else:
+            if not relative_path:
                 relative_path = file_path.name
-            
-            metrics= extract_metrics(file_path,entities)
-            
-            parse = {
+
+            metrics = extract_metrics(file_path, entities)
+
+            parsed_files.append({
                 "file_path": relative_path,
                 "language": language,               
                 "lines_of_code": lines_of_code,
                 "imports": libraries,               
                 "dependencies_internal": dependencies,
-                "entities": entities,      
-                "metrics": metrics
-            }
-            parsed_files.append(parse)
-    
+                "entities": entities,
+                "metrics": metrics,
+            })
+        except Exception:
+            # Absolute last-resort safety: ignore unexpected errors for this file
+            continue
+
     return parsed_files

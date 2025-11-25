@@ -219,22 +219,24 @@ def verify_user_in_files(
     user_collaborative = []
     user_solo = []
     others_only = []
-    
+
     for file_path, info in file_metadata.items():
         authors = info.get("authors", [])
-        
+        path_obj = Path(info["path"])
+        is_readme = path_obj.name.lower().startswith("readme")
+
+        if is_readme:
+            user_collaborative.append(info["path"])
+            continue
+
         if user_email in authors:
-            # User IS an author
             if len(authors) == 1:
-                # ONLY user (solo work)
                 user_solo.append(info["path"])
             else:
-                # User + at least 1 other person (collaborative)
                 user_collaborative.append(info["path"])
         else:
-            # User is NOT an author (others' work)
             others_only.append(info["path"])
-    
+
     return {
         "user_collaborative": user_collaborative,
         "user_solo": user_solo,

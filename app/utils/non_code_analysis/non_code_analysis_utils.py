@@ -6,6 +6,7 @@ from collections import Counter
 from app.client.llm_client import GeminiLLMClient
 from app.shared.test_data.parsed_input_text import sample_parsed_files
 from app.utils.user_preference_utils import UserPreferenceStore
+from dotenv import load_dotenv, find_dotenv
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -14,6 +15,10 @@ from sumy.utils import get_stop_words
 import textstat
 import json
 import spacy
+
+# Load environment variables
+load_dotenv(find_dotenv())  # Finds .env file anywhere up the tree
+KEY = os.environ.get("GOOGLE_API_KEY")
 
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
@@ -337,7 +342,7 @@ def aggregate_non_code_summaries(llm1_results):
     }
     return aggregated_project_metrics
 
-#TODO Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
+#Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
 def create_non_code_analysis_prompt(aggregated_project_metrics):
     """
     Create a structured prompt for AI analysis using the aggregated llm1 project summaries.
@@ -354,17 +359,25 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
         education = user_prefs.get("education")
         
     else:   
-        industry = "N/A"  # TODO: Fetch from user profile/preferences
-        aspiring_job_title = "N/A"  # TODO: Fetch from user profile/preferences
-        education = "N/A"  # TODO: Fetch from user profile/preferences
+        industry = "N/A"  #fallback
+        aspiring_job_title = "N/A"  #fallback
+        education = "N/A"  #fallback
 
     # Base prompt structure
     PROMPT = f"""
     You are a precise and detail-oriented Analyst. 
     Your task is to analyze the following project and generate accurate, concise skills and resume bullet points based on the metrics and context information provided. 
-    Take into account the industry, aspiring job title, and education if available.   
+    Your task is to analyze the provided project files and generate:
+    - A concise project summary
+    - Resume-ready bullet points
+    - Extracted technical and soft skills
+    - Domain expertise
+    - A readability score
+    
+    Take into account the user's industry, aspiring job title, and education if available.   
     Ensure the skills and resume bullet points are relevant to the project content provided.
-   
+    All insights MUST be grounded ONLY in the content provided below.
+
     Project Name: {aggregated_project_metrics["Project_Name"]}
     
     Total Files: {aggregated_project_metrics["totalFiles"]}
@@ -412,41 +425,48 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
 
     # Specify the required output format
     PROMPT += """
-    Return your analysis in the following format: {
-        "skills": [
-            "Skill 1",
-            "Skill 2", 
-            "Skill 3",
-            ...
-        ],
-        "resume_bullets": [
-            "Bullet point 1",
-            "Bullet point 2",
-            "Bullet point 3",
-            ...
-        ]
+    ──────────────── OUTPUT INSTRUCTIONS (IMPORTANT) ────────────────
+
+    You MUST return ONLY a valid JSON object.
+    No markdown, no comments, no explanations, no trailing commas.
+
+    Do NOT repeat or copy the schema literally. Fill it with real values extracted from your own conducted project analysis.
+
+    If a field has no information, return an empty array or empty string.
+
+    Return JSON matching EXACTLY this schema:
+
+    {
+    "project_summary": "string",
+    "resume_bullets": ["string"],
+    "skills": {
+        "technical_skills": ["string"],
+        "soft_skills": ["string"]
+    },
+    "readability_score": "number",
+    "domain_expertise": ["string"]
     }
-    Provide only the JSON object as output without any additional text.
+
+    OUTPUT ONLY the JSON object.
     """
+
     return PROMPT
 
-#TODO Step 5: Analyze summries using the second LLM
+#Step 5: Analyze summaries using the second LLM
 def generate_non_code_insights(PROMPT):
     """
     Generates llm2_metrics by calling LLM2 with the formatted prompt.
     Returns Response
     """
-    env_path = Path(__file__).resolve().parent / ".env"
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-    LLM2 = None
-    if GeminiLLMClient().__init__:
-        LLM2 = GeminiLLMClient(GEMINI_API_KEY)
-        response = clean_response(LLM2.generate(PROMPT))
-    else:
-        
+    # Create Client for LLM2 (Gemini)
+    LLM2 = GeminiLLMClient(api_key=KEY)
+    response = LLM2.generate(PROMPT)
+    
+    response = clean_response(response)
+    if not response:
         response = {}
         raise EnvironmentError("No LLM2 client is available for non-code analysis.")
-    
+
     return response
 
 def clean_response(response):
@@ -456,6 +476,8 @@ def clean_response(response):
     try:
         # Attempt to parse the response directly
         result = json.loads(response)
+        # Add project_name and to response for completeness
+        result["project_name"] = re.search(r'Project Name:\s*(.*)', response).group(1).strip() if re.search(r'Project Name:\s*(.*)', response) else "N/A"
         return result
     except json.JSONDecodeError:
         # If direct parsing fails, try to extract JSON from the response
@@ -465,10 +487,12 @@ def clean_response(response):
                 result = json.loads(json_match.group(0))
                 return result
             except json.JSONDecodeError:
-                pass
+                # Call LLM2 again to reformat response as JSON
+                LLM2 = GeminiLLMClient(api_key=KEY)
+                response = LLM2.generate(response)  
     raise ValueError("Failed to parse LLM2 response as JSON")
 
-#TODO Step 6: Store results
+# TODO Step 6: Store results
 def store_non_code_analysis_results(final_result):
     """
     Store analysis results in RESUME table and SKILLS table in database.
@@ -516,7 +540,7 @@ def run_pipeline():
         print_project_metrics(project_metrics)
         print("\n✓ Aggregation completed successfully")
         
-        # Step 3 : Generate LLM2 Prompt using aggregated project metrics
+        # Step 3: Generate LLM2 Prompt using aggregated project metrics
         prompt = create_non_code_analysis_prompt(project_metrics)
         print(prompt)
         print("\n✓ Prompt generation completed successfully")

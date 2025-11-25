@@ -499,29 +499,11 @@ def store_non_code_analysis_results(final_result):
     """
     pass
 
-def analyze_non_code_files(parsed_files):
-    """
-    Entry & Main Flow: pre-process files (NLP), aggregate summaries, generate prompt,
-    call LLM2, store analysis results.
-    """
-    # 1. Pre-Process files (Use LLM1)
-    #pre_process_non_code_files(parsed_files)
-
-    # 2. Aggregate summaries 
-    #aggregate_non_code_summaries(llm1_summary)
-    
-    # 3. Generate Analysis Prompt
-    #create_non_code_analysis_prompt(aggregated_project)
-    
-    # 4. Call LLM2 for Analysis
-    #generate_non_code_insights(PROMPT)
-
-    # 5. Store Data
-    #store_non_code_analysis_results(Final_Result)
-
-def run_pipeline():
+def analyze_non_code_files():
     """
     Main pipeline to process non-code files, aggregate summaries, and generate project metrics.
+    Entry & Main Flow: pre-process files (NLP), aggregate summaries, generate prompt,
+    call LLM2, store analysis results.
     """
     print("\n" + "=" * 80)
     print("Running pre_process_non_code_files...")
@@ -580,5 +562,4 @@ def print_project_metrics(project_metrics):
 
 # Hardcoded function for CLI run
 if __name__ == "__main__":
-    run_pipeline()
-    
+    analyze_non_code_files()

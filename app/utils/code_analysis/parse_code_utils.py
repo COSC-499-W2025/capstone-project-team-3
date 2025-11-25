@@ -361,38 +361,36 @@ def normalize_library(lib: str, language: str) -> str:
     # Single-segment library: keep as-is
     return lib
 
-def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, float]:
+def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, Optional[float]]:
     """
     Compute per-file metrics including class methods + free functions.
     """
-    # Collect all function-like bodies
     free_funcs = entities.get("functions", [])
-    class_methods = [
-        m for cls in entities.get("classes", [])
-        for m in cls.get("methods", [])
-    ]
+    class_methods = [m for cls in entities.get("classes", []) for m in cls.get("methods", [])]
     all_funcs = free_funcs + class_methods
 
+    function_count = len(all_funcs)
+    entity_code_lines = sum(f.get("lines_of_code", 0) for f in all_funcs)
+    avg_function_length = round(entity_code_lines / function_count, 2) if function_count else 0.0
+
+    # Independent attempts so we can still return average even if ratio fails
     try:
         code_lines = count_lines_of_code(file_path)
     except Exception:
-        code_lines = 0
+        code_lines = None
     try:
         doc_lines = count_lines_of_documentation(file_path)
     except Exception:
-        doc_lines = 0
+        doc_lines = None
 
-    if all_funcs:
-        total_loc = sum(f.get("lines_of_code", 0) for f in all_funcs)
-        avg_func_length = round(total_loc / len(all_funcs), 2)
+    if code_lines is not None and doc_lines is not None:
+        total_lines = code_lines + doc_lines
+        comment_ratio = round(doc_lines / total_lines, 2) if total_lines else 0.0
     else:
-        avg_func_length = 0.0
-
-    total_lines = code_lines + doc_lines
-    comment_ratio = round(doc_lines / total_lines, 2) if total_lines else 0.0
+        comment_ratio = None
 
     return {
-        "average_function_length": avg_func_length,
+        "average_function_length": avg_function_length,
         "comment_ratio": comment_ratio
     }
     

@@ -936,50 +936,97 @@ def infer_roles_from_file(file):
     return roles
 
 # Main entry point for local project analysis
-def analyze_parsed_project(parsed_files: List[Dict], llm_client=None):
+def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
     """
-    Analyze a project from parsed file dicts and return a resume summary.
-    Uses LLM if provided, otherwise returns enhanced NLP analysis.
+    Analyze a project from parsed file dicts and return a structured JSON summary.
+    Updated to include all metrics data alongside standardized format (no project summary).
     """
+    # Get existing rich analysis
     metrics = aggregate_parsed_files_metrics(parsed_files)
+    technical_keywords = extract_technical_keywords_from_parsed(parsed_files)
+    code_patterns = analyze_code_patterns_from_parsed(parsed_files)
+    complexity_analysis = calculate_advanced_complexity_from_parsed(parsed_files)
+    
+    # Enhanced metrics for analysis
+    metrics["technical_keywords"] = technical_keywords
+    metrics["code_patterns"] = code_patterns
+    metrics["complexity_analysis"] = complexity_analysis
     
     if llm_client:
-        # Use LLM to generate summary
-        prompt = (
-            "Given these aggregated project metrics:\n"
-            f"{metrics}\n"
-            "Generate resume-like bullet points summarizing the user's contributions, "
-            "including key activities, skills, technologies, and impact."
-            "Do NOT include any explanations, headings, or options—just the list."
+        # Use LLM for resume bullets only
+        resume_prompt = (
+            "Based on the project metrics provided, generate 3-5 professional resume bullet points "
+            "highlighting key technical contributions, skills demonstrated, and project impact. "
+            "Focus on quantifiable achievements and technical expertise."
+            "Return only the bullet points, no explanations or headers."
         )
-        return llm_client.generate(prompt)
+        resume_bullets = llm_client.generate(resume_prompt).split('\n') if llm_client.generate(resume_prompt) else []
     else:
-        # Use enhanced NLP analysis
-        metrics["technical_keywords"] = extract_technical_keywords_from_parsed(parsed_files)
-        metrics["code_patterns"] = analyze_code_patterns_from_parsed(parsed_files)
-        metrics["complexity_analysis"] = calculate_advanced_complexity_from_parsed(parsed_files)
-        return generate_resume_summary_from_parsed(metrics)
+        # Use existing enhanced NLP analysis
+        resume_bullets = generate_resume_summary_from_parsed(metrics)
 
-# Main entry point for Github project analysis
-def analyze_github_project(commits: List[Dict], llm_client=None):
+    
+    return {
+        "Resume_bullets": resume_bullets,
+        "Metrics": {
+            "languages": metrics["languages"],
+            "total_files": metrics["total_files"],
+            "total_lines": metrics["total_lines"],
+            "functions": metrics["functions"],
+            "components": metrics["components"],
+            "classes": metrics["classes"],
+            "roles": metrics["roles"],
+            "average_function_length": metrics["average_function_length"],
+            "average_comment_ratio": metrics["average_comment_ratio"],
+            "technical_keywords": technical_keywords,
+            "code_patterns": code_patterns,
+            "complexity_analysis": complexity_analysis
+        }
+    }
+
+# Main entry point for github project analysis
+def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     """
-    Analyze a project from GitHub commit dicts and return a resume summary.
-    Uses LLM if provided, otherwise returns enhanced NLP analysis.
+    Analyze a project from GitHub commit dicts and return a structured JSON summary.
+    Updated to include all metrics data alongside standardized format (no project summary).
     """
+    # Get existing rich analysis
     metrics = aggregate_github_individual_metrics(commits)
+    technical_keywords = extract_technical_keywords_from_github(commits)
+    development_patterns = analyze_github_development_patterns(commits)
+    
+    # Enhanced metrics for analysis
+    metrics["technical_keywords"] = technical_keywords
+    metrics["development_patterns"] = development_patterns
     
     if llm_client:
-        # Use LLM to generate summary
-        prompt = (
-            "Given these GitHub contribution metrics:\n"
-            f"{metrics}\n"
-            "Generate resume-like bullet points summarizing the user's contributions, "
-            "including key activities, skills, technologies, and impact."
-            "Do NOT include any explanations, headings, or options—just the list."
+        # Use LLM for resume bullets only
+        resume_prompt = (
+            "Based on the GitHub metrics provided, generate 3-5 professional resume bullet points "
+            "highlighting key contributions, technical skills, and development impact. "
+            "Focus on quantifiable achievements and collaboration patterns."
+            "Return only the bullet points, no explanations or headers."
         )
-        return llm_client.generate(prompt)
+        resume_bullets = llm_client.generate(resume_prompt).split('\n') if llm_client.generate(resume_prompt) else []
     else:
-        # Use enhanced NLP analysis
-        metrics["technical_keywords"] = extract_technical_keywords_from_github(commits)
-        metrics["development_patterns"] = analyze_github_development_patterns(commits)
-        return generate_github_resume_summary(metrics)
+        # Use existing enhanced NLP analysis
+        resume_bullets = generate_github_resume_summary(metrics)
+    
+    return {
+        "Resume_bullets": resume_bullets,
+        "Metrics": {
+            "authors": metrics["authors"],
+            "total_commits": metrics["total_commits"],
+            "duration_days": metrics["duration_days"],
+            "files_added": metrics["files_added"],
+            "files_modified": metrics["files_modified"],
+            "files_deleted": metrics["files_deleted"],
+            "total_files_changed": metrics["total_files_changed"],
+            "code_files_changed": metrics["code_files_changed"],
+            "doc_files_changed": metrics["doc_files_changed"],
+            "test_files_changed": metrics["test_files_changed"],
+            "roles": metrics["roles"],
+            "technical_keywords": technical_keywords,
+            "development_patterns": development_patterns
+        }
+    }

@@ -1,17 +1,3 @@
-# Question: do we want a project structure too?
-
-# Tracking TODOs:
-#  "detect_language":"str" --done
-#   "lines_of_code": "integer",    ---done      
-
-#   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
-#  Imports only returns full import statements, working to only extract the library...
-
-#   "dependencies_internal": ["string"] --done,   // Local imports within the project
-#   "top_keywords": ["string"],            // Most frequent meaningful identifiers
-#   "entities": { FileEntities },          // Structural elements (functions, classes, etc.)
-#   "metrics": { FileMetrics },            // Per-file stats
-
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 import json 
@@ -19,7 +5,7 @@ from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from pygount import SourceAnalysis
 from tree_sitter import Parser, Node, Query
-from tree_sitter_language_pack import get_language, get_parser
+from tree_sitter_language_pack import get_language
 from typing import List, Set
 import importlib.resources as pkg_resources
 import re
@@ -83,6 +69,12 @@ def count_lines_of_code(file_path: Path) -> int:
     """Return the number of lines of code in the given source file."""
     analysis= SourceAnalysis.from_file(str(file_path),"pygount")
     count = analysis.code_count
+    return count
+
+def count_lines_of_documentation(file_path: Path) -> int:
+    """Return the number of documentation lines in the given source file."""
+    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
+    count = analysis.documentation_count
     return count
 
 def extract_contents(file_path: Path) -> str:
@@ -366,3 +358,36 @@ def normalize_library(lib: str, language: str) -> str:
 
     # Single-segment library: keep as-is
     return lib
+
+def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, Optional[float]]:
+    """
+    Compute per-file metrics including class methods + free functions.
+    """
+    free_funcs = entities.get("functions", [])
+    class_methods = [m for cls in entities.get("classes", []) for m in cls.get("methods", [])]
+    all_funcs = free_funcs + class_methods
+
+    function_count = len(all_funcs)
+    entity_code_lines = sum(f.get("lines_of_code", 0) for f in all_funcs)
+    avg_function_length = round(entity_code_lines / function_count, 2) if function_count else 0.0
+
+    # Independent attempts so we can still return average even if ratio fails
+    try:
+        code_lines = count_lines_of_code(file_path)
+    except Exception:
+        code_lines = None
+    try:
+        doc_lines = count_lines_of_documentation(file_path)
+    except Exception:
+        doc_lines = None
+
+    if code_lines is not None and doc_lines is not None:
+        total_lines = code_lines + doc_lines
+        comment_ratio = round(doc_lines / total_lines, 2) if total_lines else 0.0
+    else:
+        comment_ratio = None
+
+    return {
+        "average_function_length": avg_function_length,
+        "comment_ratio": comment_ratio
+    }

@@ -5,8 +5,6 @@ from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from app.utils.code_analysis.file_entity_utils import classify_node_types, extract_entities, get_parser
 from app.utils.code_analysis.grammar_loader import extract_rule_names
-from app.utils.project_extractor import get_project_top_level_dirs
-# from app.utils.scan_utils import scan_project_files
 from pygount import SourceAnalysis
 from tree_sitter import Parser, Node, Query
 from tree_sitter_language_pack import get_language
@@ -398,7 +396,7 @@ def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[st
         "comment_ratio": comment_ratio
     }
     
-def parse_code_flow(file_paths: List[Path]) -> List[Dict]:
+def parse_code_flow(file_paths: List[Path],top_level_dirs: List[str]) -> List[Dict]:
     """ This method performs the whole flow of detecting code files to parsing the files and returning an array of JSON """
     parsed_files = []
     
@@ -413,14 +411,14 @@ def parse_code_flow(file_paths: List[Path]) -> List[Dict]:
             import_statements = extract_imports(contents, language)
             project_top_level_dir = []
             try:
-                project_top_level_dir = get_project_top_level_dirs(file_path) or []
+                project_top_level_dir = top_level_dirs
             except Exception:
                 project_top_level_dir = []
             libraries = extract_libraries(import_statements, language, project_top_level_dir)
             dependencies = extract_internal_dependencies(import_statements, language, project_top_level_dir)
 
             mapped_language = map_language_for_treesitter(language)
-            entities: Dict = {}
+            entities = {}
             if mapped_language:
                 try:
                     grammar_path = Path(f"app/shared/grammars/{mapped_language}.js")

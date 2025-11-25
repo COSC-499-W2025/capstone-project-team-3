@@ -4,16 +4,15 @@ class RootInputText:
     (directory or .zip). Kept separate from consent text for easier PR review.
     """
     ROOT_INPUT_PROMPT = (
-        "Enter the FULL project root path to analyze (directory or .zip).\n"
+        "Enter the FULL project root path to analyze.\n"
         "Examples:\n"
-        "  - Directory: /Users/you/myrepo\n"
         "  - ZIP file:  /Users/you/projects.zip\n\n"
         "Path> "
     )
 
     ROOT_INPUT_HELP = (
         "\n"
-        "Please provide the absolute (full) path to a directory or .zip file.\n"
+        "Please provide the absolute (full) path to a .zip file.\n"
         "Relative paths like './project' or '/Desktop' will not work."
     )
 

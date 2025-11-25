@@ -6,6 +6,44 @@ Here’s a detailed, step-by-step explanation of **how code analyzes non-code fi
 
 ---
 
+### Tools Used 
+
+1. spaCy: For sentence segmentation and basic NLP tasks.
+-> Used in:
+extract_key_topics_from_content() → noun phrase extraction
+extract_important_sentences() (as a fallback)
+extract_contribution_bullets() → sentence segmentation + action verbs
+extract_all_skills() → entity detection (ORG/PRODUCT)
+-> Purpose:
+Lightweight NLP tasks (tokenization, noun chunks, entities).
+No AI generation — only linguistic parsing.
+
+2. NLTK: For tokenization and text processing.
+-> Used in:
+Tokenizing sentences and words
+Basic text cleanup and preprocessing in multiple helper functions
+-> Purpose:
+Offline classical NLP preprocessing.
+
+3. Sumy: For extractive summarization (generating summaries from text).
+-> Used in:
+extract_important_sentences() to produce extractive summaries
+(selects important sentences, does NOT generate new text)
+-> Purpose:
+Purely algorithmic summarization using Latent Semantic Analysis (LSA).
+
+4. Python standard libraries: For file handling, pattern matching, and aggregation.
+-> Used everywhere:
+re → regex-based pattern matching
+Counter → counting topics, doc types
+Path → file information
+set, dict, list → aggregation and merging
+String operations for keyword scanning
+-> Purpose:
+Deterministic logic, no ML at all.
+
+# Overall Flow
+
 ## **1. File Parsing and Input**
 
 - The analysis starts with a dictionary like `parsed_files = {"files": [...]}`.

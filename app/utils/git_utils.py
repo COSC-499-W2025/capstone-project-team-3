@@ -216,6 +216,11 @@ def extract_code_commit_content_by_author(
         repo = get_repo(path)  # uses existing helper to get Repo object
     except Exception:
         return json.dumps([], indent =2)  # on error, return empty list
+    
+    # Explicit empty repo check
+    if is_repo_empty(path):
+        return json.dumps([], indent=2)
+    
     seen = set()
     out = []
     errors = []
@@ -245,8 +250,8 @@ def extract_code_commit_content_by_author(
             files_changed_data = []
             for d in diffs:
                 #  # Skip binary files - only process code/text files
-                # if not is_code_file(d): 
-                #     continue
+                if not is_code_file(d): 
+                    continue
                 status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")
@@ -254,6 +259,14 @@ def extract_code_commit_content_by_author(
                     patch = patch_text.decode("utf-8", errors="replace")
                 except Exception:
                     patch = "/* Could not decode patch text */"
+                
+                # Determine file extension
+                if d.b_path:
+                    _, file_ext = os.path.splitext(d.b_path)
+                elif d.a_path:
+                    _, file_ext = os.path.splitext(d.a_path)
+                else:
+                    file_ext = None  # should never happen, but safe fallback
 
                 files_changed_data.append({
                     "status": status,
@@ -261,6 +274,7 @@ def extract_code_commit_content_by_author(
                     "path_after": d.b_path,
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                    "file_extension": file_ext,
                 })
             # --- END NEW PER-FILE LOGIC ---
         # Handle potential Git command errors by adding to dictionary

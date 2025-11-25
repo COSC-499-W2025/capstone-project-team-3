@@ -1,5 +1,7 @@
 """pytest tests for non-code file analysis."""
 import pytest
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 from app.utils.non_code_analysis.non_code_analysis_utils import (
     pre_process_non_code_files,
     aggregate_non_code_summaries,
@@ -10,7 +12,8 @@ from app.utils.non_code_analysis.non_code_analysis_utils import (
     get_readability_metrics,
     get_unique_key_topics,
     get_named_entities,
-    create_non_code_analysis_prompt
+    create_non_code_analysis_prompt,
+    generate_non_code_insights
 )
 
 # ---------- Pre-Processing Unit Tests ----------------- #
@@ -228,10 +231,67 @@ def test_get_named_entities():
     assert "LLM2" in named_entities
     assert "2025" in named_entities
 
+def test_generate_non_code_insights_json(monkeypatch):
+    """Test that generate_non_code_insights returns valid JSON when LLM2 returns correct output."""
+    from app.utils.non_code_analysis.non_code_analysis_utils import generate_non_code_insights
+
+    # Mock GeminiLLMClient to return a valid JSON string
+    class MockGeminiLLMClient:
+        def __init__(self, api_key, model="gemini-2.5-flash"):
+            pass
+        def generate(self, prompt):
+            return '{"project_summary": "Test summary", "resume_bullets": ["Bullet 1"], "skills": {"technical_skills": ["Python"], "soft_skills": ["Communication"]}, "readability_score": 10, "domain_expertise": ["AI"]}'
+
+    monkeypatch.setattr("app.utils.non_code_analysis.non_code_analysis_utils.GeminiLLMClient", MockGeminiLLMClient)
+
+    prompt = "Test prompt"
+    result = generate_non_code_insights(prompt)
+    assert isinstance(result, dict)
+    assert "project_summary" in result
+    assert "resume_bullets" in result
+    assert "skills" in result
+    assert "readability_score" in result
+    assert "domain_expertise" in result
+
+def test_generate_non_code_insights_invalid_json(monkeypatch):
+    """Test that generate_non_code_insights raises ValueError when LLM2 returns invalid JSON."""
+    from app.utils.non_code_analysis.non_code_analysis_utils import generate_non_code_insights
+
+    class MockGeminiLLMClient:
+        def __init__(self, api_key, model="gemini-2.5-flash"):
+            pass
+        def generate(self, prompt):
+            return "Not a JSON string"
+
+    monkeypatch.setattr("app.utils.non_code_analysis.non_code_analysis_utils.GeminiLLMClient", MockGeminiLLMClient)
+
+    prompt = "Test prompt"
+    import pytest
+    with pytest.raises(ValueError):
+        generate_non_code_insights(prompt)
+
+def test_clean_response_extracts_json(monkeypatch):
+    """Test that clean_response extracts JSON from a response with extra text."""
+    from app.utils.non_code_analysis.non_code_analysis_utils import clean_response
+
+    response = """
+    Here is your result:
+    {
+        "project_summary": "Test summary",
+        "resume_bullets": ["Bullet 1"],
+        "skills": {"technical_skills": ["Python"], "soft_skills": ["Communication"]},
+        "readability_score": 10,
+        "domain_expertise": ["AI"]
+    }
+    Thank you!
+    """
+    result = clean_response(response)
+    assert isinstance(result, dict)
+    assert result["project_summary"] == "Test summary"
 
 # ---------- Integration Tests ----------------- #
 def test_pipeline_integration():
-    """Test the full pipeline from pre-processing to aggregation."""
+    """Test the full pipeline from pre-processing to analysis."""
     sample_parsed_files = {
         "files": [
             {
@@ -248,11 +308,21 @@ def test_pipeline_integration():
     # Run pipeline
     llm1_results = pre_process_non_code_files(sample_parsed_files)
     project_metrics = aggregate_non_code_summaries(llm1_results)
+    prompt = create_non_code_analysis_prompt(project_metrics)
+    llm2_results = generate_non_code_insights(prompt)
 
     # Assertions
     assert project_metrics is not None
     assert project_metrics["totalFiles"] == 1
     assert project_metrics["fileTypeDistribution"] == {"txt": 1}
+    assert prompt is not None
+    assert llm2_results is not None
+    assert isinstance(llm2_results, dict)
+    assert "project_summary" in llm2_results
+    assert "resume_bullets" in llm2_results
+    assert "skills" in llm2_results
+    assert "readability_score" in llm2_results
+    assert "domain_expertise" in llm2_results
 
 
 # ---------- Run Tests Directly ----------------- #

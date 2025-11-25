@@ -5,6 +5,8 @@ from datetime import datetime
 import os, json, re, requests
 from typing import Optional
 from urllib.parse import quote
+from pygments.lexers import guess_lexer, guess_lexer_for_filename
+from pygments.util import ClassNotFound
 
 
 
@@ -524,3 +526,35 @@ def is_code_file(diff_object) -> bool:
             return False  # Safe fallback
 
     return True
+
+def detect_language_from_patch(filename: str, patch: str) -> Optional[str]:
+    """
+    Detect the programming language using (1) filename extension, then
+    (2) patch text as a fallback.
+    """
+    # 1. Detect from filename first
+    try:
+        lexer = guess_lexer_for_filename(filename, patch or "")
+        language = lexer.name
+
+        # Inline normalization:
+        language = re.split(r'\+(?=[A-Za-z])', language)[0]  # remove "+Something"
+        language = language.strip().split()[0]               # keep only first token
+        return language
+    except ClassNotFound:
+        pass
+
+    # 2. Detect from patch content (fallback)
+    try:
+        if patch.strip():
+            lexer = guess_lexer(patch)
+            language = lexer.name
+
+            # Inline normalization:
+            language = re.split(r'\+(?=[A-Za-z])', language)[0]
+            language = language.strip().split()[0]
+            return language
+    except ClassNotFound:
+        pass
+
+    return None

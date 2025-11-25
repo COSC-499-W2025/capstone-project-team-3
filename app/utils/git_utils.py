@@ -1,4 +1,4 @@
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
+from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
 from typing import Tuple, Union, Dict
 from datetime import datetime

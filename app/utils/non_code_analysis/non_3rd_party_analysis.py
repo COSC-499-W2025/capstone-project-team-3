@@ -341,3 +341,177 @@ def extract_all_skills(content: str) -> Dict[str, List[str]]:
         for category, skill_set in skills.items()
     }
 
+
+def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Clean project-wide analysis:
+    - One high-level summary
+    - 4–5 project-level bullet points
+    - Combined skills across all successful files
+    """
+    files = parsed_files.get("files", [])
+    if not files:
+        return {
+            "summary": "No files were available for analysis.",
+            "bullets": [],
+            "skills": {
+                "technical_skills": [],
+                "soft_skills": [],
+                "domain_expertise": [],
+                "tools_and_technologies": [],
+                "writing_skills": [],
+            },
+        }
+
+    project_content = ""
+    project_skills = {
+        "technical_skills": set(),
+        "soft_skills": set(),
+        "domain_expertise": set(),
+        "tools_and_technologies": set(),
+        "writing_skills": set(),
+    }
+    doc_type_counts: Counter = Counter()
+
+    for file_data in files:
+        if not file_data.get("success", False):
+            continue
+        content = (file_data.get("content") or "").strip()
+        if not content:
+            continue
+        project_content += "\n\n" + content
+        file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
+        doc_type = classify_document_type(content, file_path)
+        doc_type_counts[doc_type] += 1
+        file_skills = extract_all_skills(content)
+        for cat, vals in file_skills.items():
+            project_skills[cat].update(vals)
+
+    if not project_content.strip():
+        return {
+            "summary": "No successfully parsed content was available for analysis.",
+            "bullets": [],
+            "skills": {
+                "technical_skills": [],
+                "soft_skills": [],
+                "domain_expertise": [],
+                "tools_and_technologies": [],
+                "writing_skills": [],
+            },
+        }
+
+    project_content_lower = project_content.lower()
+
+    doc_descriptions = {
+        "README": "README documentation",
+        "API_DOCUMENTATION": "API documentation",
+        "DESIGN_DOCUMENT": "system design and architecture documentation",
+        "REQUIREMENTS_DOCUMENT": "requirements documentation",
+        "TUTORIAL": "tutorial or how-to documentation",
+        "RESEARCH_DOCUMENT": "research or analysis documents",
+        "PROPOSAL": "project proposal documents",
+        "GENERAL_DOCUMENTATION": "general technical documentation",
+        "INSTALLATION_GUIDE": "installation and setup guides",
+        "MEETING_NOTES": "meeting notes and action items",
+    }
+
+    if doc_type_counts:
+        top_doc_types = [dt for dt, _ in doc_type_counts.most_common(2)]
+    else:
+        top_doc_types = ["GENERAL_DOCUMENTATION"]
+
+    doc_phrases = [doc_descriptions.get(dt, "documentation") for dt in top_doc_types]
+    if len(doc_phrases) == 1:
+        doc_phrase = doc_phrases[0]
+    else:
+        doc_phrase = ", ".join(doc_phrases[:-1]) + " and " + doc_phrases[-1]
+
+    domain_keywords = {
+        "Software Engineering": ["software", "code", "api", "system", "development", "application"],
+        "Data Science": ["data", "analysis", "model", "dataset", "analytics", "visualization"],
+        "Business": ["business", "strategy", "market", "revenue", "customer", "sales"],
+        "Healthcare": ["health", "medical", "patient", "treatment", "clinical"],
+        "Education": ["education", "learning", "curriculum", "student", "course"],
+        "Research": ["research", "study", "experiment", "hypothesis", "findings"],
+        "Design": ["design", "ui", "ux", "prototype", "wireframe", "interface"],
+        "Project Management": ["project", "milestone", "deliverable", "timeline", "agile"],
+        "AI / Machine Learning": ["artificial intelligence", "ai", "machine learning", "model", "algorithm"],
+    }
+
+    detected_domain = None
+    max_score = 0
+    for domain, kws in domain_keywords.items():
+        score = sum(1 for kw in kws if kw in project_content_lower)
+        if score > max_score:
+            max_score = score
+            detected_domain = domain
+
+    has_architecture = any(w in project_content_lower for w in ["architecture", "design", "microservice", "event-driven"])
+    has_requirements = any(w in project_content_lower for w in ["requirement", "requirements", "specification", "non-functional"])
+    has_nlp_or_parsing = any(
+        w in project_content_lower
+        for w in ["parse", "parser", "nlp", "natural language", "skill extraction", "contribution analysis", "analytics platform"]
+    )
+    has_risks_or_testing = any(w in project_content_lower for w in ["risk", "mitigation", "testing", "performance", "latency", "uptime"])
+
+    summary_parts = []
+    summary_parts.append(f"Across this project, the user created {doc_phrase}.")
+    if detected_domain:
+        summary_parts.append(f"The documentation is primarily in the {detected_domain} domain.")
+    if has_architecture:
+        summary_parts.append("It describes the system architecture and key design decisions.")
+    if has_requirements:
+        summary_parts.append("It captures core functional and non-functional requirements for the platform.")
+    if has_nlp_or_parsing:
+        summary_parts.append("It outlines parsing, analysis, and NLP-driven capabilities for working with non-code artifacts.")
+    if has_risks_or_testing:
+        summary_parts.append("It also discusses risks, testing, and reliability or performance considerations.")
+    if len(summary_parts) == 1:
+        summary_parts.append("The documents collectively describe the goals, behaviour, and constraints of the project.")
+    final_summary = " ".join(part.strip() for part in summary_parts)
+
+    bullets: List[str] = []
+    if has_architecture:
+        bullets.append("Designed or documented the system architecture and overall platform structure.")
+    if has_requirements:
+        bullets.append("Specified functional and non-functional requirements for how the platform should behave.")
+    if has_nlp_or_parsing:
+        bullets.append("Outlined parsing and NLP-based analysis of non-code artifacts to extract skills and contributions.")
+    if has_risks_or_testing:
+        bullets.append("Identified key risks, mitigation strategies, and testing or performance considerations.")
+
+    tech_skills_sorted = sorted(project_skills["technical_skills"])
+    if tech_skills_sorted:
+        top_tech = tech_skills_sorted[:5]
+        bullets.append(f"Worked with technologies such as {', '.join(top_tech)}.")
+
+    metrics = {
+        "word_count": len(project_content.split()),
+        "heading_count": len(re.findall(r"^#{1,6}\s+.+$", project_content, re.MULTILINE)),
+        "code_snippet_count": len(re.findall(r"```[\w]*\n.*?```", project_content, re.DOTALL)),
+    }
+
+    main_doc_type = top_doc_types[0] if top_doc_types else "GENERAL_DOCUMENTATION"
+    extracted_bullets = extract_contribution_bullets(project_content, main_doc_type, metrics)
+
+    seen_bullets = set(bullets)
+    for b in extracted_bullets:
+        b_clean = b.strip()
+        if b_clean and b_clean not in seen_bullets:
+            bullets.append(b_clean)
+            seen_bullets.add(b_clean)
+        if len(bullets) >= 5:
+            break
+
+    bullets = bullets[:5]
+
+    final_skills = {
+        category: sorted(list(skill_set))
+        for category, skill_set in project_skills.items()
+    }
+
+    return {
+        "summary": final_summary.strip(),
+        "bullets": bullets,
+        "skills": final_skills,
+    }

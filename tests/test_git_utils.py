@@ -14,7 +14,8 @@ from app.utils.git_utils import (detect_git,
     ,is_collaborative,
     extract_code_commit_content_by_author,
     extract_all_readmes,
-    extract_pull_request_metrics)
+    extract_pull_request_metrics,
+    is_code_file)
 from git import Repo, Actor
 from pathlib import Path
 import time, json, pytest, os
@@ -591,3 +592,181 @@ def test_extract_pull_request_metrics_zero_contributions(
     # Assert
     assert result == {"prs_merged": 0, "prs_reviewed": 0}
     assert mock_fetch_results.call_count == 2
+    
+# --- Tests for is_code_file() ---
+
+def make_diff_mock(
+    a_path=None,
+    b_path=None,
+    blob_size=100,
+    blob_bytes=b"print('hello')\n",
+    in_vendor=False,
+    binary_ext=False,
+    use_b_blob=True,
+    raise_on_read=False,
+):
+    """
+    Helper to construct a diff-like mock object for is_code_file tests.
+    """
+    diff = MagicMock()
+    diff.a_path = a_path
+    diff.b_path = b_path
+
+    # Configure blob
+    blob = MagicMock()
+    blob.size = blob_size
+
+    if raise_on_read:
+        blob.data_stream.read.side_effect = Exception("read error")
+    else:
+        blob.data_stream.read.return_value = blob_bytes
+
+    # Attach blob either to a_blob or b_blob, or both
+    if use_b_blob:
+        diff.b_blob = blob
+        diff.a_blob = None
+    else:
+        diff.a_blob = blob
+        diff.b_blob = None
+
+    return diff
+
+
+def test_is_code_file_text_file_returns_true():
+    """
+    A normal small text/code file (.py) outside vendor/build dirs should be classified as code.
+    """
+    diff = make_diff_mock(
+        b_path="src/app.py",
+        blob_size=123,
+        blob_bytes=b"def foo():\n    return 42\n",
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_skips_binary_extension():
+    """
+    Files with a known binary extension (.png) should return False, regardless of content.
+    """
+    diff = make_diff_mock(
+        b_path="images/logo.png",
+        blob_size=500,
+        blob_bytes=b"\x89PNG\r\n\x1a\n",  # typical PNG header
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_skips_vendor_directories():
+    """
+    Files inside vendor/build/system folders (e.g., node_modules) should be skipped.
+    """
+    diff = make_diff_mock(
+        b_path="node_modules/library/index.js",
+        blob_size=200,
+        blob_bytes=b"module.exports = {};",
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_skips_large_files_by_size():
+    """
+    Files larger than the 2MB threshold should be treated as non-code (False),
+    and the content should not need to be read.
+    """
+    diff = make_diff_mock(
+        b_path="src/huge_file.py",
+        blob_size=2_500_000,  # > 2MB
+        blob_bytes=b"A" * 1024,  # should not matter
+    )
+
+    result = is_code_file(diff)
+    assert result is False
+
+    # Ensure we didn't need to inspect contents (optional but nice to assert)
+    blob = diff.b_blob or diff.a_blob
+    blob.data_stream.read.assert_not_called()
+
+
+def test_is_code_file_detects_binary_via_nul_bytes_for_unknown_extension():
+    """
+    For files with non-blacklisted extensions, NUL bytes in the first chunk
+    should cause classification as non-code.
+    """
+    diff = make_diff_mock(
+        b_path="data/custom.txt",  # .txt is NOT in BINARY_EXTENSIONS
+        blob_size=256,
+        blob_bytes=b"hello\x00world",  # contains NUL
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_allows_text_with_unknown_extension():
+    """
+    For files with non-binary extensions and no NUL bytes, we should treat them as code/text.
+    """
+    diff = make_diff_mock(
+        b_path="data/custom.txt",
+        blob_size=256,
+        blob_bytes=b"just some plain text\nwith multiple lines\n",
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_handles_missing_blob_gracefully():
+    """
+    If no blob is available (e.g., edge cases in diff), but the extension looks like code,
+    the function should still return True (treated as text/code by extension alone).
+    """
+    diff = MagicMock()
+    diff.a_path = None
+    diff.b_path = "src/app.py"
+    diff.a_blob = None
+    diff.b_blob = None  # no blob
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_handles_read_exception_as_non_code():
+    """
+    If reading blob contents raises an exception, is_code_file should fail safely
+    and classify the file as non-code (False).
+    """
+    diff = make_diff_mock(
+        b_path="src/suspicious.txt",
+        blob_size=100,
+        raise_on_read=True,
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_uses_a_path_when_b_path_missing():
+    """
+    When b_path is None (e.g., deleted file), a_path should be used to determine extension.
+    """
+    diff = make_diff_mock(
+        a_path="src/deleted.py",
+        b_path=None,
+        blob_size=100,
+        use_b_blob=False,  # place blob on a_blob
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_returns_false_when_no_paths():
+    """
+    If both a_path and b_path are missing, the function should return False.
+    """
+    diff = MagicMock()
+    diff.a_path = None
+    diff.b_path = None
+    diff.a_blob = None
+    diff.b_blob = None
+
+    assert is_code_file(diff) is False

@@ -497,26 +497,141 @@ def test_role_inference_comprehensive():
 # --- KEEP EXISTING INTEGRATION TESTS ---
 
 def test_full_integration_workflow():
-    """Test complete workflow with new structure"""
-    print_section("🚀 FULL INTEGRATION WORKFLOW")
+    """Test complete workflow with simplified JSON output format"""
+    print_section("🚀 FULL INTEGRATION WORKFLOW - Simplified JSON Format")
     
     print("\n" + "="*50 + " LOCAL PROJECT WORKFLOW " + "="*50)
-    local_summary = analyze_parsed_project(design_pattern_files)
-    print_subsection("Local Project Summary", local_summary)
+    local_result = analyze_parsed_project(design_pattern_files)
+    print_subsection("Local Project JSON Keys", list(local_result.keys()))
+    print_subsection("Local Project Sample", {
+        "Resume bullets count": len(local_result["Resume_bullets"]),
+        "Sample bullet": local_result["Resume_bullets"][0] if local_result["Resume_bullets"] else "None",
+        "Languages": local_result["Metrics"]["languages"],
+        "Total files": local_result["Metrics"]["total_files"]
+    })
     
     print("\n" + "="*50 + " GITHUB PROJECT WORKFLOW " + "="*50)
-    github_summary = analyze_github_project(architectural_commits)
-    print_subsection("GitHub Project Summary", github_summary)
+    github_result = analyze_github_project(architectural_commits)
+    print_subsection("GitHub Project JSON Keys", list(github_result.keys()))
+    print_subsection("GitHub Project Sample", {
+        "Resume bullets count": len(github_result["Resume_bullets"]),
+        "Sample bullet": github_result["Resume_bullets"][0] if github_result["Resume_bullets"] else "None",
+        "Total commits": github_result["Metrics"]["total_commits"],
+        "Roles": github_result["Metrics"]["roles"]
+    })
     
-    assert isinstance(local_summary, list) and len(local_summary) > 0
-    assert isinstance(github_summary, list) and len(github_summary) > 0
+    # Both should return valid JSON structures
+    assert isinstance(local_result, dict) and len(local_result) > 0
+    assert isinstance(github_result, dict) and len(github_result) > 0
+    
+    # Both should have same structure for consistency
+    expected_keys = {"Resume_bullets", "Metrics"}
+    assert set(local_result.keys()) == expected_keys, f"Local result should have {expected_keys}, got {set(local_result.keys())}"
+    assert set(github_result.keys()) == expected_keys, f"GitHub result should have {expected_keys}, got {set(github_result.keys())}"
 
+def test_metrics_data_richness():
+    """Test that metrics contain rich data for both local and GitHub analysis"""
+    print_section("📊 METRICS DATA RICHNESS TEST")
+    
+    # Test local project metrics richness
+    local_result = analyze_parsed_project(design_pattern_files)
+    local_metrics = local_result["Metrics"]
+    
+    print_subsection("Local Project Metrics", {
+        "Languages": len(local_metrics["languages"]),
+        "Technical Keywords": len(local_metrics["technical_keywords"]),
+        "Frameworks": len(local_metrics["code_patterns"]["frameworks_detected"]),
+        "Design Patterns": len(local_metrics["code_patterns"]["design_patterns"]),
+        "Complexity Functions": len(local_metrics["complexity_analysis"]["function_complexity"])
+    })
+    
+    # Test GitHub project metrics richness
+    github_result = analyze_github_project(architectural_commits)
+    github_metrics = github_result["Metrics"]
+    
+    print_subsection("GitHub Project Metrics", {
+        "Total Commits": github_metrics["total_commits"],
+        "Files Changed": github_metrics["total_files_changed"],
+        "Technical Keywords": len(github_metrics["technical_keywords"]),
+        "Development Practices": len(github_metrics["development_patterns"]["code_practices"]),
+        "Roles Detected": len(github_metrics["roles"])
+    })
+    
+    # Validate data richness
+    assert len(local_metrics["technical_keywords"]) > 0, "Should extract technical keywords"
+    assert len(local_metrics["code_patterns"]["frameworks_detected"]) > 0, "Should detect frameworks"
+    assert github_metrics["total_commits"] > 0, "Should have commit data"
+    assert len(github_metrics["technical_keywords"]) > 0, "Should extract GitHub keywords"
+
+
+def test_resume_bullets_quality():
+    """Test that resume bullets are meaningful and well-structured"""
+    print_section("📝 RESUME BULLETS QUALITY TEST")
+    
+    # Test local project resume bullets
+    local_result = analyze_parsed_project(complex_parsed_files)
+    local_bullets = local_result["Resume_bullets"]
+    
+    print_subsection("Local Project Resume Bullets", local_bullets[:3])
+    
+    # Test GitHub project resume bullets  
+    github_result = analyze_github_project(architectural_commits)
+    github_bullets = github_result["Resume_bullets"]
+    
+    print_subsection("GitHub Project Resume Bullets", github_bullets[:3])
+    
+    # Validate resume bullet quality
+    assert len(local_bullets) > 0, "Should generate local resume bullets"
+    assert len(github_bullets) > 0, "Should generate GitHub resume bullets"
+    
+    # Check that bullets are meaningful (not empty or too short)
+    assert all(len(bullet.strip()) > 10 for bullet in local_bullets), "Local bullets should be meaningful"
+    assert all(len(bullet.strip()) > 10 for bullet in github_bullets), "GitHub bullets should be meaningful"
+    
+    print_subsection("✅ Resume Quality Tests Passed", [
+        f"Local project: {len(local_bullets)} quality resume bullets",
+        f"GitHub project: {len(github_bullets)} quality resume bullets",
+        "All bullets are meaningful and well-structured"
+    ])
+      
 def test_local_analysis_no_llm():
-    """Test local analysis without LLM"""
-    print_section("💻 LOCAL ANALYSIS (No LLM)")
-    summary = analyze_parsed_project(complex_parsed_files)
-    print_subsection("Generated Summary", summary)
-    assert summary is not None and len(summary) > 0
+    """Test local analysis without LLM - Updated to expect simplified JSON format"""
+    print_section("💻 LOCAL ANALYSIS (No LLM) - Simplified JSON Output")
+    result = analyze_parsed_project(complex_parsed_files)
+    
+    print_subsection("Generated JSON Structure", {
+        "Resume_bullets": len(result["Resume_bullets"]),
+        "Metrics_keys": list(result["Metrics"].keys())
+    })
+    
+    # Validate simplified JSON structure
+    assert isinstance(result, dict), "Should return dictionary"
+    assert "Resume_bullets" in result, "Should have resume bullets"
+    assert "Metrics" in result, "Should have metrics data"
+    
+    # Should NOT have other fields
+    assert "Project_summary" not in result, "Should not have project summary"
+    assert "Skills" not in result, "Should not have skills extraction"
+    assert "Domain_expertise" not in result, "Should not have domain expertise"
+    
+    # Validate metrics structure
+    metrics = result["Metrics"]
+    assert "languages" in metrics, "Should have languages in metrics"
+    assert "total_files" in metrics, "Should have total files in metrics"
+    assert "technical_keywords" in metrics, "Should have technical keywords in metrics"
+    assert "code_patterns" in metrics, "Should have code patterns in metrics"
+    assert "complexity_analysis" in metrics, "Should have complexity analysis in metrics"
+    
+    # Validate data types
+    assert isinstance(result["Resume_bullets"], list), "Resume bullets should be list"
+    assert isinstance(metrics["total_files"], int), "Total files should be integer"
+    assert isinstance(metrics["languages"], list), "Languages should be list"
+    
+    print_subsection("✅ Simplified Format Tests Passed", [
+        "Clean JSON structure with just Resume_bullets and Metrics",
+        "All rich metrics data preserved",
+        "No unnecessary complexity in output format"
+    ])
 
 def test_aggregation_functions():
     """Test metrics aggregation with new structure"""
@@ -539,9 +654,11 @@ def test_local_analysis_with_llm():
     if api_key:
         print_section("🤖 LOCAL ANALYSIS (With LLM)")
         llm_client = GeminiLLMClient(api_key=api_key)
-        summary = analyze_parsed_project(complex_parsed_files, llm_client)
-        print_subsection("LLM Generated Summary", summary)
-        assert summary is not None
+        result = analyze_parsed_project(complex_parsed_files, llm_client)
+        print_subsection("LLM Generated Resume", result["Resume_bullets"])
+        assert result is not None
+        assert "Resume_bullets" in result
+        assert "Metrics" in result
 
 def test_enhanced_architectural_pattern_analysis():
     """Test architectural pattern analysis"""
@@ -557,20 +674,36 @@ def test_enhanced_architectural_pattern_analysis():
     assert len(patterns["project_evolution"]) > 0
 
 def test_github_analysis_no_llm():
-    """Test GitHub analysis without LLM"""
-    print_section("🐙 GITHUB ANALYSIS (No LLM)")  
-    sample_commits = [
-        {
-            "hash": "a7c3f2d",
-            "author_name": "Developer", 
-            "authored_datetime": "2025-10-30T12:45:32",
-            "message_summary": "feat: implement user authentication",
-            "files": [{"status": "A", "path_after": "auth/login.py"}]
-        }
-    ]
-    summary = analyze_github_project(sample_commits)
-    print_subsection("Generated Summary", summary)
-    assert summary is not None and len(summary) > 0
+    """Test GitHub analysis without LLM - Updated to expect simplified JSON format"""
+    print_section("🐙 GITHUB ANALYSIS (No LLM) - Simplified JSON Output")
+    result = analyze_github_project(architectural_commits)
+    
+    print_subsection("Generated JSON Structure", {
+        "Resume_bullets": len(result["Resume_bullets"]),
+        "Metrics_keys": list(result["Metrics"].keys())
+    })
+    
+    # Validate simplified JSON structure
+    assert isinstance(result, dict), "Should return dictionary"
+    assert "Resume_bullets" in result, "Should have resume bullets"
+    assert "Metrics" in result, "Should have metrics data"
+    
+    # Should NOT have other fields
+    assert "Project_summary" not in result, "Should not have project summary"
+    assert "Skills" not in result, "Should not have skills extraction"
+    assert "Domain_expertise" not in result, "Should not have domain expertise"
+    
+    # Validate GitHub-specific metrics
+    metrics = result["Metrics"]
+    assert "total_commits" in metrics, "Should have total commits in metrics"
+    assert "duration_days" in metrics, "Should have duration in metrics"
+    assert "technical_keywords" in metrics, "Should have technical keywords in metrics"
+    assert "development_patterns" in metrics, "Should have development patterns in metrics"
+    
+    # Validate data types
+    assert isinstance(result["Resume_bullets"], list), "Resume bullets should be list"
+    assert isinstance(metrics["total_commits"], int), "Total commits should be integer"
+    assert isinstance(metrics["authors"], list), "Authors should be list"
 
 def test_github_analysis_with_llm():
     """Test GitHub analysis with LLM (if available)"""
@@ -579,6 +712,8 @@ def test_github_analysis_with_llm():
     if api_key:
         print_section("🤖 GITHUB ANALYSIS (With LLM)")
         llm_client = GeminiLLMClient(api_key=api_key)
-        summary = analyze_github_project(architectural_commits, llm_client)
-        print_subsection("LLM Generated Summary", summary)
-        assert summary is not None
+        result = analyze_github_project(architectural_commits, llm_client)
+        print_subsection("LLM Generated Resume", result["Resume_bullets"])
+        assert result is not None
+        assert "Resume_bullets" in result
+        assert "Metrics" in result

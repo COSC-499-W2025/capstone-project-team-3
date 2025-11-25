@@ -13,7 +13,8 @@ from app.utils.code_analysis.parse_code_utils import (detect_language,
                                             extract_libraries,
                                             map_language_for_treesitter,
                                             extract_internal_dependencies,
-                                            extract_metrics)
+                                            extract_metrics,
+                                            parse_code_flow)
 
 @pytest.fixture
 def sample_file(tmp_path):
@@ -288,3 +289,58 @@ def test_extract_metrics_computes_average_and_ratio(tmp_path):
 
     assert result["average_function_length"] == expected_avg
     assert result["comment_ratio"] == round(3 / (6 + 3), 2)  # 3 of 9 total lines
+
+@pytest.fixture
+def python_import_patterns():
+    # Reuse patterns consistent with other tests for Python import parsing
+    return {
+        "python": [
+            r"^\s*import\s+([\w\.]+(?:\s*,\s*[\w\.]+)*)",
+            r"^\s*from\s+([\w\.]+)\s+import\s*\(\s*([\w\s,._\*\n\r]+?)\s*\)",
+            r"^\s*from\s+([\w\.]+)\s+import\s+([\w\s,._\*]+)",
+        ]
+    }
+
+
+def test_parse_code_flow_basic_python(tmp_path, python_import_patterns):
+    """Parse a simple Python file; verify relative path, libraries, internal deps, metrics presence."""
+    project_root = tmp_path / "proj"
+    app_dir = project_root / "app"
+    app_dir.mkdir(parents=True)
+
+    file_good = app_dir / "module.py"
+    file_skip = app_dir / "binary.bin"
+
+    file_good.write_text(
+        '"""\nDoc line 1\nDoc line 2\n"""\nimport os, json\nfrom pathlib import Path\nfrom app.utils import something\n'
+        )
+
+
+    file_skip.write_bytes(b"\x00\xFF\x00")  # unreadable/binary -> should be skipped
+
+    with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_QUERIES", python_import_patterns):
+        results = parse_code_flow([file_good, file_skip], top_level_dirs=["app"])
+
+    assert len(results) == 1, "Should parse only the readable Python source file"
+    entry = results[0]
+    assert entry["file_path"].endswith("app/module.py"), "Relative path should include top-level directory"
+    assert entry["language"].lower() == "python"
+    # Libraries extracted (order not guaranteed)
+    assert set(entry["imports"]).issuperset({"os", "json", "pathlib"}), "Expected extracted libraries"
+    # Internal dependency assembled from 'from app.utils import something'
+    assert any(dep.startswith("app.utils") for dep in entry["dependencies_internal"]), "Internal dependency missing"
+    assert "metrics" in entry and {"average_function_length", "comment_ratio"}.issubset(entry["metrics"].keys())
+
+
+def test_parse_code_flow_non_matching_top_level(tmp_path, python_import_patterns):
+    """If provided top-level dirs don't match path segments, fallback to filename only."""
+    file_path = tmp_path / "standalone.py"
+    file_path.write_text("print('hi')\n")
+
+    with patch("app.utils.code_analysis.parse_code_utils._TS_IMPORT_QUERIES", python_import_patterns):
+        results = parse_code_flow([file_path], top_level_dirs=["doesnotexist"])
+
+    assert len(results) == 1
+    entry = results[0]
+    assert entry["file_path"] == "standalone.py", "Should fallback to bare filename when no top-level dir matches"
+    assert entry["language"].lower() == "python"

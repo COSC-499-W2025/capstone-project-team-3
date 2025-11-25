@@ -14,7 +14,8 @@ sys.path.insert(0, str(project_root))
 from app.utils.non_code_analysis.non_3rd_party_analysis import (
     classify_document_type,
     extract_contribution_bullets,
-    extract_all_skills
+    extract_all_skills,
+    analyze_project_clean
 )
 
 
@@ -157,3 +158,43 @@ def test_extract_all_skills_basic():
     skill in skills["writing_skills"]
     for skill in ["Technical Documentation", "Specification Writing"]
 )
+
+def test_analyze_project_clean_empty_files():
+    parsed_files = {"files": []}
+    result = analyze_project_clean(parsed_files)
+    assert result["summary"].startswith("No files were available")
+    assert result["bullets"] == []
+    for skill_list in result["skills"].values():
+        assert skill_list == []
+
+def test_analyze_project_clean_no_successful_files():
+    parsed_files = {"files": [
+        {"success": False, "content": "Some content", "path": "README.md"}
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert result["summary"].startswith("No successfully parsed content")
+    assert result["bullets"] == []
+    for skill_list in result["skills"].values():
+        assert skill_list == []
+
+def test_analyze_project_clean_basic_readme():
+    parsed_files = {"files": [
+        {"success": True, "content": "This is a README for a Python project using FastAPI and Docker.", "path": "README.md"}
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert "README documentation" in result["summary"]
+    assert any("Python" in skill for skill in result["skills"]["technical_skills"])
+    assert any("Docker" in skill for skill in result["skills"]["technical_skills"])
+    assert len(result["bullets"]) > 0
+
+def test_analyze_project_clean_multiple_files():
+    parsed_files = {"files": [
+        {"success": True, "content": "API endpoints for user authentication and data analysis.", "path": "api_doc.md"},
+        {"success": True, "content": "System architecture and microservices design.", "path": "design.md"},
+        {"success": True, "content": "Requirements: scalability, reliability, performance.", "path": "requirements.txt"},
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert "API documentation" in result["summary"] or "system design" in result["summary"]
+    assert "architecture" in result["summary"] or "requirements" in result["summary"]
+    assert len(result["bullets"]) > 0
+    assert isinstance(result["skills"], dict)

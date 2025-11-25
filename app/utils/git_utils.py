@@ -1,4 +1,4 @@
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
+from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
 from typing import Tuple, Union, Dict
 from datetime import datetime
@@ -454,3 +454,73 @@ def extract_pull_request_metrics(
         "prs_merged": prs_merged, 
         "prs_reviewed": prs_reviewed
     }
+    
+BINARY_EXTENSIONS = {
+    # Images
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico",
+    # Audio
+    ".mp3", ".wav", ".ogg", ".flac", ".aac",
+    # Video
+    ".mp4", ".mov", ".avi", ".mkv", ".webm",
+    # Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt",
+    # Archives
+    ".zip", ".gz", ".tar", ".rar", ".7z",
+    # Compiled/Binary
+    ".exe", ".dll", ".so", ".o", ".a", ".jar", ".pyc", ".class", ".swf",
+    # Other
+    ".db", ".sqlite", ".dat", ".bin", ".lock", ".DS_Store"
+}
+
+# --- Vendor/build folders to skip entirely ---
+SKIP_DIRS = {
+    ".git", ".github", ".gitlab", ".venv", "venv", "__pycache__", ".idea", ".vscode",
+    "node_modules", "vendor", "dist", "build", "target", ".next", ".gradle", ".mvn",
+    ".cargo", ".pnpm-store", ".tox", ".pytest_cache"
+}
+
+def is_code_file(diff_object) -> bool:
+    """
+    Determines if a diff object represents a code/text file.
+    Returns False for binary, vendor, or very large files.
+    
+    Args:
+        diff_object: A GitPython diff object
+        
+    Returns:
+        bool: True if the file is a code/text file, False if binary or non-code
+    """
+    # --- 1. Get file path ---
+    path_str = diff_object.b_path or diff_object.a_path
+    if not path_str:
+        return False  # No valid path
+    
+    # Normalize slashes for cross-platform consistency
+    norm_path = path_str.replace("\\", "/")
+
+    # --- 2. Skip vendor/build/system folders early ---
+    if any(skip in norm_path for skip in SKIP_DIRS):
+        return False
+
+    # --- 3. Check file extension blacklist ---
+    _, extension = os.path.splitext(path_str)
+    if extension.lower() in BINARY_EXTENSIONS:
+        return False
+
+    # --- 4. Size-based skip ---
+    blob = diff_object.b_blob or diff_object.a_blob
+    if blob and getattr(blob, "size", 0) > 2_000_000:  # 2 MB size limit
+        return False  # Too large to be meaningful source code
+
+    # --- 5. Optional NUL-byte sniff for unknown extensions ---
+    if not extension or extension.lower() not in BINARY_EXTENSIONS:
+        try:
+            if blob:
+                # Read only first 2 KB for efficiency
+                data = blob.data_stream.read(2048)
+                if b"\x00" in data:  # NUL byte → binary
+                    return False
+        except Exception:
+            return False  # Safe fallback
+
+    return True

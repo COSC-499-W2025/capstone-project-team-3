@@ -132,6 +132,8 @@ def seed_db():
             "file_signatures": ["alpha_main_hash", "alpha_utils_hash", "alpha_readme_hash"],
             "size_bytes": 2048,
             "rank": 1,
+            "created_at": "2024-01-15 10:30:00",  # ADD THIS
+            "last_modified": "2024-11-20 14:45:00"  # ADD THIS
         },
         {
             "project_signature": "sig_beta_project/hash",
@@ -140,6 +142,8 @@ def seed_db():
             "file_signatures": ["beta_core_hash", "beta_helper_hash"],
             "size_bytes": 4096,
             "rank": 2,
+            "created_at": "2024-03-10 09:15:00",  # ADD THIS
+            "last_modified": "2024-11-22 16:20:00"  # ADD THIS
         },
         {
             "project_signature": "sig_gamma_project/hash",
@@ -148,20 +152,24 @@ def seed_db():
             "file_signatures": ["gamma_app_hash", "gamma_test_hash", "gamma_docs_hash"],
             "size_bytes": 1024,
             "rank": 3,
+            "created_at": "2024-06-05 11:00:00",  # ADD THIS
+            "last_modified": "2024-11-25 09:30:00"  # ADD THIS
         },
     ]
 
     for proj in projects:
         cursor.execute("""
-            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank, created_at, last_modified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             proj["project_signature"],
             proj["name"],
             proj["path"],
             json.dumps(proj["file_signatures"]),
             proj["size_bytes"],
-            proj["rank"]
+            proj["rank"],
+            proj["created_at"],        # ADD THIS
+            proj["last_modified"]      # ADD THIS
         ))
 
         project_id = proj["project_signature"]

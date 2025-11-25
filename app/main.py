@@ -36,30 +36,21 @@ def main():
     if prompt_root in ("1", "true", "True", "yes"):
         print("\n--- Project Root Input ---")
         rc = file_input_main()
-        if rc != 0:
-            print("Root input step failed or was cancelled. Exiting.")
-            sys.exit(rc)
-        # If ZIP, scan each project in the projects array
-        # to test flow we need to first have values in the project attribute in rc 
-        if rc.get("type") == "zip" and "projects" in rc:
-            print(f"Found {rc['count']} projects in ZIP. Scanning each...")
-            for project_path in rc["projects"]:
-                print(f"\nScanning project: {project_path}")
-                files = run_scan_flow(project_path)
-                if not files:
-                    print(f"No files to analyze in {project_path}. Skipping.")
-                else:
-                    print(f"Ready to analyze {len(files)} files in {project_path}.")
-        else:
-            # Single directory project, this is temporarily here for simplified testing purpses
-            project_path = rc["path"]
+        # If rc is not a dict or not a ZIP, exit
+        if not isinstance(rc, dict) or rc.get("type") != "zip":
+            print("❌ Only ZIP archives are accepted as input. Exiting.")
+            sys.exit(1)
+        if rc.get("count", 0) == 0 or "projects" not in rc:
+            print("❌ No projects found in ZIP archive. Exiting.")
+            sys.exit(1)
+        print(f"Found {rc['count']} projects in ZIP. Scanning each...")
+        for project_path in rc["projects"]:
             print(f"\nScanning project: {project_path}")
             files = run_scan_flow(project_path)
             if not files:
-                print("No files to analyze. Exiting.")
-                sys.exit(1)
-            print(f"Ready to analyze {len(files)} files.")
-    
+                print(f"No files to analyze in {project_path}. Skipping.")
+            else:
+                print(f"Ready to analyze {len(files)} files in {project_path}.")
     print("App started successfully")
 
 

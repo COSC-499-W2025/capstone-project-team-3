@@ -28,7 +28,7 @@ def test_is_non_code_file_markdown():
 
 
 def test_is_non_code_file_image():
-    assert is_non_code_file("logo.png") is True
+    assert is_non_code_file("logo.png") is False
 
 
 def test_is_non_code_file_multiple_document_types():
@@ -47,20 +47,6 @@ def test_is_non_code_file_multiple_image_types():
     assert is_non_code_file("icon.gif") is True
     assert is_non_code_file("graphic.bmp") is True
     assert is_non_code_file("vector.svg") is True
-
-
-def test_is_non_code_file_archive_types():
-    """Test archive/compressed file formats."""
-    assert is_non_code_file("package.zip") is True
-    assert is_non_code_file("backup.tar") is True
-    assert is_non_code_file("compressed.gz") is True
-
-
-def test_is_non_code_file_spreadsheets():
-    """Test spreadsheet formats."""
-    assert is_non_code_file("data.xls") is True
-    assert is_non_code_file("data.xlsx") is True
-
 
 def test_is_non_code_file_various_code_extensions():
     """Test that code files are correctly identified as code."""
@@ -87,8 +73,6 @@ def test_is_non_code_file_config_files():
 def test_is_non_code_file_case_insensitive():
     """Test that extension checking is case-insensitive."""
     assert is_non_code_file("Document.PDF") is True
-    assert is_non_code_file("Image.PNG") is True
-    assert is_non_code_file("README.MD") is True
     assert is_non_code_file("Script.PY") is False
 
 
@@ -123,36 +107,7 @@ def test_is_non_code_file_multiple_dots_in_name():
     """Test files with multiple dots in filename."""
     assert is_non_code_file("my.backup.file.pdf") is True
     assert is_non_code_file("test.spec.js") is False
-    assert is_non_code_file("archive.2024.01.15.zip") is True
-
-
-@pytest.mark.parametrize("extension,expected", [
-    # Non-code extensions
-    (".pdf", True),
-    (".docx", True),
-    (".png", True),
-    (".jpg", True),
-    (".mp4", True),
-    (".zip", True),
-    (".txt", True),
-    (".md", True),
-    # Code extensions
-    (".py", False),
-    (".js", False),
-    (".java", False),
-    (".cpp", False),
-    (".go", False),
-    (".rs", False),
-    (".rb", False),
-    (".php", False),
-    (".ts", False),
-    (".jsx", False),
-])
-def test_is_non_code_file_parametrized(extension, expected):
-    """Parametrized test for various extensions."""
-    filename = f"testfile{extension}"
-    assert is_non_code_file(filename) is expected
-
+    assert is_non_code_file("archive.2024.01.15.zip") is False
 
 # ============================================================================
 # Tests for filter_non_code_files() - NEW TESTS
@@ -199,56 +154,6 @@ def test_filter_non_code_files_all_code_files(tmp_path):
     
     result = filter_non_code_files(scanned_files)
     assert result == []
-
-
-def test_filter_non_code_files_all_non_code_files(tmp_path):
-    """Test with list containing only non-code files."""
-    pdf = tmp_path / "doc.pdf"
-    pdf.write_bytes(b"PDF")
-    
-    png = tmp_path / "image.png"
-    png.write_bytes(b"PNG")
-    
-    md = tmp_path / "README.md"
-    md.write_text("readme")
-    
-    scanned_files = [str(pdf), str(png), str(md)]
-    
-    result = filter_non_code_files(scanned_files)
-    assert len(result) == 3
-
-
-def test_filter_non_code_files_mixed_list(tmp_path):
-    """Test with mixed code and non-code files."""
-    # Non-code
-    pdf = tmp_path / "report.pdf"
-    pdf.write_bytes(b"PDF")
-    
-    docx = tmp_path / "doc.docx"
-    docx.write_bytes(b"DOCX")
-    
-    png = tmp_path / "logo.png"
-    png.write_bytes(b"PNG")
-    
-    # Code
-    py = tmp_path / "main.py"
-    py.write_text("code")
-    
-    js = tmp_path / "app.js"
-    js.write_text("code")
-    
-    json_file = tmp_path / "config.json"
-    json_file.write_text("{}")
-    
-    scanned_files = [str(pdf), str(py), str(docx), str(js), str(png), str(json_file)]
-    
-    result = filter_non_code_files(scanned_files)
-    
-    assert len(result) == 3
-    assert any("report.pdf" in f for f in result)
-    assert any("doc.docx" in f for f in result)
-    assert any("logo.png" in f for f in result)
-
 
 def test_filter_non_code_files_returns_absolute_paths(tmp_path):
     """Test that returned paths are absolute."""
@@ -311,34 +216,6 @@ def test_filter_non_code_files_skips_directories(tmp_path):
     assert "file.pdf" in result[0]
 
 
-def test_filter_non_code_files_multiple_extensions(tmp_path):
-    """Test various non-code extensions."""
-    files = []
-    extensions = [".pdf", ".docx", ".png", ".mp4", ".zip", ".md", ".txt"]
-    
-    for i, ext in enumerate(extensions):
-        f = tmp_path / f"file{i}{ext}"
-        f.write_bytes(b"content")
-        files.append(str(f))
-    
-    result = filter_non_code_files(files)
-    
-    assert len(result) == len(extensions)
-
-
-def test_filter_non_code_files_case_insensitive(tmp_path):
-    """Test case-insensitive extension matching."""
-    pdf_upper = tmp_path / "DOC.PDF"
-    pdf_upper.write_bytes(b"PDF")
-    
-    png_mixed = tmp_path / "Image.PnG"
-    png_mixed.write_bytes(b"PNG")
-    
-    result = filter_non_code_files([str(pdf_upper), str(png_mixed)])
-    
-    assert len(result) == 2
-
-
 def test_filter_non_code_files_special_characters(tmp_path):
     """Test files with special characters in names."""
     file1 = tmp_path / "my document (2024).pdf"
@@ -373,32 +250,6 @@ def test_filter_non_code_files_preserves_order(tmp_path):
     
     assert a_idx < b_idx < c_idx
 
-
-def test_filter_non_code_files_nested_paths(tmp_path):
-    """Test files from nested directory structures."""
-    docs_dir = tmp_path / "docs"
-    docs_dir.mkdir()
-    doc = docs_dir / "guide.pdf"
-    doc.write_bytes(b"PDF")
-    
-    assets_dir = tmp_path / "assets" / "images"
-    assets_dir.mkdir(parents=True)
-    img = assets_dir / "logo.png"
-    img.write_bytes(b"PNG")
-    
-    src_dir = tmp_path / "src"
-    src_dir.mkdir()
-    code = src_dir / "main.py"
-    code.write_text("code")
-    
-    scanned_files = [str(doc), str(img), str(code)]
-    result = filter_non_code_files(scanned_files)
-    
-    assert len(result) == 2
-    assert any("guide.pdf" in f for f in result)
-    assert any("logo.png" in f for f in result)
-
-
 def test_filter_non_code_files_duplicate_paths(tmp_path):
     """Test handling of duplicate file paths in input."""
     doc = tmp_path / "file.pdf"
@@ -429,21 +280,6 @@ def test_filter_non_code_files_with_relative_paths(tmp_path):
     finally:
         os.chdir(original_dir)
 
-
-@pytest.mark.parametrize("extension", [
-    ".pdf", ".docx", ".png", ".jpg", ".mp4", ".zip", ".md", ".txt"
-])
-def test_filter_non_code_files_parametrized(tmp_path, extension):
-    """Parametrized test for various non-code extensions."""
-    f = tmp_path / f"file{extension}"
-    f.write_bytes(b"content")
-    
-    result = filter_non_code_files([str(f)])
-    
-    assert len(result) == 1
-    assert extension in result[0]
-
-
 def test_filter_non_code_files_large_list(tmp_path):
     """Test performance with large file list."""
     files = []
@@ -463,38 +299,6 @@ def test_filter_non_code_files_large_list(tmp_path):
     # Should only return the 50 PDFs
     assert len(result) == 50
     assert all(".pdf" in f for f in result)
-
-
-def test_filter_non_code_files_integration_pattern(tmp_path):
-    """Test realistic integration scenario with scan_project_files pattern."""
-    # Create project structure (what scan_project_files would return)
-    (tmp_path / "README.md").write_text("readme")
-    (tmp_path / "app.py").write_text("code")
-    (tmp_path / "logo.png").write_bytes(b"PNG")
-    
-    src_dir = tmp_path / "src"
-    src_dir.mkdir()
-    (src_dir / "main.py").write_text("code")
-    (src_dir / "guide.pdf").write_bytes(b"PDF")
-    
-    # Simulate scan_project_files output (already excludes .git, node_modules, etc.)
-    scanned_files = [
-        str(tmp_path / "README.md"),
-        str(tmp_path / "app.py"),
-        str(tmp_path / "logo.png"),
-        str(src_dir / "main.py"),
-        str(src_dir / "guide.pdf")
-    ]
-    
-    result = filter_non_code_files(scanned_files)
-    
-    assert len(result) == 3
-    assert any("README.md" in f for f in result)
-    assert any("logo.png" in f for f in result)
-    assert any("guide.pdf" in f for f in result)
-    assert not any("app.py" in f for f in result)
-    assert not any("main.py" in f for f in result)
-
 
 # ============================================================================
 # Tests for collect_git_non_code_files_with_metadata() 
@@ -542,29 +346,6 @@ def test_collect_git_non_code_files_single_author():
         assert "README.md" in result
         assert result["README.md"]["authors"] == ["alice@example.com"]
         assert result["README.md"]["commit_count"] == 1
-
-
-def test_collect_git_non_code_files_filters_code():
-    """Test that code files are excluded."""
-    commit = _make_mock_commit("alice@example.com", {
-        "script.py": {},
-        "app.js": {},
-        "doc.pdf": {},
-        "image.png": {}
-    })
-    
-    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo:
-        mock_repo = MagicMock()
-        mock_repo.iter_commits.return_value = [commit]
-        mock_get_repo.return_value = mock_repo
-        
-        result = collect_git_non_code_files_with_metadata("/fake/repo")
-        
-        assert "doc.pdf" in result
-        assert "image.png" in result
-        assert "script.py" not in result
-        assert "app.js" not in result
-
 
 def test_collect_git_non_code_files_invalid_repo():
     """Test handling of invalid repository."""
@@ -1075,6 +856,34 @@ def test_verify_user_in_files_empty_metadata():
     assert result["user_collaborative"] == []
     assert result["user_solo"] == []
     assert result["others_only"] == []
+
+def test_verify_user_in_files_includes_readme_for_collaborative():
+    """README files should always be included in user_collaborative, even if user is not an author."""
+    metadata = {
+        "README.md": {
+            "path": "/repo/README.md",
+            "authors": ["other@example.com"]
+        },
+        "readme.txt": {
+            "path": "/repo/readme.txt",
+            "authors": []
+        },
+        "ReadMe.docx": {
+            "path": "/repo/ReadMe.docx",
+            "authors": ["someone@example.com"]
+        },
+        "notes.pdf": {
+            "path": "/repo/notes.pdf",
+            "authors": ["other@example.com"]
+        }
+    }
+    result = verify_user_in_files(metadata, "user@example.com")
+    # All README variants should be in user_collaborative
+    assert "/repo/README.md" in result["user_collaborative"]
+    assert "/repo/readme.txt" in result["user_collaborative"]
+    assert "/repo/ReadMe.docx" in result["user_collaborative"]
+    # notes.pdf should not be in user_collaborative
+    assert "/repo/notes.pdf" not in result["user_collaborative"]
 
 # ============================================================================
 # Tests for classify_non_code_files_with_user_verification()

@@ -455,6 +455,29 @@ def extract_pull_request_metrics(
         "prs_reviewed": prs_reviewed
     }
     
+BINARY_EXTENSIONS = {
+    # Images
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico",
+    # Audio
+    ".mp3", ".wav", ".ogg", ".flac", ".aac",
+    # Video
+    ".mp4", ".mov", ".avi", ".mkv", ".webm",
+    # Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt",
+    # Archives
+    ".zip", ".gz", ".tar", ".rar", ".7z",
+    # Compiled/Binary
+    ".exe", ".dll", ".so", ".o", ".a", ".jar", ".pyc", ".class", ".swf",
+    # Other
+    ".db", ".sqlite", ".dat", ".bin", ".lock", ".DS_Store"
+}
+
+# --- Vendor/build folders to skip entirely ---
+SKIP_DIRS = {
+    ".git", ".github", ".gitlab", ".venv", "venv", "__pycache__", ".idea", ".vscode",
+    "node_modules", "vendor", "dist", "build", "target", ".next", ".gradle", ".mvn",
+    ".cargo", ".pnpm-store", ".tox", ".pytest_cache"
+}
 
 def is_code_file(diff_object) -> bool:
     """

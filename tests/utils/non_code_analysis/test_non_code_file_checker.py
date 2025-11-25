@@ -1076,6 +1076,34 @@ def test_verify_user_in_files_empty_metadata():
     assert result["user_solo"] == []
     assert result["others_only"] == []
 
+def test_verify_user_in_files_includes_readme_for_collaborative():
+    """README files should always be included in user_collaborative, even if user is not an author."""
+    metadata = {
+        "README.md": {
+            "path": "/repo/README.md",
+            "authors": ["other@example.com"]
+        },
+        "readme.txt": {
+            "path": "/repo/readme.txt",
+            "authors": []
+        },
+        "ReadMe.docx": {
+            "path": "/repo/ReadMe.docx",
+            "authors": ["someone@example.com"]
+        },
+        "notes.pdf": {
+            "path": "/repo/notes.pdf",
+            "authors": ["other@example.com"]
+        }
+    }
+    result = verify_user_in_files(metadata, "user@example.com")
+    # All README variants should be in user_collaborative
+    assert "/repo/README.md" in result["user_collaborative"]
+    assert "/repo/readme.txt" in result["user_collaborative"]
+    assert "/repo/ReadMe.docx" in result["user_collaborative"]
+    # notes.pdf should not be in user_collaborative
+    assert "/repo/notes.pdf" not in result["user_collaborative"]
+
 # ============================================================================
 # Tests for classify_non_code_files_with_user_verification()
 # ============================================================================

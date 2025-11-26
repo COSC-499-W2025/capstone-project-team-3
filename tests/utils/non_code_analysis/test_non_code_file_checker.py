@@ -8,7 +8,8 @@ from app.utils.non_code_analysis.non_code_file_checker import (
     filter_non_code_files_by_collaboration,
     get_git_user_identity,
     verify_user_in_files,
-    classify_non_code_files_with_user_verification
+    classify_non_code_files_with_user_verification,
+    get_classified_non_code_file_paths
 )
 
 # ============================================================================
@@ -1379,3 +1380,43 @@ def test_classify_parametrized_users(mock_collect, mock_detect_git, user_email, 
     
     assert len(result["collaborative"]) == expected_collab
     assert len(result["non_collaborative"]) == expected_solo
+
+
+# Tests for get_classified_non_code_file_paths()
+
+def test_get_classified_file_paths_non_git_directory(tmp_path):
+    """Test getting file paths from non-git directory."""
+    doc = tmp_path / "document.pdf"
+    doc.write_bytes(b"PDF content")
+    
+    readme = tmp_path / "README.md"
+    readme.write_text("# Project")
+    
+    result = get_classified_non_code_file_paths(tmp_path)
+    
+    assert isinstance(result, list)
+    assert len(result) >= 2
+    assert any("document.pdf" in str(p) for p in result)
+    assert any("README.md" in str(p) for p in result)
+
+
+def test_get_classified_file_paths_returns_list(tmp_path):
+    """Test that result is a list of paths."""
+    doc = tmp_path / "test.txt"
+    doc.write_text("test content")
+    
+    result = get_classified_non_code_file_paths(tmp_path)
+    
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert "test.txt" in str(result[0])
+
+
+def test_get_classified_file_paths_empty_directory(tmp_path):
+    """Test with directory containing no non-code files."""
+    code = tmp_path / "script.py"
+    code.write_text("print('hello')")
+    
+    result = get_classified_non_code_file_paths(tmp_path)
+    
+    assert result == []

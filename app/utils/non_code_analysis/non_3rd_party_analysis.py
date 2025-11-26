@@ -238,14 +238,13 @@ def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str,
 
 def extract_all_skills(content: str) -> Dict[str, List[str]]:
     """
-    Extract technical, soft, and writing skills from content.
+    Extract technical and soft skills from content.
     Domain expertise and tools/technologies intentionally removed.
     """
 
     skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "writing_skills": set(),
     }
 
     content_lower = content.lower()
@@ -312,18 +311,6 @@ def extract_all_skills(content: str) -> Dict[str, List[str]]:
     for skill, patterns in soft_skill_patterns.items():
         if any(p in content_lower for p in patterns):
             skills["soft_skills"].add(skill)
-
-    # ---- WRITING SKILLS ----
-    writing_indicators = {
-        "Technical Documentation": ["documentation", "technical writing"],
-        "Structured Writing": ["section", "heading", "organized", "structure"],
-        "Instructional Writing": ["tutorial", "step-by-step", "how-to", "guide"],
-        "Clear Communication": ["explain", "describe", "clarify"],
-    }
-
-    for skill, indicators in writing_indicators.items():
-        if any(i in content_lower for i in indicators):
-            skills["writing_skills"].add(skill)
 
     return {k: sorted(list(v)) for k, v in skills.items()}
 
@@ -420,7 +407,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "soft_skills": [],
                 "domain_expertise": [],
                 "tools_and_technologies": [],
-                "writing_skills": [],
             },
         }
 
@@ -428,7 +414,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     project_skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "writing_skills": set(),
     }
     doc_type_counts: Counter = Counter()
 
@@ -453,7 +438,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "skills": {
                 "technical_skills": [],
                 "soft_skills": [],
-                "writing_skills": [],
             },
         }
 

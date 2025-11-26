@@ -239,107 +239,70 @@ def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str,
 
 def extract_all_skills(content: str) -> Dict[str, List[str]]:
     """
-    Extract ALL skills from content - technical, soft, domain-specific.
-    Uses spaCy, KeyBERT, and pattern matching.
+    Extract technical, soft, and writing skills from content.
+    Domain expertise and tools/technologies intentionally removed.
     """
     skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "domain_expertise": set(),
-        "tools_and_technologies": set(),
         "writing_skills": set(),
     }
 
     content_lower = content.lower()
 
+    # ---- TECHNICAL SKILLS ----
     tech_keywords = {
         "python", "javascript", "java", "c++", "typescript", "go", "rust",
         "react", "angular", "vue", "django", "flask", "spring", "express",
         "postgresql", "mongodb", "mysql", "redis", "elasticsearch",
-        "docker", "kubernetes", "aws", "azure", "gcp", "terraform",
-        "git", "jenkins", "circleci", "github actions",
+        "docker", "kubernetes", "aws", "azure", "gcp",
+        "git", "devops", "ci/cd"
     }
 
     for tech in tech_keywords:
-        if re.search(r"\b" + tech + r"\b", content_lower):
+        if re.search(rf"\b{tech}\b", content_lower):
             skills["technical_skills"].add(tech.title())
 
+    # KeyBERT (if available)
     if KEYBERT_AVAILABLE and len(content) > 100:
         try:
             keywords = kw_model.extract_keywords(content, keyphrase_ngram_range=(1, 2), top_n=20)
             for keyword, score in keywords:
                 if score > 0.3:
-                    keyword_lower = keyword.lower()
-                    if any(tech in keyword_lower for tech in ["api", "system", "architecture", "design"]):
+                    kw_lower = keyword.lower()
+                    if any(t in kw_lower for t in ["api", "system", "architecture", "design"]):
                         skills["technical_skills"].add(keyword.title())
-                    elif any(word in keyword_lower for word in ["manage", "lead", "coordinate"]):
-                        skills["soft_skills"].add(keyword.title())
         except:
             pass
 
+    # ---- SOFT SKILLS ----
     soft_skill_patterns = {
-        "Technical Writing": ["documentation", "documented", "writing", "authored"],
-        "System Design": ["architecture", "designed", "architected", "system design"],
-        "API Design": ["api design", "endpoint design", "rest api", "graphql"],
-        "Database Design": ["database design", "schema", "data model"],
-        "Problem Solving": ["solved", "resolved", "addressed", "fixed"],
+        "Communication": ["explained", "communicated", "documented", "presented"],
+        "Collaboration": ["team", "collaborated", "worked with"],
+        "Problem Solving": ["solved", "resolved", "addressed"],
         "Project Planning": ["planned", "planning", "roadmap", "strategy"],
-        "Requirements Analysis": ["requirements", "specifications", "analysis"],
-        "Communication": ["explained", "communicated", "presented", "documented"],
-        "Collaboration": ["team", "collaborated", "coordinated", "worked with"],
-        "Research": ["researched", "investigated", "analyzed", "studied"],
         "Quality Assurance": ["tested", "testing", "qa", "quality"],
-        "Security": ["security", "authentication", "authorization", "encryption"],
-        "DevOps": ["deployment", "ci/cd", "automation", "pipeline"],
-        "Agile Methodology": ["agile", "scrum", "sprint", "kanban"],
+        "Requirements Analysis": ["requirements", "analysis", "specification"]
     }
 
     for skill, patterns in soft_skill_patterns.items():
-        if any(pattern in content_lower for pattern in patterns):
+        if any(p in content_lower for p in patterns):
             skills["soft_skills"].add(skill)
 
-    domain_patterns = {
-        "Web Development": ["web", "frontend", "backend", "full-stack", "http"],
-        "Mobile Development": ["mobile", "ios", "android", "app development"],
-        "Cloud Computing": ["cloud", "aws", "azure", "serverless", "microservices"],
-        "Data Science": ["data science", "machine learning", "analytics", "visualization"],
-        "Cybersecurity": ["security", "encryption", "vulnerability", "penetration testing"],
-        "DevOps": ["devops", "ci/cd", "containerization", "orchestration"],
-        "Database Management": ["database", "sql", "nosql", "data modeling"],
-        "System Architecture": ["architecture", "distributed systems", "scalability"],
-        "UI/UX Design": ["ui", "ux", "user experience", "interface design"],
-        "API Development": ["api", "rest", "graphql", "microservices"],
-    }
-
-    for domain, patterns in domain_patterns.items():
-        match_count = sum(1 for pattern in patterns if pattern in content_lower)
-        if match_count >= 2:
-            skills["domain_expertise"].add(domain)
-
+    # ---- WRITING SKILLS ----
     writing_indicators = {
         "Technical Documentation": ["documentation", "technical writing"],
-        "Content Creation": ["content", "article", "guide", "tutorial"],
         "Structured Writing": ["section", "heading", "organized", "structure"],
-        "Clear Communication": ["explain", "describe", "clarify", "detail"],
-        "Instructional Design": ["tutorial", "step-by-step", "how-to", "guide"],
-        "Specification Writing": ["specification", "requirements", "criteria"],
+        "Instructional Writing": ["tutorial", "step-by-step", "how-to", "guide"],
+        "Clear Communication": ["explain", "describe", "clarify"],
     }
 
     for skill, indicators in writing_indicators.items():
-        if any(indicator in content_lower for indicator in indicators):
+        if any(i in content_lower for i in indicators):
             skills["writing_skills"].add(skill)
 
-    if SPACY_AVAILABLE:
-        doc = nlp(content)
-        for ent in doc.ents:
-            if ent.label_ in ["ORG", "PRODUCT"]:
-                if any(tech in ent.text.lower() for tech in ["system", "platform", "tool", "service"]):
-                    skills["tools_and_technologies"].add(ent.text)
+    return {k: sorted(list(v)) for k, v in skills.items()}
 
-    return {
-        category: sorted(list(skill_set))
-        for category, skill_set in skills.items()
-    }
 
 def calculate_completeness_score(content: str, doc_type: str) -> int:
     """
@@ -441,8 +404,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     project_skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "domain_expertise": set(),
-        "tools_and_technologies": set(),
         "writing_skills": set(),
     }
     doc_type_counts: Counter = Counter()
@@ -468,8 +429,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "skills": {
                 "technical_skills": [],
                 "soft_skills": [],
-                "domain_expertise": [],
-                "tools_and_technologies": [],
                 "writing_skills": [],
             },
         }
@@ -594,5 +553,11 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "bullets": bullets,
         "skills": final_skills,
         "completeness_score": completeness_score,
+        "word_count": len(project_content.split())
     }
+
+if __name__ == "__main__":
+    from app.shared.test_data.parsed_input_text import sample_parsed_files
+    result = analyze_project_clean(sample_parsed_files)
+    print(result)
 

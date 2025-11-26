@@ -341,6 +341,80 @@ def extract_all_skills(content: str) -> Dict[str, List[str]]:
         for category, skill_set in skills.items()
     }
 
+def calculate_completeness_score(content: str, doc_type: str) -> int:
+    """
+    Document-type–aware completeness scoring (0–100). Each document type has its own expected conceptual components. We check how many of those components are present in the text.
+    This is NOT structural (headings/urls/etc). It is semantic completeness.
+    """
+
+    if not content or len(content.strip()) < 30:
+        return 0
+
+    text = content.lower()
+
+    # --- Expected sections for each documentation type ---
+    SECTION_PATTERNS = {
+        "PROPOSAL": [
+            "problem", "objective", "goal", "purpose",
+            "approach", "solution",
+            "milestone", "timeline",
+            "risk", "challenge", "mitigation"
+        ],
+        "DESIGN_DOCUMENT": [
+            "architecture", "design", "component",
+            "module", "flow", "diagram",
+            "rationale", "pattern"
+        ],
+        "REQUIREMENTS_DOCUMENT": [
+            "functional requirement", "non-functional",
+            "criteria", "constraint", "must", "should"
+        ],
+        "API_DOCUMENTATION": [
+            "endpoint", "request", "response",
+            "method", "parameter", "authentication"
+        ],
+        "README": [
+            "introduction", "install", "setup",
+            "usage", "example", "feature"
+        ],
+        "TUTORIAL": [
+            "step", "instruction", "guide",
+            "example", "walkthrough"
+        ],
+        "RESEARCH_DOCUMENT": [
+            "research", "study", "experiment",
+            "analysis", "hypothesis", "finding"
+        ],
+        "INSTALLATION_GUIDE": [
+            "install", "setup", "configuration",
+            "environment", "dependency"
+        ],
+        "MEETING_NOTES": [
+            "agenda", "notes", "discussion",
+            "action item", "decision"
+        ],
+
+        # Fallback: general documentation expectations
+        "GENERAL_DOCUMENTATION": [
+            "overview", "explain", "describe",
+            "details", "note", "discussion"
+        ]
+    }
+
+    # Select patterns based on doc type, default to general
+    patterns = SECTION_PATTERNS.get(doc_type, SECTION_PATTERNS["GENERAL_DOCUMENTATION"])
+
+    found = 0
+    for kw in patterns:
+        if kw in text:
+            found += 1
+
+    if not patterns:
+        return 0
+
+    completeness = int((found / len(patterns)) * 100)
+    return min(max(completeness, 0), 100)
+
 
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -484,14 +558,19 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     if tech_skills_sorted:
         top_tech = tech_skills_sorted[:5]
         bullets.append(f"Worked with technologies such as {', '.join(top_tech)}.")
+    
+    main_doc_type = top_doc_types[0] if top_doc_types else "GENERAL_DOCUMENTATION"
 
     metrics = {
         "word_count": len(project_content.split()),
         "heading_count": len(re.findall(r"^#{1,6}\s+.+$", project_content, re.MULTILINE)),
         "code_snippet_count": len(re.findall(r"```[\w]*\n.*?```", project_content, re.DOTALL)),
+        "url_count": len(re.findall(r"https?://[^\s\)\]]+", project_content)),
+        "bullet_point_count": len(re.findall(r"^\s*[\-\*\+]\s+", project_content, re.MULTILINE)),
+        "paragraph_count": len([p for p in re.split(r"\n{2,}", project_content) if len(p.strip().split()) > 10])
     }
+    completeness_score = calculate_completeness_score(project_content, main_doc_type)
 
-    main_doc_type = top_doc_types[0] if top_doc_types else "GENERAL_DOCUMENTATION"
     extracted_bullets = extract_contribution_bullets(project_content, main_doc_type, metrics)
 
     seen_bullets = set(bullets)
@@ -514,4 +593,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "summary": final_summary.strip(),
         "bullets": bullets,
         "skills": final_skills,
+        "completeness_score": completeness_score,
     }
+

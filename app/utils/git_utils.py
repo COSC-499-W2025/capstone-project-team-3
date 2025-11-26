@@ -454,6 +454,112 @@ def extract_pull_request_metrics(
         "prs_merged": prs_merged, 
         "prs_reviewed": prs_reviewed
     }
+
+def extract_non_code_content_by_author(
+    path: Union[str, Path],
+    author: str,
+    exclude_readme: bool = True,
+    exclude_pdf_docx: bool = True,
+    include_merges: bool = False,
+    max_commits: Optional[int] = None
+) -> str:
+    """
+    Extract non-code file contributions by author.
+    REUSES: Logic from extract_code_commit_content_by_author() and README filtering from verify_user_in_files().
+    
+    Args:
+        path: Path to git repository
+        author: Author name or email
+        exclude_readme: Exclude README files (default: True, reuses verify_user_in_files logic)
+        exclude_pdf_docx: Exclude PDF/DOCX (default: True)
+        include_merges: Include merge commits (default: False)
+        max_commits: Max commits to process (default: None)
+    
+    Returns:
+        JSON string with author's non-code contributions
+    """
+    try:
+        repo = get_repo(path)
+    except Exception:
+        return json.dumps([], indent=2)
+    
+    non_code_exts = {".md", ".txt", ".markdown"}
+    if not exclude_pdf_docx:
+        non_code_exts.update({".pdf", ".docx", ".doc"})
+    
+    seen = set()
+    out = []
+    
+    for commit in repo.iter_commits(rev="--all"):
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+        
+        if not author_matches(commit, author):
+            continue
+        
+        is_merge = len(commit.parents) > 1
+        if is_merge and not include_merges:
+            continue
+        
+        try:
+            parent = commit.parents[0] if commit.parents else NULL_TREE
+            diffs = commit.diff(parent, create_patch=True)
+            
+            files_changed_data = []
+            for d in diffs:
+                file_path = d.b_path or d.a_path or ""
+                if not file_path:
+                    continue
+                
+                path_obj = Path(file_path)
+                file_ext = path_obj.suffix.lower()
+                file_name = path_obj.name.lower()
+                
+                if file_ext not in non_code_exts:
+                    continue
+                
+                # REUSE README filtering logic from verify_user_in_files
+                if exclude_readme and file_name.startswith("readme"):
+                    continue
+                
+                status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
+                patch_text = getattr(d, "diff", b"")
+                try:
+                    patch = patch_text.decode("utf-8", errors="replace")
+                except Exception:
+                    patch = "/* Could not decode patch text */"
+                
+                files_changed_data.append({
+                    "status": status,
+                    "path_before": d.a_path,
+                    "path_after": d.b_path,
+                    "patch": patch,
+                    "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                })
+            
+            if not files_changed_data:
+                continue
+            
+            out.append({
+                "hash": commit.hexsha,
+                "author_name": getattr(commit.author, "name", "") or "",
+                "author_email": getattr(commit.author, "email", "") or "",
+                "authored_datetime": commit.authored_datetime.isoformat(),
+                "committed_datetime": commit.committed_datetime.isoformat(),
+                "message_summary": commit.summary,
+                "message_full": commit.message,
+                "is_merge": is_merge,
+                "files": files_changed_data
+            })
+            
+            if max_commits is not None and len(out) >= max_commits:
+                break
+        
+        except GitCommandError:
+            continue
+    
+    return json.dumps(out, indent=2)
     
 BINARY_EXTENSIONS = {
     # Images

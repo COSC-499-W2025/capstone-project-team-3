@@ -23,7 +23,7 @@ KEY = os.environ.get("GOOGLE_API_KEY")
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
-def pre_process_non_code_files(parsed_files: Dict, language: str = "english") -> List[Dict]:
+def pre_process_non_code_files(parsed_files: Dict, language: str = "english", is_author_filtered: bool = False) -> List[Dict]:
     """
     This function pre-processes parsed project data using Sumy LSA summarizer to generate 
     concise file summaries and extract key topics for the second LLM to use.
@@ -36,6 +36,7 @@ def pre_process_non_code_files(parsed_files: Dict, language: str = "english") ->
         max_content_length: Maximum content length in characters to process (default: 50000)
         summary_sentences: Number of sentences to include in summary (default: 3)
         language: Language for tokenization and summarization (default: "english")
+        is_author_filtered: If True, content represents only author's contributions (default: False)
     
     Returns:
         List of llm1_summary dictionaries, each with structure:
@@ -116,6 +117,7 @@ def pre_process_non_code_files(parsed_files: Dict, language: str = "english") ->
                 "readability_score": readability_score,
                 "summary": summary.strip(),
                 "key_topics": key_topics[:5],  # Limit to 5 main topics per file
+                "is_author_only": is_author_filtered,
             }
             
             llm1_summaries.append(llm1_summary)
@@ -422,6 +424,10 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
 
     # Append file-level details to the prompt
     PROMPT += "\nFile Details:\n" + "\n".join(file_details)
+    
+    # Add context if analyzing author-only content
+    if any(file.get("is_author_only") for file in aggregated_project_metrics.get("files", [])):
+        PROMPT += "\n\nNote: The content represents individual author contributions (diffs/changes from git commits), not complete files. Focus on the author's specific contributions and changes made.\n"
 
     # Specify the required output format
     PROMPT += """

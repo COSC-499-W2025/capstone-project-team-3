@@ -243,6 +243,25 @@ def verify_user_in_files(
         "others_only": others_only
     }
 
+def get_classified_non_code_file_paths(
+    directory: Union[str, Path],
+    user_email: str = None
+) -> List[str]:
+    """
+    Classify non-code files and return file paths ready for parsing.
+    Does NOT parse files - returns paths only for later parsing integration.
+    
+    Args:
+        directory: Path to directory/repository
+        user_email: Email of user (if None, gets from git config for git repos)
+    
+    Returns:
+        List of file paths (collaborative + non_collaborative, excludes others' files)
+    """
+    classification = classify_non_code_files_with_user_verification(directory, user_email)
+    return classification["collaborative"] + classification["non_collaborative"]
+
+
 def classify_non_code_files_with_user_verification(
     directory: Union[str, Path],
     user_email: str = None

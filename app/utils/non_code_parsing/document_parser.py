@@ -80,38 +80,37 @@ def parse_documents_to_json(file_paths, output_path, repo_path=None, author=None
     return output_data
 
 
-def parsed_input_text(file_paths, repo_path=None, author=None):
+def parsed_input_text(file_paths_dict, repo_path=None, author=None):
     """
-    Parse multiple non-code files and return aggregated results for non-code analysis pipeline.
-    REUSES: All existing parsing logic from parse_documents_to_json without file I/O.
+    Parse non-code files with different strategies based on collaboration status.
+    - Non-collaborative files: Extract FULL content
+    - Collaborative files: Extract ONLY author's git contributions
     
     Args:
-        file_paths: List of file paths to parse
-        repo_path: Optional git repository path for author contributions
-        author: Optional author name/email for git contributions
+        file_paths_dict: Dict with "collaborative" and "non_collaborative" keys
+        repo_path: Git repository path (required for collaborative files)
+        author: Author email (required for collaborative files)
         
     Returns:
-        Dictionary with parsed_files array matching expected output structure:
+        Dictionary with parsed_files array:
         {
             "parsed_files": [
                 {
                     "path": "string",
                     "name": "string", 
-                    "type": "string",  # e.g., "pdf", "txt", "docx"
-                    "content": "string",  # raw extracted text
+                    "type": "string",
+                    "content": "string",
                     "success": bool,
-                    "error": "string",  # error message if any
-                    "is_author_only": bool  # True for git contributions
+                    "error": "string",
+                    "is_author_only": bool  # True for collaborative files
                 }
             ]
         }
     """
-    if not file_paths:
-        return {"parsed_files": []}
-    
     results = []
     
-    for file_path_str in file_paths:
+    # Parse NON-COLLABORATIVE files - extract FULL content
+    for file_path_str in file_paths_dict.get("non_collaborative", []):
         file_path = Path(file_path_str)
         result = {
             "path": str(file_path.resolve()),
@@ -123,7 +122,6 @@ def parsed_input_text(file_paths, repo_path=None, author=None):
         }
 
         try:
-            # REUSE existing validation and parsing logic
             if not file_path.exists():
                 result["error"] = "File does not exist"
             elif is_file_too_large(file_path):
@@ -144,8 +142,8 @@ def parsed_input_text(file_paths, repo_path=None, author=None):
 
         results.append(result)
     
-    # Add author contributions if repo_path and author provided
-    if repo_path and author:
+    # Parse COLLABORATIVE files - extract ONLY author's contributions from git
+    if repo_path and author and file_paths_dict.get("collaborative"):
         try:
             author_data = parse_author_contributions(repo_path, author)
             if author_data.get("parsed_files"):
@@ -231,9 +229,10 @@ def parse_author_contributions(repo_path, author, include_merges=False, max_comm
         from app.utils.git_utils import extract_non_code_content_by_author
         import json
         
-        # Get author's non-code contributions from git
+        # Get author's non-code contributions from git (excluding README files)
         commits_json = extract_non_code_content_by_author(
-            repo_path, author, include_merges, max_commits
+            repo_path, author, exclude_readme=True, exclude_pdf_docx=True,
+            include_merges=include_merges, max_commits=max_commits
         )
         commits = json.loads(commits_json)
         

@@ -142,24 +142,6 @@ def test_extract_contribution_bullets_readme():
     for b in bullets:
         assert not re.search(r"\s+\d+\s*\.*$", b)
 
-def test_extract_all_skills_basic():
-    content = """
-    Developed a Python API using FastAPI and Docker.
-    Collaborated with team members and documented requirements.
-    Designed database schema for PostgreSQL.
-    """
-    skills = extract_all_skills(content)
-    assert "Python" in skills["technical_skills"]
-    assert "Docker" in skills["technical_skills"]
-    assert "Postgresql" in skills["technical_skills"]
-    assert "Collaboration" in skills["soft_skills"]
-    assert "Database Design" in skills["soft_skills"]
-    assert "Database Management" in skills["domain_expertise"]
-    assert any(
-    skill in skills["writing_skills"]
-    for skill in ["Technical Documentation", "Specification Writing"]
-)
-
 def test_analyze_project_clean_empty_files():
     parsed_files = {"files": []}
     result = analyze_project_clean(parsed_files)

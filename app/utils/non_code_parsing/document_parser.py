@@ -18,9 +18,10 @@ try:
 except Exception:
     docx = None
 
-def parse_documents_to_json(file_paths, output_path):
+def parse_documents_to_json(file_paths, output_path, repo_path=None, author=None):
     """
     Parse non-code documents and save results to JSON.
+    If repo_path and author provided, also include author contributions.
     """
     results = []
 
@@ -59,6 +60,17 @@ def parse_documents_to_json(file_paths, output_path):
 
         results.append(result)
 
+    # Add author contributions if repo_path and author provided
+    if repo_path and author:
+        try:
+            author_data = parse_author_contributions(repo_path, author)
+            if author_data.get("parsed_files"):
+                for file_data in author_data["parsed_files"]:
+                    file_data["is_author_only"] = True
+                results.extend(author_data["parsed_files"])
+        except Exception as e:
+            print(f"Warning: Could not parse author contributions: {e}")
+    
     # Save to JSON
     output_data = {"files": results}
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -68,13 +80,15 @@ def parse_documents_to_json(file_paths, output_path):
     return output_data
 
 
-def parsed_input_text(file_paths):
+def parsed_input_text(file_paths, repo_path=None, author=None):
     """
     Parse multiple non-code files and return aggregated results for non-code analysis pipeline.
     REUSES: All existing parsing logic from parse_documents_to_json without file I/O.
     
     Args:
         file_paths: List of file paths to parse
+        repo_path: Optional git repository path for author contributions
+        author: Optional author name/email for git contributions
         
     Returns:
         Dictionary with parsed_files array matching expected output structure:
@@ -86,7 +100,8 @@ def parsed_input_text(file_paths):
                     "type": "string",  # e.g., "pdf", "txt", "docx"
                     "content": "string",  # raw extracted text
                     "success": bool,
-                    "error": "string"  # error message if any
+                    "error": "string",  # error message if any
+                    "is_author_only": bool  # True for git contributions
                 }
             ]
         }
@@ -128,6 +143,17 @@ def parsed_input_text(file_paths):
             result["error"] = str(e)
 
         results.append(result)
+    
+    # Add author contributions if repo_path and author provided
+    if repo_path and author:
+        try:
+            author_data = parse_author_contributions(repo_path, author)
+            if author_data.get("parsed_files"):
+                for file_data in author_data["parsed_files"]:
+                    file_data["is_author_only"] = True
+                results.extend(author_data["parsed_files"])
+        except Exception as e:
+            print(f"Warning: Could not parse author contributions: {e}")
     
     return {"parsed_files": results}
 

@@ -236,12 +236,12 @@ def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str,
         bullets.append("Provided clear explanations to support better understanding.")
     return bullets[:5]
 
-
 def extract_all_skills(content: str) -> Dict[str, List[str]]:
     """
     Extract technical, soft, and writing skills from content.
     Domain expertise and tools/technologies intentionally removed.
     """
+
     skills = {
         "technical_skills": set(),
         "soft_skills": set(),
@@ -250,29 +250,53 @@ def extract_all_skills(content: str) -> Dict[str, List[str]]:
 
     content_lower = content.lower()
 
-    # ---- TECHNICAL SKILLS ----
-    tech_keywords = {
-        "python", "javascript", "java", "c++", "typescript", "go", "rust",
-        "react", "angular", "vue", "django", "flask", "spring", "express",
-        "postgresql", "mongodb", "mysql", "redis", "elasticsearch",
-        "docker", "kubernetes", "aws", "azure", "gcp",
-        "git", "devops", "ci/cd"
+    # ---- TECHNICAL KEYWORDS WITH CORRECT CASING ----
+    TECH_CORRECT_CASING = {
+        "python": "Python",
+        "javascript": "JavaScript",
+        "java": "Java",
+        "c++": "C++",
+        "typescript": "TypeScript",
+        "go": "Go",
+        "rust": "Rust",
+        "react": "React",
+        "angular": "Angular",
+        "vue": "Vue",
+        "django": "Django",
+        "flask": "Flask",
+        "spring": "Spring",
+        "express": "Express",
+        "postgresql": "PostgreSQL",
+        "mongodb": "MongoDB",
+        "mysql": "MySQL",
+        "redis": "Redis",
+        "elasticsearch": "Elasticsearch",
+        "docker": "Docker",
+        "kubernetes": "Kubernetes",
+        "aws": "AWS",
+        "azure": "Azure",
+        "gcp": "GCP",
+        "git": "Git",
+        "devops": "DevOps",
+        "ci/cd": "CI/CD",
+        "fastapi": "FastAPI"
     }
 
-    for tech in tech_keywords:
-        if re.search(rf"\b{tech}\b", content_lower):
-            skills["technical_skills"].add(tech.title())
+    # Extract technical skills
+    for tech_raw, tech_clean in TECH_CORRECT_CASING.items():
+        if re.search(rf"\b{re.escape(tech_raw)}\b", content_lower):
+            skills["technical_skills"].add(tech_clean)
 
-    # KeyBERT (if available)
+    # ---- KEYBERT (OPTIONAL TECH EXTRACTION) ----
     if KEYBERT_AVAILABLE and len(content) > 100:
         try:
             keywords = kw_model.extract_keywords(content, keyphrase_ngram_range=(1, 2), top_n=20)
             for keyword, score in keywords:
                 if score > 0.3:
                     kw_lower = keyword.lower()
-                    if any(t in kw_lower for t in ["api", "system", "architecture", "design"]):
+                    if any(term in kw_lower for term in ["api", "system", "architecture", "design"]):
                         skills["technical_skills"].add(keyword.title())
-        except:
+        except Exception:
             pass
 
     # ---- SOFT SKILLS ----

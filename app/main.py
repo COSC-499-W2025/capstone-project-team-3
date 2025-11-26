@@ -1,15 +1,21 @@
 """
 Minimal Python entry point.
 """
+from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI
+from app.client.llm_client import GeminiLLMClient
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main 
+from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.scan_utils import run_scan_flow 
 import uvicorn
 import os
 import sys
+
+load_dotenv()
 
 # Database Entry Point#
 def main():
@@ -41,24 +47,48 @@ def main():
             sys.exit(rc)
         # If ZIP, scan each project in the projects array
         # to test flow we need to first have values in the project attribute in rc 
-        if rc.get("type") == "zip" and "projects" in rc:
+        if "projects" in rc:
             print(f"Found {rc['count']} projects in ZIP. Scanning each...")
+            llm_manager = LLMConsentManager()
+            analysis_results = {}
+            
             for project_path in rc["projects"]:
                 print(f"\nScanning project: {project_path}")
                 files = run_scan_flow(project_path)
                 if not files:
                     print(f"No files to analyze in {project_path}. Skipping.")
+                    continue
                 else:
-                    print(f"Ready to analyze {len(files)} files in {project_path}.")
+                    project_name = Path(project_path).name
+                    analysis_type = llm_manager.ask_analysis_type(project_name)
+                    if analysis_type == 'ai':
+                        # run ai analysis
+                        print("run ai analysis")
+                        api_key = os.getenv("GEMINI_API_KEY")
+                        llm_client = GeminiLLMClient(api_key=api_key)
+                        #TODO: add non code starting point for AI analysis
+                        
+                        #Code analysis
+                        #check if git or non git 
+                        # if git: call parsing for git -> analysis for git USING LLM
+                        # else call parsing for local -> analysis for local USING LLM
+                        
+                    elif analysis_type == 'local':
+                        # run local analysis
+                        #TODO: add non code starting point for local analysis
+                        
+                        #Code analysis
+                        #check if git or non git
+                        # if git: call parsing for git -> analysis for git NON LLM
+                        # else call parsing for local -> analysis for local NON LLM
+                    
+                    
+                        print("run local analysis")
+                # Merge code and non code analysis into analysis_results
+                # Save analysis_results into db 
+                # print analysis_results  
         else:
-            # Single directory project, this is temporarily here for simplified testing purpses
-            project_path = rc["path"]
-            print(f"\nScanning project: {project_path}")
-            files = run_scan_flow(project_path)
-            if not files:
-                print("No files to analyze. Exiting.")
-                sys.exit(1)
-            print(f"Ready to analyze {len(files)} files.")
+            print("No projects to be analyzed")
     
     print("App started successfully")
 

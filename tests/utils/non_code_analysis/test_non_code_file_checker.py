@@ -9,7 +9,7 @@ from app.utils.non_code_analysis.non_code_file_checker import (
     get_git_user_identity,
     verify_user_in_files,
     classify_non_code_files_with_user_verification,
-    parse_classified_non_code_files
+    get_classified_non_code_file_paths
 )
 
 # ============================================================================
@@ -1573,59 +1573,41 @@ def test_classify_parametrized_users(mock_collect, mock_detect_git, user_email, 
     assert len(result["non_collaborative"]) == expected_solo
 
 
-# Tests for parse_classified_non_code_files()
+# Tests for get_classified_non_code_file_paths()
 
-def test_parse_classified_non_git_directory(tmp_path):
-    """Test parsing simple non-git directory with real files."""
-    # Create real test files
+def test_get_classified_file_paths_non_git_directory(tmp_path):
+    """Test getting file paths from non-git directory."""
     doc = tmp_path / "document.pdf"
     doc.write_bytes(b"PDF content")
     
     readme = tmp_path / "README.md"
     readme.write_text("# Project")
     
-    # Call function on non-git directory
-    result = parse_classified_non_code_files(tmp_path)
+    result = get_classified_non_code_file_paths(tmp_path)
     
-    # Verify basic structure
-    assert "parsed_files" in result
-    assert "classification" in result
-    
-    # Verify it's recognized as non-git
-    assert result["classification"]["is_git_repo"] is False
-    
-    # Verify files were parsed
-    assert len(result["parsed_files"]) >= 2
+    assert isinstance(result, list)
+    assert len(result) >= 2
+    assert any("document.pdf" in str(p) for p in result)
+    assert any("README.md" in str(p) for p in result)
 
 
-def test_parse_classified_returns_required_keys(tmp_path):
-    """Test that result has all required keys."""
-    # Create a simple file
+def test_get_classified_file_paths_returns_list(tmp_path):
+    """Test that result is a list of paths."""
     doc = tmp_path / "test.txt"
     doc.write_text("test content")
     
-    result = parse_classified_non_code_files(tmp_path)
+    result = get_classified_non_code_file_paths(tmp_path)
     
-    # Check top-level keys
-    assert "parsed_files" in result
-    assert "classification" in result
-    
-    # Check classification keys
-    assert "is_git_repo" in result["classification"]
-    assert "user_identity" in result["classification"]
-    assert "collaborative_count" in result["classification"]
-    assert "non_collaborative_count" in result["classification"]
-    assert "excluded_count" in result["classification"]
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert "test.txt" in str(result[0])
 
 
-def test_parse_classified_empty_directory(tmp_path):
+def test_get_classified_file_paths_empty_directory(tmp_path):
     """Test with directory containing no non-code files."""
-    # Create only code files
     code = tmp_path / "script.py"
     code.write_text("print('hello')")
     
-    result = parse_classified_non_code_files(tmp_path)
+    result = get_classified_non_code_file_paths(tmp_path)
     
-    # Should return empty parsed_files
-    assert result["parsed_files"] == []
-    assert result["classification"]["non_collaborative_count"] == 0
+    assert result == []

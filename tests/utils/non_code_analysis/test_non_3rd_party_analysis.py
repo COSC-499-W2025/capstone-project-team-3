@@ -15,6 +15,7 @@ from app.utils.non_code_analysis.non_3rd_party_analysis import (
     classify_document_type,
     extract_contribution_bullets,
     extract_all_skills,
+    calculate_completeness_score,
     analyze_project_clean
 )
 
@@ -198,3 +199,30 @@ def test_analyze_project_clean_multiple_files():
     assert "architecture" in result["summary"] or "requirements" in result["summary"]
     assert len(result["bullets"]) > 0
     assert isinstance(result["skills"], dict)
+
+def test_completeness_score_design_document():
+    # Simulate a design document with key sections
+    content = """
+    System Architecture: The platform uses a microservice architecture.
+    Component Design: Each module is independently deployable.
+    Flow Diagram: See attached diagrams for data flow.
+    Rationale: Chosen for scalability and maintainability.
+    Pattern: Uses the Observer and Factory patterns.
+    """
+    doc_type = "DESIGN_DOCUMENT"
+    score = calculate_completeness_score(content, doc_type)
+    # Should be high since all key sections are present
+    assert score >= 80
+
+def test_completeness_score_empty_content():
+    content = ""
+    doc_type = "README"
+    score = calculate_completeness_score(content, doc_type)
+    assert score == 0
+
+def test_completeness_score_partial_readme():
+    content = "Introduction: This project is awesome. Install: Use pip install."
+    doc_type = "README"
+    score = calculate_completeness_score(content, doc_type)
+    # Should be non-zero but less than 100
+    assert 0 < score < 100

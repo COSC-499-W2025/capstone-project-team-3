@@ -171,3 +171,71 @@ def _extract_text_file(file_path):
             return f.read().strip()
     except Exception as e:
         raise Exception(f"Text extraction failed: {e}")
+
+def parse_author_contributions(repo_path, author, include_merges=False, max_commits=None):
+    """
+    Parse non-code file contributions by a specific author from a git repository.
+    REUSES: extract_non_code_content_by_author() from git_utils and existing parsing logic.
+    
+    Args:
+        repo_path: Path to git repository
+        author: Author name or email to filter by
+        include_merges: Include merge commits (default: False)
+        max_commits: Maximum number of commits to process (default: None)
+    
+    Returns:
+        Dictionary with parsed_files array containing author's contributions:
+        {
+            "parsed_files": [
+                {
+                    "path": "string",
+                    "name": "string",
+                    "type": "string",
+                    "content": "string",  # Author's diff/patch content
+                    "success": bool,
+                    "error": "string",
+                    "commit_hash": "string",
+                    "commit_message": "string",
+                    "authored_datetime": "string"
+                }
+            ]
+        }
+    """
+    try:
+        from app.utils.git_utils import extract_non_code_content_by_author
+        import json
+        
+        # Get author's non-code contributions from git
+        commits_json = extract_non_code_content_by_author(
+            repo_path, author, include_merges, max_commits
+        )
+        commits = json.loads(commits_json)
+        
+        results = []
+        
+        # Process each commit's files
+        for commit in commits:
+            for file_data in commit.get("files", []):
+                file_path = file_data.get("path_after") or file_data.get("path_before", "")
+                
+                result = {
+                    "path": file_path,
+                    "name": Path(file_path).name if file_path else "unknown",
+                    "type": Path(file_path).suffix.lower().lstrip('.') if file_path else "unknown",
+                    "content": file_data.get("patch", ""),
+                    "success": True,
+                    "error": "",
+                    "commit_hash": commit.get("hash", ""),
+                    "commit_message": commit.get("message_summary", ""),
+                    "authored_datetime": commit.get("authored_datetime", "")
+                }
+                
+                results.append(result)
+        
+        return {"parsed_files": results}
+    
+    except Exception as e:
+        return {
+            "parsed_files": [],
+            "error": f"Failed to parse author contributions: {str(e)}"
+        }

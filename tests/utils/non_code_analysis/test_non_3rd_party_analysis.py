@@ -208,3 +208,19 @@ def test_completeness_score_partial_readme():
     score = calculate_completeness_score(content, doc_type)
     # Should be non-zero but less than 100
     assert 0 < score < 100
+    
+def test_analyze_project_clean_returns_word_count():
+    parsed_files = {"files": [
+        {
+            "success": True,
+            "content": "This is a README file with several words for testing.",
+            "path": "README.md"
+        }
+    ]}
+
+    result = analyze_project_clean(parsed_files)
+    expected_word_count = len("This is a README file with several words for testing.".split())
+
+    # TOP-LEVEL word_count, not nested inside metrics
+    assert "word_count" in result
+    assert result["word_count"] == expected_word_count

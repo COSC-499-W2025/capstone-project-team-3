@@ -118,7 +118,8 @@ def parsed_input_text(file_paths_dict, repo_path=None, author=None):
             "type": file_path.suffix.lower().lstrip('.') if file_path.suffix else "unknown",
             "content": "",
             "success": False,
-            "error": ""
+            "error": "",
+            "contribution_frequency": 1
         }
 
         try:
@@ -147,8 +148,6 @@ def parsed_input_text(file_paths_dict, repo_path=None, author=None):
         try:
             author_data = parse_author_contributions(repo_path, author)
             if author_data.get("parsed_files"):
-                for file_data in author_data["parsed_files"]:
-                    file_data["is_author_only"] = True
                 results.extend(author_data["parsed_files"])
         except Exception as e:
             print(f"Warning: Could not parse author contributions: {e}")
@@ -237,25 +236,36 @@ def parse_author_contributions(repo_path, author, include_merges=False, max_comm
         commits = json.loads(commits_json)
         
         results = []
+        file_commit_count = {}
         
-        # Process each commit's files
+        # Count commits per file and aggregate content
         for commit in commits:
             for file_data in commit.get("files", []):
                 file_path = file_data.get("path_after") or file_data.get("path_before", "")
                 
-                result = {
-                    "path": file_path,
-                    "name": Path(file_path).name if file_path else "unknown",
-                    "type": Path(file_path).suffix.lower().lstrip('.') if file_path else "unknown",
-                    "content": file_data.get("patch", ""),
-                    "success": True,
-                    "error": "",
-                    "commit_hash": commit.get("hash", ""),
-                    "commit_message": commit.get("message_summary", ""),
-                    "authored_datetime": commit.get("authored_datetime", "")
-                }
+                if file_path not in file_commit_count:
+                    file_commit_count[file_path] = {
+                        "count": 0,
+                        "content": [],
+                        "name": Path(file_path).name if file_path else "unknown",
+                        "type": Path(file_path).suffix.lower().lstrip('.') if file_path else "unknown"
+                    }
                 
-                results.append(result)
+                file_commit_count[file_path]["count"] += 1
+                file_commit_count[file_path]["content"].append(file_data.get("patch", ""))
+        
+        # Create results with aggregated content and contribution frequency
+        for file_path, data in file_commit_count.items():
+            result = {
+                "path": file_path,
+                "name": data["name"],
+                "type": data["type"],
+                "content": "\n\n".join(data["content"]),
+                "success": True,
+                "error": "",
+                "contribution_frequency": data["count"]
+            }
+            results.append(result)
         
         return {"parsed_files": results}
     

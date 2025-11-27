@@ -76,21 +76,25 @@ def get_project_signature(file_signatures: List[str]) -> str:
 
 def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path], retries: int = 2, delay: float = 0.1) -> str:
     """
-    Generate a unique signature for a file (hash of relative path + size + last_modified).
-    Handles errors if file is missing, unreadable, or path issues. Retries on error.
+    Generate a signature based on relative path + file size only.
+    Ignores timestamps and absolute paths to be consistent across extractions.
     """
     for attempt in range(1, retries + 1):
         try:
             p = Path(file_path)
             root = Path(project_root)
             stat = p.stat()
+            
+            # Just use relative path + size (no timestamp)
             rel_path = str(p.relative_to(root))
-            sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+            sig_str = f"{rel_path}:{stat.st_size}"
             return hashlib.sha256(sig_str.encode()).hexdigest()
+            
         except (FileNotFoundError, PermissionError, ValueError) as e:
             print(f"Error extracting signature for {file_path} (attempt {attempt}/{retries}): {e}")
             if attempt < retries:
                 time.sleep(delay)
+    
     return "ERROR_SIGNATURE"
 
 def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int):

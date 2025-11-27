@@ -114,8 +114,8 @@ def seed_db():
     # --- CONSENT ---
     cursor.execute("""
         INSERT OR IGNORE INTO CONSENT (id, policy_version, consent_given)
-        VALUES (1, ?, ?)
-    """, ("v1.0", 1))
+        VALUES (1, ?, 0)
+    """, ("v1.0",))
 
     # --- USER_PREFERENCES ---
     cursor.execute("""

@@ -262,8 +262,8 @@ def extract_code_commit_content_by_author(
                 
                 filename = d.b_path or d.a_path or ""
                 language = detect_language_from_patch(filename, patch)
-                code_lines_added = sum(1 for line in patch.splitlines() if line.startswith('+') and not line.startswith('+++'))
-
+                lines_added = sum( 1 for line in patch.splitlines()
+                if line.startswith('+') and not line.startswith('+++'))
 
                 files_changed_data.append({
                     "status": status,
@@ -272,7 +272,7 @@ def extract_code_commit_content_by_author(
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
                     "language": language,
-                    "code_lines_added": code_lines_added
+                    "code_lines_added": lines_added
                 })
             # --- END NEW PER-FILE LOGIC ---
         # Handle potential Git command errors by adding to dictionary

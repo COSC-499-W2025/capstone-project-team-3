@@ -328,6 +328,17 @@ def test_basic_extraction(
     # Arrange
     mock_repo = MagicMock()
     commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
+
+    # Provide realistic stats for this commit so code_lines_added is an int
+    stats_mock = MagicMock()
+    stats_mock.files = {
+        "src/app.py": {
+            "insertions": 5,
+            "deletions": 2,
+        }
+    }
+    commit1.stats = stats_mock
+
     mock_repo.iter_commits.return_value = [commit1]
     mock_get_repo.return_value = mock_repo
 
@@ -347,12 +358,15 @@ def test_basic_extraction(
     file_entry = commit_data["files"][0]
     assert file_entry["path_after"] == "src/app.py"
 
-    # New assertions
+    # Language
     assert file_entry["language"] == "Python"
+
+    # code_lines_added should come from commit.stats.files["src/app.py"]["insertions"]
     assert "code_lines_added" in file_entry
     assert isinstance(file_entry["code_lines_added"], int)
+    assert file_entry["code_lines_added"] == 5
 
-    # Optionally, verify detect_language_from_patch was called as expected
+    # Verify language detection was called
     mock_detect_language_from_patch.assert_called_once()
     
 @patch("app.utils.git_utils.get_repo")

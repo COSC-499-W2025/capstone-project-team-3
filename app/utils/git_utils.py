@@ -260,13 +260,10 @@ def extract_code_commit_content_by_author(
                 except Exception:
                     patch = "/* Could not decode patch text */"
                 
-                # Determine file extension
-                if d.b_path:
-                    _, file_ext = os.path.splitext(d.b_path)
-                elif d.a_path:
-                    _, file_ext = os.path.splitext(d.a_path)
-                else:
-                    file_ext = None  # should never happen, but safe fallback
+                filename = d.b_path or d.a_path or ""
+                language = detect_language_from_patch(filename, patch)
+                code_lines_added = sum(1 for line in patch.splitlines() if line.startswith('+') and not line.startswith('+++'))
+
 
                 files_changed_data.append({
                     "status": status,
@@ -274,7 +271,8 @@ def extract_code_commit_content_by_author(
                     "path_after": d.b_path,
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
-                    "file_extension": file_ext,
+                    "language": language,
+                    "code_lines_added": code_lines_added
                 })
             # --- END NEW PER-FILE LOGIC ---
         # Handle potential Git command errors by adding to dictionary

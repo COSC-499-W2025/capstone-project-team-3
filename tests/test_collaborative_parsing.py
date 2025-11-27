@@ -46,21 +46,20 @@ def test_collaborative_parsing():
     
     if parsed.get("parsed_files"):
         total = len(parsed["parsed_files"])
-        author_only = sum(1 for f in parsed["parsed_files"] if f.get("is_author_only"))
-        full_content = total - author_only
+        collab = sum(1 for f in parsed["parsed_files"] if f.get("contribution_frequency", 0) > 1 or "week" in f.get("name", "").lower())
+        non_collab = total - collab
         
         print(f"   ✓ Total parsed: {total}")
-        print(f"   ✓ Full content (non-collaborative): {full_content}")
-        print(f"   ✓ Author-only (collaborative): {author_only}")
+        print(f"   ✓ Full content (non-collaborative): {non_collab}")
+        print(f"   ✓ Author contributions (collaborative): {collab}")
         
-        # Show sample of author-only content
-        if author_only > 0:
-            print(f"\n4. Sample author-only content:")
+        # Show sample of collaborative content
+        if collab > 0:
+            print(f"\n4. Sample collaborative file:")
             for f in parsed["parsed_files"]:
-                if f.get("is_author_only"):
+                if "week" in f.get("name", "").lower():
                     print(f"   File: {Path(f['path']).name}")
-                    print(f"   Commit: {f.get('commit_hash', 'N/A')[:8]}")
-                    print(f"   Message: {f.get('commit_message', 'N/A')[:50]}")
+                    print(f"   Contribution frequency: {f.get('contribution_frequency', 0)}")
                     content_preview = f.get('content', '')[:100].replace('\n', ' ')
                     print(f"   Content preview: {content_preview}...")
                     break

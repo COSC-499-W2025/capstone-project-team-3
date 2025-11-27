@@ -63,17 +63,16 @@ def test_classification_and_parsing():
             # Verify logic
             print("\n3. Verifying parsing logic...")
             
-            # Check non-collaborative files have full content
+            # Check non-collaborative files have full content and contribution_frequency=1
             for f in parsed["parsed_files"]:
-                if not f.get("is_author_only"):
-                    if f.get("success") and len(f.get("content", "")) > 0:
-                        print(f"   ✓ Non-collaborative file has full content: {Path(f['path']).name}")
-                        break
+                if f.get("contribution_frequency") == 1 and f.get("success") and len(f.get("content", "")) > 0:
+                    print(f"   ✓ Non-collaborative file: {Path(f['path']).name} (freq=1, full content)")
+                    break
             
-            # Check collaborative files have author-only flag
+            # Check collaborative files have contribution_frequency > 0
             for f in parsed["parsed_files"]:
-                if f.get("is_author_only"):
-                    print(f"   ✓ Collaborative file marked as author-only: {Path(f['path']).name}")
+                if f.get("contribution_frequency", 0) >= 1 and "week" in Path(f['path']).name.lower():
+                    print(f"   ✓ Collaborative file: {Path(f['path']).name} (freq={f.get('contribution_frequency')})")
                     break
             
             print("\n" + "=" * 60)

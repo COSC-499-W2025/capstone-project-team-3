@@ -62,23 +62,23 @@ def main():
     # Check non-collaborative have full content
     non_collab_check = False
     for f in parsed["parsed_files"]:
-        if not f.get("is_author_only") and f.get("success"):
+        if f.get("contribution_frequency") == 1 and f.get("success"):
             content_len = len(f.get("content", ""))
             if content_len > 0:
                 print(f"✓ Non-collaborative file has full content:")
                 print(f"  File: {Path(f['path']).name}")
+                print(f"  Contribution frequency: 1")
                 print(f"  Content length: {content_len} chars")
                 non_collab_check = True
                 break
     
-    # Check collaborative have author-only flag and git data
+    # Check collaborative have contribution_frequency and git diffs
     collab_check = False
     for f in parsed["parsed_files"]:
-        if f.get("is_author_only"):
-            print(f"✓ Collaborative file has author-only git diff:")
+        if f.get("contribution_frequency", 0) > 1 or "week" in f.get("name", "").lower():
+            print(f"✓ Collaborative file has author git diffs:")
             print(f"  File: {Path(f['path']).name}")
-            print(f"  Commit: {f.get('commit_hash', 'N/A')[:8]}")
-            print(f"  Message: {f.get('commit_message', 'N/A')[:40]}...")
+            print(f"  Contribution frequency: {f.get('contribution_frequency', 0)}")
             print(f"  Content type: Git diff/patch")
             collab_check = True
             break

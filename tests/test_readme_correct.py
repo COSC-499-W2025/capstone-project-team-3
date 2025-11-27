@@ -46,25 +46,25 @@ def test_readme_full_content():
     if readme_parsed:
         print(f"\n3. Verifying README parsing:")
         for readme in readme_parsed[:2]:
-            is_author_only = readme.get("is_author_only", False)
+            freq = readme.get("contribution_frequency", 0)
             has_content = len(readme.get("content", "")) > 0
             
             print(f"\n   File: {Path(readme['path']).name}")
-            print(f"   Is author-only (git diff): {is_author_only}")
+            print(f"   Contribution frequency: {freq}")
             print(f"   Has content: {has_content}")
             print(f"   Content length: {len(readme.get('content', ''))} chars")
             
-            if not is_author_only and has_content:
-                print(f"   ✓ CORRECT: Full content parsed")
-            elif is_author_only:
-                print(f"   ✗ WRONG: Should be full content, not git diff")
+            if freq == 1 and has_content:
+                print(f"   ✓ CORRECT: Full content parsed (freq=1)")
+            elif freq > 1:
+                print(f"   ✗ WRONG: Should be full content with freq=1, not git diff")
             else:
                 print(f"   ✗ WRONG: No content found")
     
     # Final verification
     print("\n" + "=" * 70)
-    readme_with_full_content = sum(1 for f in readme_parsed if not f.get("is_author_only") and len(f.get("content", "")) > 0)
-    readme_with_git_diff = sum(1 for f in readme_parsed if f.get("is_author_only"))
+    readme_with_full_content = sum(1 for f in readme_parsed if f.get("contribution_frequency") == 1 and len(f.get("content", "")) > 0)
+    readme_with_git_diff = sum(1 for f in readme_parsed if f.get("contribution_frequency", 0) > 1)
     
     if readme_with_full_content > 0 and readme_with_git_diff == 0:
         print("✅ README HANDLING CORRECT")

@@ -248,6 +248,7 @@ def extract_code_commit_content_by_author(
             diffs = commit.diff(parent, create_patch=True) 
             
             files_changed_data = []
+            stats = commit.stats.files 
             for d in diffs:
                 #  # Skip binary files - only process code/text files
                 if not is_code_file(d): 
@@ -262,8 +263,12 @@ def extract_code_commit_content_by_author(
                 
                 filename = d.b_path or d.a_path or ""
                 language = detect_language_from_patch(filename, patch)
-                lines_added = sum( 1 for line in patch.splitlines()
-                if line.startswith('+') and not line.startswith('+++'))
+                file_stats = stats.get(filename, {})
+                raw_insertions = file_stats.get("insertions", 0)
+                try:
+                    lines_added = int(raw_insertions)
+                except (TypeError, ValueError):
+                    lines_added = None
 
                 files_changed_data.append({
                     "status": status,

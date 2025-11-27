@@ -313,7 +313,7 @@ def make_commit(hexsha, author_name, author_email, message, is_merge=False, file
     diff_mock.change_type = "M"
     commit.diff.return_value = files or [diff_mock]
     return commit
-
+@patch("app.utils.git_utils.detect_language_from_patch", return_value="Python")
 @patch("app.utils.git_utils.author_matches", return_value=True)
 @patch("app.utils.git_utils.is_repo_empty", return_value=False)
 @patch("app.utils.git_utils.is_code_file", return_value=True)
@@ -323,6 +323,7 @@ def test_basic_extraction(
     mock_is_code_file,
     mock_is_repo_empty,
     mock_author_matches,
+    mock_detect_language_from_patch,
 ):
     # Arrange
     mock_repo = MagicMock()
@@ -345,7 +346,14 @@ def test_basic_extraction(
 
     file_entry = commit_data["files"][0]
     assert file_entry["path_after"] == "src/app.py"
-    assert file_entry["file_extension"] == ".py"
+
+    # New assertions
+    assert file_entry["language"] == "Python"
+    assert "code_lines_added" in file_entry
+    assert isinstance(file_entry["code_lines_added"], int)
+
+    # Optionally, verify detect_language_from_patch was called as expected
+    mock_detect_language_from_patch.assert_called_once()
     
 @patch("app.utils.git_utils.get_repo")
 def test_skips_other_authors(mock_get_repo):

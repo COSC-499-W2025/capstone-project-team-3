@@ -15,11 +15,13 @@ from app.utils.git_utils import (detect_git,
     extract_code_commit_content_by_author,
     extract_all_readmes,
     extract_pull_request_metrics,
-    is_code_file)
+    is_code_file,
+    detect_language_from_patch)
 from git import Repo, Actor
 from pathlib import Path
 import time, json, pytest, os
 from unittest.mock import MagicMock, patch
+from pygments.util import ClassNotFound
 
 import app.utils.git_utils as git_utils
 
@@ -770,3 +772,111 @@ def test_is_code_file_returns_false_when_no_paths():
     diff.b_blob = None
 
     assert is_code_file(diff) is False
+    
+# --- Tests for detect_language_from_patch() ---
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_uses_filename_first(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If filename-based detection succeeds, it should be used
+    and content-based detection should not be called.
+    """
+    mock_lexer = MagicMock()
+    mock_lexer.name = "Python 3"
+    mock_guess_lexer_for_filename.return_value = mock_lexer
+
+    result = detect_language_from_patch("script.py", "some patch text")
+
+    assert result == "Python"
+    mock_guess_lexer_for_filename.assert_called_once_with("script.py", "some patch text")
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_normalizes_language_name(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    Language names like 'C++ Header' should be normalized to 'C++'
+    (first token, '+' chunks kept).
+    """
+    mock_lexer = MagicMock()
+    mock_lexer.name = "C++ Header"
+    mock_guess_lexer_for_filename.return_value = mock_lexer
+
+    result = detect_language_from_patch("main.cpp", "diff content")
+
+    assert result == "C++"
+    mock_guess_lexer_for_filename.assert_called_once()
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_falls_back_to_content_on_class_not_found(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    When filename-based detection raises ClassNotFound, the function should
+    fall back to guess_lexer(patch).
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    content_lexer = MagicMock()
+    content_lexer.name = "JavaScript"
+    mock_guess_lexer.return_value = content_lexer
+
+    patch = "function foo() { return 42; }"
+    result = detect_language_from_patch("unknown.ext", patch)
+
+    assert result == "JavaScript"
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", patch)
+    mock_guess_lexer.assert_called_once_with(patch)
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_does_not_use_content_when_patch_blank(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If the patch is empty/whitespace and filename-based detection fails,
+    content-based detection should not be attempted and None should be returned.
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    result = detect_language_from_patch("unknown.ext", "   ")
+
+    assert result is None
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", "   ")
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_returns_none_when_both_detectors_fail(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If both filename-based and content-based detection raise ClassNotFound,
+    the function should return None.
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    mock_guess_lexer.side_effect = ClassNotFound("no match")
+
+    patch = "some random content that still doesn't match"
+    result = detect_language_from_patch("unknown.ext", patch)
+
+    assert result is None
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", patch)
+    mock_guess_lexer.assert_called_once_with(patch)

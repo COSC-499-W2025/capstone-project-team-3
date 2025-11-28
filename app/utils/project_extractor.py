@@ -43,7 +43,6 @@ def extract_and_list_projects(zip_path: Union[str, Path]) -> dict:
     
     # Scan for projects
     projects = _identify_projects(temp_dir)
-    
     return {
         "status": "ok",
         "projects": projects,
@@ -55,26 +54,55 @@ def _identify_projects(root_dir: Union[str, Path]) -> List[str]:
     """
     Identify individual projects in a directory.
     
-    Project markers: .git, package.json, setup.py, pom.xml, .gradle, requirements.txt, Gemfile
+    Logic:
+    - If 1 folder inside container → That folder is the project
+    - If 0 folders inside container → No projects (return [])
+    - If 2+ folders inside container → Multiple projects
+    
     Returns list of project paths (strings).
     """
     root = Path(root_dir)
     projects = []
-    project_markers = {
-        ".git", "package.json", "setup.py", "pom.xml", ".gradle",
-        "requirements.txt", "Gemfile", "go.mod", "Cargo.toml", ".gitignore"
+    
+    # System/hidden folders to completely ignore
+    system_folders = {
+        "__MACOSX", ".DS_Store", "Thumbs.db", ".AppleDouble", ".LSOverride"
     }
     
-    # Check if root itself is a project
-    if any((root / marker).exists() for marker in project_markers):
-        projects.append(str(root))
-        return projects
-    
-    # Scan subdirectories (one level)
+    # Get all top-level directories (container folders like "projects")
+    container_folders = []
     for item in root.iterdir():
-        if item.is_dir() and not item.name.startswith("."):
-            if any((item / marker).exists() for marker in project_markers):
-                projects.append(str(item))
+        if item.is_dir():
+            # Skip hidden directories and system folders
+            if item.name.startswith(".") or item.name in system_folders:
+                continue
+            container_folders.append(item)
+    
+    # If NO directories found at all → No projects
+    if not container_folders:
+        return []
+    
+    # If only one container folder, look inside it for actual projects
+    if len(container_folders) == 1:
+        container = container_folders[0]
+        
+        # Look inside the container for actual projects
+        nested_projects = []
+        for project_item in container.iterdir():
+            if project_item.is_dir():
+                # Skip hidden directories and system folders
+                if project_item.name.startswith(".") or project_item.name in system_folders:
+                    continue
+                nested_projects.append(str(project_item))
+        
+        # Clear logic based on your requirements:
+        # - 0 folders inside container → No projects
+        # - 1+ folders inside container → Those are the projects
+        projects.extend(nested_projects)
+    
+    # If multiple container folders, treat each as a project
+    elif len(container_folders) > 1:
+        projects = [str(folder) for folder in container_folders]
     
     return projects
 

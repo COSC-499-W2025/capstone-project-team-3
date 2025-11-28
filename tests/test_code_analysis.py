@@ -96,6 +96,12 @@ def test_new_json_structure_compatibility():
             "Internal dependencies": len(metrics["dependencies_internal"]),
             "Languages": metrics["languages"]
         })
+        print_subsection("File Type Counts", {
+            "Code": metrics["code_files_changed"],
+            "Docs": metrics["doc_files_changed"],
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
+        })
         
         # Verify class detection
         assert metrics["classes"] > 0, "Should detect classes from new structure"
@@ -149,6 +155,12 @@ def test_edge_cases_and_robustness():
             "Functions found": metrics["functions"],
             "Classes found": metrics["classes"],
             "Components found": metrics["components"]
+        })
+        print_subsection("File Type Counts (Edge Cases)", {
+            "Code": metrics["code_files_changed"],
+            "Docs": metrics["doc_files_changed"],
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         # Should handle edge cases gracefully
@@ -215,6 +227,12 @@ def test_backward_compatibility():
             "Components": metrics["components"],
             "Classes": metrics["classes"]  # Should be 0 for old structure
         })
+        print_subsection("Old Structure File Type Counts", {
+            "Code": metrics["code_files_changed"],
+            "Docs": metrics["doc_files_changed"],
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
+        })
         
         assert len(keywords) > 0, "Should extract keywords from old structure"
         assert metrics["functions"] == 1, "Should count functions from old structure"
@@ -279,6 +297,12 @@ def test_performance_optimization():
             "Classes analyzed": metrics["classes"],
             "Functions analyzed": metrics["functions"],
             "Complexity scores calculated": len(complexity["function_complexity"]) + len(complexity["class_complexity"])
+        })
+        print_subsection("File Type Counts (Performance)", {
+            "Code": metrics["code_files_changed"],
+            "Docs": metrics["doc_files_changed"],
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         # Performance assertions
@@ -507,7 +531,10 @@ def test_full_integration_workflow():
         "Resume bullets count": len(local_result["Resume_bullets"]),
         "Sample bullet": local_result["Resume_bullets"][0] if local_result["Resume_bullets"] else "None",
         "Languages": local_result["Metrics"]["languages"],
-        "Total files": local_result["Metrics"]["total_files"]
+        "Total files": local_result["Metrics"]["total_files"],
+        "Code files": local_result["Metrics"].get("code_files_changed"),
+        "Doc files": local_result["Metrics"].get("doc_files_changed"),
+        "Test files": local_result["Metrics"].get("test_files_changed")
     })
     
     print("\n" + "="*50 + " GITHUB PROJECT WORKFLOW " + "="*50)
@@ -542,7 +569,10 @@ def test_metrics_data_richness():
         "Technical Keywords": len(local_metrics["technical_keywords"]),
         "Frameworks": len(local_metrics["code_patterns"]["frameworks_detected"]),
         "Design Patterns": len(local_metrics["code_patterns"]["design_patterns"]),
-        "Complexity Functions": len(local_metrics["complexity_analysis"]["function_complexity"])
+        "Complexity Functions": len(local_metrics["complexity_analysis"]["function_complexity"]),
+        "Code Files": local_metrics.get("code_files_changed"),
+        "Doc Files": local_metrics.get("doc_files_changed"),
+        "Test Files": local_metrics.get("test_files_changed")
     })
     
     # Test GitHub project metrics richness
@@ -621,6 +651,9 @@ def test_local_analysis_no_llm():
     assert "technical_keywords" in metrics, "Should have technical keywords in metrics"
     assert "code_patterns" in metrics, "Should have code patterns in metrics"
     assert "complexity_analysis" in metrics, "Should have complexity analysis in metrics"
+    for key in ["code_files_changed", "doc_files_changed", "test_files_changed"]:
+        assert key in metrics, f"Missing {key} in metrics"
+        assert isinstance(metrics[key], int), f"{key} should be int"
     
     # Validate data types
     assert isinstance(result["Resume_bullets"], list), "Resume bullets should be list"

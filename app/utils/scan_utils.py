@@ -102,21 +102,25 @@ def get_project_signature(file_signatures: List[str]) -> str:
 
 def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path], retries: int = 2, delay: float = 0.1) -> str:
     """
-    Generate a unique signature for a file (hash of relative path + size + last_modified).
-    Handles errors if file is missing, unreadable, or path issues. Retries on error.
+    Generate a signature based on relative path + file size only.
+    Ignores timestamps and absolute paths to be consistent across extractions.
     """
     for attempt in range(1, retries + 1):
         try:
             p = Path(file_path)
             root = Path(project_root)
             stat = p.stat()
+            
+            # Just use relative path + size (no timestamp)
             rel_path = str(p.relative_to(root))
-            sig_str = f"{rel_path}:{stat.st_size}:{stat.st_mtime}"
+            sig_str = f"{rel_path}:{stat.st_size}"
             return hashlib.sha256(sig_str.encode()).hexdigest()
+            
         except (FileNotFoundError, PermissionError, ValueError) as e:
             print(f"Error extracting signature for {file_path} (attempt {attempt}/{retries}): {e}")
             if attempt < retries:
                 time.sleep(delay)
+    
     return "ERROR_SIGNATURE"
 
 def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int, created_at: datetime = None, last_modified: datetime = None):
@@ -176,9 +180,10 @@ def calculate_project_score(current_file_signatures: List[str]) -> float:
     return round((already_analyzed / len(current_file_signatures)) * 100, 2)
 
 
-def run_scan_flow(root: str, exclude: list = None) -> list:
+def run_scan_flow(root: str, exclude: list = None) -> dict:
     """
-    Scans the project, stores signatures in DB with actual timestamps, and returns the list of files for downstream use.
+    Scans the project, stores signatures in DB, and returns analysis info.
+    Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
@@ -186,7 +191,13 @@ def run_scan_flow(root: str, exclude: list = None) -> list:
     files = scan_project_files(root, exclude_patterns=patterns)
     if not files:
         print("No files found to scan in the specified directory. Skipping analysis.")
-        return []
+        return {
+            "files": [], 
+            "skip_analysis": True, 
+            "score": 0.0, 
+            "reason": "no_files",
+            "signature": None
+        }
 
     # Print scanned files for user feedback
     print(f"Scanned files (excluding patterns {exclude}):")
@@ -197,18 +208,30 @@ def run_scan_flow(root: str, exclude: list = None) -> list:
     timestamps = extract_project_timestamps(root)
     
     # Store signatures in DB with actual timestamps
+
     file_signatures = [extract_file_signature(f, root) for f in files]
-    signature = get_project_signature(file_signatures)
+    project_signature = get_project_signature(file_signatures)
+    
+    # Check if project already exists
+    if project_signature_exists(project_signature):
+        print("100.0% of this Project was analyzed in the past.")
+        return {
+            "files": files,
+            "skip_analysis": True,
+            "score": 100.0,
+            "reason": "already_analyzed",
+            "signature": project_signature
+        }
+    # Project is new - calculate score and store
+    score = calculate_project_score(file_signatures)
+    print(f"{score}% of files in this project was analyzed in the past.")
+    
+    # Store new project
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
-
-    score = calculate_project_score(file_signatures)
-    print(f"Project analysis score: {score}% of files already analyzed.")
-    
-    if not project_signature_exists(signature):
-        store_project_in_db(
-            signature, 
+    store_project_in_db(
+            project_signature, 
             name, 
             path, 
             file_signatures, 
@@ -216,11 +239,11 @@ def run_scan_flow(root: str, exclude: list = None) -> list:
             timestamps["created_at"],
             timestamps["last_modified"]
         )
-        print(f"Stored project in DB with timestamps:")
-        print(f"  Created: {timestamps['created_at']}")
-        print(f"  Last Modified: {timestamps['last_modified']}")
-    else:
-        print("Project signature already exists in DB.")
-
-    # return the files for downstream processing
-    return files
+    print("Stored project and file signatures in DB.")
+    return {
+        "files": files,
+        "skip_analysis": False,
+        "score": score,
+        "reason": "new_project",
+        "signature": project_signature
+    }

@@ -199,7 +199,8 @@ def test_run_scan_flow_returns_files_and_stores_in_db(tmp_path):
     (tmp_path / "ignore.mp3").write_text("audio")
 
     # Exclude .mp3 files by default 
-    files = run_scan_flow(str(tmp_path), exclude=[])
+    scan_result = run_scan_flow(str(tmp_path), exclude=[])
+    files = scan_result["files"]
     file_names = [f.name for f in files]
 
     # Should include a.py and b.txt, but not ignore.mp3
@@ -291,8 +292,8 @@ def test_run_scan_flow_with_real_timestamps(tmp_path):
     (tmp_path / "README.md").write_text("# Test Project")
     
     # Run the scan flow
-    files = run_scan_flow(str(tmp_path), exclude=[])
-    
+    scan_result = run_scan_flow(str(tmp_path), exclude=[])
+    files = scan_result["files"]
     # Verify files were found
     assert len(files) == 3
     file_names = [f.name for f in files]

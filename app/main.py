@@ -1,17 +1,44 @@
 """
 Minimal Python entry point.
 """
+from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI
+from app.client.llm_client import GeminiLLMClient
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main 
+from app.manager.llm_consent_manager import LLMConsentManager
+from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 import uvicorn
 import os
 import sys
 
-# Database Entry Point#
+load_dotenv()
+
+def display_startup_info():
+    """Display startup information including API key status."""
+    print("\n" + "="*60)
+    print("🚀 PROJECT INSIGHTS - STARTUP INFO")
+    print("="*60)
+    
+    # Check API key status
+    api_available, api_status = check_gemini_api_key()
+    
+    print("📊 Available Analysis Types:")
+    print("   📍 Local Analysis: ✅ Always available")
+    
+    if api_available:
+        print("   🤖 AI Analysis: ✅ Ready (Gemini API key detected)")
+    else:
+        print("   🤖 AI Analysis: ❌ Requires Gemini API key")
+        print("      💡 Get your key at: https://aistudio.google.com/app/apikey")
+    
+    print("="*60)
+
+# Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
     seed_db()  # automatically populate test data
@@ -31,48 +58,160 @@ def main():
         user_pref.store.close()
         print("User preferences stored successfully.")
 
+    # Display startup info including API status
+    display_startup_info()
+    
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):
-        print("\n--- Project Root Input ---")
-        rc = file_input_main()
-        if rc != 0:
-            print("Root input step failed or was cancelled. Exiting.")
-            sys.exit(rc)
-        # If ZIP, scan each project in the projects array
-        # to test flow we need to first have values in the project attribute in rc 
-        if rc.get("type") == "zip" and "projects" in rc:
-            print(f"Found {rc['count']} projects in ZIP. Scanning each...")
-            for project_path in rc["projects"]:
-                print(f"\nScanning project: {project_path}")
-                files = run_scan_flow(project_path)
-                if not files:
-                    print(f"No files to analyze in {project_path}. Skipping.")
+        
+        # Initialize LLM manager once (outside the loop)
+        llm_manager = LLMConsentManager()
+        
+        # Main analysis loop - keeps asking for projects until user exits
+        while True:
+            print("\n" + "="*60)
+            print("🔍 PROJECT ANALYSIS SESSION")
+            print("="*60)
+            
+            print("\n--- Project Root Input ---")
+            rc = file_input_main()
+            
+            # Handle cancellation or error
+            if not isinstance(rc, dict) or rc.get("status") != "ok":
+                print("\n❌ Project input failed or was cancelled.")
+                
+                # Ask if user wants to try again or exit
+                while True:
+                    choice = input("\nWould you like to:\n  ↺ 'retry' - Try entering another project path\n  🚪 'exit'  - Exit the application\n\nChoice (retry/exit): ").lower().strip()
+                    
+                    if choice in ['exit', 'e', 'quit', 'q']:
+                        print("👋 Exiting Project Insights. Goodbye!")
+                        break
+                    elif choice in ['retry', 'r', 'again', 'y', 'yes']:
+                        break
+                    else:
+                        print("❌ Please enter 'retry' or 'exit'")
+                
+                if choice in ['exit', 'e', 'quit', 'q']:
+                    break
                 else:
-                    print(f"Ready to analyze {len(files)} files in {project_path}.")
-        else:
-            # Single directory project, this is temporarily here for simplified testing purpses
-            project_path = rc["path"]
-            print(f"\nScanning project: {project_path}")
-            files = run_scan_flow(project_path)
-            if not files:
-                print("No files to analyze. Exiting.")
-                sys.exit(1)
-            print(f"Ready to analyze {len(files)} files.")
+                    continue  # Go back to project input
+            
+            # Process projects (we only expect "projects" in rc now)
+            if "projects" in rc:
+                print(f"Found {rc['count']} projects in ZIP. Scanning each...")
+                
+                # will be used once analysis on each project is done to be able to fetch individual project analysis to display
+                project_signatures = []
+                
+                for i, project_path in enumerate(rc["projects"], 1):
+                    project_name = Path(project_path).name
+                    print(f"\n{'='*50}")
+                    print(f"📁 PROJECT {i}/{rc['count']}: {project_name}")
+                    print(f"{'='*50}")
+                    
+                    print(f"🔍 Scanning project files...")
+                    scan_result = run_scan_flow(project_path)
+                    files = scan_result['files']
+                
+                    print(f"✅ Found {len(files)} files")
+                    
+                    # Check if we should skip analysis
+                    if scan_result["skip_analysis"]:
+                        if scan_result["reason"] == "already_analyzed":
+                            print(f"⏭️ Skipping analysis - {project_name} already fully analyzed")
+                            project_signatures.append(scan_result["signature"])
+                        elif scan_result["reason"] == "no_files":
+                            print(f"⚠️ No files to analyze in {project_name}. Skipping.")
+                        continue
+                        
+                    project_signatures.append(scan_result["signature"])
+                    analysis_type = llm_manager.ask_analysis_type(project_name)
+                    
+                    # analysis flow with LLM
+                    if analysis_type == 'ai':
+                        print("🤖 Running AI analysis...")
+                        
+                        # Double-check API key (safety check)
+                        api_key = os.getenv("GEMINI_API_KEY")
+                        if not api_key:
+                            print("❌ Error: Gemini API key not available. Falling back to local analysis.")
+                            analysis_type = 'local'
+                        else:
+                            try:
+                                llm_client = GeminiLLMClient(api_key=api_key)
+                                
+                                #TODO: Non Code parsing -> analysis
+                                
+                                #TODO: Code parsing -> analysis
+                                #check if git or non git 
+                                # if git: call parsing for git -> analysis for git USING LLM
+                                # else call parsing for local -> analysis for local USING LLM
+                                
+                                print(f"✅ Starting AI analysis for {project_name}")
+                                
+                                #TODO: merge code and non code LLM analysis then store into db
+                                
+                            except Exception as e:
+                                print(f"❌ Error initializing AI client: {e}")
+                                print("🔄 Falling back to local analysis...")
+                                analysis_type = 'local'
+                    
+                    # Handle local analysis (including fallbacks from AI failures)
+                    if analysis_type == 'local':
+                        print("📊 Running local analysis...")
+                        
+                        #TODO: Non Code parsing -> analysis
+                        
+                        #TODO: Code parsing -> analysis
+                        #check if git or non git
+                        # if git: call parsing for git -> analysis for git NON LLM
+                        # else call parsing for local -> analysis for local NON LLM
+                        
+                        print(f"✅ Starting Local analysis for {project_name}")
+                        
+                        #TODO: merge code and non code LOCAL analysis then store into db
+                
+                #TODO: Print all information for projects using the signatures stored in project_signatures
+                #TODO: Print Chronological order of projects analyzed from the db
+                #TODO: Print Chronological Skills worked on from projects 
+                
+                
+            else:
+                print("❌ No projects found to analyze")
+          
+            # ADD THE MISSING SECTION HERE!
+            print(f"\n{'='*60}")
+            print("🔄 CONTINUE OR EXIT?")
+            print(f"{'='*60}")
+            
+            while True:
+                choice = input("\nWould you like to:\n  🔄 'continue' - Analyze another project\n  🚪 'exit'     - Exit the application\n\nChoice (continue/exit): ").lower().strip()
+                
+                if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                    print("👋 Exiting Project Insights. Thank you for using our service!")
+                    break
+                elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
+                    print("🔄 Starting new analysis session...")
+                    break
+                else:
+                    print("❌ Please enter 'continue' or 'exit'")
+            
+            # Break out of the main while loop if user chose exit
+            if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                break
     
     print("App started successfully")
 
-
-    
 # Create FastAPI app
 app = FastAPI(title="Project Insights")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Project Insights!!",
-              }
+    return {"message": "Welcome to the Project Insights!!"}
 
 if __name__ == "__main__":
     main()
-    print("App started Succesfully")
+    print("App started Successfully")
     uvicorn.run(app, host="0.0.0.0", port=8000)

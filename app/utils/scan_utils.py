@@ -231,7 +231,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     name = Path(root).name
     path = str(Path(root).resolve())
     store_project_in_db(
-            signature, 
+            project_signature, 
             name, 
             path, 
             file_signatures, 

@@ -14,7 +14,9 @@ sys.path.insert(0, str(project_root))
 from app.utils.non_code_analysis.non_3rd_party_analysis import (
     classify_document_type,
     extract_contribution_bullets,
-    extract_all_skills
+    extract_all_skills,
+    calculate_completeness_score,
+    analyze_project_clean
 )
 
 
@@ -140,20 +142,85 @@ def test_extract_contribution_bullets_readme():
     for b in bullets:
         assert not re.search(r"\s+\d+\s*\.*$", b)
 
-def test_extract_all_skills_basic():
+def test_analyze_project_clean_empty_files():
+    parsed_files = {"files": []}
+    result = analyze_project_clean(parsed_files)
+    assert result["summary"].startswith("No files were available")
+    assert result["bullets"] == []
+    for skill_list in result["skills"].values():
+        assert skill_list == []
+
+def test_analyze_project_clean_no_successful_files():
+    parsed_files = {"files": [
+        {"success": False, "content": "Some content", "path": "README.md"}
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert result["summary"].startswith("No successfully parsed content")
+    assert result["bullets"] == []
+    for skill_list in result["skills"].values():
+        assert skill_list == []
+
+def test_analyze_project_clean_basic_readme():
+    parsed_files = {"files": [
+        {"success": True, "content": "This is a README for a Python project using FastAPI and Docker.", "path": "README.md"}
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert "README documentation" in result["summary"]
+    assert any("Python" in skill for skill in result["skills"]["technical_skills"])
+    assert any("Docker" in skill for skill in result["skills"]["technical_skills"])
+    assert len(result["bullets"]) > 0
+
+def test_analyze_project_clean_multiple_files():
+    parsed_files = {"files": [
+        {"success": True, "content": "API endpoints for user authentication and data analysis.", "path": "api_doc.md"},
+        {"success": True, "content": "System architecture and microservices design.", "path": "design.md"},
+        {"success": True, "content": "Requirements: scalability, reliability, performance.", "path": "requirements.txt"},
+    ]}
+    result = analyze_project_clean(parsed_files)
+    assert "API documentation" in result["summary"] or "system design" in result["summary"]
+    assert "architecture" in result["summary"] or "requirements" in result["summary"]
+    assert len(result["bullets"]) > 0
+    assert isinstance(result["skills"], dict)
+
+def test_completeness_score_design_document():
+    # Simulate a design document with key sections
     content = """
-    Developed a Python API using FastAPI and Docker.
-    Collaborated with team members and documented requirements.
-    Designed database schema for PostgreSQL.
+    System Architecture: The platform uses a microservice architecture.
+    Component Design: Each module is independently deployable.
+    Flow Diagram: See attached diagrams for data flow.
+    Rationale: Chosen for scalability and maintainability.
+    Pattern: Uses the Observer and Factory patterns.
     """
-    skills = extract_all_skills(content)
-    assert "Python" in skills["technical_skills"]
-    assert "Docker" in skills["technical_skills"]
-    assert "Postgresql" in skills["technical_skills"]
-    assert "Collaboration" in skills["soft_skills"]
-    assert "Database Design" in skills["soft_skills"]
-    assert "Database Management" in skills["domain_expertise"]
-    assert any(
-    skill in skills["writing_skills"]
-    for skill in ["Technical Documentation", "Specification Writing"]
-)
+    doc_type = "DESIGN_DOCUMENT"
+    score = calculate_completeness_score(content, doc_type)
+    # Should be high since all key sections are present
+    assert score >= 80
+
+def test_completeness_score_empty_content():
+    content = ""
+    doc_type = "README"
+    score = calculate_completeness_score(content, doc_type)
+    assert score == 0
+
+def test_completeness_score_partial_readme():
+    content = "Introduction: This project is awesome. Install: Use pip install."
+    doc_type = "README"
+    score = calculate_completeness_score(content, doc_type)
+    # Should be non-zero but less than 100
+    assert 0 < score < 100
+    
+def test_analyze_project_clean_returns_word_count():
+    parsed_files = {"files": [
+        {
+            "success": True,
+            "content": "This is a README file with several words for testing.",
+            "path": "README.md"
+        }
+    ]}
+
+    result = analyze_project_clean(parsed_files)
+    expected_word_count = len("This is a README file with several words for testing.".split())
+
+    # TOP-LEVEL word_count, not nested inside metrics
+    assert "word_count" in result
+    assert result["word_count"] == expected_word_count

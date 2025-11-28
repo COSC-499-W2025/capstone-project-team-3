@@ -3,6 +3,7 @@ from typing import Union, List, Dict
 import hashlib
 import json
 import time 
+from datetime import datetime
 from app.data.db import get_connection
 
 EXCLUDE_PATTERNS = [
@@ -64,7 +65,32 @@ def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
         "last_modified": stat.st_mtime,
     }
 
-
+def extract_project_timestamps(project_root: Union[str, Path]) -> Dict[str, datetime]:
+    """
+    Extract creation and modification timestamps from the project root directory.
+    Returns timestamps as datetime objects.
+    """
+    try:
+        root_path = Path(project_root)
+        stat = root_path.stat()
+        
+        # Get timestamps
+        created_at = datetime.fromtimestamp(stat.st_ctime)
+        last_modified = datetime.fromtimestamp(stat.st_mtime)
+        
+        return {
+            "created_at": created_at,
+            "last_modified": last_modified
+        }
+    except Exception as e:
+        print(f"Error extracting project timestamps for {project_root}: {e}")
+        # Fallback to current time if there's an error
+        current_time = datetime.now()
+        return {
+            "created_at": current_time,
+            "last_modified": current_time
+        }
+        
 def get_project_signature(file_signatures: List[str]) -> str:
     """
     Generate a unique signature for the project based on all file signatures.
@@ -97,13 +123,26 @@ def extract_file_signature(file_path: Union[str, Path], project_root: Union[str,
     
     return "ERROR_SIGNATURE"
 
-def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int):
-    """Store project and its file signatures in the PROJECT table."""
+def store_project_in_db(signature: str, name: str, path: str, file_signatures: List[str], size_bytes: int, created_at: datetime = None, last_modified: datetime = None):
+    """Store project and its file signatures in the PROJECT table with actual timestamps."""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Use provided timestamps or current time as fallback
+    if created_at is None:
+        created_at = datetime.now()
+    if last_modified is None:
+        last_modified = datetime.now()
+    
+    # Convert to ISO format strings - these sort chronologically as strings!
+    created_at_str = created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
+    last_modified_str = last_modified.isoformat() if isinstance(last_modified, datetime) else str(last_modified)
+    
     cursor.execute(
-        "INSERT OR REPLACE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes) VALUES (?, ?, ?, ?, ?)",
-        (signature, name, path, json.dumps(file_signatures), size_bytes)
+        """INSERT OR REPLACE INTO PROJECT 
+           (project_signature, name, path, file_signatures, size_bytes, created_at, last_modified) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (signature, name, path, json.dumps(file_signatures), size_bytes, created_at_str, last_modified_str)
     )
     conn.commit()
     conn.close()
@@ -141,7 +180,6 @@ def calculate_project_score(current_file_signatures: List[str]) -> float:
     return round((already_analyzed / len(current_file_signatures)) * 100, 2)
 
 
-
 def run_scan_flow(root: str, exclude: list = None) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
@@ -166,7 +204,11 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     for f in files:
         print(f)
 
-    # Generate signatures
+    # Extract project timestamps
+    timestamps = extract_project_timestamps(root)
+    
+    # Store signatures in DB with actual timestamps
+
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
     
@@ -188,9 +230,16 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
-    store_project_in_db(project_signature, name, path, file_signatures, size_bytes)
+    store_project_in_db(
+            signature, 
+            name, 
+            path, 
+            file_signatures, 
+            size_bytes,
+            timestamps["created_at"],
+            timestamps["last_modified"]
+        )
     print("Stored project and file signatures in DB.")
-
     return {
         "files": files,
         "skip_analysis": False,

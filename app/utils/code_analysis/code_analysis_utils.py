@@ -337,9 +337,16 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     roles = set()
     
     # File type extensions for classification
-    code_exts = {".py", ".js", ".java", ".cpp", ".c", ".ts", ".rb", ".go"}
+    code_exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cc",
+                 ".cs", ".go", ".rb", ".rs", ".kt", ".kts", ".swift", ".scala", ".php", ".m", ".mm",
+                 ".sh", ".ps1", ".pl", ".lua", ".r", ".jl", ".sql", ".dart", ".groovy", ".hs", ".erl",
+                 ".ex", ".exs", ".clj", ".cljs", ".coffee", ".asm", ".s", ".vb", ".vbs", ".v", ".sv", 
+                 ".vhdl", ".zig", ".nim", ".gd", ".proto", ".graphql", ".vue", ".scss", ".less", ".css",
+                 ".qml", ".cmake", ".gradle", ".make"
+                 }
     doc_exts = {".md"}
-    test_exts = {"test_", "_test.py", ".spec.js", ".spec.ts"}
+    test_exts = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
+                 ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}
 
     # Collect metrics from each commit
     for commit in commits:
@@ -355,7 +362,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
                 total_files_changed.add(path)
                 ext = os.path.splitext(path)[1].lower()
                 fname = os.path.basename(path).lower()
-                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts) or "test" in path.lower():
+                # Strict test-file detection: filename-only prefixes/suffixes and known test extensions
+                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts)or (ext and fname.endswith("_test" + ext)):
                     file_types_counter["test"] += 1
                 elif ext in doc_exts:
                     file_types_counter["docs"] += 1
@@ -836,6 +844,20 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     Aggregates key metrics from a list of parsed file dicts.
     Updated to handle new JSON structure with entities.
     """
+    file_types_counter = Counter()
+    
+    # File type extensions for classification
+    code_exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cc",
+                 ".cs", ".go", ".rb", ".rs", ".kt", ".kts", ".swift", ".scala", ".php", ".m", ".mm",
+                 ".sh", ".ps1", ".pl", ".lua", ".r", ".jl", ".sql", ".dart", ".groovy", ".hs", ".erl",
+                 ".ex", ".exs", ".clj", ".cljs", ".coffee", ".asm", ".s", ".vb", ".vbs", ".v", ".sv", 
+                 ".vhdl", ".zig", ".nim", ".gd", ".proto", ".graphql", ".vue", ".scss", ".less", ".css",
+                 ".qml", ".cmake", ".gradle", ".make"
+                 }
+    doc_exts = {".md"}
+    test_exts = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
+                 ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}
+    
     metrics = {
         "languages": set(),
         "total_files": 0,
@@ -848,10 +870,26 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         "dependencies_internal": set(),  # New for internal dependencies
         "average_function_length": [],
         "comment_ratios": [],
+        "code_files_changed": 0, #new for contribution by filetype
+        "doc_files_changed": 0,
+        "test_files_changed": 0
     }
 
     # Collect metrics from each file
     for file in parsed_files:
+        path = file.get("file_path")
+        ext = os.path.splitext(path)[1].lower()
+        fname = os.path.basename(path).lower()
+        # Strict test-file detection: filename-only prefixes/suffixes and known test extensions
+        if any(fname.endswith(e) or fname.startswith(e) for e in test_exts)or (ext and fname.endswith("_test" + ext)):
+            file_types_counter["test"] += 1
+        elif ext in doc_exts:
+            file_types_counter["docs"] += 1
+        elif ext in code_exts:
+            file_types_counter["code"] += 1
+        else:
+            file_types_counter["other"] += 1
+        
         metrics["languages"].add(file.get("language"))
         metrics["total_files"] += 1
         metrics["total_lines"] += file.get("lines_of_code", 0)
@@ -898,6 +936,9 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     metrics["roles"] = list(metrics["roles"])
     metrics["imports"] = list(metrics["imports"])
     metrics["dependencies_internal"] = list(metrics["dependencies_internal"])
+    metrics["code_files_changed"] = file_types_counter["code"]  # new for contribution by filetype
+    metrics["doc_files_changed"] = file_types_counter["docs"]
+    metrics["test_files_changed"] = file_types_counter["test"]
     return metrics
 
 
@@ -978,6 +1019,9 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
             "roles": metrics["roles"],
             "average_function_length": metrics["average_function_length"],
             "average_comment_ratio": metrics["average_comment_ratio"],
+            "code_files_changed": metrics["code_files_changed"],
+            "doc_files_changed": metrics["doc_files_changed"],
+            "test_files_changed": metrics["test_files_changed"],
             "technical_keywords": technical_keywords,
             "code_patterns": code_patterns,
             "complexity_analysis": complexity_analysis

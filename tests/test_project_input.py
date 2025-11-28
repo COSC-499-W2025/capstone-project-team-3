@@ -292,8 +292,8 @@ def test_run_scan_flow_with_real_timestamps(tmp_path):
     (tmp_path / "README.md").write_text("# Test Project")
     
     # Run the scan flow
-    files = run_scan_flow(str(tmp_path), exclude=[])
-    
+    scan_result = run_scan_flow(str(tmp_path), exclude=[])
+    files = scan_result["files"]
     # Verify files were found
     assert len(files) == 3
     file_names = [f.name for f in files]

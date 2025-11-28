@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
     rank INTEGER,
+    summary TEXT default NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,7 +70,7 @@ CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     project_id TEXT,
     metric_name TEXT,
     metric_value TEXT,
-    chart_type TEXT,
+    chart_type TEXT DEFAULT NONE,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
@@ -132,6 +133,7 @@ def seed_db():
             "file_signatures": ["alpha_main_hash", "alpha_utils_hash", "alpha_readme_hash"],
             "size_bytes": 2048,
             "rank": 1,
+            "summary" : "Alpha Project is a machine learning application using TensorFlow.",
             "created_at": "2024-01-15 10:30:00",  # ADD THIS
             "last_modified": "2024-11-20 14:45:00"  # ADD THIS
         },
@@ -142,6 +144,7 @@ def seed_db():
             "file_signatures": ["beta_core_hash", "beta_helper_hash"],
             "size_bytes": 4096,
             "rank": 2,
+            "summary" : "Beta Project is a web application built with Flask.",
             "created_at": "2024-03-10 09:15:00",  # ADD THIS
             "last_modified": "2024-11-22 16:20:00"  # ADD THIS
         },
@@ -152,15 +155,16 @@ def seed_db():
             "file_signatures": ["gamma_app_hash", "gamma_test_hash", "gamma_docs_hash"],
             "size_bytes": 1024,
             "rank": 3,
-            "created_at": "2024-06-05 11:00:00",  # ADD THIS
-            "last_modified": "2024-11-25 09:30:00"  # ADD THIS
+            "summary" : "Gamma Project focuses on data analysis and visualization techniques.",
+            "created_at": "2024-06-05 11:00:00", 
+            "last_modified": "2024-11-25 09:30:00" 
         },
     ]
 
     for proj in projects:
         cursor.execute("""
-            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank, created_at, last_modified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank,summary, created_at, last_modified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             proj["project_signature"],
             proj["name"],
@@ -168,8 +172,9 @@ def seed_db():
             json.dumps(proj["file_signatures"]),
             proj["size_bytes"],
             proj["rank"],
-            proj["created_at"],        # ADD THIS
-            proj["last_modified"]      # ADD THIS
+            proj["summary"],
+            proj["created_at"],       
+            proj["last_modified"]      
         ))
 
         project_id = proj["project_signature"]

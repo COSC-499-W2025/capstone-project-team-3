@@ -337,16 +337,9 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     roles = set()
     
     # File type extensions for classification
-    code_exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cc",
-                 ".cs", ".go", ".rb", ".rs", ".kt", ".kts", ".swift", ".scala", ".php", ".m", ".mm",
-                 ".sh", ".ps1", ".pl", ".lua", ".r", ".jl", ".sql", ".dart", ".groovy", ".hs", ".erl",
-                 ".ex", ".exs", ".clj", ".cljs", ".coffee", ".asm", ".s", ".vb", ".vbs", ".v", ".sv", 
-                 ".vhdl", ".zig", ".nim", ".gd", ".proto", ".graphql", ".vue", ".scss", ".less", ".css",
-                 ".qml", ".cmake", ".gradle", ".make"
-                 }
-    doc_exts = {".md"}
-    test_exts = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
-                 ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}
+    code_exts = TechnicalPatterns.CODE_EXTS
+    doc_exts = TechnicalPatterns.DOC_EXTS
+    test_exts = TechnicalPatterns.TEST_EXTS
 
     # Collect metrics from each commit
     for commit in commits:
@@ -847,16 +840,9 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     file_types_counter = Counter()
     
     # File type extensions for classification
-    code_exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cc",
-                 ".cs", ".go", ".rb", ".rs", ".kt", ".kts", ".swift", ".scala", ".php", ".m", ".mm",
-                 ".sh", ".ps1", ".pl", ".lua", ".r", ".jl", ".sql", ".dart", ".groovy", ".hs", ".erl",
-                 ".ex", ".exs", ".clj", ".cljs", ".coffee", ".asm", ".s", ".vb", ".vbs", ".v", ".sv", 
-                 ".vhdl", ".zig", ".nim", ".gd", ".proto", ".graphql", ".vue", ".scss", ".less", ".css",
-                 ".qml", ".cmake", ".gradle", ".make"
-                 }
-    doc_exts = {".md"}
-    test_exts = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
-                 ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}
+    code_exts = TechnicalPatterns.CODE_EXTS
+    doc_exts = TechnicalPatterns.DOC_EXTS
+    test_exts = TechnicalPatterns.TEST_EXTS
     
     metrics = {
         "languages": set(),

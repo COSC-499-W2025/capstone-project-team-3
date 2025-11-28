@@ -118,3 +118,14 @@ class TechnicalPatterns:
         'devops': {".yml", ".yaml", ".sh"},
         'datascience': {".ipynb", ".csv", ".pkl"}
     }
+    
+    CODE_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".cpp", ".c", ".h", ".hpp", ".cc",
+                 ".cs", ".go", ".rb", ".rs", ".kt", ".kts", ".swift", ".scala", ".php", ".m", ".mm",
+                 ".sh", ".ps1", ".pl", ".lua", ".r", ".jl", ".sql", ".dart", ".groovy", ".hs", ".erl",
+                 ".ex", ".exs", ".clj", ".cljs", ".coffee", ".asm", ".s", ".vb", ".vbs", ".v", ".sv", 
+                 ".vhdl", ".zig", ".nim", ".gd", ".proto", ".graphql", ".vue", ".scss", ".less", ".css",
+                 ".qml", ".cmake", ".gradle", ".make"
+                 }
+    DOC_EXTS = {".md"}
+    TEST_EXTS = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
+                 ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}

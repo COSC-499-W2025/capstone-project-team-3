@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id TEXT,
     skill TEXT,
-    source TEXT, -- 'code' or 'non-code'
+    source TEXT DEFAULT non-code, -- 'technical' or 'soft'
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 

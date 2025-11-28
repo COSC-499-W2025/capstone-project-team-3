@@ -313,12 +313,32 @@ def make_commit(hexsha, author_name, author_email, message, is_merge=False, file
     diff_mock.change_type = "M"
     commit.diff.return_value = files or [diff_mock]
     return commit
-
+@patch("app.utils.git_utils.detect_language_from_patch", return_value="Python")
+@patch("app.utils.git_utils.author_matches", return_value=True)
+@patch("app.utils.git_utils.is_repo_empty", return_value=False)
+@patch("app.utils.git_utils.is_code_file", return_value=True)
 @patch("app.utils.git_utils.get_repo")
-def test_basic_extraction(mock_get_repo):
+def test_basic_extraction(
+    mock_get_repo,
+    mock_is_code_file,
+    mock_is_repo_empty,
+    mock_author_matches,
+    mock_detect_language_from_patch,
+):
     # Arrange
     mock_repo = MagicMock()
     commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
+
+    # Provide realistic stats for this commit so code_lines_added is an int
+    stats_mock = MagicMock()
+    stats_mock.files = {
+        "src/app.py": {
+            "insertions": 5,
+            "deletions": 2,
+        }
+    }
+    commit1.stats = stats_mock
+
     mock_repo.iter_commits.return_value = [commit1]
     mock_get_repo.return_value = mock_repo
 
@@ -328,9 +348,27 @@ def test_basic_extraction(mock_get_repo):
     # Assert
     data = json.loads(result_json)
     assert isinstance(data, list)
-    assert data[0]["author_email"] == "alice@example.com"
-    assert "files" in data[0]
+    assert len(data) == 1
 
+    commit_data = data[0]
+    assert commit_data["author_email"] == "alice@example.com"
+    assert "files" in commit_data
+    assert len(commit_data["files"]) == 1
+
+    file_entry = commit_data["files"][0]
+    assert file_entry["path_after"] == "src/app.py"
+
+    # Language
+    assert file_entry["language"] == "Python"
+
+    # code_lines_added should come from commit.stats.files["src/app.py"]["insertions"]
+    assert "code_lines_added" in file_entry
+    assert isinstance(file_entry["code_lines_added"], int)
+    assert file_entry["code_lines_added"] == 5
+
+    # Verify language detection was called
+    mock_detect_language_from_patch.assert_called_once()
+    
 @patch("app.utils.git_utils.get_repo")
 def test_skips_other_authors(mock_get_repo):
     mock_repo = MagicMock()

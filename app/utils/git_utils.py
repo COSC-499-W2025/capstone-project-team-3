@@ -216,6 +216,11 @@ def extract_code_commit_content_by_author(
         repo = get_repo(path)  # uses existing helper to get Repo object
     except Exception:
         return json.dumps([], indent =2)  # on error, return empty list
+    
+    # Explicit empty repo check
+    if is_repo_empty(path):
+        return json.dumps([], indent=2)
+    
     seen = set()
     out = []
     errors = []
@@ -243,10 +248,11 @@ def extract_code_commit_content_by_author(
             diffs = commit.diff(parent, create_patch=True) 
             
             files_changed_data = []
+            stats = commit.stats.files 
             for d in diffs:
                 #  # Skip binary files - only process code/text files
-                # if not is_code_file(d): 
-                #     continue
+                if not is_code_file(d): 
+                    continue
                 status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")
@@ -254,6 +260,15 @@ def extract_code_commit_content_by_author(
                     patch = patch_text.decode("utf-8", errors="replace")
                 except Exception:
                     patch = "/* Could not decode patch text */"
+                
+                filename = d.b_path or d.a_path or ""
+                language = detect_language_from_patch(filename, patch)
+                file_stats = stats.get(filename, {})
+                raw_insertions = file_stats.get("insertions", 0)
+                try:
+                    lines_added = int(raw_insertions)
+                except (TypeError, ValueError):
+                    lines_added = None
 
                 files_changed_data.append({
                     "status": status,
@@ -261,6 +276,8 @@ def extract_code_commit_content_by_author(
                     "path_after": d.b_path,
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                    "language": language,
+                    "code_lines_added": lines_added
                 })
             # --- END NEW PER-FILE LOGIC ---
         # Handle potential Git command errors by adding to dictionary

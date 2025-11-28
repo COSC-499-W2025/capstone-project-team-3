@@ -76,7 +76,6 @@ def main():
             
             print("\n--- Project Root Input ---")
             rc = file_input_main()
-            print(rc)
             
             # Handle cancellation or error
             if not isinstance(rc, dict) or rc.get("status") != "ok":

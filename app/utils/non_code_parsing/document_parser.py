@@ -119,7 +119,7 @@ def parsed_input_text(file_paths_dict, repo_path=None, author=None):
             "content": "",
             "success": False,
             "error": "",
-            "contribution_frequency": 1
+            "contribution_frequency": _get_contribution_frequency(repo_path, author, file_path) if repo_path and author else 1
         }
 
         try:
@@ -194,6 +194,30 @@ def _extract_text_file(file_path):
             return f.read().strip()
     except Exception as e:
         raise Exception(f"Text extraction failed: {e}")
+
+def _get_contribution_frequency(repo_path, author, file_path):
+    """Get the number of commits by author for a specific file."""
+    try:
+        from app.utils.git_utils import extract_non_code_content_by_author
+        import json
+        
+        commits_json = extract_non_code_content_by_author(
+            repo_path, author, exclude_readme=True, exclude_pdf_docx=True
+        )
+        commits = json.loads(commits_json)
+        
+        count = 0
+        file_path_str = str(file_path.resolve())
+        
+        for commit in commits:
+            for file_data in commit.get("files", []):
+                commit_file = file_data.get("path_after") or file_data.get("path_before", "")
+                if Path(commit_file).resolve() == Path(file_path_str):
+                    count += 1
+        
+        return count if count > 0 else 1
+    except Exception:
+        return 1
 
 def parse_author_contributions(repo_path, author, include_merges=False, max_commits=None):
     """

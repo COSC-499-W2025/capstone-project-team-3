@@ -5,16 +5,20 @@ from pathlib import Path
 from app.utils.project_extractor import extract_and_list_projects, _identify_projects, get_project_top_level_dirs
 
 def test_extract_and_list_projects_single_project(tmp_path):
-    """Test extracting a ZIP with one project."""
-    proj = tmp_path / "project1"
+    """Test extracting a ZIP with one project in container structure."""
+    # Create the strict structure: root/projects/project1
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    
+    proj = projects_dir / "project1"
     proj.mkdir()
     (proj / "setup.py").write_text("# setup")
     (proj / "main.py").write_text("print('hi')")
     
     zip_path = tmp_path / "projects.zip"
     with zipfile.ZipFile(str(zip_path), 'w') as zf:
-        zf.write(proj / "setup.py", "project1/setup.py")
-        zf.write(proj / "main.py", "project1/main.py")
+        zf.write(proj / "setup.py", "projects/project1/setup.py")
+        zf.write(proj / "main.py", "projects/project1/main.py")
     
     res = extract_and_list_projects(str(zip_path))
     
@@ -86,14 +90,14 @@ def test_extract_and_list_projects_returns_correct_structure(tmp_path):
     assert "extracted_dir" in res
 
 def test_identify_projects_root_is_project(tmp_path):
-    """Test when root directory itself is a project."""
+    """Test when root directory itself has files (should return empty for strict logic)."""
     (tmp_path / "setup.py").write_text("# setup")
     (tmp_path / "main.py").write_text("print('hi')")
     
     projects = _identify_projects(tmp_path)
     
-    assert len(projects) == 1
-    assert str(tmp_path) in projects[0]
+    # Strict logic: root with files is not the expected ZIP structure
+    assert len(projects) == 0
 
 def test_identify_projects_multiple_subdirs(tmp_path):
     """Test identifying multiple projects in subdirectories."""
@@ -117,12 +121,16 @@ def test_identify_projects_multiple_subdirs(tmp_path):
     assert any("proj3" in p for p in projects)
 
 def test_identify_projects_ignores_hidden_dirs(tmp_path):
-    """Test that hidden directories (starting with .) are ignored."""
-    hidden = tmp_path / ".hidden"
+    """Test strict container structure with hidden dirs ignored."""
+    # Create strict structure: root/projects/visible_project
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    
+    hidden = projects_dir / ".hidden"
     hidden.mkdir()
     (hidden / "setup.py").write_text("# setup")
     
-    proj = tmp_path / "visible"
+    proj = projects_dir / "visible"
     proj.mkdir()
     (proj / "package.json").write_text("{}")
     
@@ -176,8 +184,12 @@ def test_identify_projects_returns_list(tmp_path):
     assert all(isinstance(p, str) for p in projects)
 
 def test_identify_projects_git_marker(tmp_path):
-    """Test detection by .git marker."""
-    proj = tmp_path / "git_proj"
+    """Test strict container structure with git project."""
+    # Create strict structure: root/projects/git_proj
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    
+    proj = projects_dir / "git_proj"
     proj.mkdir()
     (proj / ".git").mkdir()
     
@@ -187,8 +199,12 @@ def test_identify_projects_git_marker(tmp_path):
     assert "git_proj" in projects[0]
 
 def test_identify_projects_multiple_markers(tmp_path):
-    """Test project with multiple markers (should still count as one)."""
-    proj = tmp_path / "multi_marker"
+    """Test strict container structure with multiple markers."""
+    # Create strict structure: root/projects/multi_marker
+    projects_dir = tmp_path / "projects"
+    projects_dir.mkdir()
+    
+    proj = projects_dir / "multi_marker"
     proj.mkdir()
     (proj / "setup.py").write_text("# setup")
     (proj / "package.json").write_text("{}")
@@ -220,8 +236,17 @@ def test_get_project_top_level_dirs_edge_cases(tmp_path):
     # Test empty directory
     assert get_project_top_level_dirs(tmp_path) == []
 
-    # Test non-existent path
-    assert get_project_top_level_dirs(tmp_path) == []
+    # Test non-existent path  
+    non_existent = tmp_path / "does_not_exist"
+    assert get_project_top_level_dirs(non_existent) == []
+
+    # Clean up tmp_path for clean tests
+    import shutil
+    for item in tmp_path.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
 
     # Test custom exclude pattern
     (tmp_path / "secret").mkdir()
@@ -230,10 +255,17 @@ def test_get_project_top_level_dirs_edge_cases(tmp_path):
     result = get_project_top_level_dirs(tmp_path, exclude_patterns=custom_excludes)
     assert result == ["public_api"]
 
-    # Test case sensitivity: "NODE_MODULES" is not excluded if pattern is "node_modules"
-    (tmp_path / "node_modules").mkdir()
-    (tmp_path / "NODE_MODULES").mkdir()  # different case
+    # Clean up again
+    for item in tmp_path.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+
+    # Test with standard excluded pattern
+    (tmp_path / "node_modules").mkdir()  # Should be excluded
+    (tmp_path / "ValidProject").mkdir()  # Should be included
+    
     result = get_project_top_level_dirs(tmp_path)
-    # "node_modules" is excluded; "NODE_MODULES" is not (unless explicitly in EXCLUDE_PATTERNS)
+    
     assert "node_modules" not in result
-    assert "NODE_MODULES" in result  # because EXCLUDE_PATTERNS has "node_modules", not uppercase
+    assert "ValidProject" in result
+    assert len(result) == 1

@@ -140,9 +140,12 @@ def calculate_project_score(current_file_signatures: List[str]) -> float:
     already_analyzed = sum(1 for sig in current_file_signatures if sig in db_sigs)
     return round((already_analyzed / len(current_file_signatures)) * 100, 2)
 
-def run_scan_flow(root: str, exclude: list = None) -> list:
+
+
+def run_scan_flow(root: str, exclude: list = None) -> dict:
     """
-    Scans the project, stores signatures in DB, and returns the list of files for downstream use.
+    Scans the project, stores signatures in DB, and returns analysis info.
+    Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
@@ -150,25 +153,48 @@ def run_scan_flow(root: str, exclude: list = None) -> list:
     files = scan_project_files(root, exclude_patterns=patterns)
     if not files:
         print("No files found to scan in the specified directory. Skipping analysis.")
-        return []
+        return {
+            "files": [], 
+            "skip_analysis": True, 
+            "score": 0.0, 
+            "reason": "no_files",
+            "signature": None
+        }
 
     # Print scanned files for user feedback
     print(f"Scanned files (excluding patterns {exclude}):")
     for f in files:
         print(f)
 
-    # Store signatures in DB (internal use only)
+    # Generate signatures
     file_signatures = [extract_file_signature(f, root) for f in files]
-    signature = get_project_signature(file_signatures)
+    project_signature = get_project_signature(file_signatures)
+    
+    # Check if project already exists
+    if project_signature_exists(project_signature):
+        print("Project analysis score: 100.0% - Project already fully analyzed.")
+        return {
+            "files": files,
+            "skip_analysis": True,
+            "score": 100.0,
+            "reason": "already_analyzed",
+            "signature": project_signature
+        }
+    # Project is new - calculate score and store
+    score = calculate_project_score(file_signatures)
+    print(f"Project analysis score: {score}% of files already analyzed.")
+    
+    # Store new project
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
+    store_project_in_db(project_signature, name, path, file_signatures, size_bytes)
+    print("Stored project and file signatures in DB.")
 
-    score = calculate_project_score(file_signatures)
-    print(f"Project analysis score: {score}% of files already analyzed.")
-    if not project_signature_exists(signature):
-        store_project_in_db(signature, name, path, file_signatures, size_bytes)
-        print("Stored project and file signatures in DB.")
-
-    # return the files for downstream processing
-    return files
+    return {
+        "files": files,
+        "skip_analysis": False,
+        "score": score,
+        "reason": "new_project",
+        "signature": project_signature
+    }

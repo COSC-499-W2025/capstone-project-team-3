@@ -50,16 +50,15 @@ def extract_and_list_projects(zip_path: Union[str, Path]) -> dict:
         "count": len(projects)
     }
 
-# Replace the _identify_projects function with this simpler version:
-
-# Replace the _identify_projects function:
-
 def _identify_projects(root_dir: Union[str, Path]) -> List[str]:
     """
     Identify individual projects in a directory.
     
-    Expects structure: container_folder/project1/, container_folder/project2/, etc.
-    Goes one level deep to find actual projects.
+    Logic:
+    - If 1 folder inside container → That folder is the project
+    - If 0 folders inside container → No projects (return [])
+    - If 2+ folders inside container → Multiple projects
+    
     Returns list of project paths (strings).
     """
     root = Path(root_dir)
@@ -79,29 +78,31 @@ def _identify_projects(root_dir: Union[str, Path]) -> List[str]:
                 continue
             container_folders.append(item)
     
+    # If NO directories found at all → No projects
+    if not container_folders:
+        return []
+    
     # If only one container folder, look inside it for actual projects
     if len(container_folders) == 1:
         container = container_folders[0]
         
         # Look inside the container for actual projects
+        nested_projects = []
         for project_item in container.iterdir():
             if project_item.is_dir():
                 # Skip hidden directories and system folders
                 if project_item.name.startswith(".") or project_item.name in system_folders:
                     continue
-                projects.append(str(project_item))
+                nested_projects.append(str(project_item))
         
-        # If no projects found inside container, treat container as the project
-        if not projects:
-            projects.append(str(container))
+        # Clear logic based on your requirements:
+        # - 0 folders inside container → No projects
+        # - 1+ folders inside container → Those are the projects
+        projects.extend(nested_projects)
     
     # If multiple container folders, treat each as a project
     elif len(container_folders) > 1:
         projects = [str(folder) for folder in container_folders]
-    
-    # If no subdirectories found, treat the root itself as the project
-    else:
-        projects.append(str(root))
     
     return projects
 

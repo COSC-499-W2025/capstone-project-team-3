@@ -78,7 +78,9 @@ def main():
             # Process projects (we only expect "projects" in rc now)
             if "projects" in rc:
                 print(f"Found {rc['count']} projects in ZIP. Scanning each...")
-                analysis_results = {}
+                
+                # will be used once analysis on each project is done to be able to fetch individual project analysis to display
+                project_signatures = []
                 
                 for i, project_path in enumerate(rc["projects"], 1):
                     project_name = Path(project_path).name
@@ -87,51 +89,84 @@ def main():
                     print(f"{'='*50}")
                     
                     print(f"🔍 Scanning project files...")
-                    files = run_scan_flow(project_path)
-                    
-                    if not files:
-                        print(f"⚠️ No files to analyze in {project_path}. Skipping.")
-                        analysis_results[project_name] = {"status": "skipped", "reason": "no_files"}
-                        continue
-                    
+                    scan_result = run_scan_flow(project_path)
+                    files = scan_result['files']
+                
                     print(f"✅ Found {len(files)} files")
                     
+                    # Check if we should skip analysis
+                    if scan_result["skip_analysis"]:
+                        if scan_result["reason"] == "already_analyzed":
+                            print(f"⏭️ Skipping analysis - {project_name} already fully analyzed")
+                            project_signatures.append(scan_result["signature"])
+                        elif scan_result["reason"] == "no_files":
+                            print(f"⚠️ No files to analyze in {project_name}. Skipping.")
+                        continue
+                        
+                    project_signatures.append(scan_result["signature"])
                     analysis_type = llm_manager.ask_analysis_type(project_name)
                     
+                    # analysis flow with LLM
                     if analysis_type == 'ai':
                         print("🤖 Running AI analysis...")
                         api_key = os.getenv("GEMINI_API_KEY")
                         llm_client = GeminiLLMClient(api_key=api_key)
                         
-                        #TODO: add non code starting point for AI analysis
+                        #TODO: Non Code parsing -> analysis
                         
-                        #Code analysis
+                        #TODO: Code parsing -> analysis
                         #check if git or non git 
                         # if git: call parsing for git -> analysis for git USING LLM
                         # else call parsing for local -> analysis for local USING LLM
                         
                         print(f"✅ starting AI analysis for {project_name}")
                         
+                        
+                        #TODO: merge code and non code LLM analysis then store into db
+                    
+                    # analysis flow with non LLM
                     elif analysis_type == 'local':
                         print("📊 Running local analysis...")
                         
-                        #TODO: add non code starting point for local analysis
+                        #TODO: Non Code parsing -> analysis
                         
-                        #Code analysis
+                        #TODO: Code parsing -> analysis
                         #check if git or non git
                         # if git: call parsing for git -> analysis for git NON LLM
                         # else call parsing for local -> analysis for local NON LLM
                         
                         print(f"✅ starting Local analysis for {project_name}")
+                        
+                        #TODO: merge code and non code LOCAL analysis then store into db
                 
-                # Print analysis summary
-                # Merge code and non code analysis into analysis_results
-                # Save analysis_results into db 
-                # print analysis_results
+                #TODO: Print all information for projects using the signatures stored in project_signatures
+                #TODO: Print Chronological order of projects analyzed from the db
+                #TODO: Print Chronological Skills worked on from projects 
+                
                 
             else:
                 print("❌ No projects found to analyze")
+          
+            # ADD THE MISSING SECTION HERE!
+            print(f"\n{'='*60}")
+            print("🔄 CONTINUE OR EXIT?")
+            print(f"{'='*60}")
             
+            while True:
+                choice = input("\nWould you like to:\n  🔄 'continue' - Analyze another project\n  🚪 'exit'     - Exit the application\n\nChoice (continue/exit): ").lower().strip()
+                
+                if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                    print("👋 Exiting Project Insights. Thank you for using our service!")
+                    break
+                elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
+                    print("🔄 Starting new analysis session...")
+                    break
+                else:
+                    print("❌ Please enter 'continue' or 'exit'")
+            
+            # Break out of the main while loop if user chose exit
+            if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                break
     
     print("App started successfully")
 

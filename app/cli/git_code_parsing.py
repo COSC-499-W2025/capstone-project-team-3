@@ -63,3 +63,40 @@ def get_latest_github_user() -> Optional[str]:
     github_user = github_user.strip()
     return github_user or None
 
+def run_git_analysis_from_files(
+    file_paths: List[str],
+    github_user: str,
+    include_merges: bool = False,
+    max_commits: Optional[int] = None,
+) -> str:
+    """
+    Core function you can call from main.py 
+
+    Args:
+        file_paths: List of file paths inside the project.
+        include_merges: Whether to include merge commits when extracting history.
+        max_commits: Optional cap on number of commits to return.
+
+    Returns:
+        JSON string produced by extract_code_commit_content_by_author()
+        or "[]" (JSON empty list) if analysis cannot proceed.
+    """
+    
+
+    # 1) Pick one representative path inside the project.
+    project_file = _get_first_existing_path(file_paths)
+    
+
+    print(f"[git-analysis] Detected Git repo for '{project_file}'.")
+    print(f"[git-analysis] Using GitHub username as author filter: '{github_user}'")
+
+    # 4) Call the existing git_utils function to extract commit data.
+    json_output = extract_code_commit_content_by_author(
+        path=project_file,
+        author=github_user,
+        include_merges=include_merges,
+        max_commits=max_commits,
+    )
+
+    return json_output
+

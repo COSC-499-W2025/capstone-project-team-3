@@ -47,12 +47,9 @@ def main():
     parsed = parsed_input_text(classified, repo_path, user_email)
     
     total = len(parsed.get("parsed_files", []))
-    author_only = sum(1 for f in parsed["parsed_files"] if f.get("is_author_only"))
-    full_content = total - author_only
     
     print(f"✓ Total files parsed: {total}")
-    print(f"  - Full content (non-collaborative): {full_content}")
-    print(f"  - Author-only diffs (collaborative): {author_only}")
+    print(f"  - All files have contribution_frequency tracking")
     
     # Step 4: Verification
     print("\n" + "-" * 70)

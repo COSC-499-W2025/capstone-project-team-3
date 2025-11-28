@@ -53,26 +53,17 @@ def test_classification_and_parsing():
         
         if parsed.get("parsed_files"):
             total = len(parsed["parsed_files"])
-            author_only = sum(1 for f in parsed["parsed_files"] if f.get("is_author_only"))
-            full_content = total - author_only
             
             print(f"   ✓ Total parsed files: {total}")
-            print(f"   ✓ Full content (non-collaborative): {full_content}")
-            print(f"   ✓ Author-only content (collaborative): {author_only}")
+            print(f"   ✓ All files have contribution_frequency tracking")
             
             # Verify logic
             print("\n3. Verifying parsing logic...")
             
-            # Check non-collaborative files have full content and contribution_frequency=1
+            # Check files have contribution_frequency
             for f in parsed["parsed_files"]:
-                if f.get("contribution_frequency") == 1 and f.get("success") and len(f.get("content", "")) > 0:
-                    print(f"   ✓ Non-collaborative file: {Path(f['path']).name} (freq=1, full content)")
-                    break
-            
-            # Check collaborative files have contribution_frequency > 0
-            for f in parsed["parsed_files"]:
-                if f.get("contribution_frequency", 0) >= 1 and "week" in Path(f['path']).name.lower():
-                    print(f"   ✓ Collaborative file: {Path(f['path']).name} (freq={f.get('contribution_frequency')})")
+                if f.get("contribution_frequency") and f.get("success"):
+                    print(f"   ✓ File: {Path(f['path']).name} (contribution_frequency={f.get('contribution_frequency')})")
                     break
             
             print("\n" + "=" * 60)

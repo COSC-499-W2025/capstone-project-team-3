@@ -100,3 +100,17 @@ def run_git_analysis_from_files(
 
     return json_output
 
+# Detect git in main - if git AND github_user_id exists 
+#   then call run_git_analysis_from_files() else call non git code parser
+
+    # # 2) Check if this lives inside a Git repo.
+    # if not detect_git(project_file):
+    #     print(f"[git-analysis] Path '{project_file}' is not inside a Git repository. Skipping Git analysis.")
+    #     return json.dumps([], indent=2)
+    
+# 2) Look up GitHub username from latest USER_PREFERENCES row.
+    # github_user = _lookup_github_user()
+    # if not github_user:
+    #     print("[git-analysis] No GitHub username found in USER_PREFERENCES. "
+    #           "Please set it via the user preferences CLI before running Git analysis.")
+    #     return json.dumps([], indent=2)

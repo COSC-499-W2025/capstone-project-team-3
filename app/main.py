@@ -10,12 +10,33 @@ from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main 
 from app.manager.llm_consent_manager import LLMConsentManager
+from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 import uvicorn
 import os
 import sys
 
 load_dotenv()
+
+def display_startup_info():
+    """Display startup information including API key status."""
+    print("\n" + "="*60)
+    print("🚀 PROJECT INSIGHTS - STARTUP INFO")
+    print("="*60)
+    
+    # Check API key status
+    api_available, api_status = check_gemini_api_key()
+    
+    print("📊 Available Analysis Types:")
+    print("   📍 Local Analysis: ✅ Always available")
+    
+    if api_available:
+        print("   🤖 AI Analysis: ✅ Ready (Gemini API key detected)")
+    else:
+        print("   🤖 AI Analysis: ❌ Requires Gemini API key")
+        print("      💡 Get your key at: https://aistudio.google.com/app/apikey")
+    
+    print("="*60)
 
 # Database Entry Point
 def main():
@@ -37,6 +58,9 @@ def main():
         user_pref.store.close()
         print("User preferences stored successfully.")
 
+    # Display startup info including API status
+    display_startup_info()
+    
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):
@@ -109,23 +133,34 @@ def main():
                     # analysis flow with LLM
                     if analysis_type == 'ai':
                         print("🤖 Running AI analysis...")
+                        
+                        # Double-check API key (safety check)
                         api_key = os.getenv("GEMINI_API_KEY")
-                        llm_client = GeminiLLMClient(api_key=api_key)
-                        
-                        #TODO: Non Code parsing -> analysis
-                        
-                        #TODO: Code parsing -> analysis
-                        #check if git or non git 
-                        # if git: call parsing for git -> analysis for git USING LLM
-                        # else call parsing for local -> analysis for local USING LLM
-                        
-                        print(f"✅ starting AI analysis for {project_name}")
-                        
-                        
-                        #TODO: merge code and non code LLM analysis then store into db
+                        if not api_key:
+                            print("❌ Error: Gemini API key not available. Falling back to local analysis.")
+                            analysis_type = 'local'
+                        else:
+                            try:
+                                llm_client = GeminiLLMClient(api_key=api_key)
+                                
+                                #TODO: Non Code parsing -> analysis
+                                
+                                #TODO: Code parsing -> analysis
+                                #check if git or non git 
+                                # if git: call parsing for git -> analysis for git USING LLM
+                                # else call parsing for local -> analysis for local USING LLM
+                                
+                                print(f"✅ Starting AI analysis for {project_name}")
+                                
+                                #TODO: merge code and non code LLM analysis then store into db
+                                
+                            except Exception as e:
+                                print(f"❌ Error initializing AI client: {e}")
+                                print("🔄 Falling back to local analysis...")
+                                analysis_type = 'local'
                     
-                    # analysis flow with non LLM
-                    elif analysis_type == 'local':
+                    # Handle local analysis (including fallbacks from AI failures)
+                    if analysis_type == 'local':
                         print("📊 Running local analysis...")
                         
                         #TODO: Non Code parsing -> analysis
@@ -135,7 +170,7 @@ def main():
                         # if git: call parsing for git -> analysis for git NON LLM
                         # else call parsing for local -> analysis for local NON LLM
                         
-                        print(f"✅ starting Local analysis for {project_name}")
+                        print(f"✅ Starting Local analysis for {project_name}")
                         
                         #TODO: merge code and non code LOCAL analysis then store into db
                 

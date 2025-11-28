@@ -172,7 +172,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     
     # Check if project already exists
     if project_signature_exists(project_signature):
-        print("Project analysis score: 100.0% - Project already fully analyzed.")
+        print("100.0% of this Project was analyzed in the past.")
         return {
             "files": files,
             "skip_analysis": True,
@@ -182,7 +182,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
         }
     # Project is new - calculate score and store
     score = calculate_project_score(file_signatures)
-    print(f"Project analysis score: {score}% of files already analyzed.")
+    print(f"{score}% of files in this project was analyzed in the past.")
     
     # Store new project
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)

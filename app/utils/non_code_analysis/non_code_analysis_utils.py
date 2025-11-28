@@ -5,6 +5,7 @@ from typing import List, Dict
 from collections import Counter
 from app.client.llm_client import GeminiLLMClient
 from app.shared.test_data.parsed_input_text import sample_parsed_files
+from app.utils.non_code_analysis.non_3rd_party_analysis import (calculate_completeness_score,classify_document_type)
 from app.utils.user_preference_utils import UserPreferenceStore
 from dotenv import load_dotenv, find_dotenv
 from sumy.parsers.plaintext import PlaintextParser
@@ -56,12 +57,9 @@ def pre_process_non_code_files(parsed_files: Dict, language: str = "english") ->
             continue
         
         file_path_str = file_data.get("path", "")
-        file_name = file_data.get("name", "")
+        file_name = file_data.get("name", "unknown.txt")
         content = file_data.get("content", "")
-        
-        # Check file size
-        # TODO : Intergrate file size checker here
-        
+         
         # Skip empty content
         if not content or not content.strip():
             continue
@@ -293,6 +291,50 @@ def get_named_entities(llm1_results):
         return list(entities)
     return []
 
+def get_additional_metrics(llm1_results):
+    """This functions calculates additional NLP metrics for the final LLM2 response.
+    Args:
+        llm1_results (dict): The LLM2 response to enhance with additional metrics.
+        Returns:    
+        dict: The enhanced LLM2 response with additional metrics.
+        Response structure:
+        
+        metrics = {
+            "completeness_score": float,
+            "word_count": int,
+            "contribution_activity": {"design": int, "documentation": int, "other": int},
+        }
+    """
+    completeness_scores = []
+
+    for file_data in sample_parsed_files.get("files", []):
+        file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
+        content = file_data.get("content", "")
+        doc_type = classify_document_type(content, file_path)
+        score = calculate_completeness_score(content, doc_type)
+        completeness_scores.append(score)
+        
+    metrics = {
+        "completeness_score": sum(completeness_scores)/len(completeness_scores) if completeness_scores else 0,
+        "word_count": sum(file["word_count"] for file in llm1_results) if llm1_results else 0,
+        "contribution_activity": { 
+            "design": get_activity_type(llm1_results, "design_contributions"),
+            "documentation": get_activity_type(llm1_results, "documentation_contributions"),
+            "other": get_activity_type(llm1_results, "other_contributions"),
+        }
+    }
+
+    return metrics 
+
+def get_activity_type(llm1_results, activity_key):
+    """This function determines what activity type a contribution belongs to and the amount contributed.
+    Args:
+        llm1_results (dict): The LLM2 response to analyze.
+        activity_key (str): The key representing the activity type to check.
+        Returns: The type of activity contribution."""
+    # TODO: Implement logic to determine activity type contribution using github data & fallback methods
+    return activity_key, 0
+
 #Step 3: Aggregate non code summaries into a single analyzable project
 def aggregate_non_code_summaries(llm1_results):
     """
@@ -442,9 +484,7 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     "skills": {
         "technical_skills": ["string"],
         "soft_skills": ["string"]
-    },
-    "readability_score": "number",
-    "domain_expertise": ["string"]
+    }
     }
 
     OUTPUT ONLY the JSON object.
@@ -466,7 +506,7 @@ def generate_non_code_insights(PROMPT):
     if not response:
         response = {}
         raise EnvironmentError("No LLM2 client is available for non-code analysis.")
-
+    
     return response
 
 def clean_response(response):
@@ -491,13 +531,6 @@ def clean_response(response):
                 LLM2 = GeminiLLMClient(api_key=KEY)
                 response = LLM2.generate(response)  
     raise ValueError("Failed to parse LLM2 response as JSON")
-
-# TODO Step 6: Store results
-def store_non_code_analysis_results(final_result):
-    """
-    Store analysis results in RESUME table and SKILLS table in database.
-    """
-    pass
 
 def analyze_non_code_files():
     """
@@ -529,6 +562,7 @@ def analyze_non_code_files():
         
         # Step 4: Call LLM2 for analysis 
         llm2_results = generate_non_code_insights(prompt)
+        llm2_results["metrics"] = get_additional_metrics(llm1_results)
         print("\nLLM2 Results:")
         print(llm2_results)
         print("\n✓ LLM2 analysis completed successfully")
@@ -537,8 +571,8 @@ def analyze_non_code_files():
         print(f"\n✗ Error during pipeline execution: {e}")
         import traceback
         traceback.print_exc()
-        return None
-
+    
+    return llm2_results
 
 def print_project_metrics(project_metrics):
     """

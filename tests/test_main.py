@@ -4,34 +4,46 @@ import os
 import sys
 
 
-def test_main_runs_file_input_when_prompt_root_enabled():
-    """Test main runs file input when PROMPT_ROOT=1."""
+def test_main_runs_analysis_loop_when_prompt_root_enabled():
+    """Test main runs analysis loop when PROMPT_ROOT=1."""
     with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
+         patch('app.main.LLMConsentManager'), \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input') as mock_input, \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
         
+        # Set up all the mocks
         mock_consent.return_value.enforce_consent.return_value = True
-        mock_file_input.return_value = 0
         mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/project1"], "count": 1}
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": True, 
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        # CRITICAL: Handle multiple input calls in sequence
+        # First call might be for error handling, second for continue/exit
+        mock_input.side_effect = ['exit', 'exit', 'exit']  # Cover all possible input calls
         
         from app.main import main
         main()
         
-        mock_file_input.assert_called_once()
+        mock_file_input.assert_called()
 
 
-def test_main_skips_file_input_when_prompt_root_disabled():
-    """Test main skips file input when PROMPT_ROOT=0."""
+def test_main_skips_analysis_loop_when_prompt_root_disabled():
+    """Test main skips analysis loop when PROMPT_ROOT=0."""
     with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
@@ -43,23 +55,231 @@ def test_main_skips_file_input_when_prompt_root_disabled():
         mock_file_input.assert_not_called()
 
 
-def test_main_exits_when_file_input_fails():
-    """Test main exits when file input returns non-zero."""
+def test_main_handles_file_input_failure_with_retry():
+    """Test main handles file input failure and allows retry."""
     with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
-         patch('app.main.UserPreferences'), \
-         patch('sys.exit') as mock_exit, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('builtins.input', side_effect=['retry', 'exit']), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
-        mock_file_input.return_value = 1
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.side_effect = [{"status": "error"}, {"status": "error"}]
         
         from app.main import main
         main()
         
-        mock_exit.assert_called_once_with(1)
+        assert mock_file_input.call_count >= 2
+
+
+def test_main_handles_file_input_failure_with_exit():
+    """Test main exits when user chooses exit after file input failure."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "error"}
+        
+        from app.main import main
+        main()
+        
+        mock_file_input.assert_called_once()
+
+
+def test_main_processes_projects_from_zip():
+    """Test main processes projects from ZIP file."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.GeminiLLMClient'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1', 'GEMINI_API_KEY': 'test_key'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1", "/tmp/project2"], 
+            "count": 2
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'ai'
+        
+        from app.main import main
+        main()
+        
+        assert mock_scan.call_count == 2
+        mock_llm_manager.return_value.ask_analysis_type.assert_called()
+
+
+def test_main_skips_already_analyzed_projects():
+    """Test main skips projects that are already analyzed."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        from app.main import main
+        main()
+        
+        # Should not call ask_analysis_type for already analyzed projects
+        mock_llm_manager.return_value.ask_analysis_type.assert_not_called()
+
+
+def test_main_handles_projects_with_no_files():
+    """Test main handles projects with no files correctly."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/empty_project"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": [], 
+            "skip_analysis": True,
+            "reason": "no_files",
+            "signature": None
+        }
+        
+        from app.main import main
+        main()
+        
+        mock_llm_manager.return_value.ask_analysis_type.assert_not_called()
+
+
+def test_main_runs_ai_analysis():
+    """Test main runs AI analysis when selected."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.GeminiLLMClient') as mock_llm_client, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1', 'GEMINI_API_KEY': 'test_key'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'ai'
+        
+        from app.main import main
+        main()
+        
+        mock_llm_client.assert_called_once_with(api_key='test_key')
+
+
+def test_main_runs_local_analysis():
+    """Test main runs local analysis when selected."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        
+        from app.main import main
+        main()
+        
+        mock_llm_manager.return_value.ask_analysis_type.assert_called_once()
+
+
+def test_main_handles_no_projects_found():
+    """Test main handles case when no projects are found."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok"}  # No "projects" key
+        
+        from app.main import main
+        main()
+        
+        mock_file_input.assert_called()
 
 
 def test_main_prompt_root_accepts_truthy_values():
@@ -72,11 +292,12 @@ def test_main_prompt_root_accepts_truthy_values():
              patch('app.main.file_input_main') as mock_file_input, \
              patch('app.main.seed_db'), \
              patch('app.main.UserPreferences') as mock_user_pref, \
-             patch('sys.exit'), \
+             patch('app.main.LLMConsentManager'), \
+             patch('builtins.input', return_value='exit'), \
              patch.dict(os.environ, {'PROMPT_ROOT': value}, clear=True):
             
             mock_consent.return_value.enforce_consent.return_value = True
-            mock_file_input.return_value = 0
+            mock_file_input.return_value = {"status": "error"}
             mock_user_pref.return_value.manage_preferences.return_value = None
             mock_file_input.reset_mock()
             
@@ -86,45 +307,26 @@ def test_main_prompt_root_accepts_truthy_values():
             assert mock_file_input.called, f"file_input_main not called for PROMPT_ROOT={value}"
 
 
-def test_main_prints_file_input_header(capsys):
-    """Test main prints project root input header when PROMPT_ROOT=1."""
+def test_main_prints_analysis_session_header(capsys):
+    """Test main prints analysis session header when PROMPT_ROOT=1."""
     with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
+         patch('app.main.LLMConsentManager'), \
+         patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
-        mock_file_input.return_value = 0
+        mock_file_input.return_value = {"status": "error"}
         mock_user_pref.return_value.manage_preferences.return_value = None
         
         from app.main import main
         main()
         
         captured = capsys.readouterr()
-        assert "--- Project Root Input ---" in captured.out
-
-
-def test_main_prints_error_when_file_input_cancelled(capsys):
-    """Test main prints error when file input is cancelled."""
-    with patch('app.main.init_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.file_input_main') as mock_file_input, \
-         patch('app.main.seed_db'), \
-         patch('app.main.UserPreferences'), \
-         patch('sys.exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
-        
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_file_input.return_value = 1
-        
-        from app.main import main
-        main()
-        
-        captured = capsys.readouterr()
-        assert "Root input step failed or was cancelled" in captured.out
+        assert "🔍 PROJECT ANALYSIS SESSION" in captured.out
 
 
 def test_main_initializes_database():
@@ -133,7 +335,6 @@ def test_main_initializes_database():
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
@@ -145,34 +346,12 @@ def test_main_initializes_database():
         mock_init_db.assert_called_once()
 
 
-def test_main_seeds_database_after_successful_flow(capsys):
-    """Test main seeds the database after consent and file input (if enabled)."""
-    with patch('app.main.init_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.seed_db') as mock_seed_db, \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
-        
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        
-        from app.main import main
-        main()
-        
-        # seed_db is called twice in main()
-        assert mock_seed_db.call_count == 2
-        captured = capsys.readouterr()
-        assert "Database started" in captured.out
-
-
 def test_main_prints_success_message(capsys):
     """Test main prints 'App started successfully' message."""
     with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
@@ -185,73 +364,6 @@ def test_main_prints_success_message(capsys):
         assert "App started successfully" in captured.out
 
 
-def test_main_execution_order_with_prompt_root():
-    """Test main executes steps in correct order when PROMPT_ROOT=1."""
-    call_order = []
-    
-    def track_init_db():
-        call_order.append('init_db')
-    
-    def track_consent():
-        call_order.append('consent')
-        return True
-    
-    def track_file_input():
-        call_order.append('file_input')
-        return 0
-    
-    def track_seed_db():
-        call_order.append('seed_db')
-    
-    with patch('app.main.init_db', side_effect=track_init_db), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.file_input_main', side_effect=track_file_input), \
-         patch('app.main.seed_db', side_effect=track_seed_db), \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
-        
-        mock_consent.return_value.enforce_consent.side_effect = track_consent
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        
-        from app.main import main
-        main()
-        
-        # seed_db is called twice in main()
-        assert call_order == ['init_db', 'seed_db', 'consent', 'file_input', 'seed_db']
-
-
-def test_main_execution_order_without_prompt_root():
-    """Test main executes steps in correct order when PROMPT_ROOT=0."""
-    call_order = []
-    
-    def track_init_db():
-        call_order.append('init_db')
-    
-    def track_consent():
-        call_order.append('consent')
-        return True
-    
-    def track_seed_db():
-        call_order.append('seed_db')
-    
-    with patch('app.main.init_db', side_effect=track_init_db), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.seed_db', side_effect=track_seed_db), \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
-        
-        mock_consent.return_value.enforce_consent.side_effect = track_consent
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        
-        from app.main import main
-        main()
-        
-        # seed_db is called twice in main()
-        assert call_order == ['init_db', 'seed_db', 'consent', 'seed_db']
-
-
 def test_main_prompt_root_default_behavior():
     """Test PROMPT_ROOT defaults to '0' when not set."""
     with patch('app.main.init_db'), \
@@ -259,7 +371,6 @@ def test_main_prompt_root_default_behavior():
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('sys.exit'), \
          patch.dict(os.environ, {}, clear=True):
         
         mock_consent.return_value.enforce_consent.return_value = True

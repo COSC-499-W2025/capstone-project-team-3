@@ -30,7 +30,7 @@ def test_none_raises():
 
 def test_valid_zip_file_extracts(tmp_path):
     """
-    Test for a valid zip file
+    Test for a valid zip file extraction returns temp directory path
     """
     zip_path = tmp_path / "test.zip"
     test_file = tmp_path / "file.txt"
@@ -39,7 +39,23 @@ def test_valid_zip_file_extracts(tmp_path):
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         zipf.write(test_file, arcname="file.txt")
 
-    assert extract_zipped_contents(str(zip_path)) == True
+    # Function should return the temp directory path, not True
+    result = extract_zipped_contents(str(zip_path))
+    
+    # Check that result is a string path
+    assert isinstance(result, str)
+    assert len(result) > 0
+    
+    # Check that the path exists and is a directory
+    from pathlib import Path
+    result_path = Path(result)
+    assert result_path.exists()
+    assert result_path.is_dir()
+    
+    # Check that the extracted file exists
+    extracted_file = result_path / "file.txt"
+    assert extracted_file.exists()
+    assert extracted_file.read_text() == "Hello"
 
 def test_none_path_raises_value_error():
     """

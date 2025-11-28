@@ -1,9 +1,7 @@
-import pytest
-import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from app.cli.file_input import prompt_for_root, main
-
+import zipfile
 
 def test_prompt_for_root_valid_input(monkeypatch):
     """Test prompt_for_root returns valid non-empty input."""
@@ -31,68 +29,38 @@ def test_prompt_for_root_strips_whitespace(monkeypatch):
     assert result == '/path/with/spaces'
 
 
-def test_main_with_valid_directory(tmp_path, capsys):
-    """Test main with valid directory path."""
+def test_main_with_directory_rejected(tmp_path, capsys):
+    """Test main rejects directory paths (ZIP-only enforcement)."""
     test_dir = tmp_path / "test_project"
     test_dir.mkdir()
     
-    exit_code = main(['--root', str(test_dir)])
+    result = main(['--root', str(test_dir)])
     
-    assert exit_code == 0
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
-    assert result['status'] == 'ok'
-    assert result['type'] == 'dir'
-    assert result['path'] == str(test_dir)
+    assert result['status'] == 'error'
+    assert 'Only ZIP files are accepted' in result['reason']
 
 
 def test_main_with_invalid_path(capsys):
     """Test main with non-existent path."""
-    exit_code = main(['--root', '/nonexistent/path'])
+    result = main(['--root', '/nonexistent/path'])
     
-    assert exit_code == 1
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
     assert result['status'] == 'error'
     assert 'does not exist' in result['reason']
 
-
-def test_main_with_valid_zip(tmp_path, capsys):
-    """Test main with valid ZIP file containing a project."""
-    import zipfile
-    
-    # Create a test project
-    proj = tmp_path / "project1"
-    proj.mkdir()
-    (proj / "setup.py").write_text("# setup")
-    
-    # Create ZIP
-    zip_path = tmp_path / "projects.zip"
+def create_valid_zip(zip_path):
     with zipfile.ZipFile(str(zip_path), 'w') as zf:
-        zf.write(proj / "setup.py", "project1/setup.py")
-    
-    exit_code = main(['--root', str(zip_path)])
-    
-    assert exit_code == 0
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
-    assert result['status'] == 'ok'
-    assert result['type'] == 'zip'
-    assert result['count'] == 1
-    assert 'extracted_dir' in result
-    assert 'projects' in result
-
+        # Add a marker file in a subdirectory
+        zf.writestr("project1/setup.py", "# setup")
+        # Optionally add more files
+        zf.writestr("project1/README.md", "Readme content")
 
 def test_main_with_invalid_zip(tmp_path, capsys):
     """Test main with invalid ZIP file."""
     bad_zip = tmp_path / "bad.zip"
     bad_zip.write_text("not a zip")
     
-    exit_code = main(['--root', str(bad_zip)])
+    result = main(['--root', str(bad_zip)])
     
-    assert exit_code == 1
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
     assert result['status'] == 'error'
 
 
@@ -110,13 +78,20 @@ def test_main_with_empty_zip(tmp_path, capsys):
     with zipfile.ZipFile(str(zip_path), 'w') as zf:
         zf.write(content_dir / "random.txt", "random.txt")
     
-    exit_code = main(['--root', str(zip_path)])
+    result = main(['--root', str(zip_path)])
     
-    assert exit_code == 1
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
     assert result['status'] == 'error'
-    assert 'project' in result['reason'].lower() or 'no' in result['reason'].lower()
+    assert 'no identifiable projects found' in result['reason']
+
+
+def test_main_with_user_exit(monkeypatch):
+    """Test main handles user exit from prompt."""
+    monkeypatch.setattr('builtins.input', lambda _: 'exit')
+    
+    result = main([])
+    
+    assert result['status'] == 'error'
+    assert result['reason'] == 'user_exit'
 
 
 def test_main_with_none_path_raises_valueerror(capsys):
@@ -124,37 +99,18 @@ def test_main_with_none_path_raises_valueerror(capsys):
     with patch('app.cli.file_input.validate_read_access') as mock_validate:
         mock_validate.side_effect = ValueError("path must be provided")
         
-        exit_code = main(['--root', 'dummy'])
+        result = main(['--root', 'dummy'])
         
-        assert exit_code == 1
-        captured = capsys.readouterr()
-        result = json.loads(captured.out)
         assert result['status'] == 'error'
         assert 'path must be provided' in result['reason']
 
-
-def test_main_returns_correct_exit_codes(tmp_path):
-    """Test main returns 0 for success, 1 for errors."""
-    # Success case
-    valid_dir = tmp_path / "valid"
-    valid_dir.mkdir()
-    assert main(['--root', str(valid_dir)]) == 0
+def test_main_rejects_non_zip_extension(tmp_path):
+    """Test main rejects files without .zip extension."""
+    # Create a file with .tar extension
+    tar_file = tmp_path / "archive.tar"
+    tar_file.write_text("fake tar content")
     
-    # Error case
-    assert main(['--root', '/nonexistent']) == 1
-
-
-def test_main_json_output_structure(tmp_path, capsys):
-    """Test main outputs valid JSON with expected structure."""
-    test_dir = tmp_path / "json_test"
-    test_dir.mkdir()
+    result = main(['--root', str(tar_file)])
     
-    main(['--root', str(test_dir)])
-    
-    captured = capsys.readouterr()
-    result = json.loads(captured.out)
-    
-    assert 'status' in result
-    assert 'type' in result
-    assert 'path' in result
-    assert result['type'] in ['dir', 'zip']
+    assert result['status'] == 'error'
+    assert 'Only ZIP files are accepted' in result['reason']

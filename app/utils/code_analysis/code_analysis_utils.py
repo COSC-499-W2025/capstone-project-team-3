@@ -872,7 +872,8 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
         "comment_ratios": [],
         "code_files_changed": 0, #new for contribution by filetype
         "doc_files_changed": 0,
-        "test_files_changed": 0
+        "test_files_changed": 0,
+        "other_files_changed": 0
     }
 
     # Collect metrics from each file
@@ -939,6 +940,7 @@ def aggregate_parsed_files_metrics(parsed_files: List[Dict]) -> Dict:
     metrics["code_files_changed"] = file_types_counter["code"]  # new for contribution by filetype
     metrics["doc_files_changed"] = file_types_counter["docs"]
     metrics["test_files_changed"] = file_types_counter["test"]
+    metrics["other_files_changed"] = file_types_counter["other"]
     return metrics
 
 

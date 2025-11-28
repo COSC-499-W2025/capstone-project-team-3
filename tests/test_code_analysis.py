@@ -99,7 +99,8 @@ def test_new_json_structure_compatibility():
         print_subsection("File Type Counts", {
             "Code": metrics["code_files_changed"],
             "Docs": metrics["doc_files_changed"],
-            "Tests": metrics["test_files_changed"]
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         # Verify class detection
@@ -158,7 +159,8 @@ def test_edge_cases_and_robustness():
         print_subsection("File Type Counts (Edge Cases)", {
             "Code": metrics["code_files_changed"],
             "Docs": metrics["doc_files_changed"],
-            "Tests": metrics["test_files_changed"]
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         # Should handle edge cases gracefully
@@ -228,7 +230,8 @@ def test_backward_compatibility():
         print_subsection("Old Structure File Type Counts", {
             "Code": metrics["code_files_changed"],
             "Docs": metrics["doc_files_changed"],
-            "Tests": metrics["test_files_changed"]
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         assert len(keywords) > 0, "Should extract keywords from old structure"
@@ -298,7 +301,8 @@ def test_performance_optimization():
         print_subsection("File Type Counts (Performance)", {
             "Code": metrics["code_files_changed"],
             "Docs": metrics["doc_files_changed"],
-            "Tests": metrics["test_files_changed"]
+            "Tests": metrics["test_files_changed"],
+            "Other":metrics["other_files_changed"]
         })
         
         # Performance assertions

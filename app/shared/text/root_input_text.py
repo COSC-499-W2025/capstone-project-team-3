@@ -7,7 +7,7 @@ class RootInputText:
         "Enter the FULL project root path to analyze (.zip).\n"
         "Examples:\n"
         "  - ZIP file:  /Users/you/projects.zip\n\n"
-        "Path> "
+        "-> Path: "
     )
 
     ROOT_INPUT_HELP = (

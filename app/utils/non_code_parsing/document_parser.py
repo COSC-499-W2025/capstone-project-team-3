@@ -18,10 +18,9 @@ try:
 except Exception:
     docx = None
 
-def parse_documents_to_json(file_paths, output_path, repo_path=None, author=None):
+def parse_documents_to_json(file_paths, output_path):
     """
     Parse non-code documents and save results to JSON.
-    If repo_path and author provided, also include author contributions.
     """
     results = []
 
@@ -52,24 +51,11 @@ def parse_documents_to_json(file_paths, output_path, repo_path=None, author=None
                 result["success"] = True
             else:
                 result["error"] = f"Unsupported file type: {file_path.suffix}"
-            
-
 
         except Exception as e:
             result["error"] = str(e)
 
         results.append(result)
-
-    # Add author contributions if repo_path and author provided
-    if repo_path and author:
-        try:
-            author_data = parse_author_contributions(repo_path, author)
-            if author_data.get("parsed_files"):
-                for file_data in author_data["parsed_files"]:
-                    file_data["is_author_only"] = True
-                results.extend(author_data["parsed_files"])
-        except Exception as e:
-            print(f"Warning: Could not parse author contributions: {e}")
     
     # Save to JSON
     output_data = {"files": results}
@@ -83,35 +69,28 @@ def parse_documents_to_json(file_paths, output_path, repo_path=None, author=None
 def parsed_input_text(file_paths_dict, repo_path=None, author=None):
     """
     Parse non-code files with different strategies based on collaboration status.
-    - Non-collaborative files: Extract FULL content
-    - Collaborative files: Extract ONLY author's git contributions
+    - Non-collaborative files: Extract FULL content + count commits
+    - Collaborative files: Extract ONLY author's git contributions + count commits
     
     Args:
         file_paths_dict: Dict with "collaborative" and "non_collaborative" keys
-        repo_path: Git repository path (required for collaborative files)
-        author: Author email (required for collaborative files)
+        repo_path: Git repository path
+        author: Author email
         
     Returns:
-        Dictionary with parsed_files array:
-        {
-            "parsed_files": [
-                {
-                    "path": "string",
-                    "name": "string", 
-                    "type": "string",
-                    "content": "string",
-                    "success": bool,
-                    "error": "string",
-                    "is_author_only": bool  # True for collaborative files
-                }
-            ]
-        }
+        Dictionary with parsed_files array with contribution_frequency for each file
     """
     results = []
+    
+    # Get commit counts for ALL files once (efficient)
+    commit_counts = {}
+    if repo_path and author:
+        commit_counts = _get_all_file_commit_counts(repo_path, author)
     
     # Parse NON-COLLABORATIVE files - extract FULL content
     for file_path_str in file_paths_dict.get("non_collaborative", []):
         file_path = Path(file_path_str)
+        
         result = {
             "path": str(file_path.resolve()),
             "name": file_path.name,
@@ -119,7 +98,7 @@ def parsed_input_text(file_paths_dict, repo_path=None, author=None):
             "content": "",
             "success": False,
             "error": "",
-            "contribution_frequency": _get_contribution_frequency(repo_path, author, file_path) if repo_path and author else 1
+            "contribution_frequency": commit_counts.get(str(file_path.resolve()), 1)
         }
 
         try:
@@ -146,9 +125,8 @@ def parsed_input_text(file_paths_dict, repo_path=None, author=None):
     # Parse COLLABORATIVE files - extract ONLY author's contributions from git
     if repo_path and author and file_paths_dict.get("collaborative"):
         try:
-            author_data = parse_author_contributions(repo_path, author)
-            if author_data.get("parsed_files"):
-                results.extend(author_data["parsed_files"])
+            author_data = _parse_collaborative_files(repo_path, author, commit_counts)
+            results.extend(author_data)
         except Exception as e:
             print(f"Warning: Could not parse author contributions: {e}")
     
@@ -195,8 +173,8 @@ def _extract_text_file(file_path):
     except Exception as e:
         raise Exception(f"Text extraction failed: {e}")
 
-def _get_contribution_frequency(repo_path, author, file_path):
-    """Get the number of commits by author for a specific file."""
+def _get_all_file_commit_counts(repo_path, author):
+    """Get commit counts for ALL non-code files by author (single call)."""
     try:
         from app.utils.git_utils import extract_non_code_content_by_author
         import json
@@ -206,95 +184,54 @@ def _get_contribution_frequency(repo_path, author, file_path):
         )
         commits = json.loads(commits_json)
         
-        count = 0
-        file_path_str = str(file_path.resolve())
-        
+        counts = {}
         for commit in commits:
             for file_data in commit.get("files", []):
-                commit_file = file_data.get("path_after") or file_data.get("path_before", "")
-                if Path(commit_file).resolve() == Path(file_path_str):
-                    count += 1
+                file_path = file_data.get("path_after") or file_data.get("path_before", "")
+                if file_path:
+                    resolved = str(Path(file_path).resolve())
+                    counts[resolved] = counts.get(resolved, 0) + 1
         
-        return count if count > 0 else 1
+        return counts
     except Exception:
-        return 1
+        return {}
 
-def parse_author_contributions(repo_path, author, include_merges=False, max_commits=None):
-    """
-    Parse non-code file contributions by a specific author from a git repository.
-    REUSES: extract_non_code_content_by_author() from git_utils and existing parsing logic.
-    
-    Args:
-        repo_path: Path to git repository
-        author: Author name or email to filter by
-        include_merges: Include merge commits (default: False)
-        max_commits: Maximum number of commits to process (default: None)
-    
-    Returns:
-        Dictionary with parsed_files array containing author's contributions:
-        {
-            "parsed_files": [
-                {
-                    "path": "string",
-                    "name": "string",
-                    "type": "string",
-                    "content": "string",  # Author's diff/patch content
-                    "success": bool,
-                    "error": "string",
-                    "commit_hash": "string",
-                    "commit_message": "string",
-                    "authored_datetime": "string"
-                }
-            ]
-        }
-    """
+def _parse_collaborative_files(repo_path, author, commit_counts):
+    """Parse collaborative files - extract only author's patches."""
     try:
         from app.utils.git_utils import extract_non_code_content_by_author
         import json
         
-        # Get author's non-code contributions from git (excluding README files)
         commits_json = extract_non_code_content_by_author(
-            repo_path, author, exclude_readme=True, exclude_pdf_docx=True,
-            include_merges=include_merges, max_commits=max_commits
+            repo_path, author, exclude_readme=True, exclude_pdf_docx=True
         )
         commits = json.loads(commits_json)
         
-        results = []
-        file_commit_count = {}
-        
-        # Count commits per file and aggregate content
+        file_patches = {}
         for commit in commits:
             for file_data in commit.get("files", []):
                 file_path = file_data.get("path_after") or file_data.get("path_before", "")
-                
-                if file_path not in file_commit_count:
-                    file_commit_count[file_path] = {
-                        "count": 0,
-                        "content": [],
-                        "name": Path(file_path).name if file_path else "unknown",
-                        "type": Path(file_path).suffix.lower().lstrip('.') if file_path else "unknown"
-                    }
-                
-                file_commit_count[file_path]["count"] += 1
-                file_commit_count[file_path]["content"].append(file_data.get("patch", ""))
+                if not file_path:
+                    continue
+                    
+                if file_path not in file_patches:
+                    file_patches[file_path] = []
+                file_patches[file_path].append(file_data.get("patch", ""))
         
-        # Create results with aggregated content and contribution frequency
-        for file_path, data in file_commit_count.items():
-            result = {
-                "path": file_path,
-                "name": data["name"],
-                "type": data["type"],
-                "content": "\n\n".join(data["content"]),
+        results = []
+        for file_path, patches in file_patches.items():
+            resolved = str(Path(file_path).resolve())
+            results.append({
+                "path": resolved,
+                "name": Path(file_path).name,
+                "type": Path(file_path).suffix.lower().lstrip('.'),
+                "content": "\n\n".join(patches),
                 "success": True,
                 "error": "",
-                "contribution_frequency": data["count"]
-            }
-            results.append(result)
+                "contribution_frequency": commit_counts.get(resolved, 1)
+            })
         
-        return {"parsed_files": results}
-    
+        return results
     except Exception as e:
-        return {
-            "parsed_files": [],
-            "error": f"Failed to parse author contributions: {str(e)}"
-        }
+        print(f"Error parsing collaborative files: {e}")
+        return []

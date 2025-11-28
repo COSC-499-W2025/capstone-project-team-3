@@ -1,9 +1,9 @@
 from unittest.mock import patch
+import app.cli.delete_insights as cli_mod
 
 
 def test_delete_insights_cli_happy_path(capsys):
 	"""Select project 1, confirm, type name+sig prefix, and delete succeeds."""
-	import app.cli.delete_insights as cli_mod
 
 	# Single mocked project; signature prefix is 'abcd'
 	mocked_projects = [
@@ -30,7 +30,6 @@ def test_delete_insights_cli_happy_path(capsys):
 
 def test_delete_insights_cli_cancel(capsys):
 	"""User cancels at yes/no confirmation; no deletion call occurs."""
-	import app.cli.delete_insights as cli_mod
 
 	mocked_projects = [
 		{"name": "CliProj", "project_signature": "abcdef1234"},
@@ -51,7 +50,6 @@ def test_delete_insights_cli_cancel(capsys):
 
 def test_delete_insights_cli_no_projects(capsys):
 	"""No projects in DB prints a helpful message and exits."""
-	import app.cli.delete_insights as cli_mod
 
 	# get_projects returns empty; input should not be called
 	with (patch("app.cli.delete_insights.get_projects", return_value=[]),

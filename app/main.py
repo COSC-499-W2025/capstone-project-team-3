@@ -8,15 +8,24 @@ from app.client.llm_client import GeminiLLMClient
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
-from app.cli.file_input import main as file_input_main 
+from app.cli.file_input import main as file_input_main
+from app.api.routes.upload_page import router as upload_page_router
+from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 import uvicorn
 import os
 import sys
+import time
+import threading
 
 load_dotenv()
+
+# Create FastAPI app
+app = FastAPI(title="Project Insights")
+app.include_router(upload_page_router)
+app.include_router(upload_resolver_router, prefix="/api")
 
 def display_startup_info():
     """Display startup information including API key status."""
@@ -204,14 +213,27 @@ def main():
     
     print("App started successfully")
 
-# Create FastAPI app
-app = FastAPI(title="Project Insights")
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Project Insights!!"}
 
 if __name__ == "__main__":
+    def start_server():
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            log_level="critical",
+            access_log= False
+        )
+
+    # Start API server in background
+    server_thread = threading.Thread(target=start_server, daemon=True)
+    server_thread.start()
+
+    # Give server a moment to start
+    time.sleep(1)
+
+    # Now run the CLI flow
     main()
-    print("App started Successfully")
-    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -21,7 +21,7 @@ def _compute_contribution_percentages(
     total_words = sum(m.get("word_count", 0) for m in non_code_metrics)
 
     # Convert words → doc line equivalents
-    doc_line_equiv = total_words / words_per_code_line if words_per_code_line > 0 else total_words
+    doc_line_equiv = total_words / words_per_code_line 
 
     total = total_code_lines + doc_line_equiv
     if total == 0:

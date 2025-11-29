@@ -341,15 +341,18 @@ def extract_all_skills(content: str) -> Dict[str, List[str]]:
         for category, skill_set in skills.items()
     }
 
-
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
     Clean project-wide analysis:
     - One high-level summary
     - 4–5 project-level bullet points
     - Combined skills across all successful files
+    - Document type frequencies (counts and contribution frequencies per type)
+    - Per-file document type and contribution frequency
     """
-    files = parsed_files.get("files", [])
+    # Handle both "files" and "parsed_files" keys for compatibility
+    files = parsed_files.get("parsed_files") or parsed_files.get("files", [])
+    
     if not files:
         return {
             "summary": "No files were available for analysis.",
@@ -361,6 +364,9 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "tools_and_technologies": [],
                 "writing_skills": [],
             },
+            "doc_type_counts": {},
+            "doc_type_frequency": {},
+            "files_by_doc_type": [],
         }
 
     project_content = ""
@@ -372,6 +378,8 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "writing_skills": set(),
     }
     doc_type_counts: Counter = Counter()
+    doc_type_freq: Counter = Counter()
+    files_by_doc_type = []
 
     for file_data in files:
         if not file_data.get("success", False):
@@ -379,10 +387,25 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         content = (file_data.get("content") or "").strip()
         if not content:
             continue
+        
         project_content += "\n\n" + content
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         doc_type = classify_document_type(content, file_path)
+        freq = file_data.get("contribution_frequency", 1)
+        
+        # Count documents and aggregate frequency per type
         doc_type_counts[doc_type] += 1
+        doc_type_freq[doc_type] += freq
+        
+        # Track per-file document type and contribution frequency
+        files_by_doc_type.append({
+            "file_name": file_data.get("name", ""),
+            "file_path": str(file_path),
+            "doc_type": doc_type,
+            "contribution_frequency": freq
+        })
+        
+        # Extract skills from this file
         file_skills = extract_all_skills(content)
         for cat, vals in file_skills.items():
             project_skills[cat].update(vals)
@@ -398,6 +421,9 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "tools_and_technologies": [],
                 "writing_skills": [],
             },
+            "doc_type_counts": {},
+            "doc_type_frequency": {},
+            "files_by_doc_type": [],
         }
 
     project_content_lower = project_content.lower()
@@ -514,4 +540,84 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "summary": final_summary.strip(),
         "bullets": bullets,
         "skills": final_skills,
+        "doc_type_counts": dict(doc_type_counts),
+        "doc_type_frequency": dict(doc_type_freq),
+        "files_by_doc_type": files_by_doc_type,
     }
+
+def main():
+    """
+    Test the analysis pipeline using sample parsed files.
+    Run this to verify the analysis output with contribution frequency integration.
+    """
+    import sys
+    from pathlib import Path
+    import json
+    
+    # Add the project root to the Python path
+    project_root = Path(__file__).parent.parent.parent.parent
+    sys.path.insert(0, str(project_root))
+    
+    # Import the sample data
+    from app.shared.test_data.parsed_input_text import sample_parsed_files
+    
+    print("="*80)
+    print("TESTING NON-CODE ANALYSIS WITH CONTRIBUTION FREQUENCY")
+    print("="*80)
+    
+    # Run the analysis
+    print("\n📊 Running analysis on sample parsed files...")
+    result = analyze_project_clean(sample_parsed_files)
+    
+    # Display results
+    print("\n" + "="*80)
+    print("ANALYSIS RESULTS")
+    print("="*80)
+    
+    print("\n📝 PROJECT SUMMARY:")
+    print("-" * 80)
+    print(result["summary"])
+    
+    print("\n✨ KEY CONTRIBUTIONS (Bullets):")
+    print("-" * 80)
+    for i, bullet in enumerate(result["bullets"], 1):
+        print(f"{i}. {bullet}")
+    
+    print("\n🎯 EXTRACTED SKILLS:")
+    print("-" * 80)
+    for category, skills in result["skills"].items():
+        if skills:
+            print(f"\n{category.replace('_', ' ').title()}:")
+            for skill in skills:
+                print(f"  • {skill}")
+    
+    print("\n📊 DOCUMENT TYPE COUNTS:")
+    print("-" * 80)
+    for doc_type, count in result["doc_type_counts"].items():
+        print(f"  {doc_type}: {count} file(s)")
+    
+    print("\n🔢 DOCUMENT TYPE CONTRIBUTION FREQUENCY:")
+    print("-" * 80)
+    for doc_type, freq in result["doc_type_frequency"].items():
+        print(f"  {doc_type}: {freq} contribution(s)")
+    
+    print("\n📁 FILES BY DOCUMENT TYPE:")
+    print("-" * 80)
+    for file_info in result["files_by_doc_type"]:
+        print(f"\n  File: {file_info['file_name']}")
+        print(f"    Path: {file_info['file_path']}")
+        print(f"    Type: {file_info['doc_type']}")
+        print(f"    Contribution Frequency: {file_info['contribution_frequency']}")
+    
+    print("\n" + "="*80)
+    print("FULL JSON OUTPUT")
+    print("="*80)
+    print(json.dumps(result, indent=2))
+    
+    print("\n✅ Analysis completed successfully!")
+    print("="*80)
+
+
+if __name__ == "__main__":
+    main()
+    

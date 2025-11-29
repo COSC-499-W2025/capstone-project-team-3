@@ -116,9 +116,13 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     }
     
     print("Merged Results:\n", json.dumps(merged_results, indent=4))
-
-    # Store ranked Project & Results in the database
+    
     store_results_in_db(project_name, merged_results, project_rank, project_signature)
+    
+    return merged_results
+
+    # TO DO: Store ranked Project & Results in the database
+    
 
 
 def get_project_rank(code_metrics, non_code_metrics):
@@ -173,6 +177,7 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
 def main():
     # Merge analysis results for testing
     merged_results = merge_analysis_results(code_analysis_results, non_code_analysis_result, project_name, project_signature)
-        
+    
+    
 if __name__ == "__main__":
     main()

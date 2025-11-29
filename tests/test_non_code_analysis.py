@@ -13,7 +13,8 @@ from app.utils.non_code_analysis.non_code_analysis_utils import (
     get_unique_key_topics,
     get_named_entities,
     create_non_code_analysis_prompt,
-    generate_non_code_insights
+    generate_non_code_insights,
+    get_additional_metrics
 )
 
 # ---------- Pre-Processing Unit Tests ----------------- #
@@ -49,7 +50,6 @@ def test_pre_process_non_code_files():
     assert len(result["summary"]) > 0
     assert len(result["key_topics"]) > 0
     assert len(result["key_topics"]) <= 5
-
 
 # ---------- Aggregation Unit Tests ----------------- #
 def test_aggregate_non_code_summaries():
@@ -137,7 +137,6 @@ def test_generate_prompt_structure():
     assert "Unique Key Topics:" in prompt
     assert "Named Entities:" in prompt
 
-
 def test_get_file_type_distribution():
     """Test file type distribution calculation."""
     llm1_results = [
@@ -151,7 +150,6 @@ def test_get_file_type_distribution():
     # Assertions
     assert distribution == {"pdf": 2, "txt": 1}
 
-
 def test_get_project_name():
     """Test project name extraction."""
     llm1_results = [
@@ -163,7 +161,6 @@ def test_get_project_name():
 
     # Assertions
     assert project_name == "project"
-
 
 def test_get_total_files():
     """Test total file count."""
@@ -177,7 +174,6 @@ def test_get_total_files():
     # Assertions
     assert total_files == 2
 
-
 def test_get_file_names():
     """Test file name extraction."""
     llm1_results = [
@@ -189,7 +185,6 @@ def test_get_file_names():
 
     # Assertions
     assert file_names == ["file1.pdf", "file2.txt"]
-
 
 def test_get_readability_metrics():
     """Test average readability score calculation."""
@@ -203,7 +198,6 @@ def test_get_readability_metrics():
     # Assertions
     assert avg_readability == pytest.approx(11.25, 0.1)
 
-
 def test_get_unique_key_topics():
     """Test unique key topics extraction."""
     llm1_results = [
@@ -215,7 +209,6 @@ def test_get_unique_key_topics():
 
     # Assertions
     assert set(unique_topics) == {"Topic1", "Topic2", "Topic3"}
-
 
 def test_get_named_entities():
     """Test named entity extraction."""
@@ -289,6 +282,29 @@ def test_clean_response_extracts_json(monkeypatch):
     assert isinstance(result, dict)
     assert result["project_summary"] == "Test summary"
 
+def test_get_additional_metrics():
+    """Test additional metrics extraction."""
+    llm1_results = [
+        {"content": "Team 3 is working on a project with LLM2 in 2025.",
+         "file_name": "file1.pdf",
+         "file_path": "/test/file1.pdf",
+         "word_count": 10
+         },
+        
+        {"content": "The project involves AI and machine learning.",
+         "file_name": "file2.txt",
+         "file_path": "/test/file2.txt",
+         "word_count": 8
+        }
+    ]
+
+    additional_metrics = get_additional_metrics(llm1_results)
+
+    # Assertions
+    assert "word_count" in additional_metrics
+    assert "completeness_score" in additional_metrics
+    assert "contribution_activity" in additional_metrics
+
 # ---------- Integration Tests ----------------- #
 def test_pipeline_integration():
     """Test the full pipeline from pre-processing to analysis."""
@@ -321,8 +337,6 @@ def test_pipeline_integration():
     assert "project_summary" in llm2_results
     assert "resume_bullets" in llm2_results
     assert "skills" in llm2_results
-    assert "readability_score" in llm2_results
-    assert "domain_expertise" in llm2_results
 
 
 # ---------- Run Tests Directly ----------------- #

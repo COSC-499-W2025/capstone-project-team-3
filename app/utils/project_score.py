@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 
-def compute_contribution_percentages(
+def _compute_contribution_percentages(
     code_metrics: List[Dict[str, Any]],
     non_code_metrics: List[Dict[str, Any]],
     words_per_code_line: float = 7.0

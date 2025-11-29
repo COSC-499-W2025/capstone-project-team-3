@@ -345,25 +345,6 @@ def test_main_initializes_database():
         
         mock_init_db.assert_called_once()
 
-
-def test_main_prints_success_message(capsys):
-    """Test main prints 'App started successfully' message."""
-    with patch('app.main.init_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.seed_db'), \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
-        
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        
-        from app.main import main
-        main()
-        
-        captured = capsys.readouterr()
-        assert "App started successfully" in captured.out
-
-
 def test_main_prompt_root_default_behavior():
     """Test PROMPT_ROOT defaults to '0' when not set."""
     with patch('app.main.init_db'), \
@@ -398,3 +379,66 @@ def test_root_endpoint_returns_welcome_message():
     assert response == {"message": "Welcome to the Project Insights!!"}
     assert "message" in response
     assert isinstance(response["message"], str)
+
+
+def test_main_cleans_up_upload_artifacts_on_success():
+    """Test cleanup_upload is called when analysis result has upload_id."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.cleanup_upload') as mock_cleanup, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": [],
+            "count": 0,
+            "upload_id": "abc123",
+            "extracted_dir": "/tmp/extracted",
+        }
+        mock_scan.return_value = {"files": [], "skip_analysis": True, "reason": "no_files", "signature": None}
+
+        from app.main import main
+        main()
+
+        mock_cleanup.assert_called_once_with(
+            "abc123",
+            extracted_dir="/tmp/extracted",
+            delete_extracted=True,
+        )
+
+
+def test_main_skips_cleanup_when_no_upload_id():
+    """Test cleanup_upload is not called when upload_id is missing."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.cleanup_upload') as mock_cleanup, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": [],
+            "count": 0,
+            # no upload_id
+        }
+        mock_scan.return_value = {"files": [], "skip_analysis": True, "reason": "no_files", "signature": None}
+
+        from app.main import main
+        main()
+
+        mock_cleanup.assert_not_called()

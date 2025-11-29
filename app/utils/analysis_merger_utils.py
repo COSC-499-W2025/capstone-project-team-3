@@ -2,7 +2,7 @@
 # from app.utils.project_ranker import project_ranker
 import json
 from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, git_code_analysis_results, project_name, project_signature
-
+from app.data.db import get_connection
 # Merge results from code and non-code analysis
 def merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature):
     """
@@ -115,15 +115,11 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         "metrics": merged_metrics
     }
     
-    print("Merged Results:\n", json.dumps(merged_results, indent=4))
     
+     # TODO: Store ranked Project & Results in the database
     store_results_in_db(project_name, merged_results, project_rank, project_signature)
-    
+        
     return merged_results
-
-    # TO DO: Store ranked Project & Results in the database
-    
-
 
 def get_project_rank(code_metrics, non_code_metrics):
     """
@@ -147,10 +143,10 @@ def get_project_rank(code_metrics, non_code_metrics):
     
     return project_score
 
-
 def store_results_in_db(project_name, merged_results, project_rank, project_signature):
     """
     This function stores the ranked results in the database.
+    To be stored in DASHBOARD_DATA & SKILL_ANALYSIS & RESUME_SUMMARY & PROJECT Tables
     
     Args:
         ranked_results (list): List of ranked results.
@@ -158,26 +154,147 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     Returns:
         None
     """
-     # To be stored in DASHBOARD_DATA & SKILL_ANALYSIS & RESUME_SUMMARY & PROJECT Tables
-    
-    # TODO : Use project_signature to identify the project in DB
-    
-    # TODO : Update PROJECT table with summary and rank
-    
-    # TODO : Store skills in SKILL_ANALYSIS table
-    
-    # TODO : Store resume bullets in RESUME_SUMMARY table
-    
-    # TODO : Store metrics in DASHBOARD_DATA table
-    
-    # TODO : Commit changes to DB
+    # Get DB connection 
+    get_connection()
+    conn = get_connection()
+    cur = conn.cursor()
+        
+    # Use project_signature to identify the project in DB
+    # Ensure project exists
+    cur.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (project_signature,))
+    if not cur.fetchone():
+        cur.execute("""
+        INSERT INTO PROJECT (project_signature, name, summary)
+        VALUES (?, ?, ?)
+    """, (project_signature, project_name, merged_results["summary"]))
+    else:
+        # Update summary if project already exists
+        cur.execute("""
+        UPDATE PROJECT SET name = ? , summary = ? WHERE project_signature = ?
+        """, (project_name, merged_results["summary"], project_signature))
 
-    pass
+    # Store skills in SKILL_ANALYSIS table
+    # Store soft skills
+    for skill in merged_results["skills"]["soft_skills"]:
+        cur.execute("""
+        INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
+        """, (project_signature, skill, "soft skill"))
+
+    # Store technical skills
+    for skill in merged_results["skills"]["technical_skills"]:
+        cur.execute("""
+        INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
+        """, (project_signature, skill, "technical skill"))
+
+    # Store resume bullets in RESUME_SUMMARY table
+    cur.execute("""
+    INSERT INTO RESUME_SUMMARY (project_id, summary_text) VALUES (?, ?)
+    """, (project_signature, json.dumps(merged_results["resume_bullets"])))
+
+    # Store metrics in DASHBOARD_DATA table
+    for key, value in merged_results["metrics"].items():
+        # Flatten if value is a dictionary or list type
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+        cur.execute("""
+            INSERT INTO DASHBOARD_DATA (project_id, metric_name, metric_value)
+        VALUES (?, ?, ?)
+    """, (project_signature, key, value))
+
+    # Commit changes to DB
+    conn.commit()
+    
+    # Close cursor and connection
+    cur.close()
+    conn.close()
+
+def retrieve_results_from_db(project_signature):
+    """
+    This function retrieves the merged results from the database using project_signature.
+    Will be removed once main flow is complete.
+    Args:
+        project_signature (str): Unique identifier for the project.
+    Returns:
+        merged_results (dict): Merged results retrieved from the database.
+    """
+    
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Retrieve summary from PROJECT table
+    cur.execute("""
+    SELECT summary FROM PROJECT WHERE project_signature = ?
+    """, (project_signature,))
+    summary_row = cur.fetchone()
+    summary = summary_row[0] if summary_row else ""
+    
+    # Retrieve skills from SKILL_ANALYSIS table
+    cur.execute("""
+    SELECT skill, source FROM SKILL_ANALYSIS WHERE project_id = ?
+    """, (project_signature,))
+    skills_rows = cur.fetchall()
+    
+    technical_skills = []
+    soft_skills = []
+    for row in skills_rows:
+        skill, source = row
+        if source == "technical_skill":
+            technical_skills.append(skill)
+        elif source == "soft_skill":
+            soft_skills.append(skill)
+    
+    merged_skills = {
+        "technical_skills": technical_skills,
+        "soft_skills": soft_skills
+    }
+    
+    # Retrieve resume bullets from RESUME_SUMMARY table
+    cur.execute("""
+    SELECT summary_text FROM RESUME_SUMMARY WHERE project_id = ?
+    """, (project_signature,))
+    resume_row = cur.fetchone()
+    resume_bullets = json.loads(resume_row[0]) if resume_row else []
+    
+    # Retrieve metrics from DASHBOARD_DATA table
+    cur.execute("""
+    SELECT metric_name, metric_value FROM DASHBOARD_DATA WHERE project_id = ?
+    """, (project_signature,))
+    metrics_rows = cur.fetchall()
+    
+    # Create metrics dictionary to print
+    merged_metrics = {}
+    for row in metrics_rows:
+        metric_name, metric_value = row
+        try:
+            metric_value = json.loads(metric_value)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        merged_metrics[metric_name] = metric_value
+    
+    merged_results = {
+        "summary": summary,
+        "skills": merged_skills,
+        "resume_bullets": resume_bullets,
+        "metrics": merged_metrics
+    }
+    
+    # Close cursor and connection
+    cur.close()
+    conn.close()
+    
+    return merged_results
 
 def main():
     # Merge analysis results for testing
     merged_results = merge_analysis_results(code_analysis_results, non_code_analysis_result, project_name, project_signature)
-    
-    
+    print("Merged Results:\n", json.dumps(merged_results, indent=4))
+    print("Stored Results in DB.")
+
+    # Retrieve results from DB for testing
+    print("Retrieving Results from DB...")
+    retrieved_results = retrieve_results_from_db(project_signature)
+    print("Retrieved Results:")
+    print(json.dumps(retrieved_results, indent=4))
+
 if __name__ == "__main__":
     main()

@@ -14,6 +14,7 @@ from app.api.routes.get_upload_id import router as upload_resolver_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
+from app.utils.clean_up import cleanup_upload
 import uvicorn
 import os
 import sys
@@ -189,6 +190,16 @@ def main():
                 
             else:
                 print("❌ No projects found to analyze")
+
+            # Perform cleanup of uploaded artifacts (zip + extracted dir)
+            if rc.get("status") == "ok" and rc.get("upload_id"):
+                cu_res = cleanup_upload(
+                    rc.get("upload_id"),
+                    extracted_dir=rc.get("extracted_dir"),
+                    delete_extracted=True,
+                )
+                if cu_res.get("status") != "ok":
+                     print(f"⚠️ Cleanup failed: {cu_res.get('reason')}")
           
             # ADD THE MISSING SECTION HERE!
             print(f"\n{'='*60}")
@@ -210,8 +221,6 @@ def main():
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                 break
-    
-    print("App started successfully")
 
 
 @app.get("/")

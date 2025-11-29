@@ -63,6 +63,8 @@ def main(argv=None):
         "path": str(resolved),
         "projects": projects,
         "count": len(projects),
+        "upload_id": upload_id,
+        "extracted_dir": extract_res.get("extracted_dir"),
     }
 
     return result

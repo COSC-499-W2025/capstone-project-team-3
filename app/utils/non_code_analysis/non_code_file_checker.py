@@ -202,8 +202,8 @@ def verify_user_in_files(
     """
     Verify which files the user actually contributed to vs files by others only.
     
-    README files are treated specially - they go to user_solo (non-collaborative)
-    so they get full content parsing instead of git diff extraction.
+    Ensures collaborative files have user + at least 1 other person.
+    Ensures non-collaborative files have ONLY the user.
     
     Args:
         file_metadata: Output from collect_git_non_code_files_with_metadata()
@@ -211,8 +211,8 @@ def verify_user_in_files(
     
     Returns:
         {
-            "user_collaborative": [paths],    # Files with user + at least 1 other (extract git diffs)
-            "user_solo": [paths],             # Files with ONLY user OR README (parse full content)
+            "user_collaborative": [paths],    # Files with user + at least 1 other
+            "user_solo": [paths],             # Files with ONLY user
             "others_only": [paths]            # Files WITHOUT user
         }
     """
@@ -225,9 +225,8 @@ def verify_user_in_files(
         path_obj = Path(info["path"])
         is_readme = path_obj.name.lower().startswith("readme")
 
-        # README files always go to user_solo for full content parsing
         if is_readme:
-            user_solo.append(info["path"])
+            user_collaborative.append(info["path"])
             continue
 
         if user_email in authors:
@@ -247,26 +246,20 @@ def verify_user_in_files(
 def get_classified_non_code_file_paths(
     directory: Union[str, Path],
     user_email: str = None
-) -> Dict[str, List[str]]:
+) -> List[str]:
     """
-    Classify non-code files and return separate lists for different parsing strategies.
+    Classify non-code files and return file paths ready for parsing.
+    Does NOT parse files - returns paths only for later parsing integration.
     
     Args:
         directory: Path to directory/repository
         user_email: Email of user (if None, gets from git config for git repos)
     
     Returns:
-        Dictionary with:
-        {
-            "collaborative": [paths],      # Files to parse author-only content from git
-            "non_collaborative": [paths]   # Files to parse full content
-        }
+        List of file paths (collaborative + non_collaborative, excludes others' files)
     """
     classification = classify_non_code_files_with_user_verification(directory, user_email)
-    return {
-        "collaborative": classification["collaborative"],
-        "non_collaborative": classification["non_collaborative"]
-    }
+    return classification["collaborative"] + classification["non_collaborative"]
 
 
 def classify_non_code_files_with_user_verification(

@@ -859,7 +859,7 @@ def test_verify_user_in_files_empty_metadata():
     assert result["others_only"] == []
 
 def test_verify_user_in_files_includes_readme_for_collaborative():
-    """README files should always be included in user_solo for full content parsing, even if user is not an author."""
+    """README files should always be included in user_collaborative, even if user is not an author."""
     metadata = {
         "README.md": {
             "path": "/repo/README.md",
@@ -879,12 +879,12 @@ def test_verify_user_in_files_includes_readme_for_collaborative():
         }
     }
     result = verify_user_in_files(metadata, "user@example.com")
-    # All README variants should be in user_solo for full content parsing
-    assert "/repo/README.md" in result["user_solo"]
-    assert "/repo/readme.txt" in result["user_solo"]
-    assert "/repo/ReadMe.docx" in result["user_solo"]
-    # notes.pdf should be in others_only since user is not an author
-    assert "/repo/notes.pdf" in result["others_only"]
+    # All README variants should be in user_collaborative
+    assert "/repo/README.md" in result["user_collaborative"]
+    assert "/repo/readme.txt" in result["user_collaborative"]
+    assert "/repo/ReadMe.docx" in result["user_collaborative"]
+    # notes.pdf should not be in user_collaborative
+    assert "/repo/notes.pdf" not in result["user_collaborative"]
 
 # ============================================================================
 # Tests for classify_non_code_files_with_user_verification()
@@ -1394,26 +1394,22 @@ def test_get_classified_file_paths_non_git_directory(tmp_path):
     
     result = get_classified_non_code_file_paths(tmp_path)
     
-    assert isinstance(result, dict)
-    assert "collaborative" in result
-    assert "non_collaborative" in result
-    assert len(result["non_collaborative"]) >= 2
-    assert any("document.pdf" in str(p) for p in result["non_collaborative"])
-    assert any("README.md" in str(p) for p in result["non_collaborative"])
+    assert isinstance(result, list)
+    assert len(result) >= 2
+    assert any("document.pdf" in str(p) for p in result)
+    assert any("README.md" in str(p) for p in result)
 
 
 def test_get_classified_file_paths_returns_list(tmp_path):
-    """Test that result is a dict with collaborative and non_collaborative lists."""
+    """Test that result is a list of paths."""
     doc = tmp_path / "test.txt"
     doc.write_text("test content")
     
     result = get_classified_non_code_file_paths(tmp_path)
     
-    assert isinstance(result, dict)
-    assert "collaborative" in result
-    assert "non_collaborative" in result
-    assert len(result["non_collaborative"]) == 1
-    assert "test.txt" in str(result["non_collaborative"][0])
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert "test.txt" in str(result[0])
 
 
 def test_get_classified_file_paths_empty_directory(tmp_path):
@@ -1423,4 +1419,4 @@ def test_get_classified_file_paths_empty_directory(tmp_path):
     
     result = get_classified_non_code_file_paths(tmp_path)
     
-    assert result == {"collaborative": [], "non_collaborative": []}
+    assert result == []

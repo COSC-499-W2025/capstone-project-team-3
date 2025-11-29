@@ -396,8 +396,12 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     - One high-level summary
     - 4–5 project-level bullet points
     - Combined skills across all successful files
+    - Document type frequencies (counts and contribution frequencies per type)
+    - Per-file document type and contribution frequency
     """
-    files = parsed_files.get("files", [])
+    # Handle both "files" and "parsed_files" keys for compatibility
+    files = parsed_files.get("parsed_files") or parsed_files.get("files", [])
+    
     if not files:
         return {
             "summary": "No files were available for analysis.",
@@ -408,6 +412,9 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "domain_expertise": [],
                 "tools_and_technologies": [],
             },
+            "doc_type_counts": {},
+            "doc_type_frequency": {},
+            "files_by_doc_type": [],
         }
 
     project_content = ""
@@ -416,6 +423,8 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "soft_skills": set(),
     }
     doc_type_counts: Counter = Counter()
+    doc_type_freq: Counter = Counter()
+    files_by_doc_type = []
 
     for file_data in files:
         if not file_data.get("success", False):
@@ -426,7 +435,18 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         project_content += "\n\n" + content
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         doc_type = classify_document_type(content, file_path)
+        freq = file_data.get("contribution_frequency", 1)
+        
         doc_type_counts[doc_type] += 1
+        doc_type_freq[doc_type] += freq
+        
+        files_by_doc_type.append({
+            "file_name": file_data.get("name", ""),
+            "file_path": str(file_path),
+            "doc_type": doc_type,
+            "contribution_frequency": freq
+        })
+        
         file_skills = extract_all_skills(content)
         for cat, vals in file_skills.items():
             project_skills[cat].update(vals)
@@ -439,6 +459,9 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "technical_skills": [],
                 "soft_skills": [],
             },
+            "doc_type_counts": {},
+            "doc_type_frequency": {},
+            "files_by_doc_type": [],
         }
 
     project_content_lower = project_content.lower()
@@ -561,11 +584,13 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "bullets": bullets,
         "skills": final_skills,
         "completeness_score": completeness_score,
-        "word_count": len(project_content.split())
+        "word_count": len(project_content.split()),
+        "doc_type_counts": dict(doc_type_counts),
+        "doc_type_frequency": dict(doc_type_freq),
+        "files_by_doc_type": files_by_doc_type,
     }
 
 if __name__ == "__main__":
     from app.shared.test_data.parsed_input_text import sample_parsed_files
     result = analyze_project_clean(sample_parsed_files)
     print(result)
-

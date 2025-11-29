@@ -1,6 +1,5 @@
-# Sample parsed_files object matching the structure from document_parser
 sample_parsed_files = {
-    "files": [
+    "parsed_files": [  # Change "files" to "parsed_files" to match document_parser output
         {
             "path": "/test/project_proposal.pdf",
             "name": "project_proposal.pdf",
@@ -28,7 +27,8 @@ sample_parsed_files = {
             Team Roles: The team consists of backend developers, frontend developers, and a project manager. 
             Each member has specific responsibilities aligned with their expertise areas.""",
             "success": True,
-            "error": ""
+            "error": "",
+            "contribution_frequency": 5  # Added
         },
         {
             "path": "/test/requirements_doc.txt",
@@ -52,14 +52,14 @@ sample_parsed_files = {
             Development Timeline: 12 weeks with 4 major milestones
             Success Criteria: All functional requirements met, positive user feedback""",
             "success": True,
-            "error": ""
+            "error": "",
+            "contribution_frequency": 3  # Added
         },
         {
-
-            "path":   "/files/file_three.txt",
+            "path": "/files/file_three.txt",
             "name": "file_three.pdf",
             "type": "txt",
-            "content" : """Artificial intelligence (AI) has transformed nearly every industry in the 21st century. 
+            "content": """Artificial intelligence (AI) has transformed nearly every industry in the 21st century. 
             From self-driving cars to medical diagnostics, AI-driven systems are capable of processing 
             vast amounts of data and identifying complex patterns that humans might overlook. 
             However, while the potential of AI is immense, the challenges that accompany it are equally significant. 
@@ -75,7 +75,7 @@ sample_parsed_files = {
             In business, AI is being used to automate repetitive tasks and analyze customer behavior at scale. 
             Recommendation systems on streaming platforms and online stores are prime examples of this technology 
             in action. These systems continuously learn from user interactions, adapting to provide more personalized 
-            experiences. Still, critics argue that such systems often create “echo chambers,” limiting exposure to 
+            experiences. Still, critics argue that such systems often create "echo chambers," limiting exposure to 
             diverse perspectives or products.
 
             Education is another domain undergoing transformation. Adaptive learning platforms can tailor lessons to 
@@ -97,15 +97,18 @@ sample_parsed_files = {
             whether it serves humanity as a tool for progress or becomes a source of division and control. 
             Balancing innovation with ethics, privacy, and accountability remains the central challenge in the 
             next era of technological advancement.""",
-            "success" : True,
-            "error" : ""},
+            "success": True,
+            "error": "",
+            "contribution_frequency": 2  # Added
+        },
         {
             "path": "/test/failed_file.pdf",
             "name": "failed_file.pdf",
             "type": "pdf",
             "content": "",
             "success": False,
-            "error": "File parsing failed"
+            "error": "File parsing failed",
+            "contribution_frequency": 0  # Added (0 for failed files)
         }
     ]
 }

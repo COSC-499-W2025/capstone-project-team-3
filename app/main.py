@@ -128,7 +128,21 @@ def main():
                     print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
                     print(f"Excluded files: {len(non_code_result['excluded'])}")
                     print(f"--------------------------------------------------------")
-                    # --- End non-code file checker integration ---       
+                    
+                    # --- Parsing integration ---
+                    from app.utils.non_code_parsing.document_parser import parsed_input_text
+                    
+                    print("📄 Parsing non-code files...")
+                    parsed_non_code = parsed_input_text(
+                        file_paths_dict={
+                            'collaborative': non_code_result['collaborative'],
+                            'non_collaborative': non_code_result['non_collaborative']
+                        },
+                        repo_path=project_path if non_code_result['is_git_repo'] else None,
+                        author=non_code_result['user_identity'].get('email')
+                    )
+                    print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
+                    # --- End parsing integration ---       
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -155,7 +169,23 @@ def main():
                             try:
                                 llm_client = GeminiLLMClient(api_key=api_key)
                                 
-                                #TODO: Non Code parsing -> analysis
+                                # Non-code analysis with LLM
+                                from app.utils.non_code_analysis.non_code_analysis_utils import (
+                                    pre_process_non_code_files,
+                                    aggregate_non_code_summaries,
+                                    create_non_code_analysis_prompt,
+                                    generate_non_code_insights
+                                )
+                                
+                                if parsed_non_code.get('parsed_files'):
+                                    llm1_results = pre_process_non_code_files(parsed_non_code)
+                                    project_metrics = aggregate_non_code_summaries(llm1_results)
+                                    prompt = create_non_code_analysis_prompt(project_metrics)
+                                    non_code_insights = generate_non_code_insights(prompt)
+                                    print(f"✅ Non-code AI analysis complete")
+                                else:
+                                    non_code_insights = None
+                                    print("⚠️ No non-code files to analyze")
                                 
                                 #TODO: Code parsing -> analysis
                                 #check if git or non git 
@@ -175,7 +205,19 @@ def main():
                     if analysis_type == 'local':
                         print("📊 Running local analysis...")
                         
-                        #TODO: Non Code parsing -> analysis
+                        # Non-code analysis (local)
+                        from app.utils.non_code_analysis.non_code_analysis_utils import (
+                            pre_process_non_code_files,
+                            aggregate_non_code_summaries
+                        )
+                        
+                        if parsed_non_code.get('parsed_files'):
+                            llm1_results = pre_process_non_code_files(parsed_non_code)
+                            non_code_metrics = aggregate_non_code_summaries(llm1_results)
+                            print(f"✅ Non-code local analysis complete")
+                        else:
+                            non_code_metrics = None
+                            print("⚠️ No non-code files to analyze")
                         
                         #TODO: Code parsing -> analysis
                         #check if git or non git

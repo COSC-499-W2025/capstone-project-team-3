@@ -133,8 +133,12 @@ def test_parsed_input_text_basic(tmp_path=None):
     md_file = tmp_path / "readme.md"
     md_file.write_text("# Title\nContent here")
     
-    # Test parsing
-    result = parsed_input_text([str(txt_file), str(md_file)])
+    # Test parsing with dict format
+    file_paths_dict = {
+        "non_collaborative": [str(txt_file), str(md_file)],
+        "collaborative": []
+    }
+    result = parsed_input_text(file_paths_dict)
     
     # Verify structure
     assert "parsed_files" in result
@@ -148,11 +152,16 @@ def test_parsed_input_text_basic(tmp_path=None):
         assert "content" in file_result
         assert "success" in file_result
         assert "error" in file_result
+        assert "contribution_frequency" in file_result
 
 
 def test_parsed_input_text_missing_file(tmp_path=None):
     """Test parsed_input_text with missing files."""
-    result = parsed_input_text(["/nonexistent/file.txt"])
+    file_paths_dict = {
+        "non_collaborative": ["/nonexistent/file.txt"],
+        "collaborative": []
+    }
+    result = parsed_input_text(file_paths_dict)
     
     assert len(result["parsed_files"]) == 1
     file_result = result["parsed_files"][0]
@@ -162,7 +171,11 @@ def test_parsed_input_text_missing_file(tmp_path=None):
 
 def test_parsed_input_text_empty_list(tmp_path=None):
     """Test parsed_input_text with empty file list."""
-    result = parsed_input_text([])
+    file_paths_dict = {
+        "non_collaborative": [],
+        "collaborative": []
+    }
+    result = parsed_input_text(file_paths_dict)
     assert result == {"parsed_files": []}
 
 

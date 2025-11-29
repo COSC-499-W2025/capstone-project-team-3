@@ -52,6 +52,9 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 # Copy source code
 COPY . /app
 
+# Remove old DB and re-seed
+RUN rm -f /app/app/data/app.sqlite3 && python -m app.data.db
+
 # Fix ownership (including cache directories)
 RUN chown -R appuser:appuser /app
 

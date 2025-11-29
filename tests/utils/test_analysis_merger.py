@@ -1,6 +1,7 @@
-from app.utils.analysis_merger_utils import merge_analysis_results
+from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db, retrieve_results_from_db
 
 def test_merge_analysis_results():
+    
     code_analysis_results = {
         "Resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
@@ -44,3 +45,32 @@ def test_merge_analysis_results():
     assert merged["metrics"]["languages"] == ["Python"]
     assert merged["metrics"]["word_count"] == 1000
     assert merged["metrics"]["completeness_score"] == 0.95
+    
+def test_store_and_retrieve_results_in_db():
+    project_signature = "test_project_002"
+    project_name = "DB Test Project"
+    merged_results = {
+        "summary": "DB Test Project summary.",
+        "skills": {
+            "technical_skills": ["Django"],
+            "soft_skills": ["Teamwork"]
+        },
+        "resume_bullets": ["Implemented database models"],
+        "metrics": {
+            "languages": ["Python", "SQL"],
+            "word_count": 1500,
+            "completeness_score": 0.9
+        }
+    }
+
+    # Store results in DB
+    store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
+
+    # Retrieve results from DB
+    retrieved_results = retrieve_results_from_db(project_signature)
+
+    assert retrieved_results["summary"] == merged_results["summary"]
+    assert retrieved_results["skills"]["technical_skills"] == merged_results["skills"]["technical_skills"]
+    assert retrieved_results["skills"]["soft_skills"] == merged_results["skills"]["soft_skills"]
+    assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
+    assert retrieved_results["metrics"] == merged_results["metrics"]

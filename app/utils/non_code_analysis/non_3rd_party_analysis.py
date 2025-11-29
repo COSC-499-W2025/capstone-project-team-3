@@ -236,110 +236,159 @@ def extract_contribution_bullets(content: str, doc_type: str, metrics: Dict[str,
         bullets.append("Provided clear explanations to support better understanding.")
     return bullets[:5]
 
-
 def extract_all_skills(content: str) -> Dict[str, List[str]]:
     """
-    Extract ALL skills from content - technical, soft, domain-specific.
-    Uses spaCy, KeyBERT, and pattern matching.
+    Extract technical and soft skills from content.
+    Domain expertise and tools/technologies intentionally removed.
     """
+
     skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "domain_expertise": set(),
-        "tools_and_technologies": set(),
-        "writing_skills": set(),
     }
 
     content_lower = content.lower()
 
-    tech_keywords = {
-        "python", "javascript", "java", "c++", "typescript", "go", "rust",
-        "react", "angular", "vue", "django", "flask", "spring", "express",
-        "postgresql", "mongodb", "mysql", "redis", "elasticsearch",
-        "docker", "kubernetes", "aws", "azure", "gcp", "terraform",
-        "git", "jenkins", "circleci", "github actions",
+    # ---- TECHNICAL KEYWORDS WITH CORRECT CASING ----
+    TECH_CORRECT_CASING = {
+        "python": "Python",
+        "javascript": "JavaScript",
+        "java": "Java",
+        "c++": "C++",
+        "typescript": "TypeScript",
+        "go": "Go",
+        "rust": "Rust",
+        "react": "React",
+        "angular": "Angular",
+        "vue": "Vue",
+        "django": "Django",
+        "flask": "Flask",
+        "spring": "Spring",
+        "express": "Express",
+        "postgresql": "PostgreSQL",
+        "mongodb": "MongoDB",
+        "mysql": "MySQL",
+        "redis": "Redis",
+        "elasticsearch": "Elasticsearch",
+        "docker": "Docker",
+        "kubernetes": "Kubernetes",
+        "aws": "AWS",
+        "azure": "Azure",
+        "gcp": "GCP",
+        "git": "Git",
+        "devops": "DevOps",
+        "ci/cd": "CI/CD",
+        "fastapi": "FastAPI"
     }
 
-    for tech in tech_keywords:
-        if re.search(r"\b" + tech + r"\b", content_lower):
-            skills["technical_skills"].add(tech.title())
+    # Extract technical skills
+    for tech_raw, tech_clean in TECH_CORRECT_CASING.items():
+        if re.search(rf"\b{re.escape(tech_raw)}\b", content_lower):
+            skills["technical_skills"].add(tech_clean)
 
+    # ---- KEYBERT (OPTIONAL TECH EXTRACTION) ----
     if KEYBERT_AVAILABLE and len(content) > 100:
         try:
             keywords = kw_model.extract_keywords(content, keyphrase_ngram_range=(1, 2), top_n=20)
             for keyword, score in keywords:
                 if score > 0.3:
-                    keyword_lower = keyword.lower()
-                    if any(tech in keyword_lower for tech in ["api", "system", "architecture", "design"]):
+                    kw_lower = keyword.lower()
+                    if any(term in kw_lower for term in ["api", "system", "architecture", "design"]):
                         skills["technical_skills"].add(keyword.title())
-                    elif any(word in keyword_lower for word in ["manage", "lead", "coordinate"]):
-                        skills["soft_skills"].add(keyword.title())
-        except:
+        except Exception:
             pass
 
+    # ---- SOFT SKILLS ----
     soft_skill_patterns = {
-        "Technical Writing": ["documentation", "documented", "writing", "authored"],
-        "System Design": ["architecture", "designed", "architected", "system design"],
-        "API Design": ["api design", "endpoint design", "rest api", "graphql"],
-        "Database Design": ["database design", "schema", "data model"],
-        "Problem Solving": ["solved", "resolved", "addressed", "fixed"],
+        "Communication": ["explained", "communicated", "documented", "presented"],
+        "Collaboration": ["team", "collaborated", "worked with"],
+        "Problem Solving": ["solved", "resolved", "addressed"],
         "Project Planning": ["planned", "planning", "roadmap", "strategy"],
-        "Requirements Analysis": ["requirements", "specifications", "analysis"],
-        "Communication": ["explained", "communicated", "presented", "documented"],
-        "Collaboration": ["team", "collaborated", "coordinated", "worked with"],
-        "Research": ["researched", "investigated", "analyzed", "studied"],
         "Quality Assurance": ["tested", "testing", "qa", "quality"],
-        "Security": ["security", "authentication", "authorization", "encryption"],
-        "DevOps": ["deployment", "ci/cd", "automation", "pipeline"],
-        "Agile Methodology": ["agile", "scrum", "sprint", "kanban"],
+        "Requirements Analysis": ["requirements", "analysis", "specification"]
     }
 
     for skill, patterns in soft_skill_patterns.items():
-        if any(pattern in content_lower for pattern in patterns):
+        if any(p in content_lower for p in patterns):
             skills["soft_skills"].add(skill)
 
-    domain_patterns = {
-        "Web Development": ["web", "frontend", "backend", "full-stack", "http"],
-        "Mobile Development": ["mobile", "ios", "android", "app development"],
-        "Cloud Computing": ["cloud", "aws", "azure", "serverless", "microservices"],
-        "Data Science": ["data science", "machine learning", "analytics", "visualization"],
-        "Cybersecurity": ["security", "encryption", "vulnerability", "penetration testing"],
-        "DevOps": ["devops", "ci/cd", "containerization", "orchestration"],
-        "Database Management": ["database", "sql", "nosql", "data modeling"],
-        "System Architecture": ["architecture", "distributed systems", "scalability"],
-        "UI/UX Design": ["ui", "ux", "user experience", "interface design"],
-        "API Development": ["api", "rest", "graphql", "microservices"],
+    return {k: sorted(list(v)) for k, v in skills.items()}
+
+
+def calculate_completeness_score(content: str, doc_type: str) -> int:
+    """
+    Document-type–aware completeness scoring (0–100). Each document type has its own expected conceptual components. We check how many of those components are present in the text.
+    This is NOT structural (headings/urls/etc). It is semantic completeness.
+    """
+
+    if not content or len(content.strip()) < 30:
+        return 0
+
+    text = content.lower()
+
+    # --- Expected sections for each documentation type ---
+    SECTION_PATTERNS = {
+        "PROPOSAL": [
+            "problem", "objective", "goal", "purpose",
+            "approach", "solution",
+            "milestone", "timeline",
+            "risk", "challenge", "mitigation"
+        ],
+        "DESIGN_DOCUMENT": [
+            "architecture", "design", "component",
+            "module", "flow", "diagram",
+            "rationale", "pattern"
+        ],
+        "REQUIREMENTS_DOCUMENT": [
+            "functional requirement", "non-functional",
+            "criteria", "constraint", "must", "should"
+        ],
+        "API_DOCUMENTATION": [
+            "endpoint", "request", "response",
+            "method", "parameter", "authentication"
+        ],
+        "README": [
+            "introduction", "install", "setup",
+            "usage", "example", "feature"
+        ],
+        "TUTORIAL": [
+            "step", "instruction", "guide",
+            "example", "walkthrough"
+        ],
+        "RESEARCH_DOCUMENT": [
+            "research", "study", "experiment",
+            "analysis", "hypothesis", "finding"
+        ],
+        "INSTALLATION_GUIDE": [
+            "install", "setup", "configuration",
+            "environment", "dependency"
+        ],
+        "MEETING_NOTES": [
+            "agenda", "notes", "discussion",
+            "action item", "decision"
+        ],
+
+        # Fallback: general documentation expectations
+        "GENERAL_DOCUMENTATION": [
+            "overview", "explain", "describe",
+            "details", "note", "discussion"
+        ]
     }
 
-    for domain, patterns in domain_patterns.items():
-        match_count = sum(1 for pattern in patterns if pattern in content_lower)
-        if match_count >= 2:
-            skills["domain_expertise"].add(domain)
+    # Select patterns based on doc type, default to general
+    patterns = SECTION_PATTERNS.get(doc_type, SECTION_PATTERNS["GENERAL_DOCUMENTATION"])
 
-    writing_indicators = {
-        "Technical Documentation": ["documentation", "technical writing"],
-        "Content Creation": ["content", "article", "guide", "tutorial"],
-        "Structured Writing": ["section", "heading", "organized", "structure"],
-        "Clear Communication": ["explain", "describe", "clarify", "detail"],
-        "Instructional Design": ["tutorial", "step-by-step", "how-to", "guide"],
-        "Specification Writing": ["specification", "requirements", "criteria"],
-    }
+    found = 0
+    for kw in patterns:
+        if kw in text:
+            found += 1
 
-    for skill, indicators in writing_indicators.items():
-        if any(indicator in content_lower for indicator in indicators):
-            skills["writing_skills"].add(skill)
+    if not patterns:
+        return 0
 
-    if SPACY_AVAILABLE:
-        doc = nlp(content)
-        for ent in doc.ents:
-            if ent.label_ in ["ORG", "PRODUCT"]:
-                if any(tech in ent.text.lower() for tech in ["system", "platform", "tool", "service"]):
-                    skills["tools_and_technologies"].add(ent.text)
+    completeness = int((found / len(patterns)) * 100)
+    return min(max(completeness, 0), 100)
 
-    return {
-        category: sorted(list(skill_set))
-        for category, skill_set in skills.items()
-    }
 
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -362,7 +411,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "soft_skills": [],
                 "domain_expertise": [],
                 "tools_and_technologies": [],
-                "writing_skills": [],
             },
             "doc_type_counts": {},
             "doc_type_frequency": {},
@@ -373,9 +421,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     project_skills = {
         "technical_skills": set(),
         "soft_skills": set(),
-        "domain_expertise": set(),
-        "tools_and_technologies": set(),
-        "writing_skills": set(),
     }
     doc_type_counts: Counter = Counter()
     doc_type_freq: Counter = Counter()
@@ -387,17 +432,14 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         content = (file_data.get("content") or "").strip()
         if not content:
             continue
-        
         project_content += "\n\n" + content
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         doc_type = classify_document_type(content, file_path)
         freq = file_data.get("contribution_frequency", 1)
         
-        # Count documents and aggregate frequency per type
         doc_type_counts[doc_type] += 1
         doc_type_freq[doc_type] += freq
         
-        # Track per-file document type and contribution frequency
         files_by_doc_type.append({
             "file_name": file_data.get("name", ""),
             "file_path": str(file_path),
@@ -405,7 +447,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "contribution_frequency": freq
         })
         
-        # Extract skills from this file
         file_skills = extract_all_skills(content)
         for cat, vals in file_skills.items():
             project_skills[cat].update(vals)
@@ -417,9 +458,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "skills": {
                 "technical_skills": [],
                 "soft_skills": [],
-                "domain_expertise": [],
-                "tools_and_technologies": [],
-                "writing_skills": [],
             },
             "doc_type_counts": {},
             "doc_type_frequency": {},
@@ -510,14 +548,19 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     if tech_skills_sorted:
         top_tech = tech_skills_sorted[:5]
         bullets.append(f"Worked with technologies such as {', '.join(top_tech)}.")
+    
+    main_doc_type = top_doc_types[0] if top_doc_types else "GENERAL_DOCUMENTATION"
 
     metrics = {
         "word_count": len(project_content.split()),
         "heading_count": len(re.findall(r"^#{1,6}\s+.+$", project_content, re.MULTILINE)),
         "code_snippet_count": len(re.findall(r"```[\w]*\n.*?```", project_content, re.DOTALL)),
+        "url_count": len(re.findall(r"https?://[^\s\)\]]+", project_content)),
+        "bullet_point_count": len(re.findall(r"^\s*[\-\*\+]\s+", project_content, re.MULTILINE)),
+        "paragraph_count": len([p for p in re.split(r"\n{2,}", project_content) if len(p.strip().split()) > 10])
     }
+    completeness_score = calculate_completeness_score(project_content, main_doc_type)
 
-    main_doc_type = top_doc_types[0] if top_doc_types else "GENERAL_DOCUMENTATION"
     extracted_bullets = extract_contribution_bullets(project_content, main_doc_type, metrics)
 
     seen_bullets = set(bullets)
@@ -540,7 +583,14 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "summary": final_summary.strip(),
         "bullets": bullets,
         "skills": final_skills,
+        "completeness_score": completeness_score,
+        "word_count": len(project_content.split()),
         "doc_type_counts": dict(doc_type_counts),
         "doc_type_frequency": dict(doc_type_freq),
         "files_by_doc_type": files_by_doc_type,
     }
+
+if __name__ == "__main__":
+    from app.shared.test_data.parsed_input_text import sample_parsed_files
+    result = analyze_project_clean(sample_parsed_files)
+    print(result)

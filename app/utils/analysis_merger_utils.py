@@ -134,7 +134,7 @@ def get_project_rank(code_metrics, non_code_metrics):
         Ranked Score for the Project.
     """
     # TODO : Call project ranker
-    # project_score = project_ranker.rank(code_metrics, non_code_metrics)
+    # project_score = project_ranker.rank(code_metrics, non_code_metrics, git_code_metrics)
     project_score = None  # Placeholder for actual project ranking logic
     if project_score is not None:
         return project_score
@@ -178,13 +178,13 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     for skill in merged_results["skills"]["soft_skills"]:
         cur.execute("""
         INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
-        """, (project_signature, skill, "soft skill"))
+        """, (project_signature, skill, "soft_skill"))
 
     # Store technical skills
     for skill in merged_results["skills"]["technical_skills"]:
         cur.execute("""
         INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
-        """, (project_signature, skill, "technical skill"))
+        """, (project_signature, skill, "technical_skill"))
 
     # Store resume bullets in RESUME_SUMMARY table
     cur.execute("""

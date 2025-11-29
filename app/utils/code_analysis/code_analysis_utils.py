@@ -1,3 +1,4 @@
+import json
 from typing import Dict, List, Set
 import os
 from datetime import datetime
@@ -254,50 +255,65 @@ def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
 def generate_github_resume_summary(metrics: Dict) -> List[str]:
     """
     Generate detailed resume summary using enhanced analysis for GitHub projects.
+    Updated to include languages and total lines for consistency with parsed analysis.
     """
     summary = []
     
-    # Contribution overview
+    # Contribution overview with languages and lines (UPDATED)
     total_commits = metrics.get('total_commits', 0)
     duration = metrics.get('duration_days', 0)
+    languages = metrics.get('languages', [])
+    total_lines = metrics.get('total_lines', 0)
     
-    if duration > 0:
-        summary.append(f"Contributed {total_commits} commits over {duration} days, demonstrating consistent development activity")
+    # Enhanced opening with languages and lines
+    if duration > 0 and languages and total_lines > 0:
+        lang_text = ', '.join(languages[:3])  # Show top 3 languages
+        summary.append(f"Contributed {total_commits} commits adding {total_lines} lines of code in {lang_text} over {duration} days")
+    elif duration > 0 and languages:
+        lang_text = ', '.join(languages[:3])
+        summary.append(f"Contributed {total_commits} commits in {lang_text} over {duration} days of active development")
+    elif total_lines > 0:
+        summary.append(f"Delivered {total_commits} commits adding {total_lines} lines of code in a focused development effort")
     else:
-        summary.append(f"Delivered {total_commits} focused commits in a concentrated development effort")
+        summary.append(f"Contributed {total_commits} commits demonstrating consistent development activity")
     
-    # File and code changes - FIXED FALLBACK
+    # File and code changes - IMPROVED WITH LANGUAGE CONTEXT
     files_added = metrics.get('files_added', 0)
     files_modified = metrics.get('files_modified', 0)
     code_files = metrics.get('code_files_changed', 0)
     total_files = metrics.get('total_files_changed', 0)
     
     if code_files > 0:
-        summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files modified")
+        if languages:
+            lang_context = f"across {', '.join(languages[:2])} projects"
+            summary.append(f"Implemented changes in {code_files} code files {lang_context}, with {files_added} new files created and {files_modified} existing files enhanced")
+        else:
+            summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files modified")
     elif total_files > 0:
-        # FALLBACK: If no code files detected, mention total files changed
         summary.append(f"Modified {total_files} project files, including {files_added} new additions and {files_modified} enhancements")
     elif files_added > 0 or files_modified > 0:
-        # FALLBACK: If only file operations detected
         summary.append(f"Contributed {files_added} new files and enhanced {files_modified} existing project assets")
     else:
-        # FINAL FALLBACK: If no files detected at all
         summary.append(f"Made {total_commits} focused contributions to project development and maintenance")
     
-    # Development patterns
+    # Development patterns and technical keywords
     tech_keywords = metrics.get("technical_keywords", [])
     if tech_keywords:
-        summary.append(f"Focused on key technical areas: {', '.join(tech_keywords[:6])}")
+        summary.append(f"Demonstrated expertise in: {', '.join(tech_keywords[:6])}")
     
     dev_patterns = metrics.get("development_patterns", {})
     practices = dev_patterns.get("code_practices", [])
     if practices:
-        summary.append(f"Followed industry best practices: {', '.join(practices)}")
+        summary.append(f"Applied best practices: {', '.join(practices)}")
     
-    # Project evolution
+    # Project evolution with language context
     evolution = dev_patterns.get("project_evolution", [])
     if evolution:
         summary.append(f"Led development in: {', '.join(evolution)}")
+    
+    # Technology stack summary (NEW - using languages)
+    if len(languages) > 1:
+        summary.append(f"Developed across multiple technology stacks: {', '.join(languages)}")
     
     # Testing and documentation
     test_files = metrics.get('test_files_changed', 0)
@@ -326,14 +342,17 @@ def generate_github_resume_summary(metrics: Dict) -> List[str]:
 def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
     """
     Aggregates key metrics from a list of individual commit dicts.
+    Updated to handle new fields: language and code_lines_added.
     Returns a dictionary of contribution statistics.
     """
     file_status_counter = Counter()
     file_types_counter = Counter()
+    language_counter = Counter()  # NEW: Track languages
     authors = set()
     dates = []
     messages = []
     total_files_changed = set()
+    total_code_lines_added = 0  # NEW: Track total code lines
     roles = set()
     
     # File type extensions for classification
@@ -347,16 +366,29 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         dates.append(commit.get("authored_datetime"))
         messages.append(commit.get("message_summary"))
         files = commit.get("files", [])
+        
         for f in files:
             status = f.get("status")
             file_status_counter[status] += 1
             path = f.get("path_after") or f.get("path_before")
+            
             if path:
                 total_files_changed.add(path)
                 ext = os.path.splitext(path)[1].lower()
                 fname = os.path.basename(path).lower()
-                # Strict test-file detection: filename-only prefixes/suffixes and known test extensions
-                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts)or (ext and fname.endswith("_test" + ext)):
+                
+                # NEW: Track language from file
+                language = f.get("language")
+                if language:
+                    language_counter[language] += 1
+                
+                # NEW: Track code lines added
+                code_lines = f.get("code_lines_added", 0)
+                if code_lines:
+                    total_code_lines_added += code_lines
+                
+                # Strict test-file detection
+                if any(fname.endswith(e) or fname.startswith(e) for e in test_exts) or (ext and fname.endswith("_test" + ext)):
                     file_types_counter["test"] += 1
                 elif ext in doc_exts:
                     file_types_counter["docs"] += 1
@@ -364,6 +396,7 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
                     file_types_counter["code"] += 1
                 else:
                     file_types_counter["other"] += 1
+        
         roles.update(infer_roles_from_commit_files(files))
         
     # Calculate duration in days between first and last commit
@@ -386,6 +419,8 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         "doc_files_changed": file_types_counter["docs"],
         "test_files_changed": file_types_counter["test"],
         "other_files_changed": file_types_counter["other"],
+        "languages": list(language_counter.keys()),  # NEW: Languages detected
+        "total_lines": total_code_lines_added,  # NEW: Total code lines for consistency
         "sample_messages": (messages[:5] + messages[len(messages)//2:len(messages)//2+5] + messages[-5:] if len(messages) >= 20 else messages), 
         "roles": list(roles),
     }
@@ -395,31 +430,56 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
 def infer_roles_from_commit_files(files):
     """
     Infers roles played based on file types changed in GitHub commits.
+    Updated to use language field when available.
     Returns a set of detected roles.
     """
     roles = set()
-    # Define extension sets for each role
-    frontend_exts = {".js", ".jsx", ".ts", ".tsx", ".css", ".html"}
-    backend_exts = {".py", ".java", ".rb", ".go", ".cpp", ".c"}
+    
+    # Language-based role mapping
+    language_roles = {
+        "JavaScript": "frontend",
+        "TypeScript": "frontend", 
+        "CSS": "frontend",
+        "HTML": "frontend",
+        "Python": "backend",
+        "Java": "backend",
+        "Go": "backend",
+        "Ruby": "backend",
+        "C++": "backend",
+        "C": "backend",
+        "SQL": "database",
+        "Shell": "devops",
+        "Dockerfile": "devops"
+    }
+    
+    # Extension-based fallback
+    frontend_exts = {".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".vue", ".svelte"}
+    backend_exts = {".py", ".java", ".rb", ".go", ".cpp", ".c", ".php", ".cs"}
     database_exts = {".sql", ".db", ".json"}
-    devops_exts = {".yml", ".yaml", ".sh"}
-    datascience_exts = {".ipynb", ".csv", ".pkl"}
+    devops_exts = {".yml", ".yaml", ".sh", ".dockerfile"}
+    datascience_exts = {".ipynb", ".csv", ".pkl", ".r", ".scala"}
 
     for f in files:
         path = f.get("path_after") or f.get("path_before", "")
         ext = os.path.splitext(path)[1].lower()
         fname = os.path.basename(path).lower()
-
-        if ext in frontend_exts:
-            roles.add("frontend")
-        if ext in backend_exts:
-            roles.add("backend")
-        if ext in database_exts:
-            roles.add("database")
-        if ext in devops_exts or "dockerfile" in fname:
-            roles.add("devops")
-        if ext in datascience_exts:
-            roles.add("data science")
+        
+        # NEW: Try language-based detection first
+        language = f.get("language")
+        if language and language in language_roles:
+            roles.add(language_roles[language])
+        else:
+            # Fallback to extension-based detection
+            if ext in frontend_exts:
+                roles.add("frontend")
+            elif ext in backend_exts:
+                roles.add("backend")
+            elif ext in database_exts:
+                roles.add("database")
+            elif ext in devops_exts or "dockerfile" in fname:
+                roles.add("devops")
+            elif ext in datascience_exts:
+                roles.add("data science")
 
     return roles
 
@@ -672,16 +732,19 @@ def analyze_code_patterns_from_parsed(parsed_files: List[Dict]) -> Dict:
     
     return patterns
 
+# Replace the calculate_advanced_complexity_from_parsed function:
+
 def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
     """
-    Calculate advanced complexity metrics from parsed files.
-    Updated to handle new JSON structure with entities.
+    Calculate advanced complexity metrics from parsed files with consistent naming.
+    Provides actionable maintainability insights.
     """
     complexity_metrics = {
         "function_complexity": [],
         "component_complexity": [],
-        "class_complexity": [],  # New for classes
-        "maintainability_factors": {}
+        "class_complexity": [],
+        "maintainability_score": {},
+        "complexity_breakdown": {}
     }
     
     total_functions = 0
@@ -693,7 +756,7 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
         total_lines += file.get("lines_of_code", 0)
         entities = file.get("entities", {})
         
-        # Handle functions (new: entities.functions, old: functions)
+        # Handle functions
         functions = entities.get("functions", []) or file.get("functions", [])
         for func in functions:
             total_functions += 1
@@ -701,11 +764,11 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
             calls = len(func.get("calls", []))
             params = len(func.get("parameters", []))
             
-            # Simple complexity score
-            complexity_score = func_lines + calls + (params * 2)
+            # Weighted complexity score (lines have less weight than calls/params)
+            complexity_score = func_lines + (calls * 2) + (params * 3)
             complexity_metrics["function_complexity"].append(complexity_score)
         
-        # Handle components (new: entities.components, old: components)
+        # Handle components
         components = entities.get("components", []) or file.get("components", [])
         for comp in components:
             total_components += 1
@@ -713,43 +776,85 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
             state_vars = len(comp.get("state_variables", []))
             hooks = len(comp.get("hooks_used", []))
             
-                        # Component complexity score
-            comp_complexity = props + (state_vars * 2) + hooks
+            # Component complexity (state and hooks are more complex than props)
+            comp_complexity = props + (state_vars * 3) + (hooks * 2)
             complexity_metrics["component_complexity"].append(comp_complexity)
         
-        # Handle classes (new structure only)
+        # Handle classes
         classes = entities.get("classes", [])
         for cls in classes:
-            if not cls.get("name"):  # Skip null class names
+            if not cls.get("name"):
                 continue
                 
             total_classes += 1
             methods = cls.get("methods", [])
             total_class_lines = 0
             total_class_calls = 0
+            method_count = 0
             
             for method in methods:
-                if method.get("name"):  # Skip null method names
+                if method.get("name"):
+                    method_count += 1
                     total_class_lines += method.get("lines_of_code", 0)
                     total_class_calls += len(method.get("calls", []))
             
-            # Class complexity based on methods, lines, and calls
-            class_complexity = len(methods) + (total_class_lines // 10) + total_class_calls
+            # Class complexity: methods + normalized lines + calls
+            class_complexity = (method_count * 5) + (total_class_lines // 10) + total_class_calls
             complexity_metrics["class_complexity"].append(class_complexity)
     
-    # Calculate maintainability factors
-    all_complexities = complexity_metrics["function_complexity"] + complexity_metrics["class_complexity"]
+    # Calculate comprehensive maintainability metrics
+    all_code_units = (complexity_metrics["function_complexity"] + 
+                      complexity_metrics["class_complexity"] + 
+                      complexity_metrics["component_complexity"])
     
-    if all_complexities:
-        avg_complexity = sum(all_complexities) / len(all_complexities)
-        high_complexity_items = sum(1 for c in all_complexities if c > 50)
+    if all_code_units:
+        avg_complexity = sum(all_code_units) / len(all_code_units)
         
-        complexity_metrics["maintainability_factors"] = {
-            "average_function_complexity": round(avg_complexity, 2),
-            "high_complexity_functions": high_complexity_items,
-            "complexity_ratio": round(high_complexity_items / max(len(all_complexities), 1), 2),
-            "functions_per_file": round((total_functions + total_classes) / max(len(parsed_files), 1), 2),
-            "lines_per_function": round(total_lines / max(total_functions + total_classes, 1), 2) if (total_functions + total_classes) > 0 else 0
+        # Define thresholds based on unit type
+        high_complexity_threshold = 50
+        medium_complexity_threshold = 25
+        
+        high_complexity_count = sum(1 for c in all_code_units if c > high_complexity_threshold)
+        medium_complexity_count = sum(1 for c in all_code_units if medium_complexity_threshold < c <= high_complexity_threshold)
+        low_complexity_count = len(all_code_units) - high_complexity_count - medium_complexity_count
+        
+        # Calculate maintainability score (0-100, higher is better)
+        complexity_ratio = high_complexity_count / len(all_code_units)
+        maintainability_score = max(0, 100 - (complexity_ratio * 80) - (avg_complexity / 2))
+        
+        complexity_metrics["maintainability_score"] = {
+            "overall_score": round(maintainability_score, 1),
+            "average_complexity": round(avg_complexity, 2),
+            "total_code_units": len(all_code_units),
+            "complexity_distribution": {
+                "low_complexity": low_complexity_count,
+                "medium_complexity": medium_complexity_count, 
+                "high_complexity": high_complexity_count
+            },
+            "quality_indicators": {
+                "functions_per_file": round((total_functions + total_classes + total_components) / max(len(parsed_files), 1), 2),
+                "avg_lines_per_unit": round(total_lines / max(len(all_code_units), 1), 2),
+                "complexity_trend": "good" if complexity_ratio < 0.2 else "moderate" if complexity_ratio < 0.4 else "needs_attention"
+            }
+        }
+        
+        # Detailed breakdown by type
+        complexity_metrics["complexity_breakdown"] = {
+            "functions": {
+                "count": total_functions,
+                "avg_complexity": round(sum(complexity_metrics["function_complexity"]) / max(len(complexity_metrics["function_complexity"]), 1), 2),
+                "high_complexity": sum(1 for c in complexity_metrics["function_complexity"] if c > high_complexity_threshold)
+            },
+            "classes": {
+                "count": total_classes,
+                "avg_complexity": round(sum(complexity_metrics["class_complexity"]) / max(len(complexity_metrics["class_complexity"]), 1), 2),
+                "high_complexity": sum(1 for c in complexity_metrics["class_complexity"] if c > high_complexity_threshold)
+            },
+            "components": {
+                "count": total_components,
+                "avg_complexity": round(sum(complexity_metrics["component_complexity"]) / max(len(complexity_metrics["component_complexity"]), 1), 2),
+                "high_complexity": sum(1 for c in complexity_metrics["component_complexity"] if c > high_complexity_threshold)
+            }
         }
     
     return complexity_metrics
@@ -757,7 +862,7 @@ def calculate_advanced_complexity_from_parsed(parsed_files: List[Dict]) -> Dict:
 def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
     """
     Generate detailed resume summary using enhanced NLP analysis for local projects.
-    Updated to handle new metrics including classes and internal dependencies.
+    Updated to handle new metrics including classes and updated complexity structure.
     """
     summary = []
     
@@ -792,16 +897,27 @@ def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
         practices_text = ", ".join(arch_patterns + dev_practices)
         summary.append(f"Applied modern development practices: {practices_text}")
     
-    # Code quality and complexity
+    # Code quality and complexity (UPDATED TO NEW STRUCTURE)
     complexity = metrics.get("complexity_analysis", {})
-    maintainability = complexity.get("maintainability_factors", {})
+    maintainability = complexity.get("maintainability_score", {})  # Changed from maintainability_factors
     
     if maintainability:
-        avg_complexity = maintainability.get("average_function_complexity", 0)
-        if avg_complexity < 30:
-            summary.append("Maintained high code quality with well-structured, low-complexity functions")
-        elif avg_complexity < 50:
-            summary.append("Achieved good code maintainability with moderate complexity functions")
+        overall_score = maintainability.get("overall_score", 0)
+        avg_complexity = maintainability.get("average_complexity", 0)
+        complexity_trend = maintainability.get("quality_indicators", {}).get("complexity_trend", "")
+        
+        if overall_score >= 80:
+            summary.append("Maintained excellent code quality with high maintainability score and well-structured functions")
+        elif overall_score >= 60:
+            summary.append("Achieved good code maintainability with moderate complexity and clean architecture")
+        elif overall_score >= 40:
+            summary.append("Developed functional codebase with room for maintainability improvements")
+        
+        # Add specific complexity insights
+        if complexity_trend == "good":
+            summary.append("Followed best practices with low-complexity, maintainable code structure")
+        elif complexity_trend == "moderate":
+            summary.append("Balanced complexity management with structured development approach")
     
     # Component, function, and class metrics (updated for new structure)
     functions = metrics.get('functions', 0)
@@ -817,7 +933,22 @@ def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
         if components > 0:
             architecture_parts.append(f"{components} components")
         
-        summary.append(f"Architected {' and '.join(architecture_parts)}")
+        summary.append(f"Architected modular solution with {' and '.join(architecture_parts)}")
+    
+    # Complexity breakdown insights (NEW)
+    complexity_breakdown = complexity.get("complexity_breakdown", {})
+    if complexity_breakdown:
+        high_complexity_items = []
+        
+        for unit_type, data in complexity_breakdown.items():
+            high_count = data.get("high_complexity", 0)
+            total_count = data.get("count", 0)
+            
+            if total_count > 0 and high_count == 0:
+                high_complexity_items.append(f"all {unit_type}")
+        
+        if high_complexity_items:
+            summary.append(f"Maintained low complexity across {' and '.join(high_complexity_items)}")
     
     # Import and dependency analysis (updated for new structure)
     imports = metrics.get('imports', [])
@@ -828,6 +959,15 @@ def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
     
     if len(internal_deps) > 3:
         summary.append(f"Designed modular architecture with {len(internal_deps)} internal dependencies promoting code reusability")
+    
+    # Quality indicators (NEW)
+    quality_indicators = maintainability.get("quality_indicators", {})
+    if quality_indicators:
+        functions_per_file = quality_indicators.get("functions_per_file", 0)
+        if functions_per_file > 0 and functions_per_file <= 5:
+            summary.append("Followed clean code principles with well-organized file structure")
+        elif functions_per_file > 10:
+            summary.append("Developed feature-rich modules with comprehensive functionality")
     
     return summary
 
@@ -968,7 +1108,6 @@ def infer_roles_from_file(file):
 def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
     """
     Analyze a project from parsed file dicts and return a structured JSON summary.
-    Updated to include all metrics data alongside standardized format (no project summary).
     """
     # Get existing rich analysis
     metrics = aggregate_parsed_files_metrics(parsed_files)
@@ -982,21 +1121,39 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
     metrics["complexity_analysis"] = complexity_analysis
     
     if llm_client:
-        # Use LLM for resume bullets only
+        # Use LLM for resume bullets - FIXED TO ENSURE ARRAY
         resume_prompt = (
-            "Based on the project metrics provided, generate 3-5 professional resume bullet points "
+            "Based on the following comprehensive project analysis data, generate 3-5 professional resume bullet points "
             "highlighting key technical contributions, skills demonstrated, and project impact. "
-            "Focus on quantifiable achievements and technical expertise."
-            "Return only the bullet points, no explanations or headers."
+            "Each bullet point should be on a separate line starting with '•'. "
+            "Focus on quantifiable achievements and technical expertise.\n\n"
+            "PROJECT METRICS:\n"
+            f"{json.dumps(metrics, indent=2)}"
         )
-        resume_bullets = llm_client.generate(resume_prompt).split('\n') if llm_client.generate(resume_prompt) else []
+        
+        llm_response = llm_client.generate(resume_prompt)
+        if llm_response:
+            # Split by newlines and clean up
+            raw_bullets = llm_response.strip().split('\n')
+            # Filter out empty lines and clean up bullet formatting
+            resume_bullets = []
+            for bullet in raw_bullets:
+                cleaned = bullet.strip().lstrip('•').lstrip('-').lstrip('*').strip()
+                if cleaned and len(cleaned) > 10:  # Skip very short lines
+                    resume_bullets.append(cleaned)
+        else:
+            # Fallback to NLP analysis if LLM fails
+            resume_bullets = generate_resume_summary_from_parsed(metrics)
     else:
         # Use existing enhanced NLP analysis
         resume_bullets = generate_resume_summary_from_parsed(metrics)
-
+    
+    # Ensure resume_bullets is always a list
+    if not isinstance(resume_bullets, list):
+        resume_bullets = [str(resume_bullets)] if resume_bullets else []
     
     return {
-        "Resume_bullets": resume_bullets,
+        "Resume_bullets": resume_bullets,  # Always an array
         "Metrics": {
             "languages": metrics["languages"],
             "total_files": metrics["total_files"],
@@ -1020,7 +1177,6 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
 def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     """
     Analyze a project from GitHub commit dicts and return a structured JSON summary.
-    Updated to include all metrics data alongside standardized format (no project summary).
     """
     # Get existing rich analysis
     metrics = aggregate_github_individual_metrics(commits)
@@ -1032,20 +1188,39 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     metrics["development_patterns"] = development_patterns
     
     if llm_client:
-        # Use LLM for resume bullets only
+        # Use LLM for resume bullets - FIXED TO ENSURE ARRAY
         resume_prompt = (
-            "Based on the GitHub metrics provided, generate 3-5 professional resume bullet points "
+            "Based on the following comprehensive GitHub project analysis data, generate 3-5 professional resume bullet points "
             "highlighting key contributions, technical skills, and development impact. "
-            "Focus on quantifiable achievements and collaboration patterns."
-            "Return only the bullet points, no explanations or headers."
+            "Each bullet point should be on a separate line starting with '•'. "
+            "Focus on quantifiable achievements and collaborative development.\n\n"
+            "PROJECT METRICS:\n"
+            f"{json.dumps(metrics, indent=2)}"
         )
-        resume_bullets = llm_client.generate(resume_prompt).split('\n') if llm_client.generate(resume_prompt) else []
+        
+        llm_response = llm_client.generate(resume_prompt)
+        if llm_response:
+            # Split by newlines and clean up
+            raw_bullets = llm_response.strip().split('\n')
+            # Filter out empty lines and clean up bullet formatting
+            resume_bullets = []
+            for bullet in raw_bullets:
+                cleaned = bullet.strip().lstrip('•').lstrip('-').lstrip('*').strip()
+                if cleaned and len(cleaned) > 10:  # Skip very short lines
+                    resume_bullets.append(cleaned)
+        else:
+            # Fallback to NLP analysis if LLM fails
+            resume_bullets = generate_github_resume_summary(metrics)
     else:
         # Use existing enhanced NLP analysis
         resume_bullets = generate_github_resume_summary(metrics)
     
+    # Ensure resume_bullets is always a list
+    if not isinstance(resume_bullets, list):
+        resume_bullets = [str(resume_bullets)] if resume_bullets else []
+    
     return {
-        "Resume_bullets": resume_bullets,
+        "Resume_bullets": resume_bullets,  # Always an array
         "Metrics": {
             "authors": metrics["authors"],
             "total_commits": metrics["total_commits"],
@@ -1057,6 +1232,8 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
             "code_files_changed": metrics["code_files_changed"],
             "doc_files_changed": metrics["doc_files_changed"],
             "test_files_changed": metrics["test_files_changed"],
+            "languages": metrics["languages"],
+            "total_lines": metrics["total_lines"],
             "roles": metrics["roles"],
             "technical_keywords": technical_keywords,
             "development_patterns": development_patterns

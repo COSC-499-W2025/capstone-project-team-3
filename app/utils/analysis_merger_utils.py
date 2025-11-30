@@ -2,7 +2,7 @@
 # from app.utils.project_ranker import project_ranker
 import json
 from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, git_code_analysis_results, project_name, project_signature
-
+from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
 # Merge results from code and non-code analysis
 def merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature):
     """
@@ -89,9 +89,13 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", [])
     non_code_skills = non_code_analysis_results.get("skills", {})
 
-    # Extract project summary from non-code results
-    summary = non_code_analysis_results.get("summary", "")
+    # Extract project summary from non-code summary & code resume bullets
+    #use NLP summarization to generate concise summary
+    #Make resume bullets into sentences for summarization
+    code_resume_bullets = [f"{bullet.strip()}." for bullet in code_resume_bullets if bullet.strip()]
+    summary = _sumy_lsa_summarize(non_code_analysis_results.get("summary", "") + " " + " ".join(code_resume_bullets),5)
 
+    
     # Send Metrics to project Ranker in order to rank results
     project_rank = get_project_rank(code_metrics, non_code_metrics)
 

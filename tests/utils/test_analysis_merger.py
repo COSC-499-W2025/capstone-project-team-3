@@ -10,7 +10,9 @@ def test_merge_analysis_results():
         }
     }
     non_code_analysis_results = {
-        "summary": "Project summary here.",
+        "summary": "Developed a scalable REST API using Python and FastAPI, enabling secure user authentication and data management. "
+                   "Integrated SQLAlchemy for efficient database operations and implemented comprehensive unit tests with pytest. "
+                   "Collaborated with cross-functional teams to document requirements and ensure project completeness, resulting in improved team communication and project delivery.",
         "skills": {
             "technical_skills": ["SQLAlchemy"],
             "soft_skills": ["Communication"]

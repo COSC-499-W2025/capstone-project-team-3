@@ -455,6 +455,7 @@ def test_comprehensive_technical_keyword_extraction():
     assert len(keywords_parsed) > 0, "Should extract keywords from new structure"
     assert len(summary) > 0, "Should generate resume summary"
 
+
 def test_advanced_complexity_analysis():
     """Test complexity analysis with classes, functions, and components"""
     print_section("📈 ADVANCED COMPLEXITY ANALYSIS")
@@ -464,11 +465,37 @@ def test_advanced_complexity_analysis():
     print_subsection("Function Complexity Scores", complexity["function_complexity"][:5])
     print_subsection("Class Complexity Scores", complexity["class_complexity"][:5])
     print_subsection("Component Complexity Scores", complexity["component_complexity"])
-    print_subsection("Maintainability Factors", complexity["maintainability_factors"])
     
+    # UPDATED: Use new structure instead of maintainability_factors
+    maintainability_score = complexity.get("maintainability_score", {})
+    print_subsection("Maintainability Score", maintainability_score)
+    
+    # UPDATED: Use new complexity breakdown structure
+    complexity_breakdown = complexity.get("complexity_breakdown", {})
+    print_subsection("Complexity Breakdown", complexity_breakdown)
+    
+    # UPDATED: Assert on new structure
     assert len(complexity["function_complexity"]) > 0, "Should calculate function complexity"
     assert len(complexity["class_complexity"]) > 0, "Should calculate class complexity from new structure"
-    assert "average_function_complexity" in complexity["maintainability_factors"]
+    
+    # UPDATED: Check new maintainability structure
+    assert "overall_score" in maintainability_score, "Should have overall maintainability score"
+    assert "average_complexity" in maintainability_score, "Should have average complexity"
+    assert "complexity_distribution" in maintainability_score, "Should have complexity distribution"
+    assert "quality_indicators" in maintainability_score, "Should have quality indicators"
+    
+    # UPDATED: Check complexity breakdown structure
+    assert "functions" in complexity_breakdown, "Should have function breakdown"
+    assert "classes" in complexity_breakdown, "Should have class breakdown"
+    assert "components" in complexity_breakdown, "Should have component breakdown"
+    
+    # Validate data types and ranges
+    overall_score = maintainability_score.get("overall_score", 0)
+    assert 0 <= overall_score <= 100, f"Overall score should be 0-100, got {overall_score}"
+    
+    avg_complexity = maintainability_score.get("average_complexity", 0)
+    assert avg_complexity >= 0, f"Average complexity should be >= 0, got {avg_complexity}"
+
 
 def test_enhanced_resume_generation_local():
     """Test enhanced resume generation with new structure"""

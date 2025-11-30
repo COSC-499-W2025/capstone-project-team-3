@@ -389,6 +389,7 @@ def calculate_completeness_score(content: str, doc_type: str) -> int:
     completeness = int((found / len(patterns)) * 100)
     return min(max(completeness, 0), 100)
 
+# ...existing code...
 
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -408,13 +409,10 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "bullets": [],
             "skills": {
                 "technical_skills": [],
-                "soft_skills": [],
-                "domain_expertise": [],
-                "tools_and_technologies": [],
+                "soft_skills": []
             },
             "doc_type_counts": {},
-            "doc_type_frequency": {},
-            "files_by_doc_type": [],
+            "doc_type_frequency": {}
         }
 
     project_content = ""
@@ -461,8 +459,9 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             },
             "doc_type_counts": {},
             "doc_type_frequency": {},
-            "files_by_doc_type": [],
         }
+
+    # ...existing code for project_content_lower, doc_descriptions, etc...
 
     project_content_lower = project_content.lower()
 
@@ -587,10 +586,5 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "word_count": len(project_content.split()),
         "doc_type_counts": dict(doc_type_counts),
         "doc_type_frequency": dict(doc_type_freq),
-        "files_by_doc_type": files_by_doc_type,
+        "files_by_doc_type": files_by_doc_type,  # ← ADD THIS LINE!
     }
-
-if __name__ == "__main__":
-    from app.shared.test_data.parsed_input_text import sample_parsed_files
-    result = analyze_project_clean(sample_parsed_files)
-    print(result)

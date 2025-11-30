@@ -3,7 +3,7 @@ from app.utils.analysis_merger_utils import merge_analysis_results,store_results
 def test_merge_analysis_results():
     
     code_analysis_results = {
-        "Resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
             "technical_keywords": ["FastAPI", "pytest"],
@@ -11,12 +11,14 @@ def test_merge_analysis_results():
         }
     }
     non_code_analysis_results = {
-        "summary": "Project summary here.",
+        "summary": "Developed a scalable REST API using Python and FastAPI, enabling secure user authentication and data management. "
+                   "Integrated SQLAlchemy for efficient database operations and implemented comprehensive unit tests with pytest. "
+                   "Collaborated with cross-functional teams to document requirements and ensure project completeness, resulting in improved team communication and project delivery.",
         "skills": {
             "technical_skills": ["SQLAlchemy"],
             "soft_skills": ["Communication"]
         },
-        "Resume_bullets": ["Documented requirements"],
+        "resume_bullets": ["Documented requirements"],
         "Metrics": {
             "word_count": 1000,
             "completeness_score": 0.95
@@ -38,8 +40,8 @@ def test_merge_analysis_results():
     assert "Communication" in merged["skills"]["soft_skills"]
 
     # Check merged resume bullets
-    assert "Built REST API" in merged["resume_bullets"]
-    assert "Documented requirements" in merged["resume_bullets"]
+    assert "Built REST API." in merged["resume_bullets"]
+    assert "Documented requirements." in merged["resume_bullets"]
 
     # Check merged metrics
     assert merged["metrics"]["languages"] == ["Python"]

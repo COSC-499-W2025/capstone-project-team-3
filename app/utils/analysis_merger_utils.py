@@ -3,6 +3,7 @@
 import json
 from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, git_code_analysis_results, project_name, project_signature
 from app.data.db import get_connection
+from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
 # Merge results from code and non-code analysis
 def merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature):
     """
@@ -81,17 +82,23 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_metrics = code_analysis_results.get("Metrics", {})
     non_code_metrics = non_code_analysis_results.get("Metrics", {})
 
-    # Extract resume bullets
-    code_resume_bullets = code_analysis_results.get("Resume_bullets", [])
-    non_code_resume_bullets = non_code_analysis_results.get("Resume_bullets", [])
+    # Extract & Format resume bullets
+    code_resume_bullets = code_analysis_results.get("resume_bullets", [])
+    code_resume_bullets = [f"{bullet.strip()}." for bullet in code_resume_bullets if bullet.strip()]
+
+    non_code_resume_bullets = non_code_analysis_results.get("resume_bullets", [])
+    non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
     
     # Extract skills (use technical keywords from code analysis)
     code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", [])
     non_code_skills = non_code_analysis_results.get("skills", {})
 
-    # Extract project summary from non-code results
-    summary = non_code_analysis_results.get("summary", "")
+    # Extract project summary from non-code summary & code resume bullets
+    # use NLP summarization to generate concise summary
+    #Make resume bullets into sentences for summarization
+    summary = _sumy_lsa_summarize(non_code_analysis_results.get("summary", "") + " " + " ".join(code_resume_bullets),5)
 
+    
     # Send Metrics to project Ranker in order to rank results
     project_rank = get_project_rank(code_metrics, non_code_metrics)
 

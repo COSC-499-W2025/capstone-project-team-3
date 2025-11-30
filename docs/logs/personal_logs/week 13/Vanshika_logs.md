@@ -135,18 +135,14 @@ The single-call optimization for git commit counting represents a significant ar
 ### Reflection
 **What Went Well:**
 - Successfully designed and implemented complete GitHub parsing pipeline with dynamic routing for multiple file types
-- Created unified interface handling different parsing strategies (git blame, full content, binary extraction) across file types
 - Implemented contribution frequency tracking with different calculation logic for each file type
 - Completed all 8 assigned tickets this week despite the complexity and time constraints
-- Performance optimization reduced git calls from N+1 to 1 across all file types
-- Comprehensive testing covered all file type variations and parsing scenarios
-- Successfully integrated entire pipeline into main application flow
+- Successfully integrated entire parsing pipeline into main application flow
+- I did not let my bad jetlag and travel impact my work and i joined the capstone meeting even after the continous flights of 4 days. 
 
 **What Could Be Improved:**
-- The hardest part was finding and implementing all the logic for different file types in very limited time - could have benefited from more time for design phase
-- Better documentation of the dynamic routing logic and file-type-specific parsing strategies for future maintainers
-- Could have created more modular architecture to reduce complexity of branching logic
-- More proactive communication about the architectural complexity and time requirements
+- Integrating and making sure the connections are consistent between all independent functions so that we dont spend alot of time in making in outputs and inputs same for all functions 
+
 
 ---
 

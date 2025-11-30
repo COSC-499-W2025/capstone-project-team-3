@@ -380,6 +380,46 @@ def test_root_endpoint_returns_welcome_message():
     assert "message" in response
     assert isinstance(response["message"], str)
 
+def test_main_integrates_non_code_file_checker():
+    """Test main integrates non-code file checker and prints results per project."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_non_code_checker, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py", "README.md"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_non_code_checker.return_value = {
+            "is_git_repo": True,
+            "user_identity": {"name": "Test User"},
+            "collaborative": ["README.md"],
+            "non_collaborative": [],
+            "excluded": []
+        }
+        
+        from app.main import main
+        main()
+        
+        mock_non_code_checker.assert_called_once_with("/tmp/project1")
+        
+
 
 def test_main_cleans_up_upload_artifacts_on_success():
     """Test cleanup_upload is called when analysis result has upload_id."""

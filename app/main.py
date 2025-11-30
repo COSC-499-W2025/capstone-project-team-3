@@ -13,6 +13,7 @@ from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
+from app.utils.non_code_parsing.document_parser import parsed_input_text
 import uvicorn
 import os
 import sys
@@ -128,8 +129,25 @@ def main():
                     print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
                     print(f"Excluded files: {len(non_code_result['excluded'])}")
                     print(f"--------------------------------------------------------")
-                    # --- End non-code file checker integration ---       
-                    
+                    # --- End non-code file checker integration --- 
+
+                    # --- Parsing integration ---
+                    print("📄 Parsing non-code files...")
+                    try:
+                        parsed_non_code = parsed_input_text(
+                            file_paths_dict={
+                                'collaborative': non_code_result['collaborative'],
+                                'non_collaborative': non_code_result['non_collaborative']
+                            },
+                            repo_path=project_path if non_code_result['is_git_repo'] else None,
+                            author=non_code_result['user_identity'].get('email')
+                        )
+                        print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
+                    except Exception as e:
+                        print(f"⚠️ Warning: Non-code parsing failed: {e}")
+                        parsed_non_code = {'parsed_files': []}
+                    # --- End parsing integration ---       
+
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
                         if scan_result["reason"] == "already_analyzed":

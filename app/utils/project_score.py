@@ -130,53 +130,41 @@ def _norm_with_cap(value: float, cap: float) -> float:
 
 def _compute_git_code_score(git_code_metrics: Dict[str, Any]) -> float:
     """
-    Compute a code score (0–1) for a Git-based project using weighted components.
-
-    Weights (sum to 1.0):
+    Compute a simplified Git-based code score (0–1) using 5 metrics:
       1. total_commits         → 30%
       2. duration_days         → 30%
-      3. files_added           → 9%
-      4. files_deleted         → 3%
-      5. files_modified        → 14%
-      6. code_files_changed    → 9%
-      7. test_files_changed    → 5%
+      3. total_lines           → 20%
+      4. code_files_changed    → 15%
+      5. test_files_changed    → 5%
     """
 
-    # Extract raw values (default to 0 if missing)
+    # Extract metrics
     total_commits      = git_code_metrics.get("total_commits", 0)
     duration_days      = git_code_metrics.get("duration_days", 0)
-    files_added        = git_code_metrics.get("files_added", 0)
-    files_deleted      = git_code_metrics.get("files_deleted", 0)
-    files_modified     = git_code_metrics.get("files_modified", 0)
+    total_lines        = git_code_metrics.get("total_lines", 0)
     code_files_changed = git_code_metrics.get("code_files_changed", 0)
     test_files_changed = git_code_metrics.get("test_files_changed", 0)
 
-    # Caps: "excellent" levels for a final-year undergrad project
-    commits_cap              = 50.0
-    duration_cap             = 30.0
-    files_added_cap          = 10.0
-    files_deleted_cap        = 10.0
-    files_modified_cap       = 25.0
-    code_files_changed_cap   = 20.0
-    test_files_changed_cap   = 8.0
+    # Caps (saturation thresholds for a final-year CS project)
+    commits_cap            = 50
+    duration_cap           = 30
+    total_lines_cap        = 5000
+    code_files_changed_cap = 20
+    test_files_changed_cap = 8
 
-    # Normalize each component to [0, 1]
+    # Normalize
     s_commits      = _norm_with_cap(total_commits,      commits_cap)
     s_duration     = _norm_with_cap(duration_days,      duration_cap)
-    s_added        = _norm_with_cap(files_added,        files_added_cap)
-    s_deleted      = _norm_with_cap(files_deleted,      files_deleted_cap)
-    s_modified     = _norm_with_cap(files_modified,     files_modified_cap)
+    s_lines        = _norm_with_cap(total_lines,        total_lines_cap)
     s_code_files   = _norm_with_cap(code_files_changed, code_files_changed_cap)
     s_test_files   = _norm_with_cap(test_files_changed, test_files_changed_cap)
 
-    # Apply weights (sum to 1.0)
+    # Weights
     code_score = (
         0.30 * s_commits +
         0.30 * s_duration +
-        0.09 * s_added +
-        0.03 * s_deleted +
-        0.14 * s_modified +
-        0.09 * s_code_files +
+        0.20 * s_lines +
+        0.15 * s_code_files +
         0.05 * s_test_files
     )
 

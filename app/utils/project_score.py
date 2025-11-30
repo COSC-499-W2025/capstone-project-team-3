@@ -200,6 +200,65 @@ def _compute_non_code_score(non_code_metrics: Dict[str, Any]) -> float:
 
     return completeness
 
+def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
+    """
+    Compute a code contribution score (0–1) for a non-Git project.
+    Uses structural + complexity-based metrics.
+    Higher complexity = higher contribution (not penalized).
+    """
+
+    # Extract raw values
+    total_files          = non_git_code_metrics.get("total_files", 0)
+    total_lines          = non_git_code_metrics.get("total_lines", 0)
+    code_files_changed   = non_git_code_metrics.get("code_files_changed", 0)
+    test_files_changed   = non_git_code_metrics.get("test_files_changed", 0)
+
+    overall_score        = (
+        non_git_code_metrics.get("complexity_analysis", {})
+                            .get("maintainability_score", {})
+                            .get("overall_score", 0)
+    )
+    average_complexity   = (
+        non_git_code_metrics.get("complexity_analysis", {})
+                            .get("average_complexity", 
+                                 non_git_code_metrics.get("complexity_analysis", {})
+                                                      .get("maintainability_score", {})
+                                                      .get("average_complexity", 0))
+    )
+
+    # Caps
+    total_files_cap        = 40
+    total_lines_cap        = 5000
+    code_files_changed_cap = 30
+    test_files_changed_cap = 10
+    overall_score_cap      = 100
+    average_complexity_cap = 30
+
+    # Normalization / saturation
+    def norm(value, cap):
+        if cap == 0:
+            return 0
+        return min(value / cap, 1.0)
+
+    s_files        = norm(total_files, total_files_cap)
+    s_lines        = norm(total_lines, total_lines_cap)
+    s_code_files   = norm(code_files_changed, code_files_changed_cap)
+    s_test_files   = norm(test_files_changed, test_files_changed_cap)
+    s_overall      = norm(overall_score, overall_score_cap)
+    s_complexity   = norm(average_complexity, average_complexity_cap)
+
+    # Weights
+    score = (
+        0.15 * s_files +
+        0.20 * s_lines +
+        0.20 * s_code_files +
+        0.10 * s_test_files +
+        0.20 * s_overall +
+        0.15 * s_complexity
+    )
+
+    return score
+
 
 def compute_contribution_percentages_single_project(
     code_metrics: Dict[str, Any],

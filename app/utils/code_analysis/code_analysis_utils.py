@@ -170,8 +170,6 @@ def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
     Analyze development patterns from GitHub commit history.
     """
     patterns = {
-        "development_workflow": [],
-        "collaboration_patterns": [],
         "code_practices": [],
         "project_evolution": []
     }

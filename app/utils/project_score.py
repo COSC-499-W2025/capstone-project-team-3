@@ -288,3 +288,53 @@ def compute_contribution_percentages_single_project(
     }
 
 
+def compute_overall_project_contribution_score(
+    code_metrics: Dict[str, Any],
+    git_code_metrics: Dict[str, Any],
+    non_code_metrics: Dict[str, Any],
+) -> float:
+    """
+    Compute final contribution score for a project.
+    
+    Steps:
+        1. Determine if project is Git or Non-Git.
+        2. Compute code_score from the appropriate source.
+        3. Compute non_code_score from completeness.
+        4. Compute code vs non-code percentages (effort ratio).
+        5. Final blended score:
+               final = code_score * code_percentage
+                     + non_code_score * non_code_percentage
+                     
+    Returns:
+        A single float between 0 and 1.
+    """
+
+    # 1. Detect project type
+    is_git_project = bool(git_code_metrics)
+
+    # 2. Compute code score
+    if is_git_project:
+        code_score = _compute_git_code_score(git_code_metrics)
+    else:
+        code_score = _compute_non_git_code_score(code_metrics)
+
+    # 3. Compute non-code score
+    non_code_score = _compute_non_code_score(non_code_metrics)
+
+    # 4. Compute code vs non-code percentages (effort ratios)
+    percentages = compute_contribution_percentages_single_project(
+        code_metrics=code_metrics,
+        git_code_metrics=git_code_metrics,
+        non_code_metrics=non_code_metrics,
+    )
+
+    code_percentage     = percentages["code_percentage"]
+    non_code_percentage = percentages["non_code_percentage"]
+
+    # 5. Final blended score
+    final_score = (
+        code_score * code_percentage +
+        non_code_score * non_code_percentage
+    )
+
+    return final_score

@@ -204,7 +204,7 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     """
     Compute a code contribution score (0–1) for a non-Git project.
     Uses structural + complexity-based metrics.
-    Higher complexity = higher contribution (not penalized).
+    Higher complexity = higher contribution.
     """
 
     # Extract raw values
@@ -213,18 +213,9 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     code_files_changed   = non_git_code_metrics.get("code_files_changed", 0)
     test_files_changed   = non_git_code_metrics.get("test_files_changed", 0)
 
-    overall_score        = (
-        non_git_code_metrics.get("complexity_analysis", {})
-                            .get("maintainability_score", {})
-                            .get("overall_score", 0)
-    )
-    average_complexity   = (
-        non_git_code_metrics.get("complexity_analysis", {})
-                            .get("average_complexity", 
-                                 non_git_code_metrics.get("complexity_analysis", {})
-                                                      .get("maintainability_score", {})
-                                                      .get("average_complexity", 0))
-    )
+    maint = non_git_code_metrics["complexity_analysis"]["maintainability_score"]
+    overall_score      = maint.get("overall_score", 0)
+    average_complexity = maint.get("average_complexity", 0)
 
     # Caps
     total_files_cap        = 40
@@ -234,20 +225,15 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     overall_score_cap      = 100
     average_complexity_cap = 30
 
-    # Normalization / saturation
-    def norm(value, cap):
-        if cap == 0:
-            return 0
-        return min(value / cap, 1.0)
+    # Normalize using shared function
+    s_files        = _norm_with_cap(total_files, total_files_cap)
+    s_lines        = _norm_with_cap(total_lines, total_lines_cap)
+    s_code_files   = _norm_with_cap(code_files_changed, code_files_changed_cap)
+    s_test_files   = _norm_with_cap(test_files_changed, test_files_changed_cap)
+    s_overall      = _norm_with_cap(overall_score, overall_score_cap)
+    s_complexity   = _norm_with_cap(average_complexity, average_complexity_cap)
 
-    s_files        = norm(total_files, total_files_cap)
-    s_lines        = norm(total_lines, total_lines_cap)
-    s_code_files   = norm(code_files_changed, code_files_changed_cap)
-    s_test_files   = norm(test_files_changed, test_files_changed_cap)
-    s_overall      = norm(overall_score, overall_score_cap)
-    s_complexity   = norm(average_complexity, average_complexity_cap)
-
-    # Weights
+    # Weights (sum to 1.0)
     score = (
         0.15 * s_files +
         0.20 * s_lines +
@@ -258,6 +244,7 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     )
 
     return score
+
 
 
 def compute_contribution_percentages_single_project(

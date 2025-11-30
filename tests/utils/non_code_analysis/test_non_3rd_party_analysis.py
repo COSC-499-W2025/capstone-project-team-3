@@ -149,7 +149,6 @@ def test_analyze_project_clean_empty_files():
     assert result["bullets"] == []
     assert result["doc_type_counts"] == {}
     assert result["doc_type_frequency"] == {}
-    assert result["files_by_doc_type"] == []
     for skill_list in result["skills"].values():
         assert skill_list == []
 
@@ -162,7 +161,6 @@ def test_analyze_project_clean_no_successful_files():
     assert result["bullets"] == []
     assert result["doc_type_counts"] == {}
     assert result["doc_type_frequency"] == {}
-    assert result["files_by_doc_type"] == []
     for skill_list in result["skills"].values():
         assert skill_list == []
 

@@ -1,123 +1,4 @@
-# git code:
-{
-  "Resume_bullets": [
-    "Contributed 47 commits adding 3,247 lines of code in Python, JavaScript over 23 days of active development",
-    "Implemented changes in 15 code files across Python, JavaScript projects, with 8 new files created and 12 existing files enhanced",
-    "Demonstrated expertise in: testing, api, flask, react, components, utils",
-    "Applied best practices: Test-Driven Development, Code Refactoring, Documentation-Focused",
-    "Led development in: Python Development, JavaScript/Frontend Development",
-    "Emphasized code quality through testing (5 test files) and documentation (3 docs)"
-  ],
-  "Metrics": {
-    "authors": ["john_doe", "jane_smith"],
-    "total_commits": 47,
-    "duration_days": 23,
-    "files_added": 8,
-    "files_modified": 12,
-    "files_deleted": 2,
-    "total_files_changed": 18,
-    "code_files_changed": 15,
-    "doc_files_changed": 3,
-    "test_files_changed": 5,
-    "languages": ["Python", "JavaScript", "TypeScript", "CSS"],
-    "total_lines": 3247,
-    "roles": ["backend", "frontend", "testing"],
-    "technical_keywords": [
-      "api", "authentication", "components", "database", "docker", 
-      "flask", "javascript", "models", "react", "routes", 
-      "testing", "utils", "validation", "webpack"
-    ],
-    "development_patterns": {
-      "development_workflow": ["feature_based", "git_flow"],
-      "collaboration_patterns": ["pull_requests", "code_reviews"],
-      "code_practices": ["Test-Driven Development", "Code Refactoring", "Documentation-Focused"],
-      "project_evolution": ["Python Development", "JavaScript/Frontend Development"]
-    }
-  }
-}
-# code non git:
-{
-  "Resume_bullets": [
-    "Developed a comprehensive 4,523-line codebase across 23 files using Python, JavaScript, TypeScript",
-    "Demonstrated expertise in key technologies: react, components, hooks, api, models, utils, testing, express",
-    "Built solutions using React, Flask frameworks",
-    "Implemented software design patterns: Observer Pattern, Factory Pattern, Repository Pattern",
-    "Applied modern development practices: RESTful API Architecture, Service-Oriented Architecture, React Hooks/Lifecycle (8 types), Component State Management",
-    "Maintained excellent code quality with high maintainability score and well-structured functions",
-    "Followed best practices with low-complexity, maintainable code structure",
-    "Architected modular solution with 45 functions, 12 classes and 8 components",
-    "Maintained low complexity across all functions and components",
-    "Integrated 15 external libraries and dependencies for enhanced functionality",
-    "Designed modular architecture with 8 internal dependencies promoting code reusability"
-  ],
-  "Metrics": {
-    "languages": ["Python", "JavaScript", "TypeScript"],
-    "total_files": 23,
-    "total_lines": 4523,
-    "functions": 45,
-    "components": 8,
-    "classes": 12,
-    "roles": ["backend", "frontend", "database"],
-    "average_function_length": 18.7,
-    "average_comment_ratio": 0.15,
-    "code_files_changed": 20,
-    "doc_files_changed": 2,
-    "test_files_changed": 6,
-    "technical_keywords": [
-      "api", "authentication", "components", "database", "hooks", 
-      "models", "react", "routes", "services", "testing", 
-      "utils", "validation", "express", "middleware", "async"
-    ],
-    "code_patterns": {
-      "frameworks_detected": ["React", "Flask", "Express.js"],
-      "design_patterns": ["Observer Pattern", "Factory Pattern", "Repository Pattern"],
-      "architectural_patterns": ["RESTful API Architecture", "Service-Oriented Architecture", "MVC Architecture"],
-      "development_practices": [
-        "React Hooks/Lifecycle (8 types)",
-        "Component State Management", 
-        "Component Props/Data Flow (8 components)"
-      ],
-      "technology_stack": ["Python", "JavaScript", "TypeScript"]
-    },
-    "complexity_analysis": {
-      "function_complexity": [12, 8, 45, 23, 15, 9, 34, 18, 7, 29],
-      "component_complexity": [8, 12, 6, 15, 10, 7, 9, 11],
-      "class_complexity": [25, 34, 18, 42, 28, 16, 31, 22, 19, 27, 33, 21],
-      "maintainability_score": {
-        "overall_score": 82.3,
-        "average_complexity": 19.8,
-        "total_code_units": 65,
-        "complexity_distribution": {
-          "low_complexity": 48,
-          "medium_complexity": 15,
-          "high_complexity": 2
-        },
-        "quality_indicators": {
-          "functions_per_file": 2.83,
-          "avg_lines_per_unit": 69.6,
-          "complexity_trend": "good"
-        }
-      },
-      "complexity_breakdown": {
-        "functions": {
-          "count": 45,
-          "avg_complexity": 18.4,
-          "high_complexity": 1
-        },
-        "classes": {
-          "count": 12,
-          "avg_complexity": 26.3,
-          "high_complexity": 1
-        },
-        "components": {
-          "count": 8,
-          "avg_complexity": 9.8,
-          "high_complexity": 0
-        }
-      }
-    }
-  }
-}
+
 from typing import Dict, Any
 
 def _norm_with_cap(value: float, cap: float) -> float:
@@ -233,7 +114,7 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
 
     return score
 
-def compute_contribution_percentages_single_project(
+def _compute_contribution_percentages_single_project(
     code_metrics: Dict[str, Any],
     git_code_metrics: Dict[str, Any],
     non_code_metrics: Dict[str, Any],
@@ -315,7 +196,7 @@ def compute_overall_project_contribution_score(
     non_code_score = _compute_non_code_score(non_code_metrics)
 
     # 4. Compute code vs non-code percentages (effort ratios)
-    percentages = compute_contribution_percentages_single_project(
+    percentages = _compute_contribution_percentages_single_project(
         code_metrics=code_metrics,
         git_code_metrics=git_code_metrics,
         non_code_metrics=non_code_metrics,

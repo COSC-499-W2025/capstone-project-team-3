@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 def _compute_contribution_percentages(
     code_metrics: List[Dict[str, Any]],
     non_code_metrics: List[Dict[str, Any]],
-    words_per_code_line: float = 7.0
+    avg_words_per_code_line: float = 7.0
 ) -> Dict[str, float]:
     """
     Compute percentage of code contribution vs non-code contribution
@@ -21,7 +21,7 @@ def _compute_contribution_percentages(
     total_words = sum(m.get("word_count", 0) for m in non_code_metrics)
 
     # Convert words → doc line equivalents
-    doc_line_equiv = total_words / words_per_code_line 
+    doc_line_equiv = total_words / avg_words_per_code_line 
 
     total = total_code_lines + doc_line_equiv
     if total == 0:

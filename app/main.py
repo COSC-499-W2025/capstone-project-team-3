@@ -13,7 +13,7 @@ from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.delete_insights_utils import get_projects
-from app.cli.retrieve_insights_cli import show_past_insights
+from app.cli.retrieve_insights_cli import lookup_past_insights
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
 import uvicorn
 import os
@@ -67,7 +67,7 @@ def main():
     # Check if existing local Project Insights data is present
     existing_projects = get_projects()
     if existing_projects:
-        show_past_insights()
+        lookup_past_insights(existing_projects)
     else:
         pass  # No existing projects found
 

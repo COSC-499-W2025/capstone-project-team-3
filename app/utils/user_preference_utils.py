@@ -76,6 +76,22 @@ class UserPreferenceStore:
         keys = ["industry", "job_title", "education"]
         return dict(zip(keys, row))
     
+    def get_user_info(self):
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT name, email, education, industry, job_title
+            FROM USER_PREFERENCES
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        keys = [ "name", "email", "education", "industry", "job_title"]
+        return dict(zip(keys, row))
+    
     # Close the DB connection
     def close(self):
         try:

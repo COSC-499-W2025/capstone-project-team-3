@@ -1,4 +1,3 @@
-
 from typing import Dict, Any
 
 def _norm_with_cap(value: float, cap: float) -> float:

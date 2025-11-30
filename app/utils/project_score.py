@@ -245,8 +245,6 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
 
     return score
 
-
-
 def compute_contribution_percentages_single_project(
     code_metrics: Dict[str, Any],
     git_code_metrics: Dict[str, Any],
@@ -255,37 +253,44 @@ def compute_contribution_percentages_single_project(
     """
     Compute percentage of code vs non-code contribution for a project.
     
-    Inputs:
-        code_metrics     - dict containing "total_lines" OR empty
-        git_code_metrics - dict containing "total_lines" OR empty
-        non_code_metrics - dict containing "word_count"
+    Logic:
+      - If Git project → use git_code_metrics["total_lines"]
+      - If Non-Git project → use code_metrics["total_lines"]
+      - Convert non-code word count to documentation-line equivalents
+      - Compute percentage split: code vs non-code
     """
 
-    # Choose code lines from whichever source is not empty
-    if code_metrics and code_metrics.get("total_lines", 0) > 0:
-        code_lines = code_metrics.get("total_lines", 0)
-    else:
-        code_lines = git_code_metrics.get("total_lines", 0)
+    # Determine project type
+    is_git_project = bool(git_code_metrics)
 
-    # Extract word count
+    # Select appropriate code line source
+    if is_git_project:
+        code_lines = git_code_metrics.get("total_lines", 0)
+    else:
+        code_lines = code_metrics.get("total_lines", 0)
+
+    # Extract total non-code words
     total_words = non_code_metrics.get("word_count", 0)
 
     # Convert documentation words → code line equivalents
-    words_per_code_line = 7.0
-    doc_line_equiv = total_words / words_per_code_line if words_per_code_line > 0 else total_words
+    words_per_code_line = 7.0  # industry-baseline conversion
+    doc_line_equiv = (total_words / words_per_code_line
+                      if words_per_code_line > 0 else total_words)
 
+    # Avoid div-by-zero issues
     total = code_lines + doc_line_equiv
-
     if total == 0:
         return {
             "code_percentage": 0.0,
             "non_code_percentage": 0.0
         }
 
+    # Return normalized percentages
     return {
         "code_percentage": code_lines / total,
         "non_code_percentage": doc_line_equiv / total
     }
+
 
 
 def compute_overall_project_contribution_score(

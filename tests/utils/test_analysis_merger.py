@@ -2,7 +2,7 @@ from app.utils.analysis_merger_utils import merge_analysis_results
 
 def test_merge_analysis_results():
     code_analysis_results = {
-        "Resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
             "technical_keywords": ["FastAPI", "pytest"],
@@ -17,7 +17,7 @@ def test_merge_analysis_results():
             "technical_skills": ["SQLAlchemy"],
             "soft_skills": ["Communication"]
         },
-        "Resume_bullets": ["Documented requirements"],
+        "resume_bullets": ["Documented requirements"],
         "Metrics": {
             "word_count": 1000,
             "completeness_score": 0.95
@@ -39,8 +39,8 @@ def test_merge_analysis_results():
     assert "Communication" in merged["skills"]["soft_skills"]
 
     # Check merged resume bullets
-    assert "Built REST API" in merged["resume_bullets"]
-    assert "Documented requirements" in merged["resume_bullets"]
+    assert "Built REST API." in merged["resume_bullets"]
+    assert "Documented requirements." in merged["resume_bullets"]
 
     # Check merged metrics
     assert merged["metrics"]["languages"] == ["Python"]

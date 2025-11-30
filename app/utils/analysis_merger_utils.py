@@ -81,18 +81,20 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_metrics = code_analysis_results.get("Metrics", {})
     non_code_metrics = non_code_analysis_results.get("Metrics", {})
 
-    # Extract resume bullets
-    code_resume_bullets = code_analysis_results.get("Resume_bullets", [])
-    non_code_resume_bullets = non_code_analysis_results.get("Resume_bullets", [])
+    # Extract & Format resume bullets
+    code_resume_bullets = code_analysis_results.get("resume_bullets", [])
+    code_resume_bullets = [f"{bullet.strip()}." for bullet in code_resume_bullets if bullet.strip()]
+
+    non_code_resume_bullets = non_code_analysis_results.get("resume_bullets", [])
+    non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
     
     # Extract skills (use technical keywords from code analysis)
     code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", [])
     non_code_skills = non_code_analysis_results.get("skills", {})
 
     # Extract project summary from non-code summary & code resume bullets
-    #use NLP summarization to generate concise summary
+    # use NLP summarization to generate concise summary
     #Make resume bullets into sentences for summarization
-    code_resume_bullets = [f"{bullet.strip()}." for bullet in code_resume_bullets if bullet.strip()]
     summary = _sumy_lsa_summarize(non_code_analysis_results.get("summary", "") + " " + " ".join(code_resume_bullets),5)
 
     

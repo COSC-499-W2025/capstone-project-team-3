@@ -45,7 +45,7 @@ completeness_score = 0.92
 
 # Code analysis results (non-git)
 code_analysis_results = {
-    "Resume_bullets": resume_bullets,
+    "resume_bullets": resume_bullets,
     "Metrics": {
         "languages": metrics["languages"],
         "total_files": metrics["total_files"],
@@ -67,7 +67,7 @@ code_analysis_results = {
 
 # Git code analysis results
 git_code_analysis_results = {
-    "Resume_bullets": [],
+    "resume_bullets": [],
     "Metrics": {
         "authors": metrics["authors"],
         "total_commits": metrics["total_commits"],
@@ -92,7 +92,7 @@ non_code_analysis_result = {
         "technical_skills": ["FastAPI", "SQLAlchemy"],
         "soft_skills": ["Communication", "Collaboration"]
     },
-    "Resume_bullets": resume_bullets,
+    "resume_bullets": resume_bullets,
     "Metrics": {
         "word_count": word_count,
         "completeness_score": completeness_score,

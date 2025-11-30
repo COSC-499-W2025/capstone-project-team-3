@@ -189,7 +189,13 @@ def compute_overall_project_contribution_score(
     if is_git_project:
         code_score = _compute_git_code_score(git_code_metrics)
     else:
-        code_score = _compute_non_git_code_score(code_metrics)
+        total_lines = code_metrics.get("total_lines", 0)
+        if total_lines <= 0:
+            # No code contribution at all → purely non-code-driven project
+            code_score = 0.0
+        else:
+            code_score = _compute_non_git_code_score(code_metrics)
+
 
     # 3. Compute non-code score
     non_code_score = _compute_non_code_score(non_code_metrics)

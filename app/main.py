@@ -67,7 +67,7 @@ def main():
     # Check if existing local Project Insights data is present
     existing_projects = get_projects()
     if existing_projects:
-        lookup_past_insights(existing_projects)
+        lookup_past_insights()
     else:
         pass  # No existing projects found
 

@@ -21,6 +21,9 @@
     * Extrapolate individual contributions for a given collaboration project
     * Distinguish individual projects from collaborative projects
     * Project Ranking based on user contributions
+    * Deletion of previously generated insights
+    * Parsing local code files
+    * Adding contribution by file types
   
 - **Associated project board tasks:**
     * 227: Implement scanning flow to the project's main
@@ -59,6 +62,11 @@
     * Added functionality to only accept zipped file paths.  #371
     * Integrate non code file checker into main flow. #372
     * Integrate contribution type frequency in the analysis pipeline. #379
+    * Extract metrics #312
+    * Parse code files (non-git)- Implementation of flow #174
+    * Added contribution by filetype for code (non-git) #362
+    * Added delete previously generated insights #364
+    * Allow docker container to access external files #374
 
     
 ---
@@ -94,7 +102,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
 | #372, #371, #348, #332, #328, #322  | Implemented fucntionality to only accpet zipped files, added skill extraction in analysis pipeline, added completeness score and word count, added non code file checker into main flow(integration) allowed readme files to pass through from non code file checker. | @6s-1 |
 | #218, #215 | High-Level Outline of Non-code Analysis, researching non-llm/3rd party options for non-code files.   | @abstractafua |
-| #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
+| #312, #174, #362, #364, #374 |  Extract metrics, Parse code files (non-git)- Implementation of flow, Added contribution by filetype for code (non-git), Added delete previously generated insights, Allow docker container to access external files| @dabby04  |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
 
@@ -104,7 +112,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
-| #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
 | #378        |  Waiting for one remaining code review for integrating contribution frequency in analysis pipeline. | @6s1      |
 | #217, #233         | Implementing Non-code analysis utilizing Ai/3rd party services, Implement Non-Code File Preprocessing and Summarization
     - Aggregate LLM1 Summaries into Unified Project Structure
@@ -118,29 +125,28 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 ## Meeting Notes
 
 ### 26th, 29th, 30th November 2025 – Team Meeting (All members present)
-- Work and Flow clarifyign session.
+- Work and Flow clarifying session.
 
 ---
 
 ## Test Report
 
 - **Framework used:** `pytest` and `pytest-cov`  
-- **Test run date:** 9th November 2025 
+- **Test run date:** 30th November 2025 
 - **Summary:**  
-  - Total tests run:  
-  - Passed:   
-  - Failed:   
+  - Total tests run:  365
+  - Passed:   364
+  - Failed:   1
 - **Regression Testing:**  
   - N/A  
-- **Screenshot or Output:**  
+- **Screenshot or Output:** 
   
-
-
 ---
 
 ## Reflection
 
 * This week we discovered P10 and we delegated tasks and what we will be working on for this week and possibly next week...
+* Mapped out all requirements remaining to see what is left.
 
 ## Plan for Next Cycle
-* Continue with code contributions, prioritising and finalising FR1, FR3, FR2, FR4, and FR5.
+* Wrap up all requirements for milestone 1.

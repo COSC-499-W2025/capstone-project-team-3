@@ -1,11 +1,11 @@
-# Team Log week 12
+# Team Log week 13
 
 **Team Name:** Team 3
 
 **Work Performed:** 
 - **Enhanced GitHub Analysis**: Implemented comprehensive commit analysis with pattern detection, technical keyword extraction, and resume generation capabilities
 - **Updated Analysis Architecture**: Modified code analysis system to support new JSON structure from parsing team while maintaining backward compatibility
-- **Non-Code Analysis**: Continued implementation of non-LLM and LLM analysis methods for non-code files
+- **Non-Code Analysis**: Completed Non code analysis for both ai and non ai flows. 
 - **Parsing Enhancements**: Added entity extraction, dependency mapping, and improved language detection
 - **CI/CD Improvements**: Implemented security scanning, automated testing pipelines, and workflow optimization
 - **Git Integration**: Enhanced git history extraction and collaboration detection features
@@ -51,17 +51,16 @@
     * Summary generation (offline NLP) #280
     * Extract technical keywords using KeyBERT #281
     * Generate bullet points (offline) #315
-    * Non code pre-processing and summarization #233
-    * Aggregate LLM1 Summaries into Unified Project Structure #234
-    * Generate LLM2 Prompt for Non-Code Analysis #235
-    * Researching Ai/non-Ai implementation for non code file analysis #186
-    * Create extract project names	#265
-    * Grammar loader	#282
-    * Template for `file_entity_utils`	#283
-    * Extract Classes	#284
-    * Extract Functions	#297
-    * Extract components	#298
-    * Extract Metrics	#312
+    * Research offline non-code analysis methods #245
+    * Implement functionality for extracting skill information without using 3rd party services. #322
+    * Allow the read me files to pass through non code file checker to help with analysis and updated tests #328
+    * Added functionality for non code file non Ai analysis to output the result for all files in a project and updated NLP README. #332
+    * Add completeness score and word count in output for Non Ai Non code analysis. #348
+    * Added functionality to only accept zipped file paths.  #371
+    * Integrate non code file checker into main flow. #372
+    * Integrate contribution type frequency in the analysis pipeline. #379
+
+    
 ---
 
 ## Burnup Chart
@@ -93,12 +92,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
-| #251, #255, #267, #278, #300, #288, #287, #281, #280, #279  | Implemented multi-stage non-code analysis features including git metadata collection (Pt-3), user contribution verification (Pt-4), and the final classification orchestrator (Pt-5). Added offline NLP capabilities for document identification, summary generation, keyword and topic extraction, Sumy LSA important-sentence extraction, and added bullet-point generation. | @6s-1 |
-| #218, #215 | Add completeness score & Word_count metrics into results for AI analysis pipeline, Ensure Analysis output & structure in sync with Non-AI Analysis Output   | @abstractafua |
-| #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
-| #196,#212, #221, #230, #215, #245  | Added checking for non-code file via extensions,Added functionality for local directory scanning, Added missing tests for consent management and prompt input, researching non-llm/3rd party options for non-code files. | @6s-1 |
+| #372, #371, #348, #332, #328, #322  | Implemented fucntionality to only accpet zipped files, added skill extraction in analysis pipeline, added completeness score and word count, added non code file checker into main flow(integration) allowed readme files to pass through from non code file checker. | @6s-1 |
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
-|#210, #284, #283, #297,#298,| Extract File Entities, Extract Classes, Template for file_entity_utils, Extract functions, Extract components | @dabby04 |
+| #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
 | #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
 
@@ -109,11 +105,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
 | #210 , #209          |  Extracting file entities and extracting file dependencies | @dabby04     |
-| #317        |  Working on one of the last parts of non code analysis- skill extraction | @6s1      |
-| #382, #381, #341, #336, #337 | Merge Non-Code & Code Analysis Results, Send Combined Analysis to project Ranker, Store results in DB, Integrate activity type contribution to AI non-code analysis, Project Retrieval | @abstractafua     |
-| #312, #174       |  Extract metrics, and Parse code files (non-git)- Implementation of flow | @dabby04     |
-| #215, #245          |  Researching Non-LLM/3rd party non-code file analysis methods | @6s1      |
-| #236, #237         | Store Final Non-Code Analysis Results in Local Database, Call llm_client.py and Generate Insights for Non-Code Analysis| @abstractafua     |
+| #378        |  Waiting for one remaining code review for integrating contribution frequency in analysis pipeline. | @6s1      |
+| #382, #381, #341, #336, #337 | Merge Non-Code & Code Analysis Results, Send Combined Analysis to project Ranker, Store results in DB, Integrate activity type contribution to AI non-code analysis, Project Retrieval | @abstractafua |
 | #164          | Integrate the overall project flow | @PaintedW0lf |
 
  
@@ -122,8 +115,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Meeting Notes
 
-### 18th, 21st November 2025 – Team Meeting (All members present)
-- Flow clarifyign session and review.
+### 26th, 29th, 30th November 2025 – Team Meeting (All members present)
+- Work and Flow clarifyign session.
 
 ---
 
@@ -145,8 +138,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Reflection
 
-* This week went well-we delegated tasks and what we will be working on for this week and possibly next week.
-* This week we are ensuring that we are all aligned in order to deliver the remaining requirements for Milestone 1
+* This week we discovered P10 and we delegated tasks and what we will be working on for this week and possibly next week...
 
 ## Plan for Next Cycle
 * Continue with code contributions, prioritising and finalising FR1, FR3, FR2, FR4, and FR5.

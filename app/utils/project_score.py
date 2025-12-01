@@ -50,29 +50,10 @@ def _compute_git_code_score(git_code_metrics: Dict[str, Any]) -> float:
 
     return code_score
 
-def _compute_non_code_score(non_code_metrics: Dict[str, Any]) -> float:
-    """
-    Compute a non-code score from completeness_score.
-    Expected range: [0, 1].
-    If completeness_score is out of this range, clamp it.
-    """
-
-    completeness = non_code_metrics.get("completeness_score", 0.0)
-
-    # If someone accidentally passes 0–100, convert to 0–1
-    if completeness > 1.0:
-        completeness /= 100.0
-
-    # Clamp to valid range
-    completeness = max(0.0, min(completeness, 1.0))
-
-    return completeness
-
 def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     """
     Compute a code contribution score (0–1) for a non-Git project.
-    Uses structural + complexity-based metrics.
-    Higher complexity = higher contribution.
+    Uses structural metrics + maintainability score.
     """
 
     # Extract raw values
@@ -83,7 +64,6 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
 
     maint = non_git_code_metrics["complexity_analysis"]["maintainability_score"]
     overall_score      = maint.get("overall_score", 0)
-    average_complexity = maint.get("average_complexity", 0)
 
     # Caps
     total_files_cap        = 40
@@ -91,24 +71,21 @@ def _compute_non_git_code_score(non_git_code_metrics: Dict[str, Any]) -> float:
     code_files_changed_cap = 30
     test_files_changed_cap = 10
     overall_score_cap      = 100
-    average_complexity_cap = 30
 
-    # Normalize using shared function
+    # Normalize
     s_files        = _norm_with_cap(total_files, total_files_cap)
     s_lines        = _norm_with_cap(total_lines, total_lines_cap)
     s_code_files   = _norm_with_cap(code_files_changed, code_files_changed_cap)
     s_test_files   = _norm_with_cap(test_files_changed, test_files_changed_cap)
     s_overall      = _norm_with_cap(overall_score, overall_score_cap)
-    s_complexity   = _norm_with_cap(average_complexity, average_complexity_cap)
 
-    # Weights (sum to 1.0)
+    # Updated weights (sum to 1.0)
     score = (
-        0.15 * s_files +
-        0.20 * s_lines +
-        0.20 * s_code_files +
-        0.10 * s_test_files +
-        0.20 * s_overall +
-        0.15 * s_complexity
+        0.20  * s_files +
+        0.15  * s_lines +
+        0.20  * s_code_files +
+        0.15 * s_test_files +
+        0.30 * s_overall
     )
 
     return score
@@ -159,7 +136,23 @@ def _compute_contribution_percentages_single_project(
         "non_code_percentage": doc_line_equiv / total
     }
 
+def _compute_non_code_score(non_code_metrics: Dict[str, Any]) -> float:
+    """
+    Compute a non-code score from completeness_score.
+    Expected range: [0, 1].
+    If completeness_score is out of this range, clamp it.
+    """
 
+    completeness = non_code_metrics.get("completeness_score", 0.0)
+
+    # If someone accidentally passes 0–100, convert to 0–1
+    if completeness > 1.0:
+        completeness /= 100.0
+
+    # Clamp to valid range
+    completeness = max(0.0, min(completeness, 1.0))
+
+    return completeness
 
 def compute_overall_project_contribution_score(
     code_metrics: Dict[str, Any],

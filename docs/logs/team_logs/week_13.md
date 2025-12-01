@@ -52,9 +52,13 @@
     * Extract technical keywords using KeyBERT #281
     * Generate bullet points (offline) #315
     * Research offline non-code analysis methods #245
-    * Offline skills extraction #322
-    * Technical skills extraction ##323
-    *
+    * Implement functionality for extracting skill information without using 3rd party services. #322
+    * Allow the read me files to pass through non code file checker to help with analysis and updated tests #328
+    * Added functionality for non code file non Ai analysis to output the result for all files in a project and updated NLP README. #332
+    * Add completeness score and word count in output for Non Ai Non code analysis. #348
+    * Added functionality to only accept zipped file paths.  #371
+    * Integrate non code file checker into main flow. #372
+    * Integrate contribution type frequency in the analysis pipeline. #379
 
     
 ---

@@ -8,7 +8,7 @@
 - **Non-Code Analysis**: Completed Non code analysis for both ai and non ai flows. 
 - **Parsing Enhancements**: Added entity extraction, dependency mapping, and improved language detection
 - **CI/CD Improvements**: Implemented security scanning, automated testing pipelines, and workflow optimization
-- **Git Integration**: Enhanced git history extraction and collaboration detection features
+- **Git Integration**: Enhanced git history extraction and collaboration detection features, added funcitonality to check code file, added programming language detection for git
 ---
 
 ## Recap of Milestone Goals
@@ -59,6 +59,9 @@
     * Added functionality to only accept zipped file paths.  #371
     * Integrate non code file checker into main flow. #372
     * Integrate contribution type frequency in the analysis pipeline. #379
+    * is code file for git #320
+    * language detection for git #339
+    * update extract code commit content by author #356
 
     
 ---
@@ -96,7 +99,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
 | #239, #192   |  Added a dictionary map for Pygments -> Tree_sitter, Extract libraries from import statements | @dabby04     |
 | #294, #273, #293, #292, #274, #254 | Add Security Scan Workflow in the pipeline, Linking Non-Code File Verification Results to Code Parsing Logic, Add CI Pipeline for Automated Testing, Create the Plan for the workflow, Testing for Non Code Parsing Flow into Non-code Analysis, Integrate non code parsing flow into non code analysis | @PaintedW0lf |
-| #160, #94,  #48, #113, #92, #181, #224, #301 | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics   | @kjassani    |
+| #160, #94,  #48, #113, #92, #181, #224, #320, #339, #356, | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics, Function to check is_code_file inside git repo, Language Detection for git files, Update extract code commit content by author  | @kjassani    |
 
 ---
 
@@ -108,6 +111,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #378        |  Waiting for one remaining code review for integrating contribution frequency in analysis pipeline. | @6s1      |
 | #382, #381, #341, #336, #337 | Merge Non-Code & Code Analysis Results, Send Combined Analysis to project Ranker, Store results in DB, Integrate activity type contribution to AI non-code analysis, Project Retrieval | @abstractafua |
 | #164          | Integrate the overall project flow | @PaintedW0lf |
+| #386 | Project Score for Project Ranking | @kjassani|
 
  
 

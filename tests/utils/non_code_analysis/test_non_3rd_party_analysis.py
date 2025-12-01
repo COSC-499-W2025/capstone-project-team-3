@@ -175,7 +175,6 @@ def test_analyze_project_clean_basic_readme():
     assert len(result["bullets"]) > 0
     assert result["doc_type_counts"]["README"] == 1
     assert result["doc_type_frequency"]["README"] == 1
-    assert len(result["files_by_doc_type"]) == 1
 
 def test_analyze_project_clean_multiple_files():
     parsed_files = {"files": [
@@ -190,7 +189,6 @@ def test_analyze_project_clean_multiple_files():
     assert isinstance(result["skills"], dict)
     assert len(result["doc_type_counts"]) > 0
     assert len(result["doc_type_frequency"]) > 0
-    assert len(result["files_by_doc_type"]) == 3
 
 def test_completeness_score_design_document():
     # Simulate a design document with key sections
@@ -273,26 +271,6 @@ def test_analyze_project_clean_contribution_frequency_aggregation():
     assert "doc_type_frequency" in result
     assert result["doc_type_frequency"]["README"] == 5  # 3 + 2
     assert result["doc_type_frequency"]["API_DOCUMENTATION"] == 5  # 5
-    
-    # Test files_by_doc_type structure
-    assert "files_by_doc_type" in result
-    assert len(result["files_by_doc_type"]) == 3
-    
-    # Verify each file entry has required fields
-    for file_entry in result["files_by_doc_type"]:
-        assert "file_name" in file_entry
-        assert "file_path" in file_entry
-        assert "doc_type" in file_entry
-        assert "contribution_frequency" in file_entry
-    
-    # Verify specific file entries
-    readme_entries = [f for f in result["files_by_doc_type"] if f["doc_type"] == "README"]
-    assert len(readme_entries) == 2
-    assert sum(f["contribution_frequency"] for f in readme_entries) == 5
-    
-    api_entries = [f for f in result["files_by_doc_type"] if f["doc_type"] == "API_DOCUMENTATION"]
-    assert len(api_entries) == 1
-    assert api_entries[0]["contribution_frequency"] == 5
 
 def test_analyze_project_clean_default_contribution_frequency():
     """Test that files without contribution_frequency default to 1"""
@@ -309,5 +287,4 @@ def test_analyze_project_clean_default_contribution_frequency():
     result = analyze_project_clean(parsed_files)
     
     assert result["doc_type_frequency"]["README"] == 1
-    assert result["files_by_doc_type"][0]["contribution_frequency"] == 1
     

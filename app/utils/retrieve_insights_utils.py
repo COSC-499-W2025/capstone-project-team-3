@@ -7,10 +7,10 @@ def get_portfolio_resume_insights():
     cur = conn.cursor()
     
     # Build Portfolio: Project name, summary, duration, skills
-    cur.execute("SELECT project_signature, name, summary, created_at, last_modified FROM PROJECT")
+    cur.execute("SELECT project_signature, name, rank, summary, created_at, last_modified FROM PROJECT")
     projects = []
     for row in cur.fetchall():
-        signature, name, summary, created_at, last_modified = row
+        signature, name, rank, summary, created_at, last_modified = row
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
         skills = [s[0] for s in cur.fetchall()]
         duration = f"{created_at} - {last_modified}"
@@ -19,11 +19,12 @@ def get_portfolio_resume_insights():
             "summary": summary,
             "duration": duration,
             "skills": skills,
-            "created_at": created_at
+            "created_at": created_at,
+            "rank": rank
         })
 
     # Top ranked projects (by rank limit to top 5)
-    top_projects = sorted(projects, key=lambda x: x["duration"], reverse=True)[:5]
+    top_projects = sorted(projects, key=lambda x: x["rank"], reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
     chronological = sorted(projects, key=lambda x: x["created_at"])[:10]
@@ -33,7 +34,7 @@ def get_portfolio_resume_insights():
     bullets = [row[0] for row in cur.fetchall()]
     conn.close()
     
-    # Return structured data
+    # Return structured portfolio object and resume object
     return {
         "projects": projects,
         "top_projects": top_projects,

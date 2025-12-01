@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     size_bytes INTEGER,
     rank INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    summary TEXT
 );
 
 --Analyzed Git Data---
@@ -132,8 +133,12 @@ def seed_db():
             "file_signatures": ["alpha_main_hash", "alpha_utils_hash", "alpha_readme_hash"],
             "size_bytes": 2048,
             "rank": 1,
-            "created_at": "2024-01-15 10:30:00",  # ADD THIS
-            "last_modified": "2024-11-20 14:45:00"  # ADD THIS
+            "created_at": "2024-01-15 10:30:00",  
+            "last_modified": "2024-11-20 14:45:00", 
+            "summary": "Alpha Project is a web-based task management application built with Python and Flask. "
+            "It enables users to create, assign, and track tasks in real time, featuring user authentication, "
+            "role-based access, and interactive dashboards. The project demonstrates strong skills in backend development, "
+            "RESTful API design, and team collaboration."
         },
         {
             "project_signature": "sig_beta_project/hash",
@@ -142,8 +147,11 @@ def seed_db():
             "file_signatures": ["beta_core_hash", "beta_helper_hash"],
             "size_bytes": 4096,
             "rank": 2,
-            "created_at": "2024-03-10 09:15:00",  # ADD THIS
-            "last_modified": "2024-11-22 16:20:00"  # ADD THIS
+            "created_at": "2024-03-10 09:15:00",  
+            "last_modified": "2024-11-22 16:20:00",
+            "summary": "Beta Project is a machine learning pipeline developed in Python that automates data preprocessing, "
+            "model training, and evaluation. It incorporates libraries such as Pandas, Scikit-learn, and TensorFlow to build predictive models. "
+            "The project highlights expertise in data science, algorithm optimization, and end-to-end ML workflow."
         },
         {
             "project_signature": "sig_gamma_project/hash",
@@ -152,15 +160,17 @@ def seed_db():
             "file_signatures": ["gamma_app_hash", "gamma_test_hash", "gamma_docs_hash"],
             "size_bytes": 1024,
             "rank": 3,
-            "created_at": "2024-06-05 11:00:00",  # ADD THIS
-            "last_modified": "2024-11-25 09:30:00"  # ADD THIS
+            "created_at": "2024-06-05 11:00:00",  
+            "last_modified": "2024-11-25 09:30:00",
+            "summary": "Gamma Project is a mobile application developed using React Native that provides users with personalized fitness tracking. "
+            "It features real-time activity monitoring, goal setting, and social sharing capabilities. "
         },
     ]
 
     for proj in projects:
         cursor.execute("""
-            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank, created_at, last_modified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank, created_at, last_modified, summary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             proj["project_signature"],
             proj["name"],
@@ -168,8 +178,10 @@ def seed_db():
             json.dumps(proj["file_signatures"]),
             proj["size_bytes"],
             proj["rank"],
-            proj["created_at"],        # ADD THIS
-            proj["last_modified"]      # ADD THIS
+            proj["created_at"],        
+            proj["last_modified"],     
+            proj["summary"]
+
         ))
 
         project_id = proj["project_signature"]

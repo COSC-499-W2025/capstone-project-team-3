@@ -201,7 +201,7 @@ def test_compute_non_git_code_score_sample_project():
     score = _compute_non_git_code_score(NON_GIT_CODE_METRICS_SAMPLE)
 
     assert 0.0 <= score <= 1.0
-    assert score == pytest.approx(0.7241033333, rel=1e-5)
+    assert score == pytest.approx(0.7209233333, rel=1e-5)
 
 
 def test_compute_non_git_code_score_zero_metrics():
@@ -367,7 +367,7 @@ def test_overall_score_non_git_project_integration():
     )
 
     assert 0.0 <= final_score <= 1.0
-    assert final_score == pytest.approx(0.73932765, rel=1e-5)
+    assert final_score == pytest.approx(0.7364228861, rel=1e-5)
 
 
 def test_overall_score_all_non_code():

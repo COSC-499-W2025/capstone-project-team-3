@@ -8,17 +8,27 @@ from app.client.llm_client import GeminiLLMClient
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
-from app.cli.file_input import main as file_input_main 
+from app.cli.file_input import main as file_input_main
+from app.api.routes.upload_page import router as upload_page_router
+from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
+from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
 from app.utils.non_code_parsing.document_parser import parsed_input_text
 import uvicorn
 import os
 import sys
+import time
+import threading
 
 load_dotenv()
+
+# Create FastAPI app
+app = FastAPI(title="Project Insights")
+app.include_router(upload_page_router)
+app.include_router(upload_resolver_router, prefix="/api")
 
 def display_startup_info():
     """Display startup information including API key status."""
@@ -211,6 +221,16 @@ def main():
                 
             else:
                 print("❌ No projects found to analyze")
+
+            # Perform cleanup of uploaded artifacts (zip + extracted dir)
+            if rc.get("status") == "ok" and rc.get("upload_id"):
+                cu_res = cleanup_upload(
+                    rc.get("upload_id"),
+                    extracted_dir=rc.get("extracted_dir"),
+                    delete_extracted=True,
+                )
+                if cu_res.get("status") != "ok":
+                     print(f"⚠️ Cleanup failed: {cu_res.get('reason')}")
           
             # ADD THE MISSING SECTION HERE!
             print(f"\n{'='*60}")
@@ -232,17 +252,28 @@ def main():
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                 break
-    
-    print("App started successfully")
 
-# Create FastAPI app
-app = FastAPI(title="Project Insights")
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Project Insights!!"}
 
 if __name__ == "__main__":
+    def start_server():
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            log_level="critical",
+            access_log= False
+        )
+
+    # Start API server in background
+    server_thread = threading.Thread(target=start_server, daemon=True)
+    server_thread.start()
+
+    # Give server a moment to start
+    time.sleep(1)
+
+    # Now run the CLI flow
     main()
-    print("App started Successfully")
-    uvicorn.run(app, host="0.0.0.0", port=8000)

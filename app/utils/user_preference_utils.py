@@ -76,8 +76,10 @@ class UserPreferenceStore:
         keys = ["industry", "job_title", "education"]
         return dict(zip(keys, row))
     
-    def get_user_info(self):
-        cur = self.conn.cursor()
+    @staticmethod
+    def get_user_info():
+        store = UserPreferenceStore()
+        cur = store.conn.cursor()
         cur.execute(
             """
             SELECT name, email, education, industry, job_title

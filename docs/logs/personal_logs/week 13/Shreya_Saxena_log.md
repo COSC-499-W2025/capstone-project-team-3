@@ -2,7 +2,7 @@
 
 ---
 
-## Entry for Nove 16, 2025 → Nov 23, 2025
+## Entry for Nove 24, 2025 → Nov 30, 2025
 
 ### Type of Tasks Worked On
 ![Personal Log](../../../screenshots/Shreya_Saxena_week-13.png)

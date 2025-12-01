@@ -165,6 +165,62 @@ def _detect_frameworks(imports: List[str]) -> List[str]:
     
     return detected_frameworks
 
+# Add new function for commit pattern analysis:
+
+def analyze_github_commit_patterns(commits: List[Dict]) -> Dict:
+    """Analyze commit patterns for demo-worthy insights."""
+    patterns = {
+        "commit_frequency": {},
+        "work_style": [],
+        "code_evolution": {},
+        "impact_metrics": {}
+    }
+    
+    if not commits:
+        return patterns
+    
+    total_commits = len(commits)
+    
+    # Commit size analysis
+    large_commits = sum(1 for commit in commits if commit.get("total_lines", 0) > 100)
+    small_commits = sum(1 for commit in commits if commit.get("total_lines", 0) < 20)
+    
+    if large_commits > total_commits * 0.3:
+        patterns["work_style"].append("feature_focused")
+    if small_commits > total_commits * 0.5:
+        patterns["work_style"].append("incremental_development")
+    
+    # Time-based patterns
+    dates = [commit.get("authored_datetime") for commit in commits if commit.get("authored_datetime")]
+    if dates and len(dates) > 1:
+        duration = (datetime.fromisoformat(max(dates).replace('Z', '+00:00')) - 
+                   datetime.fromisoformat(min(dates).replace('Z', '+00:00'))).days
+        
+        patterns["commit_frequency"] = {
+            "total_commits": total_commits,
+            "development_days": duration,
+            "avg_commits_per_day": round(total_commits / max(duration, 1), 2),
+            "development_intensity": "high" if total_commits / max(duration, 1) > 2 else "steady"
+        }
+    
+    # Code evolution analysis
+    file_changes = sum(len(commit.get("files", [])) for commit in commits)
+    patterns["code_evolution"] = {
+        "total_file_changes": file_changes,
+        "avg_files_per_commit": round(file_changes / total_commits, 2),
+        "change_style": "focused" if file_changes / total_commits < 3 else "broad"
+    }
+    
+    # Impact metrics
+    total_lines = sum(commit.get("total_lines", 0) for commit in commits)
+    patterns["impact_metrics"] = {
+        "total_contribution": total_lines,
+        "avg_lines_per_commit": round(total_lines / total_commits, 2) if total_commits > 0 else 0,
+        "contribution_scale": "substantial" if total_lines > 1000 else "moderate" if total_lines > 200 else "targeted"
+    }
+    
+    return patterns
+
 def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
     """
     Analyze development patterns from GitHub commit history.
@@ -252,68 +308,103 @@ def analyze_github_development_patterns(commits: List[Dict]) -> Dict:
 
 def generate_github_resume_summary(metrics: Dict) -> List[str]:
     """
-    Generate detailed resume summary using enhanced analysis for GitHub projects.
-    Updated to include languages and total lines for consistency with parsed analysis.
+    Enhanced GitHub resume generation with commit patterns and file contribution insights.
     """
     summary = []
     
-    # Contribution overview with languages and lines (UPDATED)
+    # Get enhanced patterns
+    commit_patterns = metrics.get("commit_patterns", {})
+    
+    # Basic metrics
     total_commits = metrics.get('total_commits', 0)
-    duration = metrics.get('duration_days', 0)
-    languages = metrics.get('languages', [])
     total_lines = metrics.get('total_lines', 0)
+    languages = metrics.get('languages', [])
+    duration = metrics.get('duration_days', 0)
     
-    # Enhanced opening with languages and lines
-    if duration > 0 and languages and total_lines > 0:
-        lang_text = ', '.join(languages[:3])  # Show top 3 languages
-        summary.append(f"Contributed {total_commits} commits adding {total_lines} lines of code in {lang_text} over {duration} days")
-    elif duration > 0 and languages:
+    # Work style insights from commit patterns
+    work_style = commit_patterns.get("work_style", [])
+    development_intensity = commit_patterns.get("commit_frequency", {}).get("development_intensity", "")
+    
+    # ENHANCED OPENING: Combine commit patterns with languages/duration
+    if "feature_focused" in work_style and total_lines > 500:
+        if duration > 0 and languages:
+            lang_text = '/'.join(languages[:2])
+            summary.append(f"Delivered {total_commits} feature-focused commits in {lang_text} over {duration} days, contributing {total_lines} lines of production code")
+        else:
+            lang_text = '/'.join(languages[:2]) if languages else "multiple technologies"
+            summary.append(f"Delivered {total_commits} feature-focused commits in {lang_text}, contributing {total_lines} lines of production code")
+    elif "incremental_development" in work_style:
+        if duration > 0:
+            summary.append(f"Applied incremental development methodology with {total_commits} targeted commits over {duration} days of consistent code evolution")
+        else:
+            summary.append(f"Applied incremental development methodology with {total_commits} targeted commits and consistent code evolution")
+    elif duration > 0 and languages and total_lines > 0:
+        # Fallback to original enhanced opening
         lang_text = ', '.join(languages[:3])
-        summary.append(f"Contributed {total_commits} commits in {lang_text} over {duration} days of active development")
-    elif total_lines > 0:
-        summary.append(f"Delivered {total_commits} commits adding {total_lines} lines of code in a focused development effort")
+        summary.append(f"Contributed {total_commits} commits adding {total_lines} lines of code in {lang_text} over {duration} days")
     else:
-        summary.append(f"Contributed {total_commits} commits demonstrating consistent development activity")
+        summary.append(f"Contributed {total_commits} commits demonstrating systematic development approach")
     
-    # File and code changes - IMPROVED WITH LANGUAGE CONTEXT
+    # BETTER FILE CONTRIBUTION MESSAGING (KEPT FROM ORIGINAL)
     files_added = metrics.get('files_added', 0)
     files_modified = metrics.get('files_modified', 0)
     code_files = metrics.get('code_files_changed', 0)
     total_files = metrics.get('total_files_changed', 0)
     
-    if code_files > 0:
-        if languages:
-            lang_context = f"across {', '.join(languages[:2])} projects"
-            summary.append(f"Implemented changes in {code_files} code files {lang_context}, with {files_added} new files created and {files_modified} existing files enhanced")
-        else:
-            summary.append(f"Implemented changes across {code_files} code files, with {files_added} new files created and {files_modified} existing files modified")
-    elif total_files > 0:
-        summary.append(f"Modified {total_files} project files, including {files_added} new additions and {files_modified} enhancements")
-    elif files_added > 0 or files_modified > 0:
-        summary.append(f"Contributed {files_added} new files and enhanced {files_modified} existing project assets")
+    if code_files > 5 and languages:
+        lang_text = '/'.join(languages[:2])  # Use slash for tech stack
+        summary.append(f"Developed full-stack solution using {lang_text} with {code_files} source files and comprehensive project structure")
+    elif code_files > 0 and total_lines > 500:
+        summary.append(f"Built substantial codebase with {code_files} core modules and {total_lines} lines of production code")
+    elif total_files > 10:
+        summary.append(f"Engineered comprehensive project architecture spanning {total_files} files with modern development practices")
+    elif files_added > 5:
+        summary.append(f"Established project foundation with {files_added} new modules and {files_modified} enhanced components")
     else:
-        summary.append(f"Made {total_commits} focused contributions to project development and maintenance")
+        # Fallback for smaller contributions
+        if languages:
+            lang_text = '/'.join(languages)
+            summary.append(f"Implemented {lang_text} solution with focused development approach")
+        else:
+            summary.append(f"Delivered focused technical contributions across {total_commits} commits")
     
-    # Development patterns and technical keywords
+    # COMMIT PATTERNS INSIGHTS (NEW)
+    # Development intensity and consistency
+    if development_intensity == "high":
+        summary.append("Maintained high development velocity with consistent daily contributions")
+    elif development_intensity == "steady":
+        summary.append("Demonstrated consistent development rhythm and sustainable coding practices")
+    
+    # Technical contribution scope from commit patterns
+    code_evolution = commit_patterns.get("code_evolution", {})
+    change_style = code_evolution.get("change_style", "")  # Fixed: use change_scope not change_style
+    
+    if change_style == "focused":
+        summary.append("Applied focused development approach with targeted, high-impact code changes")
+    elif change_style == "broad":
+        summary.append("Executed comprehensive development across multiple project components and modules")
+    
+    # TECHNICAL EXPERTISE (KEPT)
     tech_keywords = metrics.get("technical_keywords", [])
     if tech_keywords:
         summary.append(f"Demonstrated expertise in: {', '.join(tech_keywords[:6])}")
     
+    # DEVELOPMENT PATTERNS (KEPT)
     dev_patterns = metrics.get("development_patterns", {})
     practices = dev_patterns.get("code_practices", [])
     if practices:
         summary.append(f"Applied best practices: {', '.join(practices)}")
     
-    # Project evolution with language context
+    # Project evolution with language context (KEPT)
     evolution = dev_patterns.get("project_evolution", [])
     if evolution:
         summary.append(f"Led development in: {', '.join(evolution)}")
     
-    # Technology stack summary (NEW - using languages)
+    # Technology stack summary (KEPT)
     if len(languages) > 1:
-        summary.append(f"Developed across multiple technology stacks: {', '.join(languages)}")
+        summary.append(f"Utilized multi-technology stack: {', '.join(languages)}")
     
-    # Testing and documentation
+    # QUALITY EMPHASIS (KEPT)
     test_files = metrics.get('test_files_changed', 0)
     doc_files = metrics.get('doc_files_changed', 0)
     
@@ -326,13 +417,15 @@ def generate_github_resume_summary(metrics: Dict) -> List[str]:
     if quality_aspects:
         summary.append(f"Emphasized code quality through {' and '.join(quality_aspects)}")
     
-    # Sample impactful commit messages
-    sample_messages = metrics.get('sample_messages', [])
-    if sample_messages:
-        impactful_commits = [msg for msg in sample_messages[:3] if any(keyword in msg.lower() 
-                            for keyword in ['implement', 'add', 'create', 'build', 'develop'])]
-        if impactful_commits:
-            summary.append(f"Key contributions include: {'; '.join(impactful_commits)}")
+    # IMPACT METRICS FROM COMMIT PATTERNS (NEW)
+    impact_metrics = commit_patterns.get("impact_metrics", {})
+    contribution_scale = impact_metrics.get("contribution_scale", "")
+    avg_lines_per_commit = impact_metrics.get("avg_lines_per_commit", 0)
+    
+    if contribution_scale == "substantial" and avg_lines_per_commit > 50:
+        summary.append(f"Delivered substantial impact with average of {avg_lines_per_commit:.0f} lines per commit, demonstrating thorough implementation approach")
+    elif contribution_scale == "targeted" and avg_lines_per_commit < 20:
+        summary.append("Applied precise, targeted development approach with focused, well-scoped commits")
     
     return summary
     
@@ -1180,11 +1273,12 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     metrics = aggregate_github_individual_metrics(commits)
     technical_keywords = extract_technical_keywords_from_github(commits)
     development_patterns = analyze_github_development_patterns(commits)
+    commit_patterns = analyze_github_commit_patterns(commits)
     
     # Enhanced metrics for analysis
     metrics["technical_keywords"] = technical_keywords
     metrics["development_patterns"] = development_patterns
-    
+    metrics["commit_patterns"] = commit_patterns  # NEW
     if llm_client:
         # Use LLM for resume bullets - FIXED TO ENSURE ARRAY
         resume_prompt = (

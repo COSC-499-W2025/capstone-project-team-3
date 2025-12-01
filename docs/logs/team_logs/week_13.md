@@ -102,7 +102,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #276, #303 | Added GitHub Analysis, Modified Analysis with New Parsed Metrics/Format   | @KarimKhalil33 |
+| #335, #331, #327, #369 | Comprehensive Project Analysis Workflow, Project Timestamp Storage, Analysis Output Format Standardization, Test Hot Fixes | @KarimKhalil33 |
 | #372, #371, #348, #332, #328, #322  | Implemented fucntionality to only accpet zipped files, added skill extraction in analysis pipeline, added completeness score and word count, added non code file checker into main flow(integration) allowed readme files to pass through from non code file checker. | @6s-1 |
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
 | #312, #174, #362, #364, #374 |  Extract metrics, Parse code files (non-git)- Implementation of flow, Added contribution by filetype for code (non-git), Added delete previously generated insights, Allow docker container to access external files| @dabby04  |

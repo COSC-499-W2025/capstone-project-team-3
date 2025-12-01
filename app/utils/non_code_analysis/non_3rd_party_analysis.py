@@ -389,8 +389,6 @@ def calculate_completeness_score(content: str, doc_type: str) -> int:
     completeness = int((found / len(patterns)) * 100)
     return min(max(completeness, 0), 100)
 
-# ...existing code...
-
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
     Clean project-wide analysis:
@@ -586,5 +584,4 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         "word_count": len(project_content.split()),
         "doc_type_counts": dict(doc_type_counts),
         "doc_type_frequency": dict(doc_type_freq),
-        "files_by_doc_type": files_by_doc_type,  # ← ADD THIS LINE!
     }

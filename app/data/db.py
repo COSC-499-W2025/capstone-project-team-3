@@ -208,6 +208,11 @@ def seed_db():
         skills = [
             {"skill": "Python", "source": "code"},
             {"skill": "Git", "source": "non-code"},
+            {"skill": "Flask", "source": "code"},
+            {"skill": "Machine Learning", "source": "non-code"},
+            {"skill": "React Native", "source": "code"},
+            {"skill": "TensorFlow", "source": "non-code"},
+            {"skill": "Docker", "source": "non-code"},
         ]
         for s in skills:
             cursor.execute("""

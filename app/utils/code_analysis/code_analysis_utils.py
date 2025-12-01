@@ -183,7 +183,7 @@ def analyze_github_commit_patterns(commits: List[Dict]) -> Dict:
     
     # Commit size analysis
     large_commits = sum(1 for commit in commits if commit.get("total_lines", 0) > 100)
-    small_commits = sum(1 for commit in commits if commit.get("total_lines", 0) < 20)
+    small_commits = sum(1 for commit in commits if commit.get("total_lines", 0) < 100)
     
     if large_commits > total_commits * 0.3:
         patterns["work_style"].append("feature_focused")
@@ -198,7 +198,6 @@ def analyze_github_commit_patterns(commits: List[Dict]) -> Dict:
         
         patterns["commit_frequency"] = {
             "total_commits": total_commits,
-            "development_days": duration,
             "avg_commits_per_day": round(total_commits / max(duration, 1), 2),
             "development_intensity": "high" if total_commits / max(duration, 1) > 2 else "steady"
         }

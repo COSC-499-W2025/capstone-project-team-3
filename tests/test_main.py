@@ -438,3 +438,20 @@ def test_main_integrates_non_code_file_checker():
         
         mock_non_code_checker.assert_called_once_with("/tmp/project1")
         
+def test_main_project_retreival(monkeypatch):
+    """Test main retrieves past insights correctly and prints project info."""
+    # Seed DB is called on startup, so projects exist
+    monkeypatch.setenv("PROMPT_ROOT", "0")
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.get_projects', return_value=[{"name": "Alpha Project"}]), \
+         patch('app.main.lookup_past_insights') as mock_lookup:
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        from app.main import main
+        main()
+        mock_lookup.assert_called_once()

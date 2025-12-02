@@ -64,8 +64,11 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
-    # Check if existing local Project Insights data is present
-    existing_projects = get_projects()
+# Check if existing local Project Insights data is present
+    try:
+        existing_projects = get_projects()
+    except Exception:
+        existing_projects = None
     if existing_projects:
         lookup_past_insights()
     else:

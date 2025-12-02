@@ -204,39 +204,83 @@ def seed_db():
                 c["message"]
             ))
 
-        # --- SKILL_ANALYSIS ---
-        skills = [
-            {"skill": "Python", "source": "code"},
-            {"skill": "Git", "source": "non-code"},
-            {"skill": "Flask", "source": "code"},
-            {"skill": "Machine Learning", "source": "non-code"},
-            {"skill": "React Native", "source": "code"},
-            {"skill": "TensorFlow", "source": "non-code"},
-            {"skill": "Docker", "source": "non-code"},
-        ]
+            # --- SKILL_ANALYSIS ---
+        if proj["name"] == "Alpha Project":
+            skills = [
+                {"skill": "Python", "source": "code"},
+                {"skill": "Flask", "source": "code"},
+                {"skill": "Backend Development", "source": "code"},
+                {"skill": "RESTful API Design", "source": "code"},
+                {"skill": "Team Collaboration", "source": "non-code"},
+                {"skill": "Git", "source": "code"},
+                {"skill": "Agile Methodologies", "source": "non-code"},
+            ]
+        elif proj["name"] == "Beta Project":
+            skills = [
+                {"skill": "Machine Learning", "source": "code"},
+                {"skill": "Data Preprocessing", "source": "code"},
+                {"skill": "Feature Engineering", "source": "code"},
+                {"skill": "Scikit-learn", "source": "code"},
+                {"skill": "TensorFlow", "source": "code"},
+                {"skill": "Pandas", "source": "code"},
+                {"skill": "Algorithm Optimization", "source": "code"},
+            ]
+        elif proj["name"] == "Gamma Project":
+            skills = [
+                {"skill": "React Native", "source": "code"},
+                {"skill": "Mobile Development", "source": "code"},
+                {"skill": "Fitness Tracking", "source": "non-code"},
+                {"skill": "Real-time Monitoring", "source": "code"},
+                {"skill": "Goal Setting", "source": "non-code"},
+                {"skill": "Social Sharing", "source": "non-code"},
+                {"skill": "Sphinx", "source": "code"},
+                {"skill": "CI/CD Integration", "source": "code"}
+            ]
         for s in skills:
             cursor.execute("""
                 INSERT OR IGNORE INTO SKILL_ANALYSIS (project_id, skill, source)
                 VALUES (?, ?, ?)
             """, (project_id, s["skill"], s["source"]))
 
-        # --- DASHBOARD_DATA ---
-        metrics = [
-            {"metric_name": "Lines of Code", "metric_value": str(proj["size_bytes"]), "chart_type": "bar"},
-            {"metric_name": "Files Count", "metric_value": str(len(proj["file_signatures"])), "chart_type": "pie"},
-        ]
-        for m in metrics:
-            cursor.execute("""
-                INSERT OR IGNORE INTO DASHBOARD_DATA (project_id, metric_name, metric_value, chart_type)
-                VALUES (?, ?, ?, ?)
-            """, (project_id, m["metric_name"], m["metric_value"], m["chart_type"]))
+            # --- DASHBOARD_DATA ---
+            metrics = [
+                {"metric_name": "Lines of Code", "metric_value": str(proj["size_bytes"]), "chart_type": "bar"},
+                {"metric_name": "Files Count", "metric_value": str(len(proj["file_signatures"])), "chart_type": "pie"},
+            ]
+            for m in metrics:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO DASHBOARD_DATA (project_id, metric_name, metric_value, chart_type)
+                    VALUES (?, ?, ?, ?)
+                """, (project_id, m["metric_name"], m["metric_value"], m["chart_type"]))
 
         # --- RESUME_SUMMARY ---
-        summary_text = f"{proj['name']} demonstrates skills in Python, Git, and collaborative project structure."
-        cursor.execute("""
-            INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text)
-            VALUES (?, ?)
-        """, (project_id, summary_text))
+        resume_bullets = []
+        if proj["name"] == "Alpha Project":
+            resume_bullets = [
+                "Designed and implemented a Flask-based web application for real-time task management.",
+                "Integrated user authentication and role-based access control.",
+                "Developed interactive dashboards for project tracking.",
+                "Collaborated with a cross-functional team using Git and Agile methodologies."
+            ]
+        elif proj["name"] == "Beta Project":
+            resume_bullets = [
+                "Built a machine learning pipeline for customer churn prediction using scikit-learn.",
+                "Automated data preprocessing and feature engineering workflows.",
+                "Deployed predictive models and evaluated performance metrics.",
+                "Utilized Pandas and TensorFlow for scalable data analysis."
+            ]
+        elif proj["name"] == "Gamma Project":
+            resume_bullets = [
+                "Developed a React Native mobile app for personalized fitness tracking.",
+                "Implemented real-time activity monitoring and goal setting features.",
+                "Enabled social sharing and user engagement functionalities.",
+                "Automated documentation generation using Sphinx and CI/CD integration."
+            ]
+        for bullet in resume_bullets:
+            cursor.execute("""
+                INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text)
+                VALUES (?, ?)
+            """, (project_id, bullet))
 
     conn.commit()
     conn.close()

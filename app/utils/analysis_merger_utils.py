@@ -1,8 +1,13 @@
 # Import Project Ranker to rank projects based on analysis results
 # from app.utils.project_ranker import project_ranker
 import json
-from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, git_code_analysis_results, project_name, project_signature
+import re
+from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, project_name, project_signature
 from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
+MAX_SKILLS = 10 #Maximum number of skills to be stored per project (TDB: adjust based on some condition)
+MAX_BULLETS = 5 #Maximum number of resume bullets to be stored per project (TBD: adjust based on some condition)
+MAX_SENTENCES = 5 #Maximum number of sentences in summary (TBD: adjust based on some condition)
+
 # Merge results from code and non-code analysis
 def merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature):
     """
@@ -76,42 +81,69 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         merged_results (list): Merged list of results.
         
     """
+    # ------------------------------- EXTRACTION LOGIC ----------------------------------
     
-    # Extract metrics 
-    code_metrics = code_analysis_results.get("Metrics", {})
+    # Detect git metrics (if git present, send git metrics to project ranker)
+    if 'authors' in code_analysis_results.get("Metrics", {}):
+        git_metrics = code_analysis_results.get("Metrics", {})
+        code_metrics = None
+    else:
+        git_metrics = None
+        code_metrics = code_analysis_results.get("Metrics", {})
+       
+    # Extract non-code metrics   
     non_code_metrics = non_code_analysis_results.get("Metrics", {})
+    
+     # Send Metrics to project Ranker in order to rank results
+    project_rank = get_project_rank(code_metrics, non_code_metrics,git_metrics)
 
-    # Extract & Format resume bullets
+    # Re-initialize metrics for merging (git vs local does not matter for storage)
+    code_metrics = code_analysis_results.get("Metrics", {})
+    
+    # Extract & Format code resume bullets
     code_resume_bullets = code_analysis_results.get("resume_bullets", [])
-    code_resume_bullets = [f"{bullet.strip()}." for bullet in code_resume_bullets if bullet.strip()]
+    code_resume_bullets = [
+    bullet.strip() if bullet.strip().endswith('.') else bullet.strip() + '.'
+    for bullet in code_resume_bullets if bullet.strip() ]
 
+    # Extract & Format non-code resume bullets
     non_code_resume_bullets = non_code_analysis_results.get("resume_bullets", [])
     non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
     
-    # Extract skills (use technical keywords from code analysis)
-    code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", [])
-    non_code_skills = non_code_analysis_results.get("skills", {})
-
-    # Extract project summary from non-code summary & code resume bullets
-    # use NLP summarization to generate concise summary
-    #Make resume bullets into sentences for summarization
-    summary = _sumy_lsa_summarize(non_code_analysis_results.get("summary", "") + " " + " ".join(code_resume_bullets),5)
-
+    # Extract skills (use technical roles & keyords from code analysis)
+    code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", []) + code_analysis_results.get("Metrics", {}).get("roles", [])
+    non_code_skills = non_code_analysis_results.get("skills", {}) if non_code_analysis_results else {}
+    non_code_tech_skills = non_code_skills.get("technical_skills", [])
+    non_code_soft_skills = non_code_skills.get("soft_skills", [])
     
-    # Send Metrics to project Ranker in order to rank results
-    project_rank = get_project_rank(code_metrics, non_code_metrics)
+    # Filter non-code technical skills by code languages
+    code_langs = set(code_metrics.get("languages", []))
+    if code_langs:
+        filtered_non_code_tech_skills = [
+            s for s in non_code_tech_skills
+            if any(lang.lower() in s.lower() for lang in code_langs)
+        ]
+    else:
+        filtered_non_code_tech_skills = []
+    
+    # Build summary based on avalilable data from non-code summary & code resume bullets 
+    summary = build_summary(code_resume_bullets, non_code_analysis_results.get("summary", ""),MAX_SENTENCES, project_name)
 
-    # Merge Skills
+    # -------------------------------------------- MERGING LOGIC ----------------------------------------
+
+    # Merge Skills (Ensure a proportional representation of code and non-code skills
+    merged_tech_skills = balance_merge(code_skills, filtered_non_code_tech_skills, MAX_SKILLS)
+    
     merged_skills = {
-        "technical_skills": code_skills + non_code_skills.get("technical_skills", []),
-        "soft_skills": non_code_skills.get("soft_skills", [])
+        "technical_skills": merged_tech_skills,
+        "soft_skills": non_code_soft_skills
     }
     
-    # Merge Resume Bullets
-    merged_resume_bullets = code_resume_bullets + non_code_resume_bullets
-    
-    # Merge Metrics
-    merged_metrics = {**code_metrics, **non_code_metrics} # Merge dictionaries since keys for each are unique
+    # Merge Resume Bullets (Ensure a proportional representation of code and non-code resume bullets)
+    merged_resume_bullets = balance_merge(code_resume_bullets, non_code_resume_bullets, MAX_BULLETS)
+
+    # Merged Metrics (Merge dictionaries since keys for each are unique)
+    merged_metrics = {**code_metrics, **non_code_metrics} 
     
     # Final Merged Results to be stored in DB
     merged_results = {
@@ -127,11 +159,66 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     
     return merged_results
 
-    # TO DO: Store ranked Project & Results in the database
+def balance_merge(code_list, non_code_list, max_items=10):
+    code_count = len(code_list)
+    non_code_count = len(non_code_list)
+    if code_count and non_code_count:
+        half = max_items // 2
+        code_take = min(half, code_count)
+        non_code_take = min(half, non_code_count)
+        remaining = max_items - (code_take + non_code_take)
+        # Fill remaining from the larger pool
+        if code_count - code_take > non_code_count - non_code_take:
+            code_take += remaining
+        else:
+            non_code_take += remaining
+        return code_list[:code_take] + non_code_list[:non_code_take]
+    elif code_count:
+        return code_list[:max_items]
+    else:
+        return non_code_list[:max_items]
+
+def remove_past_tense_action_verb(bullet):
+    """
+    Removes the leading past tense action verb from a resume bullet if present.
+    Example: 'Implemented RESTful endpoints...' -> 'RESTful endpoints...'
+    """
+    # Common past tense action verbs
+    past_tense_verbs = [
+        "implemented", "optimized", "refactored", "developed", "integrated", "created", "configured",
+        "applied", "monitored", "collaborated", "designed", "produced", "tested", "resolved", "documented"
+    ]
+    pattern = r"^(" + "|".join(past_tense_verbs) + r")\b\s*"
+    bullet = bullet.strip()
+    bullet = bullet[:-1] if bullet.endswith('.') else bullet
+    bullet = bullet[0].lower() + bullet[1:] if bullet else bullet
+    bullet = re.sub(pattern, "", bullet, flags=re.IGNORECASE)
+    return bullet.strip()
+
+def build_summary(code_resume_bullets, non_code_summary,MAX_SENTENCES, project_name):
+    """
+    This function builds a summary based on code resume bullets and non-code summary.
     
+    Args:
+        code_resume_bullets (list): List of resume bullets from code analysis.
+        non_code_summary (str): Summary from non-code analysis.
+        
+    Returns:
+        summary (str): Generated summary.
+    """
+    achievements = ", ".join(remove_past_tense_action_verb(b) for b in code_resume_bullets[:MAX_SENTENCES])
+    
+    if non_code_summary and not code_resume_bullets:
+        return non_code_summary.strip()
+    elif not non_code_summary and code_resume_bullets:
+        return f"Key technical achievements include : {achievements}."
+    elif non_code_summary and code_resume_bullets:
+        return f"{non_code_summary.strip()} Key technical achievements include : {achievements}."
+    else:
+        return "User contributed to the production of {project_name}"   
 
 
-def get_project_rank(code_metrics, non_code_metrics):
+def get_project_rank(code_metrics, non_code_metrics, git_metrics):
     """
     This function calls the project_ranker, sends the code and non-code metrics/results in order to rank the overall project.
 
@@ -152,7 +239,6 @@ def get_project_rank(code_metrics, non_code_metrics):
         project_score = 0
     
     return project_score
-
 
 def store_results_in_db(project_name, merged_results, project_rank, project_signature):
     """
@@ -183,7 +269,6 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
 def main():
     # Merge analysis results for testing
     merged_results = merge_analysis_results(code_analysis_results, non_code_analysis_result, project_name, project_signature)
-    
     
 if __name__ == "__main__":
     main()

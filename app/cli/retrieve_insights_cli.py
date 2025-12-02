@@ -26,28 +26,38 @@ def lookup_past_insights():
         # Grab user information
         user_info = UserPreferenceStore.get_user_info()
         
-        # Display 
+
+        # Portfolio Section
         print("\n" + "="*60)
         print("📁 PORTFOLIO")
         print("="*60)
-        print("\nProjects & Summaries:")
+        print("\n✨ Projects & Summaries:\n")
         for proj in portfolio["projects"]:
-            print(f"- {proj['name']} ({proj['created_at']}) (Duration: {proj['duration']})")
-            print(f"  Summary: {proj['summary']}")
-            print(f"  Skills: {', '.join(proj['skills'])}")
-        print("\nTop Ranked Projects:")
+            print(f"🗂️  {proj['name']}")
+            print(f"📅 Duration: {proj['duration']}")
+            print(f"📝 Summary: {proj['summary']}")
+            print(f" 🛠️ Skills:")
+            for skill in list(sorted(set(proj['skills'])))[:5]:  # Limit to 5 skills
+                print(f"      • {skill}")
+            print("\n" + "-"*40 + "\n")
+
+        print("🏆 Top Ranked Projects:\n")
         for proj in portfolio["top_projects"]:
-            print(f"- {proj['name']} ({proj['created_at']}) (Duration: {proj['duration']})")
-        print("\nChronological List of Projects:")
+            print(f"   🥇 {proj['name']} — ({proj['duration']})")
+        print("\n📜 Chronological List of Projects:\n")
         for proj in portfolio["chronological"]:
-            print(f"- {proj['name']} ({proj['created_at']}) (Duration: {proj['duration']})")
+            print(f"   ⏳ {proj['name']} — ({proj['duration']})")
         print("\n" + "="*60)
+
+        # Resume Section
         print("📄 RESUME")
         print("="*60)
-        print(f"User: {user_info.get('name')} | Email: {user_info.get('email')}")
-        print(f"Industry: {user_info.get('industry')} | Job Title: {user_info.get('job_title')} | Education: {user_info.get('education')}")
-        for bullet in resume["bullets"]:
-            print(f"- {bullet}") 
+        if user_info:
+            print(f"{user_info.get('name')} | 📧 Email: {user_info.get('email')}")
+            print(f"🏢 Industry: {user_info.get('industry')} | 🎓 Education: {user_info.get('education')}")
+        for bullet in set(resume["bullets"]):
+            print(f"   • {bullet}")
+        print("\n" + "="*60)
     else:
         print("Skipping display of past insights.")
         return

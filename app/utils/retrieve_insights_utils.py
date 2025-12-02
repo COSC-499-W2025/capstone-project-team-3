@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 
 def get_portfolio_resume_insights():
     
@@ -13,13 +14,13 @@ def get_portfolio_resume_insights():
         signature, name, rank, summary, created_at, last_modified = row
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
         skills = [s[0] for s in cur.fetchall()]
-        duration = f"{created_at} - {last_modified}"
+        duration = f"{format_date(created_at)} - {format_date(last_modified)}"
         projects.append({
             "name": name,
             "summary": summary,
             "duration": duration,
             "skills": skills,
-            "created_at": created_at,
+            "created_at": format_date(created_at),
             "rank": rank
         })
 
@@ -42,3 +43,7 @@ def get_portfolio_resume_insights():
     }, {
         "bullets": bullets
     }
+    
+def format_date(dt_str):
+    # Assumes format "YYYY-MM-DD HH:MM:SS"
+    return dt_str.split(" ")[0] if dt_str else ""

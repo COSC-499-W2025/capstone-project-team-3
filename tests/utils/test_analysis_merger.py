@@ -1,0 +1,48 @@
+from app.utils.analysis_merger_utils import merge_analysis_results
+
+def test_merge_analysis_results():
+    code_analysis_results = {
+        "resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "Metrics": {
+            "languages": ["Python"],
+            "technical_keywords": ["FastAPI", "pytest"],
+            "code_files_changed": 5
+        }
+    }
+    non_code_analysis_results = {
+        "summary": "Developed a scalable REST API using Python and FastAPI, enabling secure user authentication and data management. "
+                   "Integrated SQLAlchemy for efficient database operations and implemented comprehensive unit tests with pytest. "
+                   "Collaborated with cross-functional teams to document requirements and ensure project completeness, resulting in improved team communication and project delivery.",
+        "skills": {
+            "technical_skills": ["SQLAlchemy"],
+            "soft_skills": ["Communication"]
+        },
+        "resume_bullets": ["Documented requirements"],
+        "Metrics": {
+            "word_count": 1000,
+            "completeness_score": 0.95
+        }
+    }
+    project_name = "Test Project"
+    project_signature = "test_project_001"
+
+    merged = merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature)
+
+    assert "summary" in merged
+    assert "skills" in merged
+    assert "resume_bullets" in merged
+    assert "metrics" in merged
+
+    # Check merged skills
+    assert "FastAPI" in merged["skills"]["technical_skills"]
+    assert "SQLAlchemy" in merged["skills"]["technical_skills"]
+    assert "Communication" in merged["skills"]["soft_skills"]
+
+    # Check merged resume bullets
+    assert "Built REST API." in merged["resume_bullets"]
+    assert "Documented requirements." in merged["resume_bullets"]
+
+    # Check merged metrics
+    assert merged["metrics"]["languages"] == ["Python"]
+    assert merged["metrics"]["word_count"] == 1000
+    assert merged["metrics"]["completeness_score"] == 0.95

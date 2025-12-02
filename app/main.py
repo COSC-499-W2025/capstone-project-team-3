@@ -12,6 +12,7 @@ from app.cli.file_input import main as file_input_main
 from app.api.routes.upload_page import router as upload_page_router
 from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.manager.llm_consent_manager import LLMConsentManager
+from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.clean_up import cleanup_upload
@@ -174,7 +175,8 @@ def main():
                                 
                                 print(f"✅ Starting AI analysis for {project_name}")
                                 
-                                #TODO: merge code and non code LLM analysis then store into db
+                                # merge code and non code LLM analysis then store into db
+                                merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
                                 
                             except Exception as e:
                                 print(f"❌ Error initializing AI client: {e}")
@@ -194,8 +196,10 @@ def main():
                         
                         print(f"✅ Starting Local analysis for {project_name}")
                         
-                        #TODO: merge code and non code LOCAL analysis then store into db
-                
+                        # merge code and non code LOCAL analysis then store into db
+                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
+                        
+                        
                 #TODO: Print all information for projects using the signatures stored in project_signatures
                 #TODO: Print Chronological order of projects analyzed from the db
                 #TODO: Print Chronological Skills worked on from projects 

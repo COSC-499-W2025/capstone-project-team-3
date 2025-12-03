@@ -175,9 +175,8 @@ def main():
                                 
                                 print(f"✅ Starting AI analysis for {project_name}")
                                 
-                                #TODO: merge code and non code LLM analysis then store into db
-                                #TODO: combine code git and non git LLM analysis if both exist
-                                merge_analysis_results(non_code_results=[], code_results=[], project_name=project_name, project_signature = scan_result["signature"])
+                                # merge code and non code LLM analysis then store into db
+                                merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
                                 
                             except Exception as e:
                                 print(f"❌ Error initializing AI client: {e}")
@@ -197,8 +196,8 @@ def main():
                         
                         print(f"✅ Starting Local analysis for {project_name}")
                         
-                        #TODO: merge code and non code LOCAL analysis then store into db
-                        merge_analysis_results(non_code_results=[], code_results=[], project_name=project_name, project_signatures=project_signatures)
+                        # merge code and non code LOCAL analysis then store into db
+                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
                         
                         
                 #TODO: Print all information for projects using the signatures stored in project_signatures

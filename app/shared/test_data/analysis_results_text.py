@@ -34,6 +34,19 @@ resume_bullets = [
     "Collaborated with front-end developers to integrate APIs"
 ]
 
+code_resume_bullets = [
+    "Implemented RESTful endpoints for user management and authentication.",
+    "Optimized SQL queries for faster data retrieval and reporting.",
+    "Refactored legacy code to improve maintainability and scalability.",
+    "Developed automated test suites using pytest for backend modules.",
+    "Integrated third-party APIs for payment and notification services.",
+    "Applied design patterns to enhance code structure and readability.",
+    "Configured CI/CD pipelines for automated deployment.",
+    "Monitored application performance and resolved bottlenecks.",
+    "Created detailed technical documentation for backend processes.",
+    "Collaborated with QA engineers to resolve critical bugs."
+]
+
 activity_type_contribution = {
     "design": 5,
     "documentation": 2,
@@ -45,7 +58,7 @@ completeness_score = 0.92
 
 # Code analysis results (non-git)
 code_analysis_results = {
-    "Resume_bullets": resume_bullets,
+    "resume_bullets": code_resume_bullets,
     "Metrics": {
         "languages": metrics["languages"],
         "total_files": metrics["total_files"],
@@ -67,7 +80,7 @@ code_analysis_results = {
 
 # Git code analysis results
 git_code_analysis_results = {
-    "Resume_bullets": [],
+    "resume_bullets": code_resume_bullets,
     "Metrics": {
         "authors": metrics["authors"],
         "total_commits": metrics["total_commits"],
@@ -87,12 +100,17 @@ git_code_analysis_results = {
 
 # Non-code analysis results
 non_code_analysis_result = {
-    "summary": "Summary of the project",
+    "summary": "This project involved the development of a robust backend API using Python and FastAPI. "
+        "The team collaborated closely to design and optimize the database schema, ensuring high performance and scalability. "
+        "Comprehensive unit and integration tests were created to maintain code quality and reliability. "
+        "Documentation was produced to facilitate onboarding and future maintenance. "
+        "Throughout the project, agile methodologies and CI/CD pipelines were employed to streamline development and deployment. "
+        "Significant contributions were made in design, documentation, and implementation, resulting in a successful and maintainable product.",
     "skills": {
         "technical_skills": ["FastAPI", "SQLAlchemy"],
         "soft_skills": ["Communication", "Collaboration"]
     },
-    "Resume_bullets": resume_bullets,
+    "resume_bullets": resume_bullets,
     "Metrics": {
         "word_count": word_count,
         "completeness_score": completeness_score,

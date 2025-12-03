@@ -161,7 +161,9 @@ def main():
                     except Exception as e:
                         print(f"⚠️ Warning: Non-code parsing failed: {e}")
                         parsed_non_code = {'parsed_files': []}
-                    # --- End parsing integration ---                           
+                    # --- End parsing integration ---       
+
+                    
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -172,8 +174,24 @@ def main():
                             print(f"⚠️ No files to analyze in {project_name}. Skipping.")
                         continue
                     else: #Perform analysis
-
+                        
+                        # --- Non-code file checker integration (per project) ---
+                        print()
+                        print("🔎 Running non-code file checker...")
+                        non_code_result = classify_non_code_files_with_user_verification(project_path)
+                        print()
+                        print(f"--- Non-Code File Checker Results for {project_name} ---")
+                        print(f"Is git repo: {non_code_result['is_git_repo']}")
+                        print(f"User identity: {non_code_result['user_identity']}")
+                        print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
+                        print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
+                        print(f"Excluded files: {len(non_code_result['excluded'])}")
+                        print(f"--------------------------------------------------------")
+                        # --- End non-code file checker integration ---  
+                            
                         #TODO: Non Code parsing -> analysis
+                                
+                        #TODO: Code parsing -> analysis
                         print()
                         print(f"🔍 Analyzing code files in {project_name}... hang tight! ⚙️📁")
                         #check if git or non git 

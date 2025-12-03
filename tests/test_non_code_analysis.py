@@ -21,7 +21,7 @@ from app.utils.non_code_analysis.non_code_analysis_utils import (
 def test_pre_process_non_code_files():
     """Test basic functionality of pre_process_non_code_files with sample data."""
     sample_parsed_files = {
-        "files": [
+        "parsed_files": [
             {
                 "path": "/test/sample_document.txt",
                 "name": "sample_document.txt",
@@ -109,7 +109,7 @@ def test_generate_prompt_structure():
                 "word_count": 100,
                 "sentence_count": 10,
                 "readability_score": 12.5,
-                "summary": "This is a summary of file1.",
+                "summary": "This is a summary of file 1.",
                 "key_topics": ["Topic1", "Topic2"],
             },
             {
@@ -119,7 +119,7 @@ def test_generate_prompt_structure():
                 "word_count": 200,
                 "sentence_count": 20,
                 "readability_score": 10.0,
-                "summary": "This is a summary of file2.",
+                "summary": "This is a summary of file 2.",
                 "key_topics": ["Topic3", "Topic4"],
             },
         ],
@@ -288,7 +288,7 @@ def test_get_additional_metrics():
         {"content": "Team 3 is working on a project with LLM2 in 2025.",
          "file_name": "file1.pdf",
          "file_path": "/test/file1.pdf",
-         "word_count": 10
+         "word_count": 10,
          },
         
         {"content": "The project involves AI and machine learning.",
@@ -303,13 +303,14 @@ def test_get_additional_metrics():
     # Assertions
     assert "word_count" in additional_metrics
     assert "completeness_score" in additional_metrics
-    assert "contribution_activity" in additional_metrics
+    assert "doc_type_counts" in additional_metrics
+    assert "doc_type_frequency" in additional_metrics
 
 # ---------- Integration Tests ----------------- #
 def test_pipeline_integration():
     """Test the full pipeline from pre-processing to analysis."""
     sample_parsed_files = {
-        "files": [
+        "parsed_files": [
             {
                 "path": "/test/sample_document.txt",
                 "name": "sample_document.txt",

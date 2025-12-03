@@ -19,6 +19,7 @@ from typing import List, Optional
 
 from app.utils.git_utils import detect_git, extract_code_commit_content_by_author
 from app.utils.user_preference_utils import UserPreferenceStore
+from app.utils.non_code_analysis.non_code_file_checker import get_git_user_identity
 
 
 def _get_first_existing_path(file_paths: List[str]) -> Path:
@@ -56,32 +57,21 @@ def run_git_analysis_from_files(
 
     # 1) Pick one representative path inside the project.
     project_file = _get_first_existing_path(file_paths)
+    repo_root = project_file.parent    
+
+    # 2) Retrieve Git user identity (email from .git/config)
+    user_identity = get_git_user_identity(repo_root)
+    git_email = user_identity.get("email", "").strip()
     
+    print(f"[git-analysis] Using git author email: '{git_email}'")
 
-    print(f"[git-analysis] Detected Git repo for '{project_file}'.")
-    print(f"[git-analysis] Using GitHub username as author filter: '{github_user}'")
 
-    # 4) Call the existing git_utils function to extract commit data.
+    # 3) Call the existing git_utils function to extract commit data.
     json_output = extract_code_commit_content_by_author(
         path=project_file,
-        author=github_user,
+        author=git_email,
         include_merges=include_merges,
         max_commits=max_commits,
     )
 
     return json_output
-
-# Detect git in main - if git AND github_user_id exists 
-#   then call run_git_analysis_from_files() else call non git code parser
-
-    # # 2) Check if this lives inside a Git repo.
-    # if not detect_git(project_file):
-    #     print(f"[git-analysis] Path '{project_file}' is not inside a Git repository. Skipping Git analysis.")
-    #     return json.dumps([], indent=2)
-    
-# 2) Look up GitHub username from latest USER_PREFERENCES row.
-    # github_user = _lookup_github_user()
-    # if not github_user:
-    #     print("[git-analysis] No GitHub username found in USER_PREFERENCES. "
-    #           "Please set it via the user preferences CLI before running Git analysis.")
-    #     return json.dumps([], indent=2)

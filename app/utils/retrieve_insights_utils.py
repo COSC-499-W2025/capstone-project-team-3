@@ -30,7 +30,7 @@ def get_portfolio_resume_insights():
     top_projects = sorted(projects, key=lambda x: x["rank"], reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
-    chronological = sorted(projects, key=lambda x: x["created_at"])[:10]
+    chronological = sorted(projects, key=lambda x: (x["created_at"],len(x["skills"])), reverse=True)[:10]
 
     # Extract Resume bullets
     cur.execute("SELECT summary_text FROM RESUME_SUMMARY")

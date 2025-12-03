@@ -155,7 +155,6 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
         None
     """
     # Get DB connection 
-    get_connection()
     conn = get_connection()
     cur = conn.cursor()
         
@@ -172,6 +171,11 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
         cur.execute("""
         UPDATE PROJECT SET name = ? , summary = ? WHERE project_signature = ?
         """, (project_name, merged_results["summary"], project_signature))
+    
+        # Delete existing records to avoid duplicates
+        cur.execute("DELETE FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))
+        cur.execute("DELETE FROM RESUME_SUMMARY WHERE project_id = ?", (project_signature,))
+        cur.execute("DELETE FROM DASHBOARD_DATA WHERE project_id = ?", (project_signature,))
 
     # Store skills in SKILL_ANALYSIS table
     # Store soft skills

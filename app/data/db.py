@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
     rank INTEGER,
+    summary TEXT default NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     summary TEXT
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id TEXT,
     skill TEXT,
-    source TEXT, -- 'code' or 'non-code'
+    source TEXT, -- 'technical' or 'soft'
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 
@@ -70,7 +71,7 @@ CREATE TABLE IF NOT EXISTS DASHBOARD_DATA (
     project_id TEXT,
     metric_name TEXT,
     metric_value TEXT,
-    chart_type TEXT,
+    chart_type TEXT DEFAULT NONE,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );

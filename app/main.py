@@ -12,12 +12,17 @@ from app.cli.file_input import main as file_input_main
 from app.api.routes.upload_page import router as upload_page_router
 from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.manager.llm_consent_manager import LLMConsentManager
+from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.delete_insights_utils import get_projects
 from app.cli.retrieve_insights_cli import lookup_past_insights
+from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
+from app.utils.project_extractor import get_project_top_level_dirs 
+from app.utils.code_analysis.parse_code_utils import parse_code_flow
+from app.utils.git_utils import detect_git
 import uvicorn
 import os
 import sys
@@ -136,21 +141,12 @@ def main():
                     
                     print(f"🔍 Scanning project files...")
                     scan_result = run_scan_flow(project_path)
+                    top_level_dirs = get_project_top_level_dirs(project_path)
                     files = scan_result['files']
                 
                     print(f"✅ Found {len(files)} files")
 
-                    # --- Non-code file checker integration (per project) ---
-                    print("🔎 Running non-code file checker...")
-                    non_code_result = classify_non_code_files_with_user_verification(project_path)
-                    print(f"--- Non-Code File Checker Results for {project_name} ---")
-                    print(f"Is git repo: {non_code_result['is_git_repo']}")
-                    print(f"User identity: {non_code_result['user_identity']}")
-                    print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
-                    print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
-                    print(f"Excluded files: {len(non_code_result['excluded'])}")
-                    print(f"--------------------------------------------------------")
-                    # --- End non-code file checker integration ---       
+                    
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -160,6 +156,34 @@ def main():
                         elif scan_result["reason"] == "no_files":
                             print(f"⚠️ No files to analyze in {project_name}. Skipping.")
                         continue
+                    else: #Perform analysis
+                        
+                        # --- Non-code file checker integration (per project) ---
+                        print()
+                        print("🔎 Running non-code file checker...")
+                        non_code_result = classify_non_code_files_with_user_verification(project_path)
+                        print()
+                        print(f"--- Non-Code File Checker Results for {project_name} ---")
+                        print(f"Is git repo: {non_code_result['is_git_repo']}")
+                        print(f"User identity: {non_code_result['user_identity']}")
+                        print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
+                        print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
+                        print(f"Excluded files: {len(non_code_result['excluded'])}")
+                        print(f"--------------------------------------------------------")
+                        # --- End non-code file checker integration ---  
+                            
+                        #TODO: Non Code parsing -> analysis
+                                
+                        #TODO: Code parsing -> analysis
+                        print()
+                        print(f"🔍 Analyzing code files in {project_name}... hang tight! ⚙️📁")
+                        #check if git or non git 
+                        # if git: call parsing for git -> analysis for git USING LLM
+                        if detect_git(project_path):
+                            pass #TODO: call parsing for git
+                        # else call parsing for local -> analysis for local USING LLM
+                        else:
+                            parse_code = parse_code_flow(files, top_level_dirs)
                         
                     project_signatures.append(scan_result["signature"])
                     analysis_type = llm_manager.ask_analysis_type(project_name)
@@ -177,16 +201,10 @@ def main():
                             try:
                                 llm_client = GeminiLLMClient(api_key=api_key)
                                 
-                                #TODO: Non Code parsing -> analysis
-                                
-                                #TODO: Code parsing -> analysis
-                                #check if git or non git 
-                                # if git: call parsing for git -> analysis for git USING LLM
-                                # else call parsing for local -> analysis for local USING LLM
-                                
                                 print(f"✅ Starting AI analysis for {project_name}")
                                 
-                                #TODO: merge code and non code LLM analysis then store into db
+                                # merge code and non code LLM analysis then store into db
+                                merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
                                 
                             except Exception as e:
                                 print(f"❌ Error initializing AI client: {e}")
@@ -197,17 +215,13 @@ def main():
                     if analysis_type == 'local':
                         print("📊 Running local analysis...")
                         
-                        #TODO: Non Code parsing -> analysis
-                        
-                        #TODO: Code parsing -> analysis
-                        #check if git or non git
-                        # if git: call parsing for git -> analysis for git NON LLM
-                        # else call parsing for local -> analysis for local NON LLM
                         
                         print(f"✅ Starting Local analysis for {project_name}")
                         
-                        #TODO: merge code and non code LOCAL analysis then store into db
-                
+                        # merge code and non code LOCAL analysis then store into db
+                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
+                        
+                        
                 #TODO: Print all information for projects using the signatures stored in project_signatures
                 #TODO: Print Chronological order of projects analyzed from the db
                 #TODO: Print Chronological Skills worked on from projects 

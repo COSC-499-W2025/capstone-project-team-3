@@ -202,12 +202,6 @@ def main():
                     if analysis_type == 'local':
                         print("📊 Running local analysis...")
                         
-                        #TODO: Non Code parsing -> analysis
-                        
-                        #TODO: Code parsing -> analysis
-                        #check if git or non git
-                        # if git: call parsing for git -> analysis for git NON LLM
-                        # else call parsing for local -> analysis for local NON LLM
                         
                         print(f"✅ Starting Local analysis for {project_name}")
                         

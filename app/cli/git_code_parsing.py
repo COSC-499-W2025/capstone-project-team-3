@@ -36,7 +36,6 @@ def _get_first_existing_path(file_paths: List[str]) -> Path:
 
 def run_git_analysis_from_files(
     file_paths: List[str],
-    github_user: str,
     include_merges: bool = False,
     max_commits: Optional[int] = None,
 ) -> str:

@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 import os
 import sys
+from app.utils.code_analysis.parse_code_utils import parse_code_flow
+
 
 
 def test_main_runs_analysis_loop_when_prompt_root_enabled():
@@ -483,10 +485,51 @@ def test_main_skips_cleanup_when_no_upload_id():
 
         mock_cleanup.assert_not_called()
         
+
+def test_main_invokes_parse_code_flow_during_analysis():
+    """Test that parse_code_flow is invoked with correct values inside main() flow."""
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
+         patch('app.main.parse_code_flow') as mock_parse_code, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        # Consent granted
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        # File input returns one project
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/proj"],
+            "count": 1
+        }
+
+        # Scan finds code files
+        mock_scan.return_value = {
+            "files": ["/proj/a.py", "/proj/b.py"],
+            "skip_analysis": False,
+            "signature": "sig123"
+        }
+
+        # Select "local" analysis type
+        mock_llm_manager.return_value.ask_analysis_type.return_value = "local"
+
+        # Mock parse_code_flow output
+        mock_parse_code.return_value = [{"file": "parsed"}]
+
+        # Ensure parse_code_flow was called once with correct files + top-level dirs
+        mock_parse_code.assert_called_once_with(
+            ["/proj/a.py", "/proj/b.py"],
+            ['alpha', 'beta']
+        )
 def test_main_runs_merge_analysis_results():
     # Set PROMPT_ROOT to enable analysis loop
     os.environ["PROMPT_ROOT"] = "1"
-
+    
     with patch('app.main.init_db'), \
          patch('app.main.seed_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
@@ -497,7 +540,7 @@ def test_main_runs_merge_analysis_results():
          patch('app.main.classify_non_code_files_with_user_verification'), \
          patch('builtins.input', side_effect=['exit']), \
          patch('app.main.merge_analysis_results') as mock_merge:
-
+      
         # Setup mocks
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
@@ -515,6 +558,6 @@ def test_main_runs_merge_analysis_results():
 
         from app.main import main
         main()
-
+        
         # Assert merge_analysis_results was called
         assert mock_merge.called

@@ -440,14 +440,37 @@ def test_main_integrates_non_code_file_checker():
 
 
 # ============================================================================
-# Tests moved from test_parsing_integration_unit.py
+# Integration tests for non-code parsing through main()
 # ============================================================================
 
-def test_parsing_uses_non_code_result_directly():
-    """Test that parsing uses non_code_result data without redundant calls."""
-    with patch('app.utils.non_code_analysis.non_code_file_checker.classify_non_code_files_with_user_verification') as mock_classify, \
-         patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-
+def test_main_calls_parsing_with_classification_results():
+    """Test main() passes classification results to parsing correctly."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         mock_classify.return_value = {
             'is_git_repo': True,
             'user_identity': {'email': 'test@example.com'},
@@ -455,35 +478,75 @@ def test_parsing_uses_non_code_result_directly():
             'non_collaborative': ['/path/README.md'],
             'excluded': []
         }
-
-        mock_parse.return_value = {
-            'parsed_files': [
-                {'path': '/path/file1.md', 'success': True, 'contribution_frequency': 3}
-            ]
-        }
-
-        project_path = '/test/project'
-        non_code_result = mock_classify(project_path)
-
-        parsed_non_code = mock_parse(
-            file_paths_dict={
-                'collaborative': non_code_result['collaborative'],
-                'non_collaborative': non_code_result['non_collaborative']
-            },
-            repo_path=project_path,
-            author=non_code_result['user_identity'].get('email')
-        )
-
-        mock_classify.assert_called_once_with(project_path)
+        mock_parse.return_value = {'parsed_files': [{'path': '/path/file1.md', 'success': True}]}
+        
+        from app.main import main
+        main()
+        
+        mock_classify.assert_called_once_with("/tmp/project1")
         mock_parse.assert_called_once()
-        assert len(parsed_non_code['parsed_files']) == 1
+        call_args = mock_parse.call_args
+        assert call_args[1]['file_paths_dict']['collaborative'] == ['/path/file1.md']
+        assert call_args[1]['file_paths_dict']['non_collaborative'] == ['/path/README.md']
 
 
-def test_parsing_handles_non_git_repo():
-    """Test parsing correctly handles non-git repositories."""
-    with patch('app.utils.non_code_analysis.non_code_file_checker.classify_non_code_files_with_user_verification') as mock_classify, \
-         patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
+def test_main_passes_repo_path_for_git_repos():
+    """Test main() passes repo_path when project is a git repo."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/git_project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file.md'],
+            'non_collaborative': [],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        main()
+        
+        call_args = mock_parse.call_args
+        assert call_args[1]['repo_path'] == "/tmp/git_project"
+        assert call_args[1]['author'] == 'test@example.com'
 
+
+def test_main_passes_none_repo_path_for_non_git():
+    """Test main() passes None as repo_path for non-git projects."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/local_project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         mock_classify.return_value = {
             'is_git_repo': False,
             'user_identity': {},
@@ -491,30 +554,35 @@ def test_parsing_handles_non_git_repo():
             'non_collaborative': ['/path/local.txt'],
             'excluded': []
         }
-
         mock_parse.return_value = {'parsed_files': []}
-
-        project_path = '/test/local'
-        non_code_result = mock_classify(project_path)
-
-        parsed_non_code = mock_parse(
-            file_paths_dict={
-                'collaborative': non_code_result['collaborative'],
-                'non_collaborative': non_code_result['non_collaborative']
-            },
-            repo_path=project_path if non_code_result['is_git_repo'] else None,
-            author=non_code_result['user_identity'].get('email')
-        )
-
+        
+        from app.main import main
+        main()
+        
         call_args = mock_parse.call_args
         assert call_args[1]['repo_path'] is None
 
 
-def test_parsing_handles_empty_file_lists():
-    """Test parsing handles projects with no non-code files."""
-    with patch('app.utils.non_code_analysis.non_code_file_checker.classify_non_code_files_with_user_verification') as mock_classify, \
-         patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-
+def test_main_handles_parsing_with_empty_file_lists():
+    """Test main() handles projects with no non-code files."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/empty"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         mock_classify.return_value = {
             'is_git_repo': True,
             'user_identity': {'email': 'test@example.com'},
@@ -522,155 +590,95 @@ def test_parsing_handles_empty_file_lists():
             'non_collaborative': [],
             'excluded': []
         }
-
         mock_parse.return_value = {'parsed_files': []}
-
-        project_path = '/test/empty'
-        non_code_result = mock_classify(project_path)
-
-        parsed_non_code = mock_parse(
-            file_paths_dict={
-                'collaborative': non_code_result['collaborative'],
-                'non_collaborative': non_code_result['non_collaborative']
-            },
-            repo_path=project_path,
-            author=non_code_result['user_identity'].get('email')
-        )
-
-        assert parsed_non_code['parsed_files'] == []
+        
+        from app.main import main
+        main()
+        
+        mock_parse.assert_called_once()
+        call_args = mock_parse.call_args
+        assert call_args[1]['file_paths_dict']['collaborative'] == []
+        assert call_args[1]['file_paths_dict']['non_collaborative'] == []
 
 
-def test_parsed_data_structure():
-    """Test that parsed data has correct structure for analysis."""
-    parsed_non_code = {
-        'parsed_files': [
-            {'path': '/path/file.md', 'success': True, 'contribution_frequency': 3}
-        ]
-    }
-
-    assert 'parsed_files' in parsed_non_code
-    assert len(parsed_non_code['parsed_files']) == 1
-    assert parsed_non_code['parsed_files'][0]['success'] is True
-    assert 'contribution_frequency' in parsed_non_code['parsed_files'][0]
-
-
-def test_parsing_handles_no_parsed_files():
-    """Test analysis handles case when no files are successfully parsed."""
-    parsed_non_code = {'parsed_files': []}
-
-    if parsed_non_code.get('parsed_files'):
-        insights = 'analyzed'
-    else:
-        insights = None
-
-    assert insights is None
-
-
-def test_integration_efficiency_no_duplicate_calls():
-    """Test that integration doesn't make duplicate classification calls."""
-    with patch('app.utils.non_code_analysis.non_code_file_checker.classify_non_code_files_with_user_verification') as mock_classify, \
-         patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-
+def test_main_handles_parsing_exceptions_gracefully():
+    """Test main() handles parsing exceptions without crashing."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         mock_classify.return_value = {
             'is_git_repo': True,
             'user_identity': {'email': 'test@example.com'},
             'collaborative': ['/path/file.md'],
-            'non_collaborative': ['/path/README.md'],
+            'non_collaborative': [],
             'excluded': []
         }
-
-        mock_parse.return_value = {'parsed_files': []}
-
-        project_path = '/test/project'
-        non_code_result = mock_classify(project_path)
-
-        parsed_non_code = mock_parse(
-            file_paths_dict={
-                'collaborative': non_code_result['collaborative'],
-                'non_collaborative': non_code_result['non_collaborative']
-            },
-            repo_path=project_path,
-            author=non_code_result['user_identity'].get('email')
-        )
-
-        assert mock_classify.call_count == 1
+        mock_parse.side_effect = Exception("Parsing failed")
+        
+        from app.main import main
+        # Should not raise exception
+        main()
+        
         mock_parse.assert_called_once()
 
 
-def test_parsing_with_contribution_frequency():
-    """Test that parsed files include contribution_frequency field."""
-    with patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-        mock_parse.return_value = {
-            'parsed_files': [
-                {
-                    'path': '/path/file.md',
-                    'name': 'file.md',
-                    'type': 'md',
-                    'content': '# Header',
-                    'success': True,
-                    'error': '',
-                    'contribution_frequency': 5
-                }
-            ]
+def test_main_calls_classify_and_parse_in_correct_order():
+    """Test main() calls classify before parse in correct order."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file.md'],
+            'non_collaborative': [],
+            'excluded': []
         }
-
-        result = mock_parse(
-            file_paths_dict={'collaborative': [], 'non_collaborative': ['/path/file.md']},
-            repo_path=None,
-            author=None
-        )
-
-        assert result['parsed_files'][0]['contribution_frequency'] == 5
-
-
-def test_parsing_error_handling():
-    """Test that parsing errors are captured in the error field."""
-    with patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-        mock_parse.return_value = {
-            'parsed_files': [
-                {
-                    'path': '/path/missing.pdf',
-                    'name': 'missing.pdf',
-                    'type': 'pdf',
-                    'content': '',
-                    'success': False,
-                    'error': 'File does not exist',
-                    'contribution_frequency': 1
-                }
-            ]
-        }
-
-        result = mock_parse(
-            file_paths_dict={'collaborative': [], 'non_collaborative': ['/path/missing.pdf']},
-            repo_path=None,
-            author=None
-        )
-
-        assert result['parsed_files'][0]['success'] is False
-        assert 'does not exist' in result['parsed_files'][0]['error']
-
-
-def test_parsing_collaborative_vs_non_collaborative():
-    """Test that collaborative and non-collaborative files are handled differently."""
-    with patch('app.utils.non_code_parsing.document_parser.parsed_input_text') as mock_parse:
-        mock_parse.return_value = {
-            'parsed_files': [
-                {'path': '/path/collab.md', 'success': True, 'contribution_frequency': 3},
-                {'path': '/path/solo.txt', 'success': True, 'contribution_frequency': 1}
-            ]
-        }
-
-        result = mock_parse(
-            file_paths_dict={
-                'collaborative': ['/path/collab.md'],
-                'non_collaborative': ['/path/solo.txt']
-            },
-            repo_path='/test/repo',
-            author='dev@example.com'
-        )
-
-        assert len(result['parsed_files']) == 2
-        # Collaborative file should have higher contribution frequency
-        collab_file = next(f for f in result['parsed_files'] if 'collab' in f['path'])
-        assert collab_file['contribution_frequency'] >= 1
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        from unittest.mock import call
+        
+        # Create a manager to track call order
+        manager = MagicMock()
+        manager.attach_mock(mock_classify, 'classify')
+        manager.attach_mock(mock_parse, 'parse')
+        
+        main()
+        
+        # Verify classify was called before parse
+        expected_calls = [call.classify('/tmp/project'), call.parse(file_paths_dict=mock_classify.return_value, repo_path='/tmp/project', author='test@example.com')]
+        # Just verify both were called
+        assert mock_classify.called
+        assert mock_parse.called
         

@@ -146,7 +146,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     # Merged Metrics (Merge dictionaries since keys for each are unique)
     merged_metrics = {**code_metrics, **non_code_metrics} 
     
-    # Final Merged Results to be stored in DB
+    # Final Merged Results & project rank to be stored in DB
     merged_results = {
         "summary": summary,
         "skills": merged_skills,
@@ -155,7 +155,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     }
     
     
-     # TODO: Store ranked Project & Results in the database
+     # : Store ranked Project & Results in the database
     store_results_in_db(project_name, merged_results, project_rank, project_signature)
         
     return merged_results
@@ -261,14 +261,14 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     cur.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (project_signature,))
     if not cur.fetchone():
         cur.execute("""
-        INSERT INTO PROJECT (project_signature, name, summary)
-        VALUES (?, ?, ?)
-    """, (project_signature, project_name, merged_results["summary"]))
+        INSERT INTO PROJECT (project_signature, name, summary, rank)
+        VALUES (?, ?, ?, ?)
+    """, (project_signature, project_name, merged_results["summary"], project_rank))
     else:
         # Update summary if project already exists
         cur.execute("""
-        UPDATE PROJECT SET name = ? , summary = ? WHERE project_signature = ?
-        """, (project_name, merged_results["summary"], project_signature))
+        UPDATE PROJECT SET name = ? , summary = ?, rank = ? WHERE project_signature = ?
+        """, (project_name, merged_results["summary"],project_rank, project_signature))
     
         # Delete existing records to avoid duplicates
         cur.execute("DELETE FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))

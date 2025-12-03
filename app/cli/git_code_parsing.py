@@ -1,13 +1,13 @@
 """
-CLI to analyze Git history for a project, given a list of file paths.
+CLI helper to analyze Git history for a project, given a list of file paths.
 
 Flow:
 1. Accept an array of file paths belonging to a single project.
-2. Use detect_git() on one of the files to determine if the project is a Git repo.
-3. Look up the user's GitHub username 
-4. If both conditions are satisfied, call extract_code_commit_content_by_author()
+2. Pick one file and use it to locate the repo.
+3. Look up the Git user email from .git config.
+4. Call extract_code_commit_content_by_author()
    to pull commit-level data for that author across the repo.
-5. Print the JSON output (later can be stored into GIT_HISTORY, etc.).
+5. Return the JSON output (later can be stored into GIT_HISTORY, etc.).
 """
 
 from __future__ import annotations
@@ -17,8 +17,7 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from app.utils.git_utils import detect_git, extract_code_commit_content_by_author
-from app.utils.user_preference_utils import UserPreferenceStore
+from app.utils.git_utils import extract_code_commit_content_by_author
 from app.utils.non_code_analysis.non_code_file_checker import get_git_user_identity
 
 
@@ -51,7 +50,6 @@ def run_git_analysis_from_files(
 
     Returns:
         JSON string produced by extract_code_commit_content_by_author()
-        or "[]" (JSON empty list) if analysis cannot proceed.
     """
     
 
@@ -63,6 +61,12 @@ def run_git_analysis_from_files(
     user_identity = get_git_user_identity(repo_root)
     git_email = user_identity.get("email", "").strip()
     
+    print(f"[git-analysis] Using git author email: '{git_email}'")
+    
+    if not git_email:
+        print("[git-analysis] Could not determine git user email. Skipping Git analysis.")
+        return "[]"
+
     print(f"[git-analysis] Using git author email: '{git_email}'")
 
 

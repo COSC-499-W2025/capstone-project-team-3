@@ -482,3 +482,39 @@ def test_main_skips_cleanup_when_no_upload_id():
         main()
 
         mock_cleanup.assert_not_called()
+        
+def test_main_runs_merge_analysis_results():
+    # Set PROMPT_ROOT to enable analysis loop
+    os.environ["PROMPT_ROOT"] = "1"
+
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('builtins.input', side_effect=['exit']), \
+         patch('app.main.merge_analysis_results') as mock_merge:
+
+        # Setup mocks
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+
+        from app.main import main
+        main()
+
+        # Assert merge_analysis_results was called
+        assert mock_merge.called

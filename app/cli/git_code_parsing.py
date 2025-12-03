@@ -34,35 +34,6 @@ def _get_first_existing_path(file_paths: List[str]) -> Path:
     raise ValueError("None of the provided file paths exist on disk.")
 
 
-def get_latest_github_user() -> Optional[str]:
-    """
-    For a single-user desktop app:
-    Return the most recently saved github_user from USER_PREFERENCES,
-    or None if not set.
-    """
-    store = UserPreferenceStore()
-    try:
-        cur = store.conn.cursor()
-        cur.execute(
-            """
-            SELECT github_user
-            FROM USER_PREFERENCES
-            ORDER BY updated_at DESC
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
-    finally:
-        # Always close the connection
-        store.close()
-
-    if not row:
-        return None
-
-    github_user = row[0] or ""
-    github_user = github_user.strip()
-    return github_user or None
-
 def run_git_analysis_from_files(
     file_paths: List[str],
     github_user: str,

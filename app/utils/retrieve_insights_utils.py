@@ -1,10 +1,12 @@
 import sqlite3
 from datetime import datetime
+from app.data.db import get_connection
+
 
 def get_portfolio_resume_insights():
     
     # Connect to the database
-    conn = sqlite3.connect("app/data/app.sqlite3")
+    conn = get_connection()
     cur = conn.cursor()
     
     # Build Portfolio: Project name, summary, duration, skills

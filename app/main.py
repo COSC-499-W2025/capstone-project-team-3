@@ -133,37 +133,7 @@ def main():
                     files = scan_result['files']
                 
                     print(f"✅ Found {len(files)} files")
-
-                    # --- Non-code file checker integration (per project) ---
-                    print("🔎 Running non-code file checker...")
-                    non_code_result = classify_non_code_files_with_user_verification(project_path)
-                    print(f"--- Non-Code File Checker Results for {project_name} ---")
-                    print(f"Is git repo: {non_code_result['is_git_repo']}")
-                    print(f"User identity: {non_code_result['user_identity']}")
-                    print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
-                    print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
-                    print(f"Excluded files: {len(non_code_result['excluded'])}")
-                    print(f"--------------------------------------------------------")
-                    # --- End non-code file checker integration --- 
-
-                    # --- Parsing integration ---
-                    print("📄 Parsing non-code files...")
-                    try:
-                        parsed_non_code = parsed_input_text(
-                            file_paths_dict={
-                                'collaborative': non_code_result['collaborative'],
-                                'non_collaborative': non_code_result['non_collaborative']
-                            },
-                            repo_path=project_path if non_code_result['is_git_repo'] else None,
-                            author=non_code_result['user_identity'].get('email')
-                        )
-                        print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
-                    except Exception as e:
-                        print(f"⚠️ Warning: Non-code parsing failed: {e}")
-                        parsed_non_code = {'parsed_files': []}
-                    # --- End parsing integration ---       
-
-                    
+                   
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -187,9 +157,24 @@ def main():
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
                         print(f"Excluded files: {len(non_code_result['excluded'])}")
                         print(f"--------------------------------------------------------")
-                        # --- End non-code file checker integration ---  
-                            
-                        #TODO: Non Code parsing -> analysis
+                        # --- End non-code file checker integration ---
+                        
+                        # --- Parsing integration ---
+                        print("📄 Parsing non-code files...")
+                        try:
+                            parsed_non_code = parsed_input_text(
+                                file_paths_dict={
+                                    'collaborative': non_code_result['collaborative'],
+                                    'non_collaborative': non_code_result['non_collaborative']
+                                },
+                                repo_path=project_path if non_code_result['is_git_repo'] else None,
+                                author=non_code_result['user_identity'].get('email')
+                            )
+                            print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
+                        except Exception as e:
+                            print(f"⚠️ Warning: Non-code parsing failed: {e}")
+                            parsed_non_code = {'parsed_files': []}
+                        # --- End parsing integration ---  
                                 
                         #TODO: Code parsing -> analysis
                         print()

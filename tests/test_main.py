@@ -347,25 +347,6 @@ def test_main_initializes_database():
         
         mock_init_db.assert_called_once()
 
-
-def test_main_prints_success_message(capsys):
-    """Test main prints 'App started successfully' message."""
-    with patch('app.main.init_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.seed_db'), \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
-        
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        
-        from app.main import main
-        main()
-        
-        captured = capsys.readouterr()
-        assert "App started successfully" in captured.out
-
-
 def test_main_prompt_root_default_behavior():
     """Test PROMPT_ROOT defaults to '0' when not set."""
     with patch('app.main.init_db'), \

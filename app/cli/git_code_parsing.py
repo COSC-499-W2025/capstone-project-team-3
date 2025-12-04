@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from app.utils.git_utils import extract_code_commit_content_by_author
+from app.utils.git_utils import extract_code_commit_content_by_author, is_collaborative
 from app.utils.non_code_analysis.non_code_file_checker import get_git_user_identity
 
 
@@ -34,42 +34,41 @@ def _get_first_existing_path(file_paths: List[str]) -> Path:
     raise ValueError("None of the provided file paths exist on disk.")
 
 
+
 def run_git_analysis_from_files(
     file_paths: List[str],
     include_merges: bool = False,
     max_commits: Optional[int] = None,
 ) -> str:
     """
-    Core function you can call from main.py 
-
-    Args:
-        file_paths: List of file paths inside the project.
-        include_merges: Whether to include merge commits when extracting history.
-        max_commits: Optional cap on number of commits to return.
-
-    Returns:
-        JSON string produced by extract_code_commit_content_by_author()
+    Core function to call from main.py for Git-based analysis.
     """
-    
 
     # 1) Pick one representative path inside the project.
     project_file = _get_first_existing_path(file_paths)
-    repo_root = project_file.parent    
+    repo_root = project_file.parent
 
     # 2) Retrieve Git user identity (email from .git/config)
     user_identity = get_git_user_identity(repo_root)
     git_email = user_identity.get("email", "").strip()
-    
+
     print(f"[git-analysis] Using git author email: '{git_email}'")
-    
+
     if not git_email:
         print("[git-analysis] Could not determine git user email. Skipping Git analysis.")
         return "[]"
 
-    print(f"[git-analysis] Using git author email: '{git_email}'")
+    # 3) Check if repository is collaborative
+    try:
+        collaborative = is_collaborative(project_file)
+        if collaborative:
+            print("[git-analysis] This is a COLLABORATIVE project (multiple authors detected).")
+        else:
+            print("[git-analysis] This is a SOLO project (only one author detected).")
+    except Exception as e:
+        print(f"[git-analysis] Could not determine collaboration status: {e}")
 
-
-    # 3) Call the existing git_utils function to extract commit data.
+    # 4) Call commit extraction
     json_output = extract_code_commit_content_by_author(
         path=project_file,
         author=git_email,

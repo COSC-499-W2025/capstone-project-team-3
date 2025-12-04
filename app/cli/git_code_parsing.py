@@ -105,5 +105,9 @@ def run_git_analysis_from_files(
         include_merges=include_merges,
         max_commits=max_commits,
     )
+        # 🔍 DEBUG PRINT
+    print("\n======= GIT ANALYSIS RAW OUTPUT =======")
+    print(json_output)
+    print("=======================================\n")
 
     return json_output

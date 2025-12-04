@@ -62,7 +62,7 @@ def run_git_parsing_from_files(
     max_commits: Optional[int] = None,
 ) -> str:
     """
-    Core function to call from main.py for Git-based analysis.
+    Core function to call from main.py for Git-based parsing.
 
     Args:
         file_paths: List of file paths inside the project.

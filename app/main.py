@@ -21,7 +21,7 @@ from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import get_project_top_level_dirs 
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
-from app.cli.git_code_parsing import run_git_analysis_from_files
+from app.cli.git_code_parsing import run_git_parsing_from_files
 
 import uvicorn
 import os
@@ -184,9 +184,9 @@ def main():
                         #check if git or non git 
                         # if git: call parsing for git -> analysis for git USING LLM
                         if detect_git(project_path):
-                            print("📘 Git repository detected — running Git-based code analysis...")
+                            print("📘 Git repository detected — running Git-based code parsing...")
                             try:
-                                code_git_history_json = run_git_analysis_from_files(
+                                code_git_history_json = run_git_parsing_from_files(
                                 file_paths=files,
                                 include_merges=False,
                                 max_commits=None,  # set a limit if needed

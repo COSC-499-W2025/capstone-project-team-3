@@ -56,7 +56,7 @@ def _get_preferred_author_email() -> Optional[str]:
     email = (row[0] or "").strip()
     return email or None
 
-def run_git_analysis_from_files(
+def run_git_parsing_from_files(
     file_paths: List[str],
     include_merges: bool = False,
     max_commits: Optional[int] = None,

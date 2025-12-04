@@ -191,9 +191,9 @@ def main():
                                 include_merges=False,
                                 max_commits=None,  # set a limit if needed
                                 )
-                                print("✅ Git code analysis completed.")
+                                print("✅ Git code parsing completed.")
                             except Exception as e:
-                                print(f"⚠️ Git code analysis failed: {e}")
+                                print(f"⚠️ Git code parsing failed: {e}")
                         # else call parsing for local -> analysis for local USING LLM
                         else:
                             parse_code = parse_code_flow(files, top_level_dirs)

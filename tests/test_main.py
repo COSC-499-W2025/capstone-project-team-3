@@ -2,9 +2,12 @@ import pytest
 from unittest.mock import patch, MagicMock
 import os
 import sys
-from app.utils.code_analysis.parse_code_utils import parse_code_flow
 
-
+@pytest.fixture(autouse=True)
+def mock_os_operations():
+    """Mock filesystem operations for all tests."""
+    with patch('os.makedirs'):
+        yield
 
 def test_main_runs_analysis_loop_when_prompt_root_enabled():
     """Test main runs analysis loop when PROMPT_ROOT=1."""
@@ -777,3 +780,185 @@ def test_main_invokes_parse_code_flow_during_analysis():
             ["/proj/a.py", "/proj/b.py"],
             ['alpha', 'beta']
         )
+def test_main_calls_analyze_project_clean_in_local_mode():
+    """Test main() calls analyze_project_clean with parsed_non_code in local analysis mode."""
+    with patch('os.makedirs'), \
+         patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.analyze_project_clean') as mock_analyze_clean, \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['dir1']), \
+         patch('app.main.parse_code_flow'), \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        # Setup mocks
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/test_project"], 
+            "count": 1
+        }
+        
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig_123"
+        }
+        
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/doc1.md'],
+            'non_collaborative': ['/path/README.md'],
+            'excluded': []
+        }
+        
+        # Mock parsed data from parsed_input_text
+        mock_parsed_data = {
+            'parsed_files': [
+                {
+                    'name': 'doc1.md',
+                    'path': '/path/doc1.md',
+                    'content': 'Test documentation content',
+                    'success': True,
+                    'contribution_frequency': 5
+                }
+            ]
+        }
+        mock_parse.return_value = mock_parsed_data
+        
+        # Mock analyze_project_clean output
+        mock_analyze_clean.return_value = {
+            'summary': 'Test summary',
+            'bullets': ['Bullet 1', 'Bullet 2'],
+            'skills': {
+                'technical_skills': ['Python'],
+                'soft_skills': ['Communication']
+            },
+            'completeness_score': 85,
+            'word_count': 100,
+            'doc_type_counts': {},
+            'doc_type_frequency': {}
+        }
+        
+        # Run main
+        from app.main import main
+        main()
+        
+        # Verify analyze_project_clean was called with parsed_non_code
+        mock_analyze_clean.assert_called_once_with(mock_parsed_data)
+
+    def test_main_calls_ai_non_code_analysis_pipeline():
+         patch('os.makedirs'), \
+         patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.pre_process_non_code_files') as mock_preprocess, \
+         patch('app.main.aggregate_non_code_summaries') as mock_aggregate, \
+         patch('app.main.create_non_code_analysis_prompt') as mock_create_prompt, \
+         patch('app.main.generate_non_code_insights') as mock_generate_insights, \
+         patch('app.main.get_additional_metrics') as mock_get_metrics, \
+         patch('app.main.GeminiLLMClient'), \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['dir1']), \
+         patch('app.main.parse_code_flow'), \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1', 'GEMINI_API_KEY': 'test_key'}):
+        
+        # Setup mocks
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/test_project"], 
+            "count": 1
+        }
+        
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig_123"
+        }
+        
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'ai'
+        
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/doc1.md'],
+            'non_collaborative': ['/path/README.md'],
+            'excluded': []
+        }
+        
+        # Mock parsed data
+        mock_parsed_data = {
+            'parsed_files': [
+                {
+                    'name': 'doc1.md',
+                    'path': '/path/doc1.md',
+                    'content': 'Test documentation content',
+                    'success': True,
+                    'contribution_frequency': 5
+                }
+            ]
+        }
+        mock_parse.return_value = mock_parsed_data
+        
+        # Mock AI pipeline steps
+        mock_llm1_results = [{'summary': 'Test summary', 'keywords': ['test', 'doc']}]
+        mock_preprocess.return_value = mock_llm1_results
+        
+        mock_project_metrics = {'total_words': 100, 'doc_count': 1}
+        mock_aggregate.return_value = mock_project_metrics
+        
+        mock_prompt = "Analyze this project: ..."
+        mock_create_prompt.return_value = mock_prompt
+        
+        mock_ai_insights = {
+            'summary': 'AI-generated summary',
+            'bullets': ['AI bullet 1', 'AI bullet 2'],
+            'skills': {
+                'technical_skills': ['Python', 'Docker'],
+                'soft_skills': ['Leadership']
+            }
+        }
+        mock_generate_insights.return_value = mock_ai_insights
+        
+        mock_additional_metrics = {'completeness_score': 90, 'word_count': 150}
+        mock_get_metrics.return_value = mock_additional_metrics
+        
+        # Run main
+        from app.main import main
+        main()
+        
+        # Verify the AI pipeline was called in correct order with correct data
+        mock_preprocess.assert_called_once_with(mock_parsed_data, language="english")
+        mock_aggregate.assert_called_once_with(mock_llm1_results)
+        mock_create_prompt.assert_called_once_with(mock_project_metrics)
+        mock_generate_insights.assert_called_once_with(mock_prompt)
+        mock_get_metrics.assert_called_once_with(mock_llm1_results)
+        
+        # Verify final result has metrics added
+        assert mock_generate_insights.called
+        

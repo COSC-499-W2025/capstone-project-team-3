@@ -391,7 +391,6 @@ def create_non_code_analysis_prompt(aggregated_project_metrics):
     Returns formatted prompt string that follows the structure of llm2_metrics.
     """
     user_prefs = UserPreferenceStore.get_latest_preferences_no_email()
-    print("DEBUG user_prefs:", user_prefs)
 
     # Fetch user preferences from DB if available
     if UserPreferenceStore.get_latest_preferences_no_email() is not None:

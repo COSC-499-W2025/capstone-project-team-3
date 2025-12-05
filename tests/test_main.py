@@ -858,8 +858,7 @@ def test_main_calls_analyze_project_clean_in_local_mode():
         # Verify analyze_project_clean was called with parsed_non_code
         mock_analyze_clean.assert_called_once_with(mock_parsed_data)
 
-        def test_main_calls_ai_non_code_analysis_pipeline():
-    """Test main() calls AI non-code analysis pipeline with parsed_non_code in AI mode."""
+def test_main_calls_ai_non_code_analysis_pipeline():
     with patch('os.makedirs'), \
          patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \

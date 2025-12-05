@@ -412,11 +412,8 @@ def test_main_integrates_non_code_file_checker():
         }
         mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         mock_non_code_checker.return_value = {
-            "is_git_repo": True,
-            "user_identity": {"name": "Test User"},
             "collaborative": ["README.md"],
-            "non_collaborative": [],
-            "excluded": []
+            "non_collaborative": []
         }
         
         from app.main import main

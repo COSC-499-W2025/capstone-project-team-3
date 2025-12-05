@@ -459,8 +459,6 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
             "doc_type_frequency": {},
         }
 
-    # ...existing code for project_content_lower, doc_descriptions, etc...
-
     project_content_lower = project_content.lower()
 
     doc_descriptions = {

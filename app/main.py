@@ -14,6 +14,9 @@ from app.api.routes.get_upload_id import router as upload_resolver_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.env_utils import check_gemini_api_key
+from app.utils.scan_utils import run_scan_flow 
+from app.utils.delete_insights_utils import get_projects
+from app.cli.retrieve_insights_cli import lookup_past_insights
 from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
@@ -84,6 +87,16 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
+# Check if existing local Project Insights data is present
+    try:
+        existing_projects = get_projects()
+    except Exception:
+        existing_projects = None
+    if existing_projects:
+        lookup_past_insights()
+    else:
+        pass  # No existing projects found
+
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):

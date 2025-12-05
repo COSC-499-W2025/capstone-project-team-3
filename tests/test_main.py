@@ -731,11 +731,6 @@ def test_main_skips_cleanup_when_no_upload_id():
         
 def test_main_invokes_parse_code_flow_during_analysis():
     """Test that parse_code_flow is invoked with correct values inside main() flow."""
-    with patch('app.main.init_db'), \
-         patch('app.main.seed_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification'), \
          patch('app.main.detect_git', return_value=False), \
@@ -768,9 +763,6 @@ def test_main_invokes_parse_code_flow_during_analysis():
 
         # Mock parse_code_flow output
         mock_parse_code.return_value = [{"file": "parsed"}]
-
-        from app.main import main
-        main()
 
         # Ensure parse_code_flow was called once with correct files + top-level dirs
         mock_parse_code.assert_called_once_with(
@@ -960,3 +952,39 @@ def test_main_calls_ai_non_code_analysis_pipeline():
         mock_create_prompt.assert_called_once_with(mock_project_metrics)
         mock_generate_insights.assert_called_once_with(mock_prompt)
         mock_get_metrics.assert_called_once_with(mock_llm1_results)
+        
+def test_main_runs_merge_analysis_results():
+    # Set PROMPT_ROOT to enable analysis loop
+    os.environ["PROMPT_ROOT"] = "1"
+    
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('builtins.input', side_effect=['exit']), \
+         patch('app.main.merge_analysis_results') as mock_merge:
+      
+        # Setup mocks
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+
+        from app.main import main
+        main()
+        
+        # Assert merge_analysis_results was called
+        assert mock_merge.called

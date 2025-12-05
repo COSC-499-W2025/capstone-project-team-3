@@ -22,6 +22,12 @@ from app.utils.project_extractor import get_project_top_level_dirs
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
+from app.utils.non_code_analysis.non_code_analysis_utils import (
+    pre_process_non_code_files,
+    aggregate_non_code_summaries,
+    create_non_code_analysis_prompt,
+    generate_non_code_insights,
+    get_additional_metrics)
 import uvicorn
 import os
 import sys

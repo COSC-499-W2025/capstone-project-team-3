@@ -20,6 +20,7 @@ from app.cli.retrieve_insights_cli import lookup_past_insights
 from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
+from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import get_project_top_level_dirs 
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
@@ -145,8 +146,7 @@ def main():
                     files = scan_result['files']
                 
                     print(f"✅ Found {len(files)} files")
-
-                    
+                   
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -170,9 +170,24 @@ def main():
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
                         print(f"Excluded files: {len(non_code_result['excluded'])}")
                         print(f"--------------------------------------------------------")
-                        # --- End non-code file checker integration ---  
-                            
-                        #TODO: Non Code parsing -> analysis
+                        # --- End non-code file checker integration ---
+                        
+                        # --- Parsing integration ---
+                        print("📄 Parsing non-code files...")
+                        try:
+                            parsed_non_code = parsed_input_text(
+                                file_paths_dict={
+                                    'collaborative': non_code_result['collaborative'],
+                                    'non_collaborative': non_code_result['non_collaborative']
+                                },
+                                repo_path=project_path if non_code_result['is_git_repo'] else None,
+                                author=non_code_result['user_identity'].get('email')
+                            )
+                            print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
+                        except Exception as e:
+                            print(f"⚠️ Warning: Non-code parsing failed: {e}")
+                            parsed_non_code = {'parsed_files': []}
+                        # --- End parsing integration ---  
                                 
                         #TODO: Code parsing -> analysis
                         print()
@@ -204,7 +219,11 @@ def main():
                                 print(f"✅ Starting AI analysis for {project_name}")
                                 
                                 # merge code and non code LLM analysis then store into db
-                                merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                try:
+                                    merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                except Exception as e:
+                                    print(f"❌ Error storing analysis results for {project_name}: {e}")
+                                    
                                 
                             except Exception as e:
                                 print(f"❌ Error initializing AI client: {e}")
@@ -219,8 +238,10 @@ def main():
                         print(f"✅ Starting Local analysis for {project_name}")
                         
                         # merge code and non code LOCAL analysis then store into db
-                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
-                        
+                        try:
+                            merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature=scan_result["signature"])
+                        except Exception as e:
+                            print(f"❌ Error storing analysis results for {project_name}: {e}")
                         
                 #TODO: Print all information for projects using the signatures stored in project_signatures
                 #TODO: Print Chronological order of projects analyzed from the db

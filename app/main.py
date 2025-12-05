@@ -152,11 +152,8 @@ def main():
                         non_code_result = classify_non_code_files_with_user_verification(project_path)
                         print()
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
-                        print(f"Is git repo: {non_code_result['is_git_repo']}")
-                        print(f"User identity: {non_code_result['user_identity']}")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
-                        print(f"Excluded files: {len(non_code_result['excluded'])}")
                         print(f"--------------------------------------------------------")
                         # --- End non-code file checker integration ---
                         
@@ -321,3 +318,5 @@ if __name__ == "__main__":
 
     # Now run the CLI flow
     main()
+
+    

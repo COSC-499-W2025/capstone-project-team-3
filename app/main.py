@@ -21,6 +21,7 @@ from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import get_project_top_level_dirs 
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
+from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 import uvicorn
 import os
 import sys
@@ -216,12 +217,17 @@ def main():
                     # Handle local analysis (including fallbacks from AI failures)
                     if analysis_type == 'local':
                         print("📊 Running local analysis...")
-                        
-                        
                         print(f"✅ Starting Local analysis for {project_name}")
                         
+                        try:
+                            # Run non-3rd party analysis (no LLM) using parsed_non_code
+                            non_code_local_results = analyze_project_clean(parsed_non_code)
+                            print(f"✅ Non Code Analysis completed successfully!")
+                        except Exception as e:
+                            print(f"⚠️ Non Code Local analysis failed: {e}")
+                            non_code_local_results = {}
                         # merge code and non code LOCAL analysis then store into db
-                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
+                        #merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
                         
                         
                 #TODO: Print all information for projects using the signatures stored in project_signatures

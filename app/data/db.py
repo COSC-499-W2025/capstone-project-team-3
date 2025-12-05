@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
     rank INTEGER,
-    summary TEXT default NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     summary TEXT

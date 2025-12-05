@@ -617,6 +617,42 @@ def test_main_handles_parsing_exceptions_gracefully():
         # Should not raise exception
         main()
         
+def test_main_project_retreival(monkeypatch):
+    """Test main retrieves past insights correctly and prints project info."""
+    # Seed DB is called on startup, so projects exist
+    monkeypatch.setenv("PROMPT_ROOT", "0")
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.get_projects', return_value=[{"name": "Alpha Project"}]), \
+         patch('app.main.lookup_past_insights') as mock_lookup:
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        from app.main import main
+        main()
+        
+def test_main_invokes_parse_code_flow_during_analysis():
+    """Test that parse_code_flow is invoked with correct values inside main() flow."""
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
+         patch('app.main.parse_code_flow') as mock_parse_code, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        # Consent granted
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
         mock_parse.assert_called_once()
 
 
@@ -669,6 +705,68 @@ def test_main_calls_classify_and_parse_in_correct_order():
 def test_main_cleans_up_upload_artifacts_on_success():
     """Test cleanup_upload is called when analysis result has upload_id."""
     with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.get_projects', return_value=[{"name": "Alpha Project"}]), \
+         patch('app.main.lookup_past_insights') as mock_lookup:
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        from app.main import main
+        main()
+        
+        
+        
+def test_main_invokes_parse_code_flow_during_analysis():
+    """Test that parse_code_flow is invoked with correct values inside main() flow."""
+    with patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
+         patch('app.main.parse_code_flow') as mock_parse_code, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        # Consent granted
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        # File input returns one project
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/proj"],
+            "count": 1
+        }
+
+        # Scan finds code files
+        mock_scan.return_value = {
+            "files": ["/proj/a.py", "/proj/b.py"],
+            "skip_analysis": False,
+            "signature": "sig123"
+        }
+
+        # Select "local" analysis type
+        mock_llm_manager.return_value.ask_analysis_type.return_value = "local"
+
+        # Mock parse_code_flow output
+        mock_parse_code.return_value = [{"file": "parsed"}]
+
+        from app.main import main
+        main()
+
+        # Ensure parse_code_flow was called once with correct files + top-level dirs
+        mock_parse_code.assert_called_once_with(
+            ["/proj/a.py", "/proj/b.py"],
+            ['alpha', 'beta']
+        )
+ 
+        
+def test_main_cleans_up_upload_artifacts_on_success():
+    """Test cleanup_upload is called when analysis result has upload_id."""
+    with patch('app.main.init_db'), \
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
@@ -698,8 +796,7 @@ def test_main_cleans_up_upload_artifacts_on_success():
             extracted_dir="/tmp/extracted",
             delete_extracted=True,
         )
-
-
+    
 def test_main_skips_cleanup_when_no_upload_id():
     """Test cleanup_upload is not called when upload_id is missing."""
     with patch('app.main.init_db'), \
@@ -728,10 +825,9 @@ def test_main_skips_cleanup_when_no_upload_id():
 
         mock_cleanup.assert_not_called()
         
-        
 def test_main_invokes_parse_code_flow_during_analysis():
     """Test that parse_code_flow is invoked with correct values inside main() flow."""
-         patch('app.main.run_scan_flow') as mock_scan, \
+    with patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification'), \
          patch('app.main.detect_git', return_value=False), \
          patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
@@ -769,6 +865,7 @@ def test_main_invokes_parse_code_flow_during_analysis():
             ["/proj/a.py", "/proj/b.py"],
             ['alpha', 'beta']
         )
+        
 def test_main_runs_merge_analysis_results():
     # Set PROMPT_ROOT to enable analysis loop
     os.environ["PROMPT_ROOT"] = "1"

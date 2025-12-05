@@ -14,6 +14,9 @@ from app.api.routes.get_upload_id import router as upload_resolver_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.env_utils import check_gemini_api_key
+from app.utils.scan_utils import run_scan_flow 
+from app.utils.delete_insights_utils import get_projects
+from app.cli.retrieve_insights_cli import lookup_past_insights
 from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
@@ -22,7 +25,13 @@ from app.utils.project_extractor import get_project_top_level_dirs
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
 from app.cli.git_code_parsing import run_git_parsing_from_files
-
+from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
+from app.utils.non_code_analysis.non_code_analysis_utils import (
+    pre_process_non_code_files,
+    aggregate_non_code_summaries,
+    create_non_code_analysis_prompt,
+    generate_non_code_insights,
+    get_additional_metrics)
 import uvicorn
 import os
 import sys
@@ -79,6 +88,16 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
+# Check if existing local Project Insights data is present
+    try:
+        existing_projects = get_projects()
+    except Exception:
+        existing_projects = None
+    if existing_projects:
+        lookup_past_insights()
+    else:
+        pass  # No existing projects found
+
     # Check if PROMPT_ROOT is enabled
     prompt_root = os.environ.get("PROMPT_ROOT", "0")
     if prompt_root in ("1", "true", "True", "yes"):
@@ -153,11 +172,8 @@ def main():
                         non_code_result = classify_non_code_files_with_user_verification(project_path)
                         print()
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
-                        print(f"Is git repo: {non_code_result['is_git_repo']}")
-                        print(f"User identity: {non_code_result['user_identity']}")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
-                        print(f"Excluded files: {len(non_code_result['excluded'])}")
                         print(f"--------------------------------------------------------")
                         # --- End non-code file checker integration ---
                         
@@ -214,10 +230,42 @@ def main():
                             try:
                                 llm_client = GeminiLLMClient(api_key=api_key)
                                 
-                                print(f"✅ Starting AI analysis for {project_name}")
+                                print(f"✅ Starting AI analysis for {project_name}")                                
+                                # --- NON-CODE ANALYSIS (AI) ---
+                                try:
+                                    # Step 1: Pre-process with local NLP
+                                    llm1_results = pre_process_non_code_files(
+                                        parsed_non_code,
+                                        language="english"
+                                    )
+                                    
+                                    # Step 2: Aggregate summaries
+                                    project_metrics = aggregate_non_code_summaries(llm1_results)
+                                    
+                                    # Step 3: Create LLM prompt
+                                    prompt = create_non_code_analysis_prompt(project_metrics)
+                                    
+                                    # Step 4: Get LLM insights
+                                    non_code_ai_results = generate_non_code_insights(prompt)
+                                    
+                                    # Step 5: Add additional metrics
+                                    non_code_ai_results["metrics"] = get_additional_metrics(llm1_results)
+                                    
+                                    print(f"✅ AI Non Code Analysis completed successfully!")
+                                    
+                                except Exception as e:
+                                    print(f"⚠️ AI non-code analysis failed: {e}")
+                                    print("🔄 Falling back to local non-code analysis...")
+                                    non_code_ai_results = analyze_project_clean(parsed_non_code)
+                                 # --- NON-CODE ANALYSIS (AI) ---
+
                                 
                                 # merge code and non code LLM analysis then store into db
-                                merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                try:
+                                    merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                except Exception as e:
+                                    print(f"❌ Error storing analysis results for {project_name}: {e}")
+                                    
                                 
                             except Exception as e:
                                 print(f"❌ Error initializing AI client: {e}")
@@ -227,13 +275,20 @@ def main():
                     # Handle local analysis (including fallbacks from AI failures)
                     if analysis_type == 'local':
                         print("📊 Running local analysis...")
-                        
-                        
                         print(f"✅ Starting Local analysis for {project_name}")
                         
+                        try:
+                            # Run non-3rd party analysis (no LLM) using parsed_non_code
+                            non_code_local_results = analyze_project_clean(parsed_non_code)
+                            print(f"✅ Non Code Analysis completed successfully!")
+                        except Exception as e:
+                            print(f"⚠️ Non Code Local analysis failed: {e}")
+                            non_code_local_results = {}
                         # merge code and non code LOCAL analysis then store into db
-                        merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signatures=project_signatures)
-                        
+                        try:
+                            merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature=scan_result["signature"])
+                        except Exception as e:
+                            print(f"❌ Error storing analysis results for {project_name}: {e}")
                         
                 #TODO: Print all information for projects using the signatures stored in project_signatures
                 #TODO: Print Chronological order of projects analyzed from the db
@@ -298,3 +353,5 @@ if __name__ == "__main__":
 
     # Now run the CLI flow
     main()
+
+    

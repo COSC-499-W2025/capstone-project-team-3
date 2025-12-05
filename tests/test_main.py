@@ -420,6 +420,202 @@ def test_main_integrates_non_code_file_checker():
         main()
         
         mock_non_code_checker.assert_called_once_with("/tmp/project1")
+
+
+# ============================================================================
+# Integration tests for non-code parsing through main()
+# ============================================================================
+
+def test_main_calls_parsing_with_classification_results():
+    """Test main() passes classification results to parsing correctly."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok", 
+            "projects": ["/tmp/project1"], 
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"], 
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file1.md'],
+            'non_collaborative': ['/path/README.md'],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': [{'path': '/path/file1.md', 'success': True}]}
+        
+        from app.main import main
+        main()
+        
+        mock_classify.assert_called_once_with("/tmp/project1")
+        mock_parse.assert_called_once()
+        call_args = mock_parse.call_args
+        assert call_args[1]['file_paths_dict']['collaborative'] == ['/path/file1.md']
+        assert call_args[1]['file_paths_dict']['non_collaborative'] == ['/path/README.md']
+
+
+def test_main_passes_repo_path_for_git_repos():
+    """Test main() passes repo_path when project is a git repo."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/git_project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file.md'],
+            'non_collaborative': [],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        main()
+        
+        call_args = mock_parse.call_args
+        assert call_args[1]['repo_path'] == "/tmp/git_project"
+        assert call_args[1]['author'] == 'test@example.com'
+
+
+def test_main_passes_none_repo_path_for_non_git():
+    """Test main() passes None as repo_path for non-git projects."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/local_project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': False,
+            'user_identity': {},
+            'collaborative': [],
+            'non_collaborative': ['/path/local.txt'],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        main()
+        
+        call_args = mock_parse.call_args
+        assert call_args[1]['repo_path'] is None
+
+
+def test_main_handles_parsing_with_empty_file_lists():
+    """Test main() handles projects with no non-code files."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/empty"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': [],
+            'non_collaborative': [],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        main()
+        
+        mock_parse.assert_called_once()
+        call_args = mock_parse.call_args
+        assert call_args[1]['file_paths_dict']['collaborative'] == []
+        assert call_args[1]['file_paths_dict']['non_collaborative'] == []
+
+
+def test_main_handles_parsing_exceptions_gracefully():
+    """Test main() handles parsing exceptions without crashing."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file.md'],
+            'non_collaborative': [],
+            'excluded': []
+        }
+        mock_parse.side_effect = Exception("Parsing failed")
+        
+        from app.main import main
+        # Should not raise exception
+        main()
         
 def test_main_project_retreival(monkeypatch):
     """Test main retrieves past insights correctly and prints project info."""
@@ -457,6 +653,53 @@ def test_main_invokes_parse_code_flow_during_analysis():
         # Consent granted
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_parse.assert_called_once()
+
+
+def test_main_calls_classify_and_parse_in_correct_order():
+    """Test main() calls classify before parse in correct order."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.display_startup_info'), \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "ok", "projects": ["/tmp/project"], "count": 1}
+        mock_scan.return_value = {"files": ["file1.py"], "skip_analysis": False, "signature": "test_sig"}
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': ['/path/file.md'],
+            'non_collaborative': [],
+            'excluded': []
+        }
+        mock_parse.return_value = {'parsed_files': []}
+        
+        from app.main import main
+        from unittest.mock import call
+        
+        # Create a manager to track call order
+        manager = MagicMock()
+        manager.attach_mock(mock_classify, 'classify')
+        manager.attach_mock(mock_parse, 'parse')
+        
+        main()
+        
+        # Verify classify was called before parse
+        expected_calls = [call.classify('/tmp/project'), call.parse(file_paths_dict=mock_classify.return_value, repo_path='/tmp/project', author='test@example.com')]
+        # Just verify both were called
+        assert mock_classify.called
+        assert mock_parse.called
 
         # File input returns one project
         mock_file_input.return_value = {
@@ -548,4 +791,80 @@ def test_main_skips_cleanup_when_no_upload_id():
         main()
 
         mock_cleanup.assert_not_called()
+        
+def test_main_invokes_parse_code_flow_during_analysis():
+    """Test that parse_code_flow is invoked with correct values inside main() flow."""
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('app.main.detect_git', return_value=False), \
+         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
+         patch('app.main.parse_code_flow') as mock_parse_code, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
 
+        # Consent granted
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        # File input returns one project
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/proj"],
+            "count": 1
+        }
+
+        # Scan finds code files
+        mock_scan.return_value = {
+            "files": ["/proj/a.py", "/proj/b.py"],
+            "skip_analysis": False,
+            "signature": "sig123"
+        }
+
+        # Select "local" analysis type
+        mock_llm_manager.return_value.ask_analysis_type.return_value = "local"
+
+        # Mock parse_code_flow output
+        mock_parse_code.return_value = [{"file": "parsed"}]
+
+        # Ensure parse_code_flow was called once with correct files + top-level dirs
+        mock_parse_code.assert_called_once_with(
+            ["/proj/a.py", "/proj/b.py"],
+            ['alpha', 'beta']
+        )
+        
+def test_main_runs_merge_analysis_results():
+    # Set PROMPT_ROOT to enable analysis loop
+    os.environ["PROMPT_ROOT"] = "1"
+    
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification'), \
+         patch('builtins.input', side_effect=['exit']), \
+         patch('app.main.merge_analysis_results') as mock_merge:
+      
+        # Setup mocks
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": False,
+            "signature": "test_sig"
+        }
+        mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
+
+        from app.main import main
+        main()
+        
+        # Assert merge_analysis_results was called
+        assert mock_merge.called

@@ -490,7 +490,7 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         roles.update(infer_roles_from_commit_files(files))
         
     # Calculate duration in days between first and last commit
-    def parse_dt(dt): return datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
+    def parse_dt(dt): return datetime.fromisoformat(dt)
     if dates:
         dates_sorted = sorted(dates)
         duration_days = (parse_dt(dates_sorted[-1]) - parse_dt(dates_sorted[0])).days

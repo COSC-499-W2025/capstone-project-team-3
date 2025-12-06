@@ -2,6 +2,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 import os
 import sys
+from app.utils.code_analysis.parse_code_utils import parse_code_flow
+from pathlib import Path
+from app.cli.git_code_parsing import run_git_parsing_from_files
+
 
 @pytest.fixture(autouse=True)
 def mock_os_operations():
@@ -865,6 +869,70 @@ def test_main_invokes_parse_code_flow_during_analysis():
             ["/proj/a.py", "/proj/b.py"],
             ['alpha', 'beta']
         )
+        
+# ============================================================================
+# tests for Git-based code parsing through main()
+# ============================================================================
+def test_main_invokes_git_parsing_for_git_projects():
+    """Test that run_git_parsing_from_files is invoked for Git-based projects."""
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.display_startup_info'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main.detect_git', return_value=True), \
+         patch('app.main.run_git_parsing_from_files') as mock_git_parse, \
+         patch('app.main.parse_code_flow') as mock_parse_code, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        # Consent + prefs ok
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+
+        # One project returned from file_input_main
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/proj"],
+            "count": 1,
+        }
+
+        # Scan finds code files and no skip
+        mock_scan.return_value = {
+            "files": ["/proj/a.py", "/proj/b.py"],
+            "skip_analysis": False,
+            "signature": "sig123",
+        }
+
+        # Non-code checker still runs but contents aren't critical here
+        mock_classify.return_value = {
+            'is_git_repo': True,
+            'user_identity': {'email': 'test@example.com'},
+            'collaborative': [],
+            'non_collaborative': [],
+            'excluded': [],
+        }
+
+        # Choose local analysis so we go through the local branch
+        mock_llm_manager.return_value.ask_analysis_type.return_value = "local"
+
+        from app.main import main
+        main()
+
+        # ✅ We should call Git parsing with the scanned files
+        mock_git_parse.assert_called_once_with(
+            file_paths=["/proj/a.py", "/proj/b.py"],
+            include_merges=False,
+            max_commits=None,
+        )
+
+        # ✅ Local non-git parse_code_flow should NOT be used in this branch
+        mock_parse_code.assert_not_called()
+
 def test_main_calls_analyze_project_clean_in_local_mode():
     """Test main() calls analyze_project_clean with parsed_non_code in local analysis mode."""
     with patch('os.makedirs'), \

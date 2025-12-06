@@ -24,6 +24,7 @@ from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import get_project_top_level_dirs 
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
+from app.cli.git_code_parsing import run_git_parsing_from_files
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 from app.utils.non_code_analysis.non_code_analysis_utils import (
     pre_process_non_code_files,
@@ -199,7 +200,16 @@ def main():
                         #check if git or non git 
                         # if git: call parsing for git -> analysis for git USING LLM
                         if detect_git(project_path):
-                            pass #TODO: call parsing for git
+                            print("📘 Git repository detected — running Git-based code parsing...")
+                            try:
+                                code_git_history_json = run_git_parsing_from_files(
+                                file_paths=files,
+                                include_merges=False,
+                                max_commits=None,  # set a limit if needed
+                                )
+                                print("✅ Git code parsing completed.")
+                            except Exception as e:
+                                print(f"⚠️ Git code parsing failed: {e}")
                         # else call parsing for local -> analysis for local USING LLM
                         else:
                             parse_code = parse_code_flow(files, top_level_dirs)

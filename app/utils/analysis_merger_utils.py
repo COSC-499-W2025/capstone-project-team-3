@@ -106,7 +106,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_metrics = code_analysis_results.get("Metrics", {})
     
     # Extract & Format code resume bullets
-    code_resume_bullets = code_analysis_results.get("resume_bullets", [])
+    code_resume_bullets = code_analysis_results.get("Resume_bullets", [])
     code_resume_bullets = [
     bullet.strip() if bullet.strip().endswith('.') else bullet.strip() + '.'
     for bullet in code_resume_bullets if bullet.strip() ]
@@ -116,7 +116,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
     
     # Extract skills (use technical roles & keywords from code analysis)
-    code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", []) + code_analysis_results.get("Metrics", {}).get("roles", [])
+    code_skills = code_analysis_results.get("Metrics", {}).get("roles", []) + code_analysis_results.get("Metrics", {}).get("languages", [])
     non_code_skills = non_code_analysis_results.get("skills", {}) if non_code_analysis_results else {}
     non_code_tech_skills = non_code_skills.get("technical_skills", [])
     non_code_soft_skills = non_code_skills.get("soft_skills", [])
@@ -240,10 +240,8 @@ def get_project_rank(code_metrics, non_code_metrics, git_metrics):
     Returns:
         Ranked Score for the Project.
     """
-    # TODO : Call project ranker
-    print("------------------HERE------------------")
+  
     project_score = compute_overall_project_contribution_score(code_metrics,git_metrics, non_code_metrics )
-    print(project_score)
     if project_score is not None:
         return project_score
     else:
@@ -304,8 +302,6 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     """, (project_signature, json.dumps(merged_results["resume_bullets"])))
 
     # Store metrics in DASHBOARD_DATA table
-    print("---------------------HERE2---------------")
-    print(merged_results["metrics"])
     for key, value in merged_results["metrics"].items():
         # Flatten if value is a dictionary or list type
         if isinstance(value, (dict, list)):

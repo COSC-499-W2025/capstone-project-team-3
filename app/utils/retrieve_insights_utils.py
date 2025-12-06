@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from app.data.db import get_connection
 
 
@@ -24,9 +25,7 @@ def get_portfolio_resume_insights():
         # Convert metrics to dictionary format
         for metric_row in cur.fetchall():
             metric_name, metric_value = metric_row
-            metrics[metric_name] = metric_value
-        print("--------------------here 3---------------")
-        print(metrics)    
+            metrics[metric_name] = metric_value  
         # Check for specific baseline metrics and include authors
         authors = []
         if "author" in metrics:
@@ -124,9 +123,27 @@ def get_projects_by_signatures(signatures: list):
             metric_name, metric_value = metric_row
             metrics[metric_name] = metric_value
         
-        # Get resume bullets for this project
+
+        # Get resume bullets for this project - FIXED
         cur.execute("SELECT summary_text FROM RESUME_SUMMARY WHERE project_id=?", (signature,))
-        resume_bullets = [row[0] for row in cur.fetchall()]
+        resume_rows = cur.fetchall()
+
+        resume_bullets = []
+        for row in resume_rows:
+            summary_text = row[0]
+            try:
+                # Try to parse as JSON first (for arrays)
+                parsed = json.loads(summary_text)
+                if isinstance(parsed, list):
+                    resume_bullets.extend(parsed)
+                else:
+                    resume_bullets.append(summary_text)
+            except (json.JSONDecodeError, TypeError):
+                # If not JSON, treat as individual bullet
+                resume_bullets.append(summary_text)
+
+        # Filter out empty bullets
+        resume_bullets = [bullet for bullet in resume_bullets if bullet and bullet.strip()]
             
         # Check for specific baseline metrics and include authors
         authors = []

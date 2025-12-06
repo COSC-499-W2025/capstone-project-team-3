@@ -17,7 +17,7 @@ from app.utils.code_analysis.code_analysis_utils import analyze_github_project, 
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.delete_insights_utils import get_projects
-from app.cli.retrieve_insights_cli import lookup_past_insights
+from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
 from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
@@ -168,10 +168,7 @@ def main():
                     else: #Perform analysis
                         
                         # --- Non-code file checker integration (per project) ---
-                        print()
-                        print("🔎 Running non-code file checker...")
                         non_code_result = classify_non_code_files_with_user_verification(project_path)
-                        print()
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
@@ -263,7 +260,7 @@ def main():
                                     if detect_git(project_path):
                                         code_analysis_results = analyze_github_project(code_git_history_json, llm_client)
                                     else:
-                                        code_analysis_results = analyze_parsed_project(parse_code, llm1_results)
+                                        code_analysis_results = analyze_parsed_project(parse_code, llm_client)
                                 except Exception as e:
                                     print(f"⚠️ AI code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
@@ -304,22 +301,11 @@ def main():
                             code_analysis_results = {}
                         # merge code and non code LOCAL analysis then store into db
                         try:
-                            print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-                            print(code_analysis_results)
-                            print(non_code_local_results)
                             merge_analysis_results(non_code_analysis_results=non_code_local_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                         except Exception as e:
                             print(f"❌ Error storing analysis results for {project_name}: {e}")
-                        
-                #TODO: Print all information for projects using the signatures stored in project_signatures
-                #TODO: Print Chronological order of projects analyzed from the db
-                #TODO: Print Chronological Skills worked on from projects 
-                # Import the CLI functions
-                from app.cli.retrieve_insights_cli import display_specific_projects, get_portfolio_resume_insights
-                
-                print(f"\n{'='*60}")
-                print("📊 ANALYSIS RESULTS SUMMARY")
-                print(f"{'='*60}")
+       
+            
                 
                 # 1. Print specific projects analyzed this session
                 if project_signatures:
@@ -339,6 +325,19 @@ def main():
                     
                     if portfolio["projects"]:
                         # Chronological order of ALL projects
+                        print(f"\n🏆 Top Ranked Projects ({len(portfolio['top_projects'])} projects):")
+                        for i, proj in enumerate(portfolio["top_projects"], 1):
+                            skills_count = len(proj['skills'])
+                            rank_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}️⃣"
+                            print(f"   {rank_emoji} {proj['name']} — Rank: {proj['rank']} — ({proj['duration']}) — {skills_count} skills")
+                            
+                            # Show a few key skills for top projects
+                            if proj['skills']:
+                                top_skills_preview = sorted(set(proj['skills']))[:5]
+                                skills_text = ", ".join(top_skills_preview)
+                                if len(proj['skills']) > 5:
+                                    skills_text += f" + {len(proj['skills']) - 5} more"
+                                print(f"      🛠️  Key skills: {skills_text}")
                         print(f"\n📜 All Projects in Chronological Order ({len(portfolio['chronological'])} recent):")
                         for i, proj in enumerate(portfolio["chronological"], 1):
                             skills_count = len(proj['skills'])

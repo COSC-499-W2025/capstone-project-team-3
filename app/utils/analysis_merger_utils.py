@@ -144,9 +144,18 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     # Merge Resume Bullets (Ensure a proportional representation of code and non-code resume bullets)
     merged_resume_bullets = balance_merge(code_resume_bullets, non_code_resume_bullets, MAX_BULLETS)
 
+    print("1------------------------8888888888")
+   # print(**code_metrics)
+    print("2")
+  #  print(**non_code_metrics)
+    print("3")
+    print(code_metrics)
+    print("4")
+    print(non_code_metrics)
     # Merged Metrics (Merge dictionaries since keys for each are unique)
     merged_metrics = {**code_metrics, **non_code_metrics} 
-    
+    print("5")
+    print(merged_metrics)
     # Final Merged Results & project rank to be stored in DB
     merged_results = {
         "summary": summary,
@@ -296,6 +305,8 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     """, (project_signature, json.dumps(merged_results["resume_bullets"])))
 
     # Store metrics in DASHBOARD_DATA table
+    print("---------------------HERE2---------------")
+    print(merged_results["metrics"])
     for key, value in merged_results["metrics"].items():
         # Flatten if value is a dictionary or list type
         if isinstance(value, (dict, list)):

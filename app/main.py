@@ -304,6 +304,9 @@ def main():
                             code_analysis_results = {}
                         # merge code and non code LOCAL analysis then store into db
                         try:
+                            print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+                            print(code_analysis_results)
+                            print(non_code_local_results)
                             merge_analysis_results(non_code_analysis_results=non_code_local_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                         except Exception as e:
                             print(f"❌ Error storing analysis results for {project_name}: {e}")

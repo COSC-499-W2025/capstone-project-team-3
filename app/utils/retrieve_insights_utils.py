@@ -25,7 +25,8 @@ def get_portfolio_resume_insights():
         for metric_row in cur.fetchall():
             metric_name, metric_value = metric_row
             metrics[metric_name] = metric_value
-            
+        print("--------------------here 3---------------")
+        print(metrics)    
         # Check for specific baseline metrics and include authors
         authors = []
         if "author" in metrics:

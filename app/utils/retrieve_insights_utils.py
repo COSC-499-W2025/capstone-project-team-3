@@ -73,8 +73,32 @@ def get_portfolio_resume_insights():
     }
     
 def format_date(dt_str):
-    # Assumes format "YYYY-MM-DD HH:MM:SS"
-    return dt_str.split(" ")[0] if dt_str else ""
+    """Format datetime string to human-readable date."""
+    if not dt_str:
+        return ""
+    
+    try:
+        from datetime import datetime
+        
+        # Handle ISO format with microseconds
+        if 'T' in dt_str:
+            # Remove microseconds if present: "2025-12-06T19:29:04.639249" -> "2025-12-06T19:29:04"
+            if '.' in dt_str:
+                dt_str = dt_str.split('.')[0]
+            dt = datetime.fromisoformat(dt_str.replace('T', ' '))
+        else:
+            # Handle space-separated format
+            dt = datetime.strptime(dt_str.split(' ')[0], '%Y-%m-%d')
+        
+        # Return human-readable format
+        return dt.strftime('%b %d, %Y')  # "Dec 06, 2025"
+        
+    except (ValueError, AttributeError):
+        # Fallback: extract just date part
+        if 'T' in str(dt_str):
+            return str(dt_str).split('T')[0]
+        else:
+            return str(dt_str).split(' ')[0]
 
 
 def get_projects_by_signatures(signatures: list):

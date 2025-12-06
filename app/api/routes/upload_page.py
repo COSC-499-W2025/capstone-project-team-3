@@ -17,7 +17,7 @@ def upload_page():
         <body>
             <h2>Upload Your ZIP File</h2>
             <form action="/upload-file" enctype="multipart/form-data" method="post">
-                <input name="file" type="file" accept=".zip">
+                <input name="file" type="file">
                 <input type="submit" value="Upload">
             </form>
         </body>

@@ -5,6 +5,7 @@ import re
 from app.shared.test_data.analysis_results_text import code_analysis_results, non_code_analysis_result, project_name, project_signature
 from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
 from app.data.db import get_connection
+from app.utils.project_score import compute_overall_project_contribution_score
 MAX_SKILLS = 10 #Maximum number of skills to be stored per project (TDB: adjust based on some condition)
 MAX_BULLETS = 5 #Maximum number of resume bullets to be stored per project (TBD: adjust based on some condition)
 MAX_SENTENCES = 5 #Maximum number of sentences in summary (TBD: adjust based on some condition)
@@ -232,8 +233,9 @@ def get_project_rank(code_metrics, non_code_metrics, git_metrics):
         Ranked Score for the Project.
     """
     # TODO : Call project ranker
-    # project_score = project_ranker.rank(code_metrics, non_code_metrics, git_code_metrics)
-    project_score = None  # Placeholder for actual project ranking logic
+    print("------------------HERE------------------")
+    project_score = compute_overall_project_contribution_score(code_metrics,git_metrics, non_code_metrics )
+    print(project_score)
     if project_score is not None:
         return project_score
     else:

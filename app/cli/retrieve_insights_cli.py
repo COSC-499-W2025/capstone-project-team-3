@@ -40,7 +40,13 @@ def lookup_past_insights():
             for skill in list(sorted(set(proj['skills'])))[:5]:  # Limit to 5 skills
                 print(f"      • {skill}")
             print("\n" + "-"*40 + "\n")
-            # TODO: Iterate over metrics from project and include in portfolio output
+            # Iterate over metrics from project and include in portfolio output
+            if proj.get('metrics'):
+                print(f" 📊 Metrics:")
+                for metric_name, metric_value in proj['metrics'].items():  
+                    print(f"      📈 {metric_name}: {metric_value}")  
+            
+            print("\n" + "-"*40 + "\n")
 
         print("🏆 Top Ranked Projects:\n")
         for proj in portfolio["top_projects"]:
@@ -62,3 +68,108 @@ def lookup_past_insights():
     else:
         print("Skipping display of past insights.")
         return
+
+# Add this function after lookup_past_insights():
+
+def get_specific_projects_info(project_signatures):
+    """
+    Get detailed information for specific projects by their signatures.
+    
+    Args:
+        project_signatures (list): List of project signature strings
+        
+    Returns:
+        dict: Formatted output with project details and summary
+    """
+    from app.utils.retrieve_insights_utils import get_projects_by_signatures
+    
+    if not project_signatures:
+        return {
+            "success": False,
+            "message": "No project signatures provided",
+            "projects": []
+        }
+    
+    # Get projects using the utility function
+    projects = get_projects_by_signatures(project_signatures)
+    
+    if not projects:
+        return {
+            "success": False,
+            "message": "No projects found with the provided signatures",
+            "projects": []
+        }
+    
+    # Format output for CLI display
+    formatted_output = {
+        "success": True,
+        "message": f"Found {len(projects)} project(s)",
+        "projects": projects,
+        "summary": {
+            "total_projects": len(projects),
+            "unique_skills": list(set(skill for proj in projects for skill in proj['skills'])),
+            "date_range": {
+                "earliest": min(proj['created_at'] for proj in projects),
+                "latest": max(proj['created_at'] for proj in projects)
+            }
+        }
+    }
+    
+    return formatted_output
+
+def display_specific_projects(project_signatures):
+    """
+    Display detailed information for specific projects.
+    
+    Args:
+        project_signatures (list): List of project signature strings
+    """
+    result = get_specific_projects_info(project_signatures)
+    
+    if not result["success"]:
+        print(f"\n❌ {result['message']}")
+        return
+    
+    projects = result["projects"]
+    summary = result["summary"]
+    
+    print(f"\n📁 SPECIFIC PROJECT DETAILS")
+    print("="*60)
+    print(f"📊 {result['message']}")
+    print(f"🎯 Skills Found: {len(summary['unique_skills'])} unique skills")
+    print(f"📅 Date Range: {summary['date_range']['earliest']} to {summary['date_range']['latest']}")
+    print("="*60)
+    
+    for i, proj in enumerate(projects, 1):
+        print(f"\n{i}. 🗂️  {proj['name']}")
+        print(f"   📅 Duration: {proj['duration']}")
+        print(f"   📝 Summary: {proj['summary']}")
+        print(f"   🏆 Rank: {proj['rank']}")
+        
+        # Skills
+        print(f"   🛠️  Skills ({len(proj['skills'])}):")
+        for skill in sorted(set(proj['skills']))[:8]:  # Limit to 8 skills
+            print(f"      • {skill}")
+        
+        # Metrics
+        if proj.get('metrics'):
+            print(f"   📊 Metrics ({len(proj['metrics'])}):")
+            for metric_name, metric_value in proj['metrics'].items():
+                print(f"      📈 {metric_name}: {metric_value}")
+        
+        # ADD RESUME BULLETS SECTION
+        if proj.get('resume_bullets'):
+            print(f"   📄 Resume Bullets ({len(proj['resume_bullets'])}):")
+            for bullet in proj['resume_bullets']:
+                if bullet and bullet.strip():
+                    print(f"      • {bullet}")
+        else:
+            print(f"   📄 Resume Bullets: None found")
+        
+        print("\n" + "-"*50)
+    
+    print(f"\n🎯 All Skills Across Selected Projects:")
+    for skill in sorted(summary['unique_skills'])[:15]:  # Limit to 15 total skills
+        print(f"   • {skill}")
+    
+    print("\n" + "="*60)

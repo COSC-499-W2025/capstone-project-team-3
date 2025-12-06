@@ -13,6 +13,7 @@ from app.api.routes.upload_page import router as upload_page_router
 from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
+from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.delete_insights_utils import get_projects
@@ -68,7 +69,7 @@ def display_startup_info():
 # Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
-    seed_db()  # automatically populate test data
+   # seed_db()  # automatically populate test data
     print("Database started")
 
     # Check for the consent
@@ -194,8 +195,7 @@ def main():
                             parsed_non_code = {'parsed_files': []}
                         # --- End parsing integration ---  
                                 
-                        #TODO: Code parsing -> analysis
-                        print()
+    
                         print(f"🔍 Analyzing code files in {project_name}... hang tight! ⚙️📁")
                         #check if git or non git 
                         # if git: call parsing for git -> analysis for git USING LLM
@@ -259,10 +259,19 @@ def main():
                                     non_code_ai_results = analyze_project_clean(parsed_non_code)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
-                                
+                                try:
+                                    if detect_git(project_path):
+                                        code_analysis_results = analyze_github_project(code_git_history_json, llm_client)
+                                    else:
+                                        code_analysis_results = analyze_parsed_project(parse_code, llm1_results)
+                                except Exception as e:
+                                    print(f"⚠️ AI code analysis failed: {e}")
+                                    print("🔄 Falling back to local non-code analysis...")
+                                    code_analysis_results = analyze_parsed_project(parsed_non_code)
+                                 # --- NON-CODE ANALYSIS (AI) ---
                                 # merge code and non code LLM analysis then store into db
                                 try:
-                                    merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                    merge_analysis_results(non_code_analysis_results=non_code_ai_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature = scan_result["signature"])
                                 except Exception as e:
                                     print(f"❌ Error storing analysis results for {project_name}: {e}")
                                     
@@ -284,16 +293,115 @@ def main():
                         except Exception as e:
                             print(f"⚠️ Non Code Local analysis failed: {e}")
                             non_code_local_results = {}
+                        
+                        try:
+                            if detect_git(project_path):
+                                code_analysis_results = analyze_github_project(code_git_history_json)
+                            else:
+                                code_analysis_results = analyze_parsed_project(parse_code)
+                        except Exception as e:
+                            print(f"⚠️ Code Local analysis failed: {e}")
+                            code_analysis_results = {}
                         # merge code and non code LOCAL analysis then store into db
                         try:
-                            merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature=scan_result["signature"])
+                            merge_analysis_results(non_code_analysis_results=non_code_local_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                         except Exception as e:
                             print(f"❌ Error storing analysis results for {project_name}: {e}")
                         
                 #TODO: Print all information for projects using the signatures stored in project_signatures
                 #TODO: Print Chronological order of projects analyzed from the db
                 #TODO: Print Chronological Skills worked on from projects 
+                # Import the CLI functions
+                from app.cli.retrieve_insights_cli import display_specific_projects, get_portfolio_resume_insights
                 
+                print(f"\n{'='*60}")
+                print("📊 ANALYSIS RESULTS SUMMARY")
+                print(f"{'='*60}")
+                
+                # 1. Print specific projects analyzed this session
+                if project_signatures:
+                    print(f"\n🎯 PROJECTS ANALYZED THIS SESSION ({len(project_signatures)} projects)")
+                    print("="*60)
+                    display_specific_projects(project_signatures)
+                else:
+                    print("\n⚠️ No projects were analyzed in this session.")
+                
+                # 2. Print chronological order and skills from ALL projects in database
+                print(f"\n{'='*60}")
+                print("📅 ALL PROJECTS CHRONOLOGICAL OVERVIEW")
+                print("="*60)
+                
+                try:
+                    portfolio, resume = get_portfolio_resume_insights()
+                    
+                    if portfolio["projects"]:
+                        # Chronological order of ALL projects
+                        print(f"\n📜 All Projects in Chronological Order ({len(portfolio['chronological'])} recent):")
+                        for i, proj in enumerate(portfolio["chronological"], 1):
+                            skills_count = len(proj['skills'])
+                            print(f"   {i:2d}. ⏳ {proj['name']} — ({proj['duration']}) — {skills_count} skills")
+                        
+                        # Skills timeline from all projects
+                        print(f"\n🛠️ Chronological Skills Evolution:")
+                        all_skills_timeline = []
+                        
+                        # Collect all skills with project dates
+                        for proj in sorted(portfolio["projects"], key=lambda x: x["created_at"]):
+                            for skill in proj['skills']:
+                                all_skills_timeline.append({
+                                    "skill": skill,
+                                    "project": proj['name'],
+                                    "date": proj['created_at']
+                                })
+                        
+                        # Display unique skills in order they first appeared
+                        seen_skills = set()
+                        skills_progression = []
+                        
+                        for item in all_skills_timeline:
+                            if item["skill"] not in seen_skills:
+                                seen_skills.add(item["skill"])
+                                skills_progression.append(item)
+                        
+                        # Show skills progression (limit to 20 for readability)
+                        print(f"   📈 Skills learned over time (first {min(20, len(skills_progression))} skills):")
+                        for i, skill_item in enumerate(skills_progression[:20], 1):
+                            print(f"      {i:2d}. {skill_item['skill']} — (first used in '{skill_item['project']}' on {skill_item['date']})")
+                        
+                        if len(skills_progression) > 20:
+                            print(f"      ... and {len(skills_progression) - 20} more skills")
+                        
+                        # Skills frequency analysis
+                        from collections import Counter
+                        skill_frequency = Counter(item["skill"] for item in all_skills_timeline)
+                        top_skills = skill_frequency.most_common(10)
+                        
+                        print(f"\n🔥 Most Frequently Used Skills (across all projects):")
+                        for i, (skill, count) in enumerate(top_skills, 1):
+                            print(f"      {i:2d}. {skill} — used in {count} project{'s' if count > 1 else ''}")
+                        
+                        # ADD RESUME SECTION HERE
+                        print(f"\n{'='*60}")
+                        print("📄 RESUME SUMMARY")
+                        print("="*60)
+                        
+                        # Show resume bullets from the database
+                        if resume and resume.get("bullets"):
+                            print(f"\n📝 All Resume Bullets ({len(resume['bullets'])} total):")
+                            for i, bullet in enumerate(resume["bullets"], 1):
+                                print(f"   {i:2d}. • {bullet}")
+                        else:
+                            print("\n📭 No resume bullets found in database.")
+                            
+                    else:
+                        print("📭 No projects found in database.")
+                        
+                except Exception as e:
+                    print(f"❌ Error retrieving project overview: {e}")
+                
+                print(f"\n{'='*60}")
+                print("✅ SESSION ANALYSIS COMPLETE")
+                print("="*60)
                 
             else:
                 print("❌ No projects found to analyze")

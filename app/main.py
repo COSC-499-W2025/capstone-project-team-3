@@ -231,7 +231,6 @@ def main():
                                 # --- NON-CODE ANALYSIS (AI) ---
                                 try:
                                     non_code_analysis_results=analyze_non_code_files(parsed_non_code=parsed_non_code)
-                                    print(non_code_analysis_results)
                                     print(f"✅ AI Non Code Analysis completed successfully!")
                                     
                                 except Exception as e:
@@ -243,7 +242,7 @@ def main():
                                 
                                 # merge code and non code LLM analysis then store into db
                                 try:
-                                    merge_analysis_results(code_analysis_results={}, non_code_analysis_results=non_code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
+                                    merge_analysis_results(non_code_analysis_results=non_code_analysis_results,code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                                 except Exception as e:
                                     print(f"❌ Error storing analysis results for {project_name}: {e}")
                                     
@@ -267,7 +266,7 @@ def main():
                             non_code_local_results = {}
                         # merge code and non code LOCAL analysis then store into db
                         try:
-                            merge_analysis_results( code_analysis_results={},non_code_analysis_results=non_code_local_results, project_name=project_name, project_signature=scan_result["signature"])
+                            merge_analysis_results(non_code_analysis_results=non_code_local_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                         except Exception as e:
                             print(f"❌ Error storing analysis results for {project_name}: {e}")
                         

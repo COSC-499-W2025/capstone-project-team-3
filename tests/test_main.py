@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import os
 import sys
+from app.main import main
 
 @pytest.fixture(autouse=True)
 def mock_os_operations():
@@ -36,7 +37,7 @@ def test_main_runs_analysis_loop_when_prompt_root_enabled():
         # First call might be for error handling, second for continue/exit
         mock_input.side_effect = ['exit', 'exit', 'exit']  # Cover all possible input calls
         
-        from app.main import main
+        
         main()
         
         mock_file_input.assert_called()
@@ -49,12 +50,13 @@ def test_main_skips_analysis_loop_when_prompt_root_disabled():
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
         
-        from app.main import main
+        
         main()
         
         mock_file_input.assert_not_called()
@@ -68,14 +70,14 @@ def test_main_handles_file_input_failure_with_retry():
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
          patch('app.main.LLMConsentManager'), \
-         patch('builtins.input', side_effect=['retry', 'exit']), \
+         patch('builtins.input', side_effect=['retry','retry', 'exit']), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
-        mock_file_input.side_effect = [{"status": "error"}, {"status": "error"}]
+        mock_file_input.side_effect = [{"status": "error"}, {"status": "error"}, {"status": "error"}]
         
-        from app.main import main
+        
         main()
         
         assert mock_file_input.call_count >= 2
@@ -96,7 +98,7 @@ def test_main_handles_file_input_failure_with_exit():
         mock_user_pref.return_value.manage_preferences.return_value = None
         mock_file_input.return_value = {"status": "error"}
         
-        from app.main import main
+        
         main()
         
         mock_file_input.assert_called_once()
@@ -129,7 +131,7 @@ def test_main_processes_projects_from_zip():
         }
         mock_llm_manager.return_value.ask_analysis_type.return_value = 'ai'
         
-        from app.main import main
+        
         main()
         
         assert mock_scan.call_count == 2
@@ -162,7 +164,7 @@ def test_main_skips_already_analyzed_projects():
             "signature": "test_sig"
         }
         
-        from app.main import main
+        
         main()
         
         # Should not call ask_analysis_type for already analyzed projects
@@ -195,7 +197,7 @@ def test_main_handles_projects_with_no_files():
             "signature": None
         }
         
-        from app.main import main
+        
         main()
         
         mock_llm_manager.return_value.ask_analysis_type.assert_not_called()
@@ -228,7 +230,7 @@ def test_main_runs_ai_analysis():
         }
         mock_llm_manager.return_value.ask_analysis_type.return_value = 'ai'
         
-        from app.main import main
+        
         main()
         
         mock_llm_client.assert_called_once_with(api_key='test_key')
@@ -260,7 +262,7 @@ def test_main_runs_local_analysis():
         }
         mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
         
-        from app.main import main
+        
         main()
         
         mock_llm_manager.return_value.ask_analysis_type.assert_called_once()
@@ -281,7 +283,7 @@ def test_main_handles_no_projects_found():
         mock_user_pref.return_value.manage_preferences.return_value = None
         mock_file_input.return_value = {"status": "ok"}  # No "projects" key
         
-        from app.main import main
+        
         main()
         
         mock_file_input.assert_called()
@@ -306,7 +308,7 @@ def test_main_prompt_root_accepts_truthy_values():
             mock_user_pref.return_value.manage_preferences.return_value = None
             mock_file_input.reset_mock()
             
-            from app.main import main
+            
             main()
             
             assert mock_file_input.called, f"file_input_main not called for PROMPT_ROOT={value}"
@@ -327,7 +329,7 @@ def test_main_prints_analysis_session_header(capsys):
         mock_file_input.return_value = {"status": "error"}
         mock_user_pref.return_value.manage_preferences.return_value = None
         
-        from app.main import main
+        
         main()
         
         captured = capsys.readouterr()
@@ -340,12 +342,13 @@ def test_main_initializes_database():
          patch('app.main.ConsentManager') as mock_consent, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '0'}):
         
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
         
-        from app.main import main
+        
         main()
         
         mock_init_db.assert_called_once()
@@ -357,12 +360,13 @@ def test_main_prompt_root_default_behavior():
          patch('app.main.file_input_main') as mock_file_input, \
          patch('app.main.seed_db'), \
          patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {}, clear=True):
         
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
         
-        from app.main import main
+        
         main()
         
         mock_file_input.assert_not_called()
@@ -416,7 +420,7 @@ def test_main_integrates_non_code_file_checker():
             "non_collaborative": []
         }
         
-        from app.main import main
+        
         main()
         
         mock_non_code_checker.assert_called_once_with("/tmp/project1")
@@ -463,7 +467,7 @@ def test_main_calls_parsing_with_classification_results():
         }
         mock_parse.return_value = {'parsed_files': [{'path': '/path/file1.md', 'success': True}]}
         
-        from app.main import main
+        
         main()
         
         mock_classify.assert_called_once_with("/tmp/project1")
@@ -502,7 +506,7 @@ def test_main_passes_repo_path_for_git_repos():
         }
         mock_parse.return_value = {'parsed_files': []}
         
-        from app.main import main
+        
         main()
         
         call_args = mock_parse.call_args
@@ -539,7 +543,7 @@ def test_main_passes_none_repo_path_for_non_git():
         }
         mock_parse.return_value = {'parsed_files': []}
         
-        from app.main import main
+        
         main()
         
         call_args = mock_parse.call_args
@@ -575,7 +579,7 @@ def test_main_handles_parsing_with_empty_file_lists():
         }
         mock_parse.return_value = {'parsed_files': []}
         
-        from app.main import main
+        
         main()
         
         mock_parse.assert_called_once()
@@ -613,7 +617,7 @@ def test_main_handles_parsing_exceptions_gracefully():
         }
         mock_parse.side_effect = Exception("Parsing failed")
         
-        from app.main import main
+        
         # Should not raise exception
         main()
         
@@ -631,31 +635,9 @@ def test_main_project_retreival(monkeypatch):
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
 
-        from app.main import main
+        
         main()
         
-def test_main_invokes_parse_code_flow_during_analysis():
-    """Test that parse_code_flow is invoked with correct values inside main() flow."""
-    with patch('app.main.init_db'), \
-         patch('app.main.seed_db'), \
-         patch('app.main.ConsentManager') as mock_consent, \
-         patch('app.main.UserPreferences') as mock_user_pref, \
-         patch('app.main.file_input_main') as mock_file_input, \
-         patch('app.main.run_scan_flow') as mock_scan, \
-         patch('app.main.classify_non_code_files_with_user_verification'), \
-         patch('app.main.detect_git', return_value=False), \
-         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
-         patch('app.main.parse_code_flow') as mock_parse_code, \
-         patch('app.main.LLMConsentManager') as mock_llm_manager, \
-         patch('builtins.input', return_value='exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
-
-        # Consent granted
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_user_pref.return_value.manage_preferences.return_value = None
-        mock_parse.assert_called_once()
-
-
 def test_main_calls_classify_and_parse_in_correct_order():
     """Test main() calls classify before parse in correct order."""
     with patch('app.main.init_db'), \
@@ -685,7 +667,7 @@ def test_main_calls_classify_and_parse_in_correct_order():
         }
         mock_parse.return_value = {'parsed_files': []}
         
-        from app.main import main
+        
         from unittest.mock import call
         
         # Create a manager to track call order
@@ -714,14 +696,19 @@ def test_main_cleans_up_upload_artifacts_on_success():
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
 
-        from app.main import main
+        
         main()
         
         
         
 def test_main_invokes_parse_code_flow_during_analysis():
     """Test that parse_code_flow is invoked with correct values inside main() flow."""
-    with patch('app.main.run_scan_flow') as mock_scan, \
+    with patch('app.main.init_db'), \
+         patch('app.main.seed_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification'), \
          patch('app.main.detect_git', return_value=False), \
          patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
@@ -729,7 +716,6 @@ def test_main_invokes_parse_code_flow_during_analysis():
          patch('app.main.LLMConsentManager') as mock_llm_manager, \
          patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
-
         # Consent granted
         mock_consent.return_value.enforce_consent.return_value = True
         mock_user_pref.return_value.manage_preferences.return_value = None
@@ -754,7 +740,7 @@ def test_main_invokes_parse_code_flow_during_analysis():
         # Mock parse_code_flow output
         mock_parse_code.return_value = [{"file": "parsed"}]
 
-        from app.main import main
+        
         main()
 
         # Ensure parse_code_flow was called once with correct files + top-level dirs
@@ -788,7 +774,7 @@ def test_main_cleans_up_upload_artifacts_on_success():
         }
         mock_scan.return_value = {"files": [], "skip_analysis": True, "reason": "no_files", "signature": None}
 
-        from app.main import main
+        
         main()
 
         mock_cleanup.assert_called_once_with(
@@ -820,51 +806,11 @@ def test_main_skips_cleanup_when_no_upload_id():
         }
         mock_scan.return_value = {"files": [], "skip_analysis": True, "reason": "no_files", "signature": None}
 
-        from app.main import main
+        
         main()
 
         mock_cleanup.assert_not_called()
         
-def test_main_invokes_parse_code_flow_during_analysis():
-    """Test that parse_code_flow is invoked with correct values inside main() flow."""
-    with patch('app.main.run_scan_flow') as mock_scan, \
-         patch('app.main.classify_non_code_files_with_user_verification'), \
-         patch('app.main.detect_git', return_value=False), \
-         patch('app.main.get_project_top_level_dirs', return_value=['alpha', 'beta']), \
-         patch('app.main.parse_code_flow') as mock_parse_code, \
-         patch('app.main.LLMConsentManager') as mock_llm_manager, \
-         patch('builtins.input', return_value='exit'), \
-         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
-
-        # Consent granted
-        mock_consent.return_value.enforce_consent.return_value = True
-        mock_user_pref.return_value.manage_preferences.return_value = None
-
-        # File input returns one project
-        mock_file_input.return_value = {
-            "status": "ok",
-            "projects": ["/proj"],
-            "count": 1
-        }
-
-        # Scan finds code files
-        mock_scan.return_value = {
-            "files": ["/proj/a.py", "/proj/b.py"],
-            "skip_analysis": False,
-            "signature": "sig123"
-        }
-
-        # Select "local" analysis type
-        mock_llm_manager.return_value.ask_analysis_type.return_value = "local"
-
-        # Mock parse_code_flow output
-        mock_parse_code.return_value = [{"file": "parsed"}]
-
-        # Ensure parse_code_flow was called once with correct files + top-level dirs
-        mock_parse_code.assert_called_once_with(
-            ["/proj/a.py", "/proj/b.py"],
-            ['alpha', 'beta']
-        )
 def test_main_calls_analyze_project_clean_in_local_mode():
     """Test main() calls analyze_project_clean with parsed_non_code in local analysis mode."""
     with patch('os.makedirs'), \
@@ -940,7 +886,7 @@ def test_main_calls_analyze_project_clean_in_local_mode():
         }
         
         # Run main
-        from app.main import main
+        
         main()
         
         # Verify analyze_project_clean was called with parsed_non_code
@@ -1039,7 +985,7 @@ def test_main_calls_ai_non_code_analysis_pipeline():
         mock_get_metrics.return_value = mock_additional_metrics
         
         # Run main
-        from app.main import main
+        
         main()
         
         # Verify the AI pipeline was called in correct order with correct data
@@ -1061,7 +1007,7 @@ def test_main_runs_merge_analysis_results():
          patch('app.main.LLMConsentManager') as mock_llm_manager, \
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification'), \
-         patch('builtins.input', side_effect=['exit']), \
+         patch('builtins.input', side_effect=['exit','exit']), \
          patch('app.main.merge_analysis_results') as mock_merge:
       
         # Setup mocks
@@ -1079,8 +1025,49 @@ def test_main_runs_merge_analysis_results():
         }
         mock_llm_manager.return_value.ask_analysis_type.return_value = 'local'
 
-        from app.main import main
+        
         main()
         
         # Assert merge_analysis_results was called
         assert mock_merge.called
+
+def test_main_user_preferences():
+    # Create a mock store with the required methods
+    mock_store = MagicMock()
+    # Set up the mock to return a known value for get_latest_preferences
+    mock_store.get_latest_preferences.return_value = {
+        "name": "Test User",
+        "email": "testuser@example.com",
+        "github_user": "testgithub",
+        "education": "BSc Computer Science",
+        "industry": "Technology",
+        "job_title": "Developer"
+    }
+
+    with patch("app.main.ConsentManager") as MockConsentManager, \
+        patch("app.main.init_db"), \
+        patch("app.main.seed_db"), \
+        patch("app.main.UserPreferences") as MockUserPreferences, \
+        patch("builtins.input", side_effect=[
+            "testuser@example.com",  # email
+            "yes",                   # update preferences
+            "Test User",             # name
+            "testgithub",            # github
+            "BSc Computer Science",  # education
+            "Technology",            # industry
+            "Developer",              # job title
+            "exit",
+            "exit",
+            "exit"
+        ]):
+        # Mock consent to always return True
+        MockConsentManager.return_value.enforce_consent.return_value = True
+
+        # Set the mock store on the UserPreferences instance
+        mock_user_pref = MockUserPreferences.return_value
+        mock_user_pref.store = mock_store
+        
+        main()
+
+        # Assert that preferences were retrieved and saved
+        mock_user_pref.manage_preferences.assert_called()

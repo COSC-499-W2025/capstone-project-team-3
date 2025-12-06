@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List, Dict
 from collections import Counter
 from app.client.llm_client import GeminiLLMClient
-from app.shared.test_data.parsed_input_text import sample_parsed_files
 from app.utils.non_code_analysis.non_3rd_party_analysis import (calculate_completeness_score,classify_document_type)
 from app.utils.user_preference_utils import UserPreferenceStore
 from dotenv import load_dotenv, find_dotenv
@@ -291,7 +290,7 @@ def get_named_entities(llm1_results):
         return list(entities)
     return []
 
-def get_additional_metrics(llm1_results):
+def get_additional_metrics(llm1_results, parsed_non_code):
     """This functions calculates additional NLP metrics for the final LLM2 response.
     Args:
         llm1_results (dict): The LLM2 response to enhance with additional metrics.
@@ -309,14 +308,14 @@ def get_additional_metrics(llm1_results):
     doc_type_counts: Counter = Counter()
     doc_type_freq: Counter = Counter()
     # Analyze each file's contribution to metrics
-    for file_data in sample_parsed_files.get("parsed_files", []):
+    for file_data in parsed_non_code.get("parsed_files", []):
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         content = file_data.get("content", "")
         doc_type = classify_document_type(content, file_path)
         doc_type_counts[doc_type] += 1
         
         freq = file_data.get("contribution_frequency", 1)
-        doc_type_freq[doc_type] += len(content.split()) * freq
+        doc_type_freq[doc_type] += freq
         
         score = calculate_completeness_score(content, doc_type)
         completeness_scores.append(score)
@@ -535,40 +534,38 @@ def clean_response(response):
                 response = LLM2.generate(response)  
     raise ValueError("Failed to parse LLM2 response as JSON")
 
-def analyze_non_code_files():
+def analyze_non_code_files(parsed_non_code):
     """
     Main pipeline to process non-code files, aggregate summaries, and generate project metrics.
     Entry & Main Flow: pre-process files (NLP), aggregate summaries, generate prompt,
     call LLM2, store analysis results.
     """
-    print("\n" + "=" * 80)
-    print("Running pre_process_non_code_files...")
-    print("=" * 80)
+    # print("\n" + "=" * 80)
+    # print("Running pre_process_non_code_files...")
+    # print("=" * 80)
 
     try:
         # Step 1: Pre-process files
         llm1_results = pre_process_non_code_files(
-            sample_parsed_files,
+            parsed_non_code,
             language="english"
         )
-        print("\n✓ Pre-processing completed successfully")
+       # print("\n✓ Pre-processing completed successfully")
 
         # Step 2: Aggregate summaries into project metrics
         project_metrics = aggregate_non_code_summaries(llm1_results)
-        print_project_metrics(project_metrics)
-        print("\n✓ Aggregation completed successfully")
+        # print("\n✓ Aggregation completed successfully")
         
         # Step 3: Generate LLM2 Prompt using aggregated project metrics
         prompt = create_non_code_analysis_prompt(project_metrics)
-        print(prompt)
-        print("\n✓ Prompt generation completed successfully")
+        #print("\n✓ Prompt generation completed successfully")
         
         # Step 4: Call LLM2 for analysis 
         llm2_results = generate_non_code_insights(prompt)
-        llm2_results["metrics"] = get_additional_metrics(llm1_results)
-        print("\nLLM2 Results:")
-        print(llm2_results)
-        print("\n✓ LLM2 analysis completed successfully")
+        llm2_results["metrics"] = get_additional_metrics(llm1_results, parsed_non_code)
+       # print("\nLLM2 Results:")
+       # print(llm2_results)
+        # print("\n✓ LLM2 analysis completed successfully")
 
     except Exception as e:
         print(f"\n✗ Error during pipeline execution: {e}")
@@ -576,27 +573,3 @@ def analyze_non_code_files():
         traceback.print_exc()
     
     return llm2_results
-
-def print_project_metrics(project_metrics):
-    """
-    Print the aggregated project metrics in a readable format.
-    """
-    if not project_metrics:
-        print("\n✗ No project metrics to display.")
-        return
-
-    print("\n" + "=" * 80)
-    print("Project Metrics:")
-    print("=" * 80)
-    print(f"Project: {project_metrics['Project_Name']}")
-    print(f"Total Files: {project_metrics['totalFiles']}")
-    print(f"File Names: {project_metrics['fileNames']}")
-    print(f"Average Readability Score: {project_metrics['averageReadabilityScore']}")
-    print(f"Unique Key Topics: {project_metrics['uniqueKeyTopics']}")
-    print(f"File Type Distribution: {project_metrics['fileTypeDistribution']}")
-    print(f"Named Entities: {project_metrics['namedEntities']}")
-    print(f"Files: {project_metrics['files']}")
-
-# Hardcoded function for CLI run
-if __name__ == "__main__":
-    analyze_non_code_files()

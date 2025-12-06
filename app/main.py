@@ -27,11 +27,8 @@ from app.utils.git_utils import detect_git
 from app.cli.git_code_parsing import run_git_parsing_from_files
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 from app.utils.non_code_analysis.non_code_analysis_utils import (
-    pre_process_non_code_files,
-    aggregate_non_code_summaries,
-    create_non_code_analysis_prompt,
-    generate_non_code_insights,
-    get_additional_metrics)
+    analyze_non_code_files,
+)
 import uvicorn
 import os
 import sys
@@ -68,7 +65,7 @@ def display_startup_info():
 # Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
-    seed_db()  # automatically populate test data
+    #seed_db()  # automatically populate test data
     print("Database started")
 
     # Check for the consent
@@ -233,36 +230,19 @@ def main():
                                 print(f"✅ Starting AI analysis for {project_name}")                                
                                 # --- NON-CODE ANALYSIS (AI) ---
                                 try:
-                                    # Step 1: Pre-process with local NLP
-                                    llm1_results = pre_process_non_code_files(
-                                        parsed_non_code,
-                                        language="english"
-                                    )
-                                    
-                                    # Step 2: Aggregate summaries
-                                    project_metrics = aggregate_non_code_summaries(llm1_results)
-                                    
-                                    # Step 3: Create LLM prompt
-                                    prompt = create_non_code_analysis_prompt(project_metrics)
-                                    
-                                    # Step 4: Get LLM insights
-                                    non_code_ai_results = generate_non_code_insights(prompt)
-                                    
-                                    # Step 5: Add additional metrics
-                                    non_code_ai_results["metrics"] = get_additional_metrics(llm1_results)
-                                    
+                                    non_code_analysis_results=analyze_non_code_files(parsed_non_code=parsed_non_code)
                                     print(f"✅ AI Non Code Analysis completed successfully!")
                                     
                                 except Exception as e:
                                     print(f"⚠️ AI non-code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
-                                    non_code_ai_results = analyze_project_clean(parsed_non_code)
+                                    non_code_analysis_results = analyze_project_clean(parsed_non_code)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
                                 
                                 # merge code and non code LLM analysis then store into db
                                 try:
-                                    merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature = scan_result["signature"])
+                                    merge_analysis_results(non_code_analysis_results=non_code_analysis_results,code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                                 except Exception as e:
                                     print(f"❌ Error storing analysis results for {project_name}: {e}")
                                     
@@ -286,7 +266,7 @@ def main():
                             non_code_local_results = {}
                         # merge code and non code LOCAL analysis then store into db
                         try:
-                            merge_analysis_results(non_code_analysis_results={}, code_analysis_results={}, project_name=project_name, project_signature=scan_result["signature"])
+                            merge_analysis_results(non_code_analysis_results=non_code_local_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                         except Exception as e:
                             print(f"❌ Error storing analysis results for {project_name}: {e}")
                         

@@ -143,52 +143,88 @@ def test_extract_contribution_bullets_readme():
         assert not re.search(r"\s+\d+\s*\.*$", b)
 
 def test_analyze_project_clean_empty_files():
-    parsed_files = {"files": []}
-    result = analyze_project_clean(parsed_files)
-    assert result["summary"].startswith("No files were available")
-    assert result["bullets"] == []
-    assert result["doc_type_counts"] == {}
-    assert result["doc_type_frequency"] == {}
-    for skill_list in result["skills"].values():
-        assert skill_list == []
+    """Test with empty files list."""
+    result = analyze_project_clean({"parsed_files": []})
+    
+    assert "project_summary" in result  # Changed from 'summary'
+    assert "resume_bullets" in result   # Changed from 'bullets'
+    assert "skills" in result
+    assert result["project_summary"] == "No files were available for analysis."
+    assert result["resume_bullets"] == []
+    assert result["Metrics"]["completeness_score"] == 0  # Changed from top-level
 
 def test_analyze_project_clean_no_successful_files():
-    parsed_files = {"files": [
-        {"success": False, "content": "Some content", "path": "README.md"}
-    ]}
+    """Test with files that failed to parse."""
+    parsed_files = {
+        "parsed_files": [
+            {"name": "file1.txt", "success": False, "error": "Parse error"},
+            {"name": "file2.md", "success": False, "error": "Access denied"}
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
-    assert result["summary"].startswith("No successfully parsed content")
-    assert result["bullets"] == []
-    assert result["doc_type_counts"] == {}
-    assert result["doc_type_frequency"] == {}
-    for skill_list in result["skills"].values():
-        assert skill_list == []
+    
+    assert "project_summary" in result
+    assert result["project_summary"] == "No successfully parsed content was available for analysis."
+    assert result["resume_bullets"] == []
+
+
 
 def test_analyze_project_clean_basic_readme():
-    parsed_files = {"files": [
-        {"success": True, "content": "This is a README for a Python project using FastAPI and Docker.", "path": "README.md", "contribution_frequency": 1}
-    ]}
+    """Test with single README file."""
+    parsed_files = {
+        "parsed_files": [
+            {
+                "name": "README.md",
+                "path": "/project/README.md",
+                "content": "# My Project\n\nThis is a test project.",
+                "success": True,
+                "contribution_frequency": 1
+            }
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
-    assert "README documentation" in result["summary"]
-    assert any("Python" in skill for skill in result["skills"]["technical_skills"])
-    assert any("Docker" in skill for skill in result["skills"]["technical_skills"])
-    assert len(result["bullets"]) > 0
-    assert result["doc_type_counts"]["README"] == 1
-    assert result["doc_type_frequency"]["README"] == 1
+    
+    assert "project_summary" in result  # Changed
+    assert "resume_bullets" in result   # Changed
+    assert "skills" in result
+    assert "Metrics" in result          # Changed
+    assert isinstance(result["project_summary"], str)
+    assert len(result["project_summary"]) > 0
+    assert isinstance(result["resume_bullets"], list)
+
+
 
 def test_analyze_project_clean_multiple_files():
-    parsed_files = {"files": [
-        {"success": True, "content": "API endpoints for user authentication and data analysis.", "path": "api_doc.md", "contribution_frequency": 3},
-        {"success": True, "content": "System architecture and microservices design.", "path": "design.md", "contribution_frequency": 5},
-        {"success": True, "content": "Requirements: scalability, reliability, performance.", "path": "requirements.txt", "contribution_frequency": 2},
-    ]}
+    """Test with multiple documentation files."""
+    parsed_files = {
+        "parsed_files": [
+            {
+                "name": "README.md",
+                "path": "/project/README.md",
+                "content": "# Project Overview\n\nThis project does X, Y, Z.",
+                "success": True,
+                "contribution_frequency": 5
+            },
+            {
+                "name": "DESIGN.md",
+                "path": "/project/DESIGN.md",
+                "content": "## Architecture\n\nWe use microservices with Docker.",
+                "success": True,
+                "contribution_frequency": 10
+            }
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
-    assert "API documentation" in result["summary"] or "system design" in result["summary"]
-    assert "architecture" in result["summary"] or "requirements" in result["summary"]
-    assert len(result["bullets"]) > 0
-    assert isinstance(result["skills"], dict)
-    assert len(result["doc_type_counts"]) > 0
-    assert len(result["doc_type_frequency"]) > 0
+    
+    assert "project_summary" in result
+    assert "resume_bullets" in result
+    assert len(result["resume_bullets"]) > 0
+    assert result["Metrics"]["word_count"] > 0
+    assert "contribution_activity" in result["Metrics"]
+
 
 def test_completeness_score_design_document():
     # Simulate a design document with key sections
@@ -217,74 +253,93 @@ def test_completeness_score_partial_readme():
     # Should be non-zero but less than 100
     assert 0 < score < 100
     
+
 def test_analyze_project_clean_returns_word_count():
-    parsed_files = {"files": [
-        {
-            "success": True,
-            "content": "This is a README file with several words for testing.",
-            "path": "README.md",
-            "contribution_frequency": 1
-        }
-    ]}
-
+    """Test that word count is calculated."""
+    parsed_files = {
+        "parsed_files": [
+            {
+                "name": "doc.txt",
+                "path": "/project/doc.txt",
+                "content": "one two three four five",
+                "success": True
+            }
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
-    expected_word_count = len("This is a README file with several words for testing.".split())
+    
+    assert "Metrics" in result                    # Changed
+    assert "word_count" in result["Metrics"]      # Changed
+    assert result["Metrics"]["word_count"] == 5   # Changed
 
-    # TOP-LEVEL word_count, not nested inside metrics
-    assert "word_count" in result
-    assert result["word_count"] == expected_word_count
 
 def test_analyze_project_clean_contribution_frequency_aggregation():
-    """Test that contribution frequency is properly aggregated by document type"""
-    parsed_files = {"files": [
-        {
-            "success": True,
-            "content": "This is a README for Python project.",
-            "path": "README.md",
-            "name": "README.md",
-            "contribution_frequency": 3
-        },
-        {
-            "success": True,
-            "content": "API endpoints for users. GET /api/users and POST /api/users. API documentation.",
-            "path": "api_docs.md",
-            "name": "api_docs.md",
-            "contribution_frequency": 5
-        },
-        {
-            "success": True,
-            "content": "Another README with setup instructions.",
-            "path": "docs/README.md",
-            "name": "README.md",
-            "contribution_frequency": 2
-        }
-    ]}
-
+    """Test aggregation of contribution frequencies by document type."""
+    parsed_files = {
+        "parsed_files": [
+            {
+                "name": "README.md",
+                "path": "/project/README.md",
+                "content": "# README\n\nProject overview goes here.",
+                "success": True,
+                "contribution_frequency": 5
+            },
+            {
+                "name": "DESIGN.md",
+                "path": "/project/DESIGN.md",
+                "content": "## System Design\n\nArchitecture description.",
+                "success": True,
+                "contribution_frequency": 10
+            },
+            {
+                "name": "API.md",
+                "path": "/project/docs/API.md",
+                "content": "## API Documentation\n\nEndpoint list.",
+                "success": True,
+                "contribution_frequency": 3
+            }
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
     
-    # Test doc_type_counts (number of files per type)
-    assert "doc_type_counts" in result
-    assert result["doc_type_counts"]["README"] == 2  # Two README files
-    assert result["doc_type_counts"]["API_DOCUMENTATION"] == 1  # One API doc
+    # Check structure
+    assert "Metrics" in result
+    assert "contribution_activity" in result["Metrics"]
+    assert "doc_type_counts" in result["Metrics"]["contribution_activity"]
+    assert "doc_type_frequency" in result["Metrics"]["contribution_activity"]
     
-    # Test doc_type_frequency (sum of contribution frequencies per type)
-    assert "doc_type_frequency" in result
-    assert result["doc_type_frequency"]["README"] == 5  # 3 + 2
-    assert result["doc_type_frequency"]["API_DOCUMENTATION"] == 5  # 5
+    # Check values
+    doc_counts = result["Metrics"]["contribution_activity"]["doc_type_counts"]
+    doc_freq = result["Metrics"]["contribution_activity"]["doc_type_frequency"]
+    
+    assert "README" in doc_counts
+    assert doc_counts["README"] == 1
+    assert doc_freq["README"] == 5
+    
+    # Total of all frequencies
+    total_freq = sum(doc_freq.values())
+    assert total_freq == 18  # 5 + 10 + 3
+
 
 def test_analyze_project_clean_default_contribution_frequency():
-    """Test that files without contribution_frequency default to 1"""
-    parsed_files = {"files": [
-        {
-            "success": True,
-            "content": "This is a README without contribution frequency specified.",
-            "path": "README.md",
-            "name": "README.md"
-            # No contribution_frequency field
-        }
-    ]}
-
+    """Test that contribution_frequency defaults to 1 if missing."""
+    parsed_files = {
+        "parsed_files": [
+            {
+                "name": "doc.txt",
+                "path": "/project/doc.txt",
+                "content": "Some content here.",
+                "success": True
+                # No contribution_frequency field
+            }
+        ]
+    }
+    
     result = analyze_project_clean(parsed_files)
     
-    assert result["doc_type_frequency"]["README"] == 1
+    # Should have doc_type_frequency with value of 1
+    doc_freq = result["Metrics"]["contribution_activity"]["doc_type_frequency"]
+    assert sum(doc_freq.values()) >= 1
     

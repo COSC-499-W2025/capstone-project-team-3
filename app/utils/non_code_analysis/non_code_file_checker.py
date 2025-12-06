@@ -98,6 +98,7 @@ def collect_git_non_code_files_with_metadata(
     # Iterate through all commits in all branches (same pattern as git_utils.py)
     for commit in repo.iter_commits(rev="--all"):
         author_email = getattr(commit.author, "email", None) or "unknown"
+        author_username = getattr(commit.author, "name", None) or "unknown"
         
         try:
             files = commit.stats.files or {}
@@ -113,12 +114,14 @@ def collect_git_non_code_files_with_metadata(
             if file_path not in file_info:
                 file_info[file_path] = {
                     "path": str((Path(repo_path) / file_path).resolve()),
-                    "authors": set(),
+                    "author_email": set(),
+                    "author_username":set(),
                     "commit_count": 0
                 }
             
             # Add author and increment commit count
-            file_info[file_path]["authors"].add(author_email)
+            file_info[file_path]["author_email"].add(author_email)
+            file_info[file_path]["author_username"].add(author_username)
             file_info[file_path]["commit_count"] += 1
     
     # Convert sets to lists and add is_collaborative flag
@@ -126,9 +129,10 @@ def collect_git_non_code_files_with_metadata(
     for file_path, info in file_info.items():
         result[file_path] = {
             "path": info["path"],
-            "authors": sorted(list(info["authors"])),
+            "authors": sorted(list(info["author_email"])),
+            "usernames": sorted(list(info["author_username"])),
             "commit_count": info["commit_count"],
-            "is_collaborative": len(info["authors"]) > 1
+            "is_collaborative": len(info["author_username"]) > 1
         }
     
     return result
@@ -183,7 +187,6 @@ def get_git_user_identity(repo_path: Union[str, Path]) -> Dict[str, str]:
     try:
         repo = get_repo(repo_path)  # REUSED from git_utils.py
         config_reader = repo.config_reader()
-        
         name = config_reader.get_value("user", "name", default="")
         email = config_reader.get_value("user", "email", default="")
         
@@ -197,7 +200,8 @@ def get_git_user_identity(repo_path: Union[str, Path]) -> Dict[str, str]:
 
 def verify_user_in_files(
     file_metadata: Dict[str, Dict[str, Any]],
-    user_email: str
+    user_email: str,
+    username:str
 ) -> Dict[str, List[str]]:
     """
     Verify which files the user actually contributed to vs files by others only.
@@ -222,6 +226,7 @@ def verify_user_in_files(
 
     for file_path, info in file_metadata.items():
         authors = info.get("authors", [])
+        usernames = info.get("usernames", [])
         path_obj = Path(info["path"])
         is_readme = path_obj.name.lower().startswith("readme")
 
@@ -230,7 +235,7 @@ def verify_user_in_files(
             user_solo.append(info["path"])
             continue
 
-        if user_email in authors:
+        if username in usernames or user_email in authors:
             if len(authors) == 1:
                 user_solo.append(info["path"])
             else:
@@ -271,7 +276,8 @@ def get_classified_non_code_file_paths(
 
 def classify_non_code_files_with_user_verification(
     directory: Union[str, Path],
-    user_email: str = None
+    user_email: str = None,
+    username:str=None
 ) -> Dict[str, Any]:
     """
     Classify non-code files as collaborative or non-collaborative with user verification.
@@ -313,13 +319,14 @@ def classify_non_code_files_with_user_verification(
     # REUSED: detect_git() from git_utils.py
     if detect_git(directory):
         # Git repository - get user identity
-        if user_email is None:
+        if user_email is None or username is None:
             user_identity = get_git_user_identity(directory)
             user_email = user_identity.get("email", "")
+            username = user_identity.get("name","")
         else:
             user_identity = {"name": "", "email": user_email}
         
-        if not user_email:
+        if not username or not user_email:
             # Can't determine user - treat as error case
             return {
                 "is_git_repo": True,
@@ -334,7 +341,7 @@ def classify_non_code_files_with_user_verification(
         metadata = collect_git_non_code_files_with_metadata(directory)
         
         # Verify user in files
-        verified = verify_user_in_files(metadata, user_email)
+        verified = verify_user_in_files(metadata, user_email, username)
         
         return {
             "is_git_repo": True,

@@ -11,7 +11,7 @@ def test_merge_analysis_results():
         }
     }
     non_code_analysis_results = {
-        "summary": "Developed a scalable REST API using Python and FastAPI, enabling secure user authentication and data management. "
+        "project_summary": "Developed a scalable REST API using Python and FastAPI, enabling secure user authentication and data management. "  # ✅ Changed from "summary"
                    "Integrated SQLAlchemy for efficient database operations and implemented comprehensive unit tests with pytest. "
                    "Collaborated with cross-functional teams to document requirements and ensure project completeness, resulting in improved team communication and project delivery.",
         "skills": {
@@ -19,7 +19,7 @@ def test_merge_analysis_results():
             "soft_skills": ["Communication"]
         },
         "resume_bullets": ["Documented requirements"],
-        "Metrics": {
+        "Metrics": {  # ✅ Capital M
             "word_count": 1000,
             "completeness_score": 0.95
         }

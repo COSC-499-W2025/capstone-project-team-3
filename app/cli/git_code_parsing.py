@@ -40,7 +40,7 @@ def _get_preferred_author_email() -> Optional[str]:
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT email
+            SELECT github_user, email
             FROM USER_PREFERENCES
             ORDER BY updated_at DESC
             LIMIT 1
@@ -51,10 +51,11 @@ def _get_preferred_author_email() -> Optional[str]:
         conn.close()
 
     if not row:
-        return None
+        return None, None
 
-    email = (row[0] or "").strip()
-    return email or None
+    github_user = (row[0] or "").strip()
+    email = (row[1] or "").strip()
+    return github_user or None, email or None
 
 def run_git_parsing_from_files(
     file_paths: List[str],
@@ -77,13 +78,13 @@ def run_git_parsing_from_files(
     project_file = _get_first_existing_path(file_paths)
     repo_root = project_file.parent
 
-    # 2) Fetch the preferred author email from the DB
-    author_email = _get_preferred_author_email()
-    print(f"[git-analysis] Using author email from USER_PREFERENCES: '{author_email}'")
+    # 2) Fetch the preferred github_user and author email from the DB
+    github_user, author_email = _get_preferred_author_email()
+    print(f"[git-analysis] Using github_user: '{github_user}', author email: '{author_email}' from USER_PREFERENCES.")
 
-    if not author_email:
+    if not author_email and github_user:
         print(
-            "[git-analysis] No user email found in USER_PREFERENCES. "
+            "[git-analysis] No user email or username found in USER_PREFERENCES. "
             "Skipping Git analysis."
         )
         return "[]"
@@ -101,7 +102,7 @@ def run_git_parsing_from_files(
     # 4) Call commit extraction filtered by this author
     json_output = extract_code_commit_content_by_author(
         path=project_file,
-        author=author_email,          \
+        author=github_user or author_email,          \
         include_merges=include_merges,
         max_commits=max_commits,
     )

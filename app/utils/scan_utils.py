@@ -67,28 +67,43 @@ def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
 
 def extract_project_timestamps(project_root: Union[str, Path]) -> Dict[str, datetime]:
     """
-    Extract creation and modification timestamps from the project root directory.
-    Returns timestamps as datetime objects.
+    Compute project timestamps based on actual file modification times.
+    This avoids using directory ctime/mtime, which reflect extraction time.
     """
     try:
         root_path = Path(project_root)
-        stat = root_path.stat()
-        
-        # Get timestamps
-        created_at = datetime.fromtimestamp(stat.st_ctime)
-        last_modified = datetime.fromtimestamp(stat.st_mtime)
-        
+
+        file_mtimes = []
+
+        # Walk through every file recursively
+        for path in root_path.rglob("*"):
+            if path.is_file():
+                stat = path.stat()
+                file_mtimes.append(stat.st_mtime)
+
+        # If the project contains no files, fallback to the directory timestamp
+        if not file_mtimes:
+            stat = root_path.stat()
+            t = datetime.fromtimestamp(stat.st_mtime)
+            return {
+                "created_at": t,
+                "last_modified": t
+            }
+
+        earliest = min(file_mtimes)
+        latest = max(file_mtimes)
+
         return {
-            "created_at": created_at,
-            "last_modified": last_modified
+            "created_at": datetime.fromtimestamp(earliest),
+            "last_modified": datetime.fromtimestamp(latest)
         }
+
     except Exception as e:
         print(f"Error extracting project timestamps for {project_root}: {e}")
-        # Fallback to current time if there's an error
-        current_time = datetime.now()
+        now = datetime.now()
         return {
-            "created_at": current_time,
-            "last_modified": current_time
+            "created_at": now,
+            "last_modified": now
         }
         
 def get_project_signature(file_signatures: List[str]) -> str:

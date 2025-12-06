@@ -403,7 +403,7 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     
     if not files:
         return {
-            "project_summary": "No files were available for analysis.",
+            "project_summary": "",
             "resume_bullets": [],
             "skills": {
                 "technical_skills": [],

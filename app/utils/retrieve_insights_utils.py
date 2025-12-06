@@ -1,4 +1,3 @@
-import sqlite3
 from datetime import datetime
 from app.data.db import get_connection
 
@@ -15,8 +14,14 @@ def get_portfolio_resume_insights():
     for row in cur.fetchall():
         signature, name, rank, summary, created_at, last_modified = row
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
+        # TODO : Initialize metric object = {}
+        # TODO : Include a select amount of metrics from DASHBOARD_DATA as needed. Check for existence first.
+                # Baseline Metrics to check & include : doc_type_frequency, completeness_score, author, languages etc..
+        # TODO : Identify authors for collaborative projects (if metric_name == 'author' is available in DASHBOARD_DATA, then include it)
+
         skills = [s[0] for s in cur.fetchall()]
         duration = f"{format_date(created_at)} - {format_date(last_modified)}"
+        
         projects.append({
             "name": name,
             "summary": summary,
@@ -24,6 +29,7 @@ def get_portfolio_resume_insights():
             "skills": skills,
             "created_at": format_date(created_at),
             "rank": rank
+            # TODO: Include metric object in project to be sent to retrieve_insights_cli.py 
         })
 
     # Top ranked projects (by rank limit to top 5)
@@ -39,7 +45,7 @@ def get_portfolio_resume_insights():
     
     # Return structured portfolio object and resume object
     return {
-        "projects": projects,
+        "projects": projects, 
         "top_projects": top_projects,
         "chronological": chronological
     }, {

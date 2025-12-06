@@ -40,6 +40,7 @@ def lookup_past_insights():
             for skill in list(sorted(set(proj['skills'])))[:5]:  # Limit to 5 skills
                 print(f"      • {skill}")
             print("\n" + "-"*40 + "\n")
+            # TODO: Iterate over metrics from project and include in portfolio output
 
         print("🏆 Top Ranked Projects:\n")
         for proj in portfolio["top_projects"]:

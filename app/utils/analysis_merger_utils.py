@@ -20,7 +20,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         # Non-git related code metrics/skills extracted from code analysis
         code_results = {
             
-         "Resume_bullets": [resume_bullets],
+         "resume_bullets": [resume_bullets],
          "Metrics": {
             "languages": metrics["languages"],
             "total_files": metrics["total_files"],
@@ -40,10 +40,10 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         }
         }
         
-        #git related non-code metrics/skills extracted from non-code analysis
+        #git related code metrics/skills extracted from code analysis
         code_results = {
             
-         "Resume_bullets": [resume_bullets],
+         "resume_bullets": [resume_bullets],
          "Metrics": {
             "authors": metrics["authors"],
             "total_commits": metrics["total_commits"],
@@ -61,26 +61,29 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         }
         }
 
-        non_code_results (list): List of results from non-code analysis.
+        non_code_results (dict): Results from non-code analysis.
         
         non_code_results = {
-
-        "summary":"Summary of the project",
-        "skills" : {
-            "technical_skills": [],
-            "soft_skills": []
-        },
-         "Resume_bullets": [resume_bullets],
-         "Metrics": {
-            "word_count": word_count,
-            "completeness_score": completeness_score,
-            "activity_type_contribution": activity_type_contribution,
+            "project_summary": "Summary of the project",
+            "skills": {
+                "technical_skills": [],
+                "soft_skills": []
+            },
+            "resume_bullets": [resume_bullets],
+            "Metrics": {
+                "completeness_score": completeness_score,
+                "word_count": word_count,
+                "contribution_activity": {
+                    "doc_type_counts": {"README": 1, "DESIGN_DOCUMENT": 2},
+                    "doc_type_frequency": {"README": 5, "DESIGN_DOCUMENT": 10}
+                }
+            }
         }
 
         *Assuming that once Analysis is done, distinction between code/non_code skills & metrics is negligible/not necessary to store*
 
     Returns:
-        merged_results (list): Merged list of results.
+        merged_results (dict): Merged results.
         
     """
     # ------------------------------- EXTRACTION LOGIC ----------------------------------
@@ -112,7 +115,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     non_code_resume_bullets = non_code_analysis_results.get("resume_bullets", [])
     non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
     
-    # Extract skills (use technical roles & keyords from code analysis)
+    # Extract skills (use technical roles & keywords from code analysis)
     code_skills = code_analysis_results.get("Metrics", {}).get("technical_keywords", []) + code_analysis_results.get("Metrics", {}).get("roles", [])
     non_code_skills = non_code_analysis_results.get("skills", {}) if non_code_analysis_results else {}
     non_code_tech_skills = non_code_skills.get("technical_skills", [])
@@ -128,12 +131,18 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     else:
         filtered_non_code_tech_skills = []
     
-    # Build summary based on avalilable data from non-code summary & code resume bullets 
-    summary = build_summary(code_resume_bullets, non_code_analysis_results.get("summary", ""),MAX_SENTENCES, project_name)
+    # Build summary based on available data from non-code summary & code resume bullets 
+    # ✅ CHANGED: "summary" -> "project_summary"
+    summary = build_summary(
+        code_resume_bullets, 
+        non_code_analysis_results.get("project_summary", ""),
+        MAX_SENTENCES, 
+        project_name
+    )
 
     # -------------------------------------------- MERGING LOGIC ----------------------------------------
 
-    # Merge Skills (Ensure a proportional representation of code and non-code skills
+    # Merge Skills (Ensure a proportional representation of code and non-code skills)
     merged_tech_skills = balance_merge(code_skills, filtered_non_code_tech_skills, MAX_SKILLS)
     
     merged_skills = {
@@ -144,18 +153,9 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     # Merge Resume Bullets (Ensure a proportional representation of code and non-code resume bullets)
     merged_resume_bullets = balance_merge(code_resume_bullets, non_code_resume_bullets, MAX_BULLETS)
 
-    print("1------------------------8888888888")
-   # print(**code_metrics)
-    print("2")
-  #  print(**non_code_metrics)
-    print("3")
-    print(code_metrics)
-    print("4")
-    print(non_code_metrics)
     # Merged Metrics (Merge dictionaries since keys for each are unique)
     merged_metrics = {**code_metrics, **non_code_metrics} 
-    print("5")
-    print(merged_metrics)
+    
     # Final Merged Results & project rank to be stored in DB
     merged_results = {
         "summary": summary,
@@ -164,8 +164,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         "metrics": merged_metrics
     }
     
-    
-     # : Store ranked Project & Results in the database
+    # Store ranked Project & Results in the database
     store_results_in_db(project_name, merged_results, project_rank, project_signature)
         
     return merged_results

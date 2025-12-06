@@ -1327,6 +1327,7 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
             "total_lines": metrics["total_lines"],
             "roles": metrics["roles"],
             "technical_keywords": technical_keywords,
-            "development_patterns": development_patterns
+            "development_patterns": development_patterns,
+            "commit_patterns": commit_patterns
         }
     }

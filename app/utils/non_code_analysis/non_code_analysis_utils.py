@@ -19,7 +19,7 @@ import spacy
 
 # Load environment variables
 load_dotenv(find_dotenv())  # Finds .env file anywhere up the tree
-KEY = os.environ.get("GOOGLE_API_KEY")
+KEY = os.environ.get("GEMINI_API_KEY")
 
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
@@ -306,22 +306,26 @@ def get_additional_metrics(llm1_results):
         }
     """
     completeness_scores = []
-
-    for file_data in sample_parsed_files.get("files", []):
+    doc_type_counts: Counter = Counter()
+    doc_type_freq: Counter = Counter()
+    # Analyze each file's contribution to metrics
+    for file_data in sample_parsed_files.get("parsed_files", []):
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         content = file_data.get("content", "")
         doc_type = classify_document_type(content, file_path)
+        doc_type_counts[doc_type] += 1
+        
+        freq = file_data.get("contribution_frequency", 1)
+        doc_type_freq[doc_type] += len(content.split()) * freq
+        
         score = calculate_completeness_score(content, doc_type)
         completeness_scores.append(score)
         
     metrics = {
         "completeness_score": sum(completeness_scores)/len(completeness_scores) if completeness_scores else 0,
         "word_count": sum(file["word_count"] for file in llm1_results) if llm1_results else 0,
-        "contribution_activity": { 
-            "design": get_activity_type(llm1_results, "design_contributions"),
-            "documentation": get_activity_type(llm1_results, "documentation_contributions"),
-            "other": get_activity_type(llm1_results, "other_contributions"),
-        }
+        "doc_type_counts": dict(doc_type_counts),
+        "doc_type_frequency": dict(doc_type_freq),
     }
 
     return metrics 

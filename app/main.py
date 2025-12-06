@@ -388,15 +388,52 @@ def main():
                         print(f"\n{'='*60}")
                         print("📄 RESUME SUMMARY")
                         print("="*60)
-                        
+
                         # Show resume bullets from the database
                         if resume and resume.get("bullets"):
-                            print(f"\n📝 All Resume Bullets ({len(resume['bullets'])} total):")
-                            for i, bullet in enumerate(resume["bullets"], 1):
-                                print(f"   {i:2d}. • {bullet}")
+                            print(f"\n📝 All Resume Bullets:")
+    
+                            # Group bullets by project
+                            bullets_by_project = {}
+                            for bullet_data in resume["bullets"]:
+                                # Handle different formats
+                                if isinstance(bullet_data, dict):
+                                    project_name = bullet_data.get("project_name", "Unknown Project")
+                                    bullet_list = bullet_data.get("bullet", [])
+            
+                                    # Handle if bullet is a string instead of list
+                                    if isinstance(bullet_list, str):
+                                        try:
+                                            import json
+                                            bullet_list = json.loads(bullet_list)
+                                        except:
+                                            bullet_list = [bullet_list]
+                                    elif not isinstance(bullet_list, list):
+                                        bullet_list = [str(bullet_list)]
+                
+                                else:
+                                    project_name = "Unknown Project"
+                                    bullet_list = [str(bullet_data)]
+        
+                                if project_name not in bullets_by_project:
+                                    bullets_by_project[project_name] = []
+        
+                                # Flatten the bullet list
+                                for bullet in bullet_list:
+                                    if bullet and isinstance(bullet, str) and bullet.strip():
+                                        bullets_by_project[project_name].append(bullet.strip())
+    
+                            # Display bullets grouped by project
+                            total_bullets = sum(len(bullets) for bullets in bullets_by_project.values())
+                            print(f"   Total: {total_bullets} bullets across {len(bullets_by_project)} project(s)\n")
+    
+                            for project_name, bullets in bullets_by_project.items():
+                                print(f"   📂 {project_name} ({len(bullets)} bullets):")
+                                for bullet in bullets:
+                                    print(f"      • {bullet}")
+                                print()  # Empty line between projects
                         else:
                             print("\n📭 No resume bullets found in database.")
-                            
                     else:
                         print("📭 No projects found in database.")
                         

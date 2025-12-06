@@ -25,7 +25,7 @@ from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import get_project_top_level_dirs 
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.git_utils import detect_git
-from app.cli.git_code_parsing import run_git_parsing_from_files
+from app.cli.git_code_parsing import run_git_parsing_from_files, _get_preferred_author_email
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 from app.utils.non_code_analysis.non_code_analysis_utils import (
     pre_process_non_code_files,
@@ -38,6 +38,7 @@ import os
 import sys
 import time
 import threading
+import json
 
 load_dotenv()
 
@@ -168,7 +169,8 @@ def main():
                     else: #Perform analysis
                         
                         # --- Non-code file checker integration (per project) ---
-                        non_code_result = classify_non_code_files_with_user_verification(project_path)
+                        username, email=_get_preferred_author_email()
+                        non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")
@@ -293,7 +295,7 @@ def main():
                         
                         try:
                             if detect_git(project_path):
-                                code_analysis_results = analyze_github_project(code_git_history_json)
+                                code_analysis_results = analyze_github_project(json.loads(code_git_history_json))
                             else:
                                 code_analysis_results = analyze_parsed_project(parse_code)
                         except Exception as e:

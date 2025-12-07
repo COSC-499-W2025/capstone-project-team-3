@@ -35,7 +35,7 @@ import os
 import sys
 import time
 import threading
-import json as json_module
+import json
 
 load_dotenv()
 
@@ -275,7 +275,7 @@ def main():
                         
                         try:
                             if detect_git(project_path):
-                                code_analysis_results = analyze_github_project(json_module.loads(code_git_history_json))
+                                code_analysis_results = analyze_github_project(json.loads(code_git_history_json))
                             else:
                                 code_analysis_results = analyze_parsed_project(parse_code)
                         except Exception as e:

@@ -313,6 +313,10 @@ def main():
                             rank_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}️⃣"
                             print(f"   {rank_emoji} {proj['name']} — Score: {proj['rank']} — ({proj['duration']}) — {skills_count} skills")
                             
+                            # Show summry of project
+                            if proj['summary']:
+                                print(f"      📝 Summary: {proj['summary']}")
+                                
                             # Show a few key skills for top projects
                             if proj['skills']:
                                 top_skills_preview = sorted(set(proj['skills']))[:5]

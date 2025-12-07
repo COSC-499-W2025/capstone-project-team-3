@@ -395,30 +395,34 @@ def main():
     
                             # Group bullets by project
                             bullets_by_project = {}
+    
                             for bullet_data in resume["bullets"]:
-                                # Handle different formats
+                                # Extract project name and bullet list
                                 if isinstance(bullet_data, dict):
                                     project_name = bullet_data.get("project_name", "Unknown Project")
                                     bullet_list = bullet_data.get("bullet", [])
-            
-                                    # Handle if bullet is a string instead of list
-                                    if isinstance(bullet_list, str):
-                                        try:
-                                            import json
-                                            bullet_list = json.loads(bullet_list)
-                                        except:
-                                            bullet_list = [bullet_list]
-                                    elif not isinstance(bullet_list, list):
-                                        bullet_list = [str(bullet_list)]
-                
                                 else:
+                                    # If it's just a string, try to parse it
                                     project_name = "Unknown Project"
-                                    bullet_list = [str(bullet_data)]
+                                    bullet_list = bullet_data
         
+                                # Handle if bullet_list is a JSON string
+                                if isinstance(bullet_list, str):
+                                    try:
+                                        bullet_list = json.loads(bullet_list)
+                                    except json.JSONDecodeError:
+                                        # If not JSON, treat as single bullet
+                                        bullet_list = [bullet_list]
+        
+                                # Ensure it's a list
+                                if not isinstance(bullet_list, list):
+                                    bullet_list = [str(bullet_list)]
+        
+                                # Add bullets to project group
                                 if project_name not in bullets_by_project:
                                     bullets_by_project[project_name] = []
         
-                                # Flatten the bullet list
+                                # Flatten and clean bullets
                                 for bullet in bullet_list:
                                     if bullet and isinstance(bullet, str) and bullet.strip():
                                         bullets_by_project[project_name].append(bullet.strip())

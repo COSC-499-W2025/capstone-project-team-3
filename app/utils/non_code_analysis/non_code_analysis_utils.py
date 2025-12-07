@@ -308,6 +308,7 @@ def get_additional_metrics(llm1_results, parsed_non_code):
     doc_type_counts: Counter = Counter()
     doc_type_freq: Counter = Counter()
     # Analyze each file's contribution to metrics
+    # Get doc_type_counts and doc_type_frequency from parsed files
     for file_data in parsed_non_code.get("parsed_files", []):
         file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
         content = file_data.get("content", "")
@@ -320,23 +321,7 @@ def get_additional_metrics(llm1_results, parsed_non_code):
         score = calculate_completeness_score(content, doc_type)
         completeness_scores.append(score)
     
-    # Get doc_type_counts and doc_type_frequency from parsed files
-    doc_type_counts = Counter()
-    doc_type_freq = Counter()
     
-    for file_data in sample_parsed_files.get("files", []):
-        if not file_data.get("success", False):
-            continue
-        content = file_data.get("content", "")
-        if not content:
-            continue
-        file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
-        doc_type = classify_document_type(content, file_path)
-        freq = file_data.get("contribution_frequency", 1)
-        
-        doc_type_counts[doc_type] += 1
-        doc_type_freq[doc_type] += freq
-        
     metrics = {
         "completeness_score": sum(completeness_scores)/len(completeness_scores) if completeness_scores else 0,
         "word_count": sum(file["word_count"] for file in llm1_results) if llm1_results else 0,

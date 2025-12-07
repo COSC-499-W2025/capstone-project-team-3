@@ -1,4 +1,4 @@
-# Team Log week 10
+# Team Log week 14
 
 **Team Name:** Team 3
 
@@ -83,9 +83,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 - **Framework used:** `pytest` and `pytest-cov`  
 - **Test run date:** 7th December 2025 
 - **Summary:**  
-  - Total tests run:  
-  - Passed:   
-  - Failed:   
+  - Total tests run:  403
+  - Passed:   380
+  - Failed:  23 
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  

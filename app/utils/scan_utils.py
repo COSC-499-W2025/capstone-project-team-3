@@ -16,6 +16,7 @@ EXCLUDE_PATTERNS = [
     "env",
     "venv",
     "build",
+    "lib"
     "dist",
     ".pytest_cache",
     # Compiled/binary files (not analyzable)
@@ -65,24 +66,37 @@ def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
         "last_modified": stat.st_mtime,
     }
 
-def extract_project_timestamps(project_root: Union[str, Path]) -> Dict[str, datetime]:
+def extract_project_timestamps(project_root: Union[str, Path], filtered_files: List[Path] = None) -> Dict[str, datetime]:
     """
     Compute project timestamps based on actual file modification times.
-    This avoids using directory ctime/mtime, which reflect extraction time.
+    Uses the already-filtered files to respect exclusions.
     """
     try:
         root_path = Path(project_root)
+        
+        # If filtered_files provided, use them; otherwise scan with exclusions
+        if filtered_files is None:
+            filtered_files = scan_project_files(root_path, EXCLUDE_PATTERNS)
+
+        if not filtered_files:
+            # Fallback to directory timestamp if no valid files
+            stat = root_path.stat()
+            t = datetime.fromtimestamp(stat.st_mtime)
+            return {
+                "created_at": t,
+                "last_modified": t
+            }
 
         file_mtimes = []
-
-        # Walk through every file recursively
-        for path in root_path.rglob("*"):
-            if path.is_file():
-                stat = path.stat()
+        for file_path in filtered_files:
+            try:
+                stat = file_path.stat()
                 file_mtimes.append(stat.st_mtime)
+            except (OSError, PermissionError):
+                continue  # Skip files we can't read
 
-        # If the project contains no files, fallback to the directory timestamp
         if not file_mtimes:
+            # Fallback if no readable files
             stat = root_path.stat()
             t = datetime.fromtimestamp(stat.st_mtime)
             return {
@@ -220,7 +234,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
         print(f)
 
     # Extract project timestamps
-    timestamps = extract_project_timestamps(root)
+    timestamps = extract_project_timestamps(root, filtered_files=files)
     
     # Store signatures in DB with actual timestamps
 

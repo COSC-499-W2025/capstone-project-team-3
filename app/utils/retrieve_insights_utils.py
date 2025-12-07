@@ -56,7 +56,7 @@ def get_portfolio_resume_insights():
     top_projects = sorted(projects, key=lambda x: x["rank"], reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
-    chronological = sorted(projects, key=lambda x: (x["created_at"],len(x["skills"])), reverse=True)[:10]
+    chronological = sorted(projects, key=lambda x: (x["created_at"]), reverse=True)[:10]
 
     # Extract Resume bullets
     cur.execute("SELECT summary_text FROM RESUME_SUMMARY")
@@ -73,7 +73,7 @@ def get_portfolio_resume_insights():
     }
     
 def format_date(dt_str):
-    """Format datetime string to human-readable date."""
+    """Format datetime string to YYYY-MM-DD for easy chronological sorting."""
     if not dt_str:
         return ""
     
@@ -90,8 +90,8 @@ def format_date(dt_str):
             # Handle space-separated format
             dt = datetime.strptime(dt_str.split(' ')[0], '%Y-%m-%d')
         
-        # Return human-readable format
-        return dt.strftime('%b %d, %Y')  # "Dec 06, 2025"
+        # Return YYYY-MM-DD format for easy chronological sorting
+        return dt.strftime('%Y-%m-%d')  # "2025-12-06"
         
     except (ValueError, AttributeError):
         # Fallback: extract just date part

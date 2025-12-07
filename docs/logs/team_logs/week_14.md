@@ -49,7 +49,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #335, #331, #327, #369 | Comprehensive Project Analysis Workflow, Project Timestamp Storage, Analysis Output Format Standardization, Test Hot Fixes | @KarimKhalil33 |
+| #407, #409, #410, #411, #412 | Add metrics to portfolio, Fine-tune flow dependencies, Polish project for final demo, Main application flow integration, Project date retrieval fixes, Demo creation and setup | @KarimKhalil33 |
 | #372, #371, #348, #332, #328, #322  | Implemented fucntionality to only accpet zipped files, added skill extraction in analysis pipeline, added completeness score and word count, added non code file checker into main flow(integration) allowed readme files to pass through from non code file checker. | @6s-1 |
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
 | #368, #418, #419, #417 | Integrate parsing in main, Resolve testing issues for merge conflicts, Regressive testing for parsing in main, Manual testing for final demo - Quality assurance, Final presentation preparation and delivery, Team contract completion, Self-reflection completion, Documentation wrap-up | @PaintedW0lf |

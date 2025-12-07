@@ -16,6 +16,7 @@ EXCLUDE_PATTERNS = [
     "env",
     "venv",
     "build",
+    "lib"
     "dist",
     ".pytest_cache",
     # Compiled/binary files (not analyzable)
@@ -65,30 +66,58 @@ def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
         "last_modified": stat.st_mtime,
     }
 
-def extract_project_timestamps(project_root: Union[str, Path]) -> Dict[str, datetime]:
+def extract_project_timestamps(project_root: Union[str, Path], filtered_files: List[Path] = None) -> Dict[str, datetime]:
     """
-    Extract creation and modification timestamps from the project root directory.
-    Returns timestamps as datetime objects.
+    Compute project timestamps based on actual file modification times.
+    Uses the already-filtered files to respect exclusions.
     """
     try:
         root_path = Path(project_root)
-        stat = root_path.stat()
         
-        # Get timestamps
-        created_at = datetime.fromtimestamp(stat.st_ctime)
-        last_modified = datetime.fromtimestamp(stat.st_mtime)
-        
+        # If filtered_files provided, use them; otherwise scan with exclusions
+        if filtered_files is None:
+            filtered_files = scan_project_files(root_path, EXCLUDE_PATTERNS)
+
+        if not filtered_files:
+            # Fallback to directory timestamp if no valid files
+            stat = root_path.stat()
+            t = datetime.fromtimestamp(stat.st_mtime)
+            return {
+                "created_at": t,
+                "last_modified": t
+            }
+
+        file_mtimes = []
+        for file_path in filtered_files:
+            try:
+                stat = file_path.stat()
+                file_mtimes.append(stat.st_mtime)
+            except (OSError, PermissionError):
+                continue  # Skip files we can't read
+
+        if not file_mtimes:
+            # Fallback if no readable files
+            stat = root_path.stat()
+            t = datetime.fromtimestamp(stat.st_mtime)
+            return {
+                "created_at": t,
+                "last_modified": t
+            }
+
+        earliest = min(file_mtimes)
+        latest = max(file_mtimes)
+
         return {
-            "created_at": created_at,
-            "last_modified": last_modified
+            "created_at": datetime.fromtimestamp(earliest),
+            "last_modified": datetime.fromtimestamp(latest)
         }
+
     except Exception as e:
         print(f"Error extracting project timestamps for {project_root}: {e}")
-        # Fallback to current time if there's an error
-        current_time = datetime.now()
+        now = datetime.now()
         return {
-            "created_at": current_time,
-            "last_modified": current_time
+            "created_at": now,
+            "last_modified": now
         }
         
 def get_project_signature(file_signatures: List[str]) -> str:
@@ -205,7 +234,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
         print(f)
 
     # Extract project timestamps
-    timestamps = extract_project_timestamps(root)
+    timestamps = extract_project_timestamps(root, filtered_files=files)
     
     # Store signatures in DB with actual timestamps
 

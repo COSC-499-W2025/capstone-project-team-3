@@ -403,14 +403,20 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     
     if not files:
         return {
-            "summary": "No files were available for analysis.",
-            "bullets": [],
+            "project_summary": "",
+            "resume_bullets": [],
             "skills": {
                 "technical_skills": [],
                 "soft_skills": []
             },
-            "doc_type_counts": {},
-            "doc_type_frequency": {}
+            "Metrics": {
+                "completeness_score": 0,
+                "word_count": 0,
+                "contribution_activity": {
+                    "doc_type_counts": {},
+                    "doc_type_frequency": {}
+                }
+            }
         }
 
     project_content = ""
@@ -449,14 +455,20 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
 
     if not project_content.strip():
         return {
-            "summary": "No successfully parsed content was available for analysis.",
-            "bullets": [],
+            "project_summary": "No successfully parsed content was available for analysis.",
+            "resume_bullets": [],
             "skills": {
                 "technical_skills": [],
                 "soft_skills": [],
             },
-            "doc_type_counts": {},
-            "doc_type_frequency": {},
+            "Metrics": {
+                "completeness_score": 0,
+                "word_count": 0,
+                "contribution_activity": {
+                    "doc_type_counts": {},
+                    "doc_type_frequency": {}
+                }
+            }
         }
 
     project_content_lower = project_content.lower()
@@ -575,11 +587,15 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     return {
-        "summary": final_summary.strip(),
-        "bullets": bullets,
+        "project_summary": final_summary.strip(),
+        "resume_bullets": bullets,
         "skills": final_skills,
-        "completeness_score": completeness_score,
-        "word_count": len(project_content.split()),
-        "doc_type_counts": dict(doc_type_counts),
-        "doc_type_frequency": dict(doc_type_freq),
+        "Metrics": {
+            "completeness_score": completeness_score,
+            "word_count": len(project_content.split()),
+            "contribution_activity": {
+                "doc_type_counts": dict(doc_type_counts),
+                "doc_type_frequency": dict(doc_type_freq)
+            }
+        }
     }

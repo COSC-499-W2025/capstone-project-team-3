@@ -189,10 +189,9 @@ def compute_overall_project_contribution_score(
         else:
             code_score = _compute_non_git_code_score(code_metrics)
 
-
     # 3. Compute non-code score
     non_code_score = _compute_non_code_score(non_code_metrics)
-
+  
     # 4. Compute code vs non-code percentages (effort ratios)
     percentages = _compute_contribution_percentages_single_project(
         code_metrics=code_metrics,
@@ -202,7 +201,7 @@ def compute_overall_project_contribution_score(
 
     code_percentage     = percentages["code_percentage"]
     non_code_percentage = percentages["non_code_percentage"]
-
+    
     # 5. Final blended score
     final_score = (
         code_score * code_percentage +

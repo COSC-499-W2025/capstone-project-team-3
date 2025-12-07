@@ -384,9 +384,9 @@ def generate_github_resume_summary(metrics: Dict) -> List[str]:
         summary.append("Executed comprehensive development across multiple project components and modules")
     
     # TECHNICAL EXPERTISE (KEPT)
-    tech_keywords = metrics.get("technical_keywords", [])
-    if tech_keywords:
-        summary.append(f"Demonstrated expertise in: {', '.join(tech_keywords[:6])}")
+    #tech_keywords = metrics.get("technical_keywords", [])
+    #if tech_keywords:
+    #    summary.append(f"Demonstrated expertise in: {', '.join(tech_keywords[:6])}")
     
     # DEVELOPMENT PATTERNS (KEPT)
     dev_patterns = metrics.get("development_patterns", {})
@@ -490,7 +490,7 @@ def aggregate_github_individual_metrics(commits: List[Dict]) -> Dict:
         roles.update(infer_roles_from_commit_files(files))
         
     # Calculate duration in days between first and last commit
-    def parse_dt(dt): return datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S")
+    def parse_dt(dt): return datetime.fromisoformat(dt)
     if dates:
         dates_sorted = sorted(dates)
         duration_days = (parse_dt(dates_sorted[-1]) - parse_dt(dates_sorted[0])).days
@@ -965,9 +965,9 @@ def generate_resume_summary_from_parsed(metrics: Dict) -> List[str]:
         summary.append(f"Developed a comprehensive {total_lines}-line codebase across {total_files} files using {', '.join(languages)}")
     
     # Technical skills and frameworks
-    tech_keywords = metrics.get("technical_keywords", [])
-    if tech_keywords:
-        summary.append(f"Demonstrated expertise in key technologies: {', '.join(tech_keywords[:8])}")
+    #tech_keywords = metrics.get("technical_keywords", [])
+   # if tech_keywords:
+   #     summary.append(f"Demonstrated expertise in key technologies: {', '.join(tech_keywords[:8])}")
     
     # Framework and patterns
     patterns = metrics.get("code_patterns", {})
@@ -1213,13 +1213,13 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
     if llm_client:
         # Use LLM for resume bullets - FIXED TO ENSURE ARRAY
         resume_prompt = (
-            "Based on the following comprehensive project analysis data, generate 3-5 professional resume bullet points "
-            "highlighting key technical contributions, skills demonstrated, and project impact. "
-            "Each bullet point should be on a separate line starting with '•'. "
-            "Focus on quantifiable achievements and technical expertise.\n\n"
-            "PROJECT METRICS:\n"
-            f"{json.dumps(metrics, indent=2)}"
-        )
+                "Generate exactly 3-5 professional resume bullet points based on this project analysis. "
+                "Return ONLY the bullet points, one per line, without any explanatory text. "
+                "Each line should start with '•' followed by the bullet point. "
+                "Focus on quantifiable achievements and technical expertise.\n\n"
+                "PROJECT METRICS:\n"
+                f"{json.dumps(metrics, indent=2)}"
+            )
         
         llm_response = llm_client.generate(resume_prompt)
         if llm_response:
@@ -1281,13 +1281,13 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     if llm_client:
         # Use LLM for resume bullets - FIXED TO ENSURE ARRAY
         resume_prompt = (
-            "Based on the following comprehensive GitHub project analysis data, generate 3-5 professional resume bullet points "
-            "highlighting key contributions, technical skills, and development impact. "
-            "Each bullet point should be on a separate line starting with '•'. "
-            "Focus on quantifiable achievements and collaborative development.\n\n"
-            "PROJECT METRICS:\n"
-            f"{json.dumps(metrics, indent=2)}"
-        )
+                "Generate exactly 3-5 professional resume bullet points based on this GitHub project analysis. "
+                "Return ONLY the bullet points, one per line, without any explanatory text. "
+                "Each line should start with '•' followed by the bullet point. "
+                "Focus on quantifiable contributions and collaborative development.\n\n"
+                "PROJECT METRICS:\n"
+                f"{json.dumps(metrics, indent=2)}"
+            )
         
         llm_response = llm_client.generate(resume_prompt)
         if llm_response:
@@ -1327,6 +1327,7 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
             "total_lines": metrics["total_lines"],
             "roles": metrics["roles"],
             "technical_keywords": technical_keywords,
-            "development_patterns": development_patterns
+            "development_patterns": development_patterns,
+            "commit_patterns": commit_patterns
         }
     }

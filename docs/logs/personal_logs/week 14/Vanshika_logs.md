@@ -26,7 +26,7 @@
 ✅ Complete team contract — Completed
 ✅ Complete self-reflection — Completed
 ✅ Wrap up all documentation tasks — Completed
-✅ Integrate parsing in main — Completed
+✅ Integrate non code parsing in main — Completed
 ✅ Resolve testing issues and merge conflicts — Completed
 ✅ Perform regressive testing for parsing — Completed
 ✅ Manual testing for final demo — Completed

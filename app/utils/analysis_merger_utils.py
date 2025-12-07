@@ -112,7 +112,8 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
 
     # Extract & Format non-code resume bullets
     non_code_resume_bullets = non_code_analysis_results.get("resume_bullets", [])
-    non_code_resume_bullets = [f"{bullet.strip()}." for bullet in non_code_resume_bullets if bullet.strip()]
+    non_code_resume_bullets = [bullet.strip() if bullet.strip().endswith('.') else bullet.strip() + '.'
+    for bullet in non_code_resume_bullets if bullet.strip()]
     
     # Extract skills (use technical roles & keywords from code analysis)
     code_skills = code_analysis_results.get("Metrics", {}).get("roles", []) + code_analysis_results.get("Metrics", {}).get("languages", [])

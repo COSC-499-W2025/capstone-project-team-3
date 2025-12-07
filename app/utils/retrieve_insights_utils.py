@@ -58,9 +58,22 @@ def get_portfolio_resume_insights():
     # Chronological list (by created_at limit to 10)
     chronological = sorted(projects, key=lambda x: (x["created_at"]), reverse=True)[:10]
 
-    # Extract Resume bullets
-    cur.execute("SELECT summary_text FROM RESUME_SUMMARY")
-    bullets = [row[0] for row in cur.fetchall()]
+    # Extract Resume bullets WITH project names - FIXED
+    cur.execute("""
+        SELECT p.name, r.summary_text 
+        FROM RESUME_SUMMARY r
+        JOIN PROJECT p ON r.project_id = p.project_signature
+        ORDER BY p.created_at DESC
+    """)
+    
+    bullets = []
+    for row in cur.fetchall():
+        project_name, summary_text = row
+        bullets.append({
+            "project_name": project_name,
+            "bullet": summary_text
+        })
+    
     conn.close()
     
     # Return structured portfolio object and resume object
@@ -193,7 +206,7 @@ def get_projects_by_signatures(signatures: list):
             "created_at": format_date(created_at),
             "rank": rank,
             "metrics": metrics,
-            "resume_bullets": resume_bullets  # ADD THIS
+            "resume_bullets": resume_bullets
         })
     
     conn.close()

@@ -28,11 +28,8 @@ from app.utils.git_utils import detect_git
 from app.cli.git_code_parsing import run_git_parsing_from_files, _get_preferred_author_email
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 from app.utils.non_code_analysis.non_code_analysis_utils import (
-    pre_process_non_code_files,
-    aggregate_non_code_summaries,
-    create_non_code_analysis_prompt,
-    generate_non_code_insights,
-    get_additional_metrics)
+    analyze_non_code_files,
+)
 import uvicorn
 import os
 import sys
@@ -70,7 +67,7 @@ def display_startup_info():
 # Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
-   # seed_db()  # automatically populate test data
+    #seed_db()  # automatically populate test data
     print("Database started")
 
     # Check for the consent
@@ -232,30 +229,13 @@ def main():
                                 print(f"✅ Starting AI analysis for {project_name}")                                
                                 # --- NON-CODE ANALYSIS (AI) ---
                                 try:
-                                    # Step 1: Pre-process with local NLP
-                                    llm1_results = pre_process_non_code_files(
-                                        parsed_non_code,
-                                        language="english"
-                                    )
-                                    
-                                    # Step 2: Aggregate summaries
-                                    project_metrics = aggregate_non_code_summaries(llm1_results)
-                                    
-                                    # Step 3: Create LLM prompt
-                                    prompt = create_non_code_analysis_prompt(project_metrics)
-                                    
-                                    # Step 4: Get LLM insights
-                                    non_code_ai_results = generate_non_code_insights(prompt)
-                                    
-                                    # Step 5: Add additional metrics
-                                    non_code_ai_results["metrics"] = get_additional_metrics(llm1_results)
-                                    
+                                    non_code_analysis_results=analyze_non_code_files(parsed_non_code=parsed_non_code)
                                     print(f"✅ AI Non Code Analysis completed successfully!")
                                     
                                 except Exception as e:
                                     print(f"⚠️ AI non-code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
-                                    non_code_ai_results = analyze_project_clean(parsed_non_code)
+                                    non_code_analysis_results = analyze_project_clean(parsed_non_code)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
                                 try:
@@ -270,7 +250,7 @@ def main():
                                  # --- NON-CODE ANALYSIS (AI) ---
                                 # merge code and non code LLM analysis then store into db
                                 try:
-                                    merge_analysis_results(non_code_analysis_results=non_code_ai_results, code_analysis_results=code_analysis_results, project_name=project_name, project_signature = scan_result["signature"])
+                                    merge_analysis_results(non_code_analysis_results=non_code_analysis_results,code_analysis_results=code_analysis_results, project_name=project_name, project_signature=scan_result["signature"])
                                 except Exception as e:
                                     print(f"❌ Error storing analysis results for {project_name}: {e}")
                                     
@@ -388,15 +368,56 @@ def main():
                         print(f"\n{'='*60}")
                         print("📄 RESUME SUMMARY")
                         print("="*60)
-                        
+
                         # Show resume bullets from the database
                         if resume and resume.get("bullets"):
-                            print(f"\n📝 All Resume Bullets ({len(resume['bullets'])} total):")
-                            for i, bullet in enumerate(resume["bullets"], 1):
-                                print(f"   {i:2d}. • {bullet}")
+                            print(f"\n📝 All Resume Bullets:")
+    
+                            # Group bullets by project
+                            bullets_by_project = {}
+    
+                            for bullet_data in resume["bullets"]:
+                                # Extract project name and bullet list
+                                if isinstance(bullet_data, dict):
+                                    project_name = bullet_data.get("project_name", "Unknown Project")
+                                    bullet_list = bullet_data.get("bullet", [])
+                                else:
+                                    # If it's just a string, try to parse it
+                                    project_name = "Unknown Project"
+                                    bullet_list = bullet_data
+        
+                                # Handle if bullet_list is a JSON string
+                                if isinstance(bullet_list, str):
+                                    try:
+                                        bullet_list = json.loads(bullet_list)
+                                    except json.JSONDecodeError:
+                                        # If not JSON, treat as single bullet
+                                        bullet_list = [bullet_list]
+        
+                                # Ensure it's a list
+                                if not isinstance(bullet_list, list):
+                                    bullet_list = [str(bullet_list)]
+        
+                                # Add bullets to project group
+                                if project_name not in bullets_by_project:
+                                    bullets_by_project[project_name] = []
+        
+                                # Flatten and clean bullets
+                                for bullet in bullet_list:
+                                    if bullet and isinstance(bullet, str) and bullet.strip():
+                                        bullets_by_project[project_name].append(bullet.strip())
+    
+                            # Display bullets grouped by project
+                            total_bullets = sum(len(bullets) for bullets in bullets_by_project.values())
+                            print(f"   Total: {total_bullets} bullets across {len(bullets_by_project)} project(s)\n")
+    
+                            for project_name, bullets in bullets_by_project.items():
+                                print(f"   📂 {project_name} ({len(bullets)} bullets):")
+                                for bullet in bullets:
+                                    print(f"      • {bullet}")
+                                print()  # Empty line between projects
                         else:
                             print("\n📭 No resume bullets found in database.")
-                            
                     else:
                         print("📭 No projects found in database.")
                         

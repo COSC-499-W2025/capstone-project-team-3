@@ -1,3 +1,4 @@
+import json
 from app.utils.retrieve_insights_utils import get_portfolio_resume_insights
 from app.utils.user_preference_utils import UserPreferenceStore 
 
@@ -62,8 +63,19 @@ def lookup_past_insights():
         if user_info:
             print(f"{user_info.get('name')} | 📧 Email: {user_info.get('email')}")
             print(f"🏢 Industry: {user_info.get('industry')} | 🎓 Education: {user_info.get('education')}")
-        for bullet in set(resume["bullets"]):
-            print(f"   • {bullet}")
+        
+        bullets_by_project = {}
+        for entry in resume["bullets"]:
+            project, items = _flatten_resume_entry(entry)
+            bullets_by_project.setdefault(project, []).extend(items)
+
+        for project_name, items in bullets_by_project.items():
+            print(f"\n🗂️  {project_name}:")
+            if not items:
+                print("   • No resume bullets found")
+                continue
+            for bullet in items:
+                print(f"   • {bullet}")
         print("\n" + "="*60)
     else:
         print("Skipping display of past insights.")
@@ -173,3 +185,15 @@ def display_specific_projects(project_signatures):
         print(f"   • {skill}")
     
     print("\n" + "="*60)
+    
+def _flatten_resume_entry(entry):
+    project = entry.get("project_name", "Unknown Project")
+    raw = entry.get("bullet", [])
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError:
+            raw = [raw]
+    if not isinstance(raw, list):
+        raw = [str(raw)]
+    return project, [b.strip() for b in raw if isinstance(b, str) and b.strip()]

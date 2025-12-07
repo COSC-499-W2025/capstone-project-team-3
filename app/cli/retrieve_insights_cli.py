@@ -50,7 +50,7 @@ def lookup_past_insights():
 
         print("🏆 Top Ranked Projects:\n")
         for proj in portfolio["top_projects"]:
-            print(f"   🥇 {proj['name']} — ({proj['duration']})")
+            print(f"   🥇 {proj['name']} — ({proj['duration']}) \n ({proj['summary']})")
         print("\n📜 Chronological List of Projects:\n")
         for proj in portfolio["chronological"]:
             print(f"   ⏳ {proj['name']} — ({proj['duration']})")

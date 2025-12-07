@@ -49,7 +49,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| #335, #331, #327, #369 | Comprehensive Project Analysis Workflow, Project Timestamp Storage, Analysis Output Format Standardization, Test Hot Fixes | @KarimKhalil33 |
+| #407, #409, #410, #411, #412 | Add metrics to portfolio, Fine-tune flow dependencies, Polish project for final demo, Main application flow integration, Project date retrieval fixes, Demo creation and setup | @KarimKhalil33 |
 | #372, #371, #348, #332, #328, #322  | Implemented fucntionality to only accpet zipped files, added skill extraction in analysis pipeline, added completeness score and word count, added non code file checker into main flow(integration) allowed readme files to pass through from non code file checker. | @6s-1 |
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
 | #351, #366, #352, #368, #344, #342, #365, #367 | Add Contribution Frequency Tracking for Non-Code Files, Implement Efficient Git Commit Counting, Comprehensive testing for Git parsing, Integrate parsing in main, Special parsing for git non-code files to extract individual contribution, Separate README.md from other md files, README as non-collaborative for non-code (bug fix), Update Non-Code Parser Tests for New Signature | @PaintedW0lf |

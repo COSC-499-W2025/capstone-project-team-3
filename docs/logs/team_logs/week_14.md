@@ -24,6 +24,7 @@
     * Update the output for non code file checker integrated in main. #397
     * Integrate the flow for non code local analysis flow into main. #396
     * Integrate non code ai analysis into main. #405
+    * Integrate git code parsing into main #401
     
 ---
 
@@ -60,7 +61,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #341, #358, #359 |  Add completeness score & Word_count metrics into results for AI analysis pipeline, Determine what analysis pipeline was used (LLM or non-LLM), Ensure Analysis output & structure in sync with Non-AI Analysis Output | @abstractafua |
 | #368, #418, #419, #417 | Integrate parsing in main, Resolve testing issues for merge conflicts, Regressive testing for parsing in main, Manual testing for final demo - Quality assurance, Final presentation preparation and delivery, Team contract completion, Self-reflection completion, Documentation wrap-up | @PaintedW0lf |
 | #415, #409, #413, #406, #398  |  Fix retrieval of resume bullets, Includes resolving time stamp error during extraction, some errors in main integration, Updated git info to contain username, Fixed integration tests, Implement the flow for parsing local code files + refactoring main | @dabby04     |
-| #160, #94,  #48, #113, #92, #181, #224, #320, #339, #356, | Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics, Function to check is_code_file inside git repo, Language Detection for git files, Update extract code commit content by author  | @kjassani    |
+| #160, #94,  #48, #113, #92, #181, #224, #320, #339, #356, #368, #401| Git History Extraction (FR5), filter authors commits, handle empty git repo, check for collaboration in git repo, Map Changes to Files, Extract author's code commits (git), Added functionality to extract readme from git repo, Calculate PR metrics, Function to check is_code_file inside git repo, Language Detection for git files, Update extract code commit content by author, project ranking, git code parsing integration  | @kjassani    |
 
 ---
 
@@ -71,8 +72,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | #305          |  Store project analysis results into db - Code | @KarimKhalil33      |
 | #382, #381, #341, #336, #337 | Merge Non-Code & Code Analysis Results, Send Combined Analysis to project Ranker, Store results in DB, Integrate activity type contribution to AI non-code analysis, Project Retrieval | @abstractafua |
-| #386 | Project Score for Project Ranking | @kjassani|
-
 
 ---
 

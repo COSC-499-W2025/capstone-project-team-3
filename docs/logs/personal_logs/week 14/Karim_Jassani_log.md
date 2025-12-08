@@ -1,4 +1,4 @@
-# Personal Log – Shreya Saxena
+# Personal Log – Karim Jassani
 
 ---
 

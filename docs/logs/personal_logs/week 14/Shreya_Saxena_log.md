@@ -72,7 +72,7 @@ Closed related issues: **#411, #412, #409** along with testing.
 Collaborated with the team to prepare slides for the final presentation. I made slides for non code analysis for skills and additional metrics for non code pipeline. Reviewed all slides with the team.
 
 #### **Final Demo Work** PR#409 FOR FINISHED PROJECT 
-Collaborated with **Karim Khalil**, **Oluwadabira Omotoso**, and **Afua Frempong** to prepare the final project demo along with testing and the following: 
+Collaborated to prepare the final project demo along with testing and the following: 
 
 **Tasks completed:**  
 - Wrote the **demo script** for my part.

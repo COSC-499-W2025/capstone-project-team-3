@@ -343,3 +343,35 @@ def test_analyze_project_clean_default_contribution_frequency():
     doc_freq = result["Metrics"]["contribution_activity"]["doc_type_frequency"]
     assert sum(doc_freq.values()) >= 1
     
+# Add this test at the end of the file
+
+def test_user_preferences_enhance_keyword_detection():
+    """Test that user preferences add enhanced keywords and return user_context."""
+    from app.cli.user_preference_cli import UserPreferences
+    
+    # Create test user
+    pref_manager = UserPreferences()
+    pref_manager.store.save_preferences(
+        name="Test User",
+        email="test@example.com",
+        github_user="testuser",
+        education="BS CS",
+        industry="Software Engineering",
+        job_title="Software Engineer"
+    )
+    
+    # Sample content
+    parsed_files = {
+        "parsed_files": [{
+            "name": "README.md",
+            "path": "/README.md",
+            "content": "Software development with Docker and CI/CD pipelines.",
+            "success": True
+        }]
+    }
+    
+    result = analyze_project_clean(parsed_files, email="test@example.com")
+    assert result["user_context"] is not None
+    assert result["user_context"]["industry"] == "Software Engineering"
+    assert result["user_context"]["detected_domain"] == "Software Engineering"
+    assert result["user_context"]["domain_match"] is True

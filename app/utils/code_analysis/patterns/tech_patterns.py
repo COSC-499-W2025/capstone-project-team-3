@@ -133,6 +133,9 @@ class TechnicalPatterns:
     # === USER PREFERENCE ENHANCEMENT PATTERNS ===
     
     # Industry-specific keyword priorities for enhanced relevance
+    # Higher priority keywords appear first in results and get better scoring
+    # "high" = directly relevant to core industry functions
+    # "medium" = supporting technologies and concepts
     INDUSTRY_KEYWORD_PRIORITIES = {
         "Software Engineering": {
             "high": ["api", "rest", "microservices", "database", "server", "client", 
@@ -168,6 +171,8 @@ class TechnicalPatterns:
     }
     
     # Job title specific keyword priorities
+    # Keywords most commonly associated with specific job roles
+    # Used to emphasize role-relevant technical actions and concepts
     JOB_KEYWORD_PRIORITIES = {
         "software engineer": ["debug", "test", "refactor", "optimize", "implement", 
                             "develop", "architecture", "scalable", "maintainable"],
@@ -184,6 +189,8 @@ class TechnicalPatterns:
     }
     
     # Industry-specific resume enhancement terms
+    # Adjectives and qualifiers that strengthen resume language for specific industries
+    # Applied to existing achievements to make them more impactful and targeted
     INDUSTRY_RESUME_ENHANCEMENTS = {
         "software engineering": ["scalable", "robust", "efficient", "maintainable", 
                                "production-ready", "high-performance", "distributed"],
@@ -194,6 +201,8 @@ class TechnicalPatterns:
     }
     
     # Job-specific action verbs for resume enhancement
+    # Strong action verbs preferred by hiring managers for specific roles
+    # Used to replace generic verbs ("worked on" → "engineered") for better impact
     JOB_ACTION_VERBS = {
         "software engineer": ["engineered", "developed", "implemented", "architected", 
                             "built", "designed", "optimized"],
@@ -206,6 +215,8 @@ class TechnicalPatterns:
     }
     
     # Pattern priorities by domain for better relevance
+    # Reorders detected technical patterns to emphasize domain-relevant ones first
+    # Helps highlight the most important architectural/design patterns for each field
     PATTERN_PRIORITIES = {
         "software engineering": {
             "design_patterns": ["Factory Pattern", "Observer Pattern", "Strategy Pattern", 

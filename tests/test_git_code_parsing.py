@@ -55,7 +55,7 @@ def test_run_git_parsing_uses_email_and_calls_extraction(tmp_path, monkeypatch):
     # --- Mock DB to return an email row ---
     class DummyCursor:
         def __init__(self):
-            self._row = ("testuser@example.com",)
+            self._row = ("testuser", "testuser@example.com",)
 
         def execute(self, *args, **kwargs):
             return None
@@ -95,7 +95,7 @@ def test_run_git_parsing_uses_email_and_calls_extraction(tmp_path, monkeypatch):
         # extract_code_commit_content_by_author called with the correct args
         mock_extract.assert_called_once_with(
             path=project_file,
-            author="testuser@example.com",
+            author="testuser",
             include_merges=False,
             max_commits=10,
         )

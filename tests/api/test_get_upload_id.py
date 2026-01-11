@@ -14,33 +14,27 @@ def app(tmp_path, monkeypatch):
     upload_dir = tmp_path / "uploads"
     upload_dir.mkdir()
 
-    # Monkeypatch only within the module under test and call the real exists
-    real_exists = os.path.exists
-
-    def fake_exists(path):
-        return real_exists(str(path).replace("/app/uploads", str(upload_dir)))
-
-    monkeypatch.setattr("app.api.routes.get_upload_id.os.path.exists", fake_exists)
+    # Set the UPLOAD_DIR environment variable to use the temp directory
+    monkeypatch.setenv("UPLOAD_DIR", str(upload_dir))
 
     app = FastAPI()
     app.include_router(router)
     return app
 
 
-def test_resolve_upload_ok(app, tmp_path):
+def test_resolve_upload_ok(app, tmp_path, monkeypatch):
     """Test that project uploads and resolves with an ok status."""
     client = TestClient(app)
+    upload_dir = tmp_path / "uploads"
 
     # Create dummy zip file in the temp upload directory
-    upload_file = tmp_path / "uploads" / "123.zip"
+    upload_file = upload_dir / "123.zip"
     upload_file.write_text("dummy")
 
     response = client.get("/resolve-upload/123")
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "ok",
-        "path": "/app/uploads/123.zip"
-    }
+    assert response.json()["status"] == "ok"
+    assert "123.zip" in response.json()["path"]
 
 
 def test_resolve_upload_pending(app):

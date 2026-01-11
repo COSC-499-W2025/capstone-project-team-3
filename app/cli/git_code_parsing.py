@@ -28,12 +28,13 @@ def _get_first_existing_path(file_paths: List[str]) -> Path:
             return candidate
     raise ValueError("None of the provided file paths exist on disk.")
 
-def _get_preferred_author_email() -> Optional[str]:
+def _get_preferred_author_email() -> Tuple[Optional[str], Optional[str]]:
     """
-    Fetch the most recent user email from USER_PREFERENCES.
+    Fetch the most recent GitHub username and email from USER_PREFERENCES.
 
-    We use this email to match commit authors:
-    - commit.author.email == this email
+    Used to match commit authors:
+    - commit.author.email == email
+    - commit.author.name / username == github_user
     """
     conn = get_connection()
     try:
@@ -53,9 +54,9 @@ def _get_preferred_author_email() -> Optional[str]:
     if not row:
         return None, None
 
-    github_user = (row[0] or "").strip()
-    email = (row[1] or "").strip()
-    return github_user or None, email or None
+    github_user = (row[0] or "").strip() or None
+    email = (row[1] or "").strip() or None
+    return github_user, email
 
 def run_git_parsing_from_files(
     file_paths: List[str],
@@ -82,7 +83,7 @@ def run_git_parsing_from_files(
     github_user, author_email = _get_preferred_author_email()
     print(f"[git-analysis] Using github_user: '{github_user}', author email: '{author_email}' from USER_PREFERENCES.")
 
-    if not author_email and github_user:
+    if not author_email and not github_user:
         print(
             "[git-analysis] No user email or username found in USER_PREFERENCES. "
             "Skipping Git analysis."

@@ -14,7 +14,7 @@ This directory contains GitHub Actions workflows for automated testing and quali
 - **Purpose**: Validates that Docker images build successfully
 - **Why**: Prevents deployment failures due to Docker issues
 
-### 3. **Security Scan** (`security.yml`) - TODO
+### 3. **Security Scan** (`security.yml`)
 - **Triggers**: On every PR, push, and weekly schedule
 - **Purpose**: Scans dependencies for known vulnerabilities
 - **Why**: Keeps the project secure from vulnerable packages

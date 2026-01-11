@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     rank INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    summary TEXT
+    summary TEXT,
+    thumbnail_path TEXT
 );
 
 --Analyzed Git Data---

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 import zipfile
@@ -39,28 +40,26 @@ def is_zip_file(path: Union[str, Path]) -> bool:
 
 
 def extract_zipped_contents(path: Union[str, Path]) -> str:
-    """
-    Extracts the contents of the zipped file to a temporary folder.
-    Returns the path to the temporary directory if extraction succeeds.
-    Raises ValueError if path is None.
-    Raise ValueError if it is not a valid zipped file or something went wrong during extraction
-    """
     if path is None:
         raise ValueError("path must be provided")
-    
-    zipped_path = Path(path)
-    
-    temp_dir = tempfile.mkdtemp()
-    
-    try:
-        with zipfile.ZipFile(zipped_path, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir)
-        return temp_dir  # Return temp directory path instead of True
-    except zipfile.BadZipFile:
-        raise ValueError(f"The file {zipped_path} is not a valid zip archive.")
-    except Exception as e:
-        raise RuntimeError(f"An error occured during extraction: {e}")
 
+    zip_path = Path(path)
+    temp_dir = tempfile.mkdtemp()
+
+    with zipfile.ZipFile(zip_path, "r") as z:
+        for info in z.infolist():
+            extracted_path = z.extract(info, temp_dir)
+
+            # Convert ZIP timestamp to epoch
+            ts = datetime(*info.date_time).timestamp()
+
+            # Apply timestamp to file or directory
+            try:
+                os.utime(extracted_path, (ts, ts))
+            except:
+                pass
+
+    return temp_dir
     
 def validate_read_access(path: Union[str, Path], treat_as_dir: bool = False) -> dict:
     """
@@ -107,7 +106,6 @@ def validate_read_access(path: Union[str, Path], treat_as_dir: bool = False) -> 
             pass
     except Exception as exc:
         return {"status": "error", "reason": f"cannot open file: {exc}"}
-
     return {"status": "ok", "reason": "", "path": str(p.resolve())}
 
 def validate_directory_size(path: Union[str, Path], max_size_mb: int = 500) -> dict:

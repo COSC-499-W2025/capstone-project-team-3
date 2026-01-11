@@ -1,26 +1,13 @@
-# Question: do we want a project structure too?
-
-# Tracking TODOs:
-#  "detect_language":"str" --done
-#   "lines_of_code": "integer",    ---done      
-#   "docstring_count": "integer", ---done
-
-#   "imports": ["string"],  ---done                // Third-party + standard libs //Would need language detection and extracting file content
-#  Imports only returns full import statements, working to only extract the library...
-
-#   "dependencies_internal": ["string"] --done,   // Local imports within the project
-#   "top_keywords": ["string"],            // Most frequent meaningful identifiers
-#   "entities": { FileEntities },          // Structural elements (functions, classes, etc.)
-#   "metrics": { FileMetrics },            // Per-file stats
-
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 import json 
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
+from app.utils.code_analysis.file_entity_utils import classify_node_types, extract_entities, get_parser
+from app.utils.code_analysis.grammar_loader import extract_rule_names
 from pygount import SourceAnalysis
 from tree_sitter import Parser, Node, Query
-from tree_sitter_language_pack import get_language, get_parser
+from tree_sitter_language_pack import get_language
 from typing import List, Set
 import importlib.resources as pkg_resources
 import re
@@ -77,7 +64,7 @@ def detect_language(file_path: Path) -> str | None:
         language = re.split(r'\+(?=[A-Za-z])', language)[0].strip()
         language = language.split()[0]
         return language
-    except ClassNotFound:
+    except (ClassNotFound, FileNotFoundError, UnicodeDecodeError, OSError):
         return None
 
 def count_lines_of_code(file_path: Path) -> int:
@@ -256,7 +243,10 @@ def extract_libraries(import_statements: List[str], language: str, project_names
                         if any(p in normalized_lib for p in project_names):
                             continue
 
-                    libraries.add(lib)
+                    normalized = normalize_library(lib, language)
+                    if normalized:
+                        libraries.add(normalized)
+
 
     return list(libraries)
 
@@ -330,9 +320,142 @@ def extract_internal_dependencies(import_statements: List[str], language: str, p
 
         # Keep dependencies that match known project prefixes
         if project_names:
-            if any(
-                dep_clean.startswith(prefix + ".") or dep_clean == prefix
-                for prefix in project_names
-            ):
+            normalized_dep = dep_clean.replace("/", ".")
+            if any(prefix in normalized_dep for prefix in project_names):
                 result.add(dep_clean)
     return list(result)
+
+def normalize_library(lib: str, language: str) -> str:
+    """
+    Normalize a library/module path
+
+    Rules:
+      - Drop the last segment of a dotted path (java.util.List -> java.util)
+      - Drop the last segment of slash paths except Go (lodash/array -> lodash)
+      - Preserve single-segment libraries (pytest, pathlib, mongoose)
+      - Ignore 'static' and similar keywords
+    """
+
+    if not lib or lib.lower() in {"static", "import", "require"}:
+        return None
+
+    #  Languages like with dot paths like Python, Java, ...
+    if "." in lib:
+        parts = lib.split(".")
+        if len(parts) > 1:
+            return ".".join(parts[:-1])
+        return lib
+
+    #  Languages with slash paths like JavaScript/TypeScript...
+    if "/" in lib and not lib.startswith("."):
+        parts = lib.split("/")
+        if len(parts) > 1:
+            # universal behavior: keep top-level package
+            return parts[0]
+        return lib
+
+    #  Go special-case (keep full import path)
+    if language in ("go", "golang"):
+        return lib
+
+    # Single-segment library: keep as-is
+    return lib
+
+def extract_metrics(file_path: Path, entities: Dict[str, List[Dict]]) -> Dict[str, Optional[float]]:
+    """
+    Compute per-file metrics including class methods + free functions.
+    """
+    free_funcs = entities.get("functions", [])
+    class_methods = [m for cls in entities.get("classes", []) for m in cls.get("methods", [])]
+    all_funcs = free_funcs + class_methods
+
+    function_count = len(all_funcs)
+    entity_code_lines = sum(f.get("lines_of_code", 0) for f in all_funcs)
+    avg_function_length = round(entity_code_lines / function_count, 2) if function_count else 0.0
+
+    # Independent attempts so we can still return average even if ratio fails
+    try:
+        code_lines = count_lines_of_code(file_path)
+    except Exception:
+        code_lines = None
+    try:
+        doc_lines = count_lines_of_documentation(file_path)
+    except Exception:
+        doc_lines = None
+
+    if code_lines is not None and doc_lines is not None:
+        total_lines = code_lines + doc_lines
+        comment_ratio = round(doc_lines / total_lines, 2) if total_lines else 0.0
+    else:
+        comment_ratio = None
+
+    return {
+        "average_function_length": avg_function_length,
+        "comment_ratio": comment_ratio
+    }
+    
+def parse_code_flow(file_paths: List[Path],top_level_dirs: List[str]) -> List[Dict]:
+    """ This method performs the whole flow of detecting code files to parsing the files and returning an array of JSON """
+    parsed_files = []
+    
+    for file_path in file_paths:
+        try:
+            language = detect_language(file_path)
+            if not language:
+                continue  # skip files where language could not be detected
+
+            lines_of_code = count_lines_of_code(file_path)
+            contents = extract_contents(file_path)
+            import_statements = extract_imports(contents, language)
+            project_top_level_dir = []
+            try:
+                project_top_level_dir = top_level_dirs
+            except Exception:
+                project_top_level_dir = []
+            libraries = extract_libraries(import_statements, language, project_top_level_dir)
+            dependencies = extract_internal_dependencies(import_statements, language, project_top_level_dir)
+
+            mapped_language = map_language_for_treesitter(language)
+            entities = {}
+            if mapped_language:
+                try:
+                    grammar_path = Path(f"app/shared/grammars/{mapped_language}.js")
+                    rule_names = extract_rule_names(grammar_path)
+                    class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
+                    ts_lang = get_language(mapped_language)
+                    tree = get_parser(contents, ts_lang)
+                    entities = extract_entities(tree, contents, class_nodes, func_nodes, component_nodes, file_path)
+                except (FileNotFoundError, LookupError, ModuleNotFoundError, ValueError):
+                    entities = {}
+                except Exception:
+                    entities = {}
+
+            # Build relative path using discovered top-level names
+            relative_path = None
+            top_level_names = project_top_level_dir if project_top_level_dir else []
+            parts = file_path.parts
+            
+            if top_level_names:
+                for idx, part in enumerate(parts):
+                    if part in top_level_names:
+                        relative_path = "/".join(parts[idx:])
+                        break
+            if not relative_path:
+                relative_path = file_path.name
+
+            metrics = extract_metrics(file_path, entities)
+
+            parsed_files.append({
+                "file_path": relative_path,
+                "language": language,               
+                "lines_of_code": lines_of_code,
+                "imports": libraries,               
+                "dependencies_internal": dependencies,
+                "entities": entities,
+                "metrics": metrics,
+            })
+        except Exception:
+            # Absolute last-resort safety: ignore unexpected errors for this file
+            continue
+
+    return parsed_files

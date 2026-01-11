@@ -7,10 +7,13 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    calculate_project_score
+    calculate_project_score,
+    extract_project_timestamps
 )
 from pathlib import Path
 from unittest.mock import patch
+from datetime import datetime
+from app.data.db import get_connection
 
 def test_scan_project_files_excludes_patterns(tmp_path):
     """Test that files matching exclude patterns are not returned."""
@@ -196,7 +199,8 @@ def test_run_scan_flow_returns_files_and_stores_in_db(tmp_path):
     (tmp_path / "ignore.mp3").write_text("audio")
 
     # Exclude .mp3 files by default 
-    files = run_scan_flow(str(tmp_path), exclude=[])
+    scan_result = run_scan_flow(str(tmp_path), exclude=[])
+    files = scan_result["files"]
     file_names = [f.name for f in files]
 
     # Should include a.py and b.txt, but not ignore.mp3
@@ -208,3 +212,195 @@ def test_run_scan_flow_returns_files_and_stores_in_db(tmp_path):
     file_sigs = [extract_file_signature(f, tmp_path) for f in files]
     proj_sig = get_project_signature(file_sigs)
     assert project_signature_exists(proj_sig) is True
+    
+def test_extract_project_timestamps(tmp_path):
+    """Test that project timestamps are correctly extracted from directory."""
+    # Create a test file to ensure the directory has some content
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test content")
+    
+    # Extract timestamps
+    timestamps = extract_project_timestamps(tmp_path)
+    
+    # Verify structure
+    assert "created_at" in timestamps
+    assert "last_modified" in timestamps
+    assert isinstance(timestamps["created_at"], datetime)
+    assert isinstance(timestamps["last_modified"], datetime)
+    
+    # Verify timestamps are recent (within last hour)
+    now = datetime.now()
+    time_diff_created = abs((now - timestamps["created_at"]).total_seconds())
+    time_diff_modified = abs((now - timestamps["last_modified"]).total_seconds())
+    
+    assert time_diff_created < 3600  # Less than 1 hour
+    assert time_diff_modified < 3600  # Less than 1 hour
+
+def test_store_project_with_custom_timestamps(tmp_path):
+    """Test storing project with specific timestamps."""
+    # Create test file
+    test_file = tmp_path / "timestamp_test.py"
+    test_file.write_text("print('timestamp test')")
+    
+    # Create custom timestamps
+    custom_created = datetime(2024, 1, 15, 10, 30, 0)
+    custom_modified = datetime(2024, 11, 25, 14, 45, 0)
+    
+    # Generate signatures
+    file_sig = extract_file_signature(test_file, tmp_path)
+    project_sig = get_project_signature([file_sig])
+    
+    # Store with custom timestamps
+    store_project_in_db(
+        project_sig,
+        "TimestampTestProject", 
+        str(tmp_path),
+        [file_sig],
+        test_file.stat().st_size,
+        custom_created,
+        custom_modified
+    )
+    
+    # Verify project exists
+    assert project_signature_exists(project_sig)
+    
+    # Verify timestamps were stored correctly
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT created_at, last_modified FROM PROJECT 
+        WHERE project_signature = ?
+    """, (project_sig,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    assert row is not None
+    stored_created = row[0]
+    stored_modified = row[1]
+    
+    # Check that our custom timestamps are in the stored values
+    assert "2024-01-15" in str(stored_created)
+    assert "10:30" in str(stored_created)
+    assert "2024-11-25" in str(stored_modified)
+    assert "14:45" in str(stored_modified)
+
+def test_run_scan_flow_with_real_timestamps(tmp_path):
+    """Test that run_scan_flow extracts and stores real directory timestamps."""
+    # Create test files
+    (tmp_path / "main.py").write_text("print('main')")
+    (tmp_path / "utils.py").write_text("def helper(): pass")
+    (tmp_path / "README.md").write_text("# Test Project")
+    
+    # Run the scan flow
+    scan_result = run_scan_flow(str(tmp_path), exclude=[])
+    files = scan_result["files"]
+    # Verify files were found
+    assert len(files) == 3
+    file_names = [f.name for f in files]
+    assert "main.py" in file_names
+    assert "utils.py" in file_names
+    assert "README.md" in file_names
+    
+    # Verify project was stored in database
+    file_sigs = [extract_file_signature(f, tmp_path) for f in files]
+    project_sig = get_project_signature(file_sigs)
+    
+    assert project_signature_exists(project_sig)
+    
+    # Verify that timestamps were stored (should be recent)
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT name, created_at, last_modified FROM PROJECT 
+        WHERE project_signature = ?
+    """, (project_sig,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    assert row is not None
+    project_name = row[0]
+    stored_created = row[1]
+    stored_modified = row[2]
+    
+    # Verify project name matches directory name
+    assert project_name == tmp_path.name
+    
+    # Verify timestamps are not None and contain recent date
+    assert stored_created is not None
+    assert stored_modified is not None
+    assert "2025" in str(stored_created)  # Should be current year
+    assert "2025" in str(stored_modified)
+
+def test_store_project_without_timestamps_uses_defaults(tmp_path):
+    """Test that when no timestamps are provided, current time is used."""
+    # Create test file
+    test_file = tmp_path / "default_timestamp_test.py" 
+    test_file.write_text("print('default test')")
+    
+    # Generate signatures
+    file_sig = extract_file_signature(test_file, tmp_path)
+    project_sig = get_project_signature([file_sig])
+    
+    # Store WITHOUT providing timestamps (should use defaults)
+    store_project_in_db(
+        project_sig,
+        "DefaultTimestampProject",
+        str(tmp_path), 
+        [file_sig],
+        test_file.stat().st_size
+        # No created_at or last_modified provided
+    )
+    
+    # Verify project exists
+    assert project_signature_exists(project_sig)
+    
+    # Verify default timestamps were used (should be very recent)
+    conn = get_connection()
+    cursor = conn.cursor() 
+    cursor.execute("""
+        SELECT created_at, last_modified FROM PROJECT 
+        WHERE project_signature = ?
+    """, (project_sig,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    assert row is not None
+    stored_created = row[0]
+    stored_modified = row[1]
+    
+    # Should contain current date/time (within last few seconds)
+    assert stored_created is not None
+    assert stored_modified is not None
+    
+    # Parse the stored timestamps and verify they're recent
+    # (This handles different timestamp formats that SQLite might use)
+    now = datetime.now()
+    assert str(now.year) in str(stored_created)
+    assert str(now.month) in str(stored_created) or f"{now.month:02d}" in str(stored_created)
+
+def test_project_db_schema_has_timestamp_columns():
+    """Test that the PROJECT table has the required timestamp columns."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Get table schema
+    cursor.execute("PRAGMA table_info(PROJECT)")
+    columns = cursor.fetchall()
+    conn.close()
+    
+    column_names = [col[1] for col in columns]  # col[1] is the column name
+    
+    # Verify timestamp columns exist
+    assert "created_at" in column_names
+    assert "last_modified" in column_names
+    
+    # Get column details for timestamp columns
+    created_at_col = next((col for col in columns if col[1] == "created_at"), None)
+    modified_col = next((col for col in columns if col[1] == "last_modified"), None)
+    
+    assert created_at_col is not None
+    assert modified_col is not None
+    
+    # Verify they're TIMESTAMP type (col[2] is the type)
+    assert "TIMESTAMP" in created_at_col[2].upper()
+    assert "TIMESTAMP" in modified_col[2].upper()

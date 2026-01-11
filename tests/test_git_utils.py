@@ -13,11 +13,15 @@ from app.utils.git_utils import (detect_git,
     extract_branches_for_author
     ,is_collaborative,
     extract_code_commit_content_by_author,
-    extract_all_readmes)
+    extract_all_readmes,
+    extract_pull_request_metrics,
+    is_code_file,
+    detect_language_from_patch)
 from git import Repo, Actor
 from pathlib import Path
 import time, json, pytest, os
 from unittest.mock import MagicMock, patch
+from pygments.util import ClassNotFound
 
 import app.utils.git_utils as git_utils
 
@@ -309,12 +313,32 @@ def make_commit(hexsha, author_name, author_email, message, is_merge=False, file
     diff_mock.change_type = "M"
     commit.diff.return_value = files or [diff_mock]
     return commit
-
+@patch("app.utils.git_utils.detect_language_from_patch", return_value="Python")
+@patch("app.utils.git_utils.author_matches", return_value=True)
+@patch("app.utils.git_utils.is_repo_empty", return_value=False)
+@patch("app.utils.git_utils.is_code_file", return_value=True)
 @patch("app.utils.git_utils.get_repo")
-def test_basic_extraction(mock_get_repo):
+def test_basic_extraction(
+    mock_get_repo,
+    mock_is_code_file,
+    mock_is_repo_empty,
+    mock_author_matches,
+    mock_detect_language_from_patch,
+):
     # Arrange
     mock_repo = MagicMock()
     commit1 = make_commit("abc123", "Alice", "alice@example.com", "Initial commit")
+
+    # Provide realistic stats for this commit so code_lines_added is an int
+    stats_mock = MagicMock()
+    stats_mock.files = {
+        "src/app.py": {
+            "insertions": 5,
+            "deletions": 2,
+        }
+    }
+    commit1.stats = stats_mock
+
     mock_repo.iter_commits.return_value = [commit1]
     mock_get_repo.return_value = mock_repo
 
@@ -324,9 +348,27 @@ def test_basic_extraction(mock_get_repo):
     # Assert
     data = json.loads(result_json)
     assert isinstance(data, list)
-    assert data[0]["author_email"] == "alice@example.com"
-    assert "files" in data[0]
+    assert len(data) == 1
 
+    commit_data = data[0]
+    assert commit_data["author_email"] == "alice@example.com"
+    assert "files" in commit_data
+    assert len(commit_data["files"]) == 1
+
+    file_entry = commit_data["files"][0]
+    assert file_entry["path_after"] == "src/app.py"
+
+    # Language
+    assert file_entry["language"] == "Python"
+
+    # code_lines_added should come from commit.stats.files["src/app.py"]["insertions"]
+    assert "code_lines_added" in file_entry
+    assert isinstance(file_entry["code_lines_added"], int)
+    assert file_entry["code_lines_added"] == 5
+
+    # Verify language detection was called
+    mock_detect_language_from_patch.assert_called_once()
+    
 @patch("app.utils.git_utils.get_repo")
 def test_skips_other_authors(mock_get_repo):
     mock_repo = MagicMock()
@@ -472,3 +514,407 @@ def test_large_readme_respects_max_size(tmp_path):
     assert len(content.encode("utf-8")) <= 2_000_000
     # Content should look correct (still valid text, not binary)
     assert all(ch == "A" for ch in content[:1000])
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_success(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests successful calculation by mocking the external Git and API calls.
+    Verifies the final dictionary structure and the correct arguments for API calls.
+    """
+    # 1. Arrange the mocks
+    
+    # Mock GitRepo and Owner Info
+    mock_get_repo.return_value = MagicMock() # Return a fake repo object
+    MOCK_OWNER = "MockOrg"
+    MOCK_REPO = "mock-project"
+    MOCK_AUTHOR = "testuser"
+    MOCK_TOKEN = "fake_pat_123"
+    mock_parse_remote_url.return_value = (MOCK_OWNER, MOCK_REPO)
+
+    # Mock API responses (The core of the test!)
+    # Mock the count for merged PRs
+    MOCK_MERGED_COUNT = 15
+    # Mock the count for reviewed PRs
+    MOCK_REVIEWED_COUNT = 42
+
+    # Configure the mock to return different values based on the URL (merged vs reviewed)
+    def side_effect_fetch_results(url, token):
+        # 1. Verify the token is passed correctly
+        assert token == MOCK_TOKEN
+        
+        # 2. Return the mocked count based on the URL query
+        if "is:merged" in url:
+            assert f"repo:{MOCK_OWNER}/{MOCK_REPO}" in url
+            assert f"author:{MOCK_AUTHOR}" in url
+            return MOCK_MERGED_COUNT
+        elif "reviewed-by" in url:
+            assert f"repo:{MOCK_OWNER}/{MOCK_REPO}" in url
+            assert f"reviewed-by:{MOCK_AUTHOR}" in url
+            return MOCK_REVIEWED_COUNT
+        return 0 # Should not happen
+
+    mock_fetch_results.side_effect = side_effect_fetch_results
+
+    # 2. Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author=MOCK_AUTHOR,
+        github_token=MOCK_TOKEN
+    )
+
+    # 3. Assert
+    # Verify the final returned metrics
+    assert result == {
+        "prs_merged": MOCK_MERGED_COUNT,
+        "prs_reviewed": MOCK_REVIEWED_COUNT
+    }
+    
+    # Verify that the two search functions were called exactly twice (once for merged, once for reviewed)
+    assert mock_fetch_results.call_count == 2
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_no_remote_info(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests the fallback case when the remote URL cannot be parsed (e.g., not a GitHub repo 
+    or no 'origin' remote).
+    """
+    # Arrange
+    mock_get_repo.return_value = MagicMock()
+    # Simulate failed parsing (no GitHub remote found)
+    mock_parse_remote_url.return_value = None 
+
+    # Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author="anyuser",
+        github_token="anytoken"
+    )
+
+    # Assert
+    # Should return zero counts without attempting any API call
+    assert result == {"prs_merged": 0, "prs_reviewed": 0}
+    assert mock_fetch_results.call_count == 0
+    
+@patch("app.utils.git_utils._fetch_all_search_results")
+@patch("app.utils.git_utils._parse_remote_url")
+@patch("app.utils.git_utils.get_repo")
+def test_extract_pull_request_metrics_zero_contributions(
+    mock_get_repo, 
+    mock_parse_remote_url, 
+    mock_fetch_results):
+    """
+    Tests the case where the user has no contributions (API returns 0 for both metrics).
+    """
+    # Arrange
+    mock_get_repo.return_value = MagicMock()
+    mock_parse_remote_url.return_value = ("TestOwner", "TestRepo")
+
+    # Simulate both API calls returning 0 total_count
+    mock_fetch_results.return_value = 0
+
+    # Act
+    result = extract_pull_request_metrics(
+        path="/fake/path",
+        author="unknownuser",
+        github_token="validtoken"
+    )
+
+    # Assert
+    assert result == {"prs_merged": 0, "prs_reviewed": 0}
+    assert mock_fetch_results.call_count == 2
+    
+# --- Tests for is_code_file() ---
+
+def make_diff_mock(
+    a_path=None,
+    b_path=None,
+    blob_size=100,
+    blob_bytes=b"print('hello')\n",
+    in_vendor=False,
+    binary_ext=False,
+    use_b_blob=True,
+    raise_on_read=False,
+):
+    """
+    Helper to construct a diff-like mock object for is_code_file tests.
+    """
+    diff = MagicMock()
+    diff.a_path = a_path
+    diff.b_path = b_path
+
+    # Configure blob
+    blob = MagicMock()
+    blob.size = blob_size
+
+    if raise_on_read:
+        blob.data_stream.read.side_effect = Exception("read error")
+    else:
+        blob.data_stream.read.return_value = blob_bytes
+
+    # Attach blob either to a_blob or b_blob, or both
+    if use_b_blob:
+        diff.b_blob = blob
+        diff.a_blob = None
+    else:
+        diff.a_blob = blob
+        diff.b_blob = None
+
+    return diff
+
+
+def test_is_code_file_text_file_returns_true():
+    """
+    A normal small text/code file (.py) outside vendor/build dirs should be classified as code.
+    """
+    diff = make_diff_mock(
+        b_path="src/app.py",
+        blob_size=123,
+        blob_bytes=b"def foo():\n    return 42\n",
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_skips_binary_extension():
+    """
+    Files with a known binary extension (.png) should return False, regardless of content.
+    """
+    diff = make_diff_mock(
+        b_path="images/logo.png",
+        blob_size=500,
+        blob_bytes=b"\x89PNG\r\n\x1a\n",  # typical PNG header
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_skips_vendor_directories():
+    """
+    Files inside vendor/build/system folders (e.g., node_modules) should be skipped.
+    """
+    diff = make_diff_mock(
+        b_path="node_modules/library/index.js",
+        blob_size=200,
+        blob_bytes=b"module.exports = {};",
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_skips_large_files_by_size():
+    """
+    Files larger than the 2MB threshold should be treated as non-code (False),
+    and the content should not need to be read.
+    """
+    diff = make_diff_mock(
+        b_path="src/huge_file.py",
+        blob_size=2_500_000,  # > 2MB
+        blob_bytes=b"A" * 1024,  # should not matter
+    )
+
+    result = is_code_file(diff)
+    assert result is False
+
+    # Ensure we didn't need to inspect contents (optional but nice to assert)
+    blob = diff.b_blob or diff.a_blob
+    blob.data_stream.read.assert_not_called()
+
+
+def test_is_code_file_detects_binary_via_nul_bytes_for_unknown_extension():
+    """
+    For files with non-blacklisted extensions, NUL bytes in the first chunk
+    should cause classification as non-code.
+    """
+    diff = make_diff_mock(
+        b_path="data/custom.txt",  # .txt is NOT in BINARY_EXTENSIONS
+        blob_size=256,
+        blob_bytes=b"hello\x00world",  # contains NUL
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_allows_text_with_unknown_extension():
+    """
+    For files with non-binary extensions and no NUL bytes, we should treat them as code/text.
+    """
+    diff = make_diff_mock(
+        b_path="data/custom.txt",
+        blob_size=256,
+        blob_bytes=b"just some plain text\nwith multiple lines\n",
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_handles_missing_blob_gracefully():
+    """
+    If no blob is available (e.g., edge cases in diff), but the extension looks like code,
+    the function should still return True (treated as text/code by extension alone).
+    """
+    diff = MagicMock()
+    diff.a_path = None
+    diff.b_path = "src/app.py"
+    diff.a_blob = None
+    diff.b_blob = None  # no blob
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_handles_read_exception_as_non_code():
+    """
+    If reading blob contents raises an exception, is_code_file should fail safely
+    and classify the file as non-code (False).
+    """
+    diff = make_diff_mock(
+        b_path="src/suspicious.txt",
+        blob_size=100,
+        raise_on_read=True,
+    )
+
+    assert is_code_file(diff) is False
+
+
+def test_is_code_file_uses_a_path_when_b_path_missing():
+    """
+    When b_path is None (e.g., deleted file), a_path should be used to determine extension.
+    """
+    diff = make_diff_mock(
+        a_path="src/deleted.py",
+        b_path=None,
+        blob_size=100,
+        use_b_blob=False,  # place blob on a_blob
+    )
+
+    assert is_code_file(diff) is True
+
+
+def test_is_code_file_returns_false_when_no_paths():
+    """
+    If both a_path and b_path are missing, the function should return False.
+    """
+    diff = MagicMock()
+    diff.a_path = None
+    diff.b_path = None
+    diff.a_blob = None
+    diff.b_blob = None
+
+    assert is_code_file(diff) is False
+    
+# --- Tests for detect_language_from_patch() ---
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_uses_filename_first(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If filename-based detection succeeds, it should be used
+    and content-based detection should not be called.
+    """
+    mock_lexer = MagicMock()
+    mock_lexer.name = "Python 3"
+    mock_guess_lexer_for_filename.return_value = mock_lexer
+
+    result = detect_language_from_patch("script.py", "some patch text")
+
+    assert result == "Python"
+    mock_guess_lexer_for_filename.assert_called_once_with("script.py", "some patch text")
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_normalizes_language_name(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    Language names like 'C++ Header' should be normalized to 'C++'
+    (first token, '+' chunks kept).
+    """
+    mock_lexer = MagicMock()
+    mock_lexer.name = "C++ Header"
+    mock_guess_lexer_for_filename.return_value = mock_lexer
+
+    result = detect_language_from_patch("main.cpp", "diff content")
+
+    assert result == "C++"
+    mock_guess_lexer_for_filename.assert_called_once()
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_falls_back_to_content_on_class_not_found(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    When filename-based detection raises ClassNotFound, the function should
+    fall back to guess_lexer(patch).
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    content_lexer = MagicMock()
+    content_lexer.name = "JavaScript"
+    mock_guess_lexer.return_value = content_lexer
+
+    patch = "function foo() { return 42; }"
+    result = detect_language_from_patch("unknown.ext", patch)
+
+    assert result == "JavaScript"
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", patch)
+    mock_guess_lexer.assert_called_once_with(patch)
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_does_not_use_content_when_patch_blank(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If the patch is empty/whitespace and filename-based detection fails,
+    content-based detection should not be attempted and None should be returned.
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    result = detect_language_from_patch("unknown.ext", "   ")
+
+    assert result is None
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", "   ")
+    mock_guess_lexer.assert_not_called()
+
+
+@patch("app.utils.git_utils.guess_lexer_for_filename")
+@patch("app.utils.git_utils.guess_lexer")
+def test_detect_language_from_patch_returns_none_when_both_detectors_fail(
+    mock_guess_lexer,
+    mock_guess_lexer_for_filename,
+):
+    """
+    If both filename-based and content-based detection raise ClassNotFound,
+    the function should return None.
+    """
+    mock_guess_lexer_for_filename.side_effect = ClassNotFound("no match")
+
+    mock_guess_lexer.side_effect = ClassNotFound("no match")
+
+    patch = "some random content that still doesn't match"
+    result = detect_language_from_patch("unknown.ext", patch)
+
+    assert result is None
+    mock_guess_lexer_for_filename.assert_called_once_with("unknown.ext", patch)
+    mock_guess_lexer.assert_called_once_with(patch)

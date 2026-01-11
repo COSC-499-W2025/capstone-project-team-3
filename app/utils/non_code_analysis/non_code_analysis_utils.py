@@ -1,17 +1,29 @@
+import os
 import re
 from pathlib import Path
 from typing import List, Dict
 from collections import Counter
+from app.client.llm_client import GeminiLLMClient
+from app.utils.non_code_analysis.non_3rd_party_analysis import (calculate_completeness_score,classify_document_type)
+from app.utils.user_preference_utils import UserPreferenceStore
+from dotenv import load_dotenv, find_dotenv
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
+import textstat
+import json
+import spacy
+
+# Load environment variables
+load_dotenv(find_dotenv())  # Finds .env file anywhere up the tree
+KEY = os.environ.get("GEMINI_API_KEY")
 
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
 
-def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 50000, language: str = "english") -> List[Dict]:
+def pre_process_non_code_files(parsed_files: Dict, language: str = "english") -> List[Dict]:
     """
     This function pre-processes parsed project data using Sumy LSA summarizer to generate 
     concise file summaries and extract key topics for the second LLM to use.
@@ -35,8 +47,8 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
     """
     llm1_summaries = []
     
-    # Extract files list from parsed_files
-    files = parsed_files.get("files", [])
+    # Extract files list from parsed_files (supports both "files" and "parsed_files" keys)
+    files = parsed_files.get("parsed_files", parsed_files.get("files", []))
     
     for file_data in files:
         # Skip files that weren't successfully parsed
@@ -44,21 +56,14 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
             continue
         
         file_path_str = file_data.get("path", "")
-        file_name = file_data.get("name", "")
+        file_name = file_data.get("name", "unknown.txt")
         content = file_data.get("content", "")
-        
-        # Check file size
-        # TODO : Intergrate file size check rather than content length if needed
-        # Check content length
-        if len(content) > max_content_length:
-            print(f"Warning: Content for {file_name} exceeds {max_content_length} characters. Truncating...")
-            content = content[:max_content_length] + "... [truncated]"
-        
+         
         # Skip empty content
         if not content or not content.strip():
             continue
         
-        # Dynamically determine the number of summary sentences
+        # Dynamically determine the number of summary sentences needed based on content length
         content_length = len(content)
         if content_length < 1000:
             summary_sentences = 3
@@ -71,20 +76,43 @@ def pre_process_non_code_files(parsed_files: Dict, max_content_length: int = 500
         
         # Generate summary and key topics using Sumy LSA
         try:
+            
+            # Extract file type from file name
+            file_type = Path(file_name).suffix.lstrip('.').lower()
+            
+            # Calculate word count and sentence count
+            word_count = len(re.findall(r'\b\w+\b', content))
+
+            # Count sentences based on periods
+            sentence_count = len(re.findall(r'\.', content))  # Simple sentence count based on periods
+
+            # Calculate readability score
+            readability_score = textstat.flesch_kincaid_grade(content)
+            
             # Generate summary using Sumy LSA
             summary = _sumy_lsa_summarize(content, num_sentences=summary_sentences, language=language)
-            
+            if not summary:
+                summary = ["N/A"]  # Fallback
+                raise ValueError("Could not extract summary from content")
+                
+
             # Extract key topics using frequency analysis
-            key_topics = _extract_key_topics_frequency(content, num_topics=5)
-            
+            key_topics = _extract_key_topics_(content, num_topics=5)
+        
             if not key_topics:
+                key_topics = ["N/A"]  # Fallback 
                 raise ValueError("Could not extract key topics from content")
+                
 
             llm1_summary = {
-                "key_topics": key_topics[:5],  # Limit to 5 main topics
-                "summary": summary.strip(),
                 "file_name": file_name,
-                "file_path": file_path_str
+                "file_path": file_path_str,
+                "file_type": file_type,
+                "word_count": word_count,
+                "sentence_count": sentence_count,
+                "readability_score": readability_score,
+                "summary": summary.strip(),
+                "key_topics": key_topics[:5],  # Limit to 5 main topics per file
             }
             
             llm1_summaries.append(llm1_summary)
@@ -130,7 +158,7 @@ def _sumy_lsa_summarize(content: str, num_sentences: int, language: str = "engli
     except Exception as e:
         print(f"Error generating summary with Sumy LSA: {e}")
 
-def _extract_key_topics_frequency(content: str, num_topics: int = 5) -> List[str]:
+def _extract_key_topics_(content: str, num_topics: int = 5) -> List[str]:
     """
     Extract key topics using word frequency analysis.
     
@@ -206,199 +234,346 @@ def _extract_key_topics_frequency(content: str, num_topics: int = 5) -> List[str
     
     return formatted_topics
 
-#TODO Step 3: Aggregate non code summaries into a single analyzable project
-def aggregate_non_code_summaries(llm1_summary):
+#TODO Implement further metric deduction functions as needed
+
+def get_project_name(llm1_results):
+    # Extract Project Name from the file path of the first file
+    if llm1_results and "file_path" in llm1_results[0]:
+        first_file_path = Path(llm1_results[0]["file_path"])
+        return first_file_path.parent.name
+    return "Unnamed Project"  # Fallback if project name can't be determined
+
+def get_total_files(llm1_results):
+    # Get total number of files processed
+    if llm1_results:
+        return len(llm1_results)
+    return 0
+
+def get_file_names(llm1_results):
+    # Get list of all file names
+    if llm1_results:
+        return [summary["file_name"] for summary in llm1_results]
+    return []
+
+def get_readability_metrics(llm1_results):
+    # Calculate average readability score across all files
+    if llm1_results:
+        scores = [summary["readability_score"] for summary in llm1_results if "readability_score" in summary]
+        return sum(scores) / len(scores) if scores else None
+
+def get_unique_key_topics(llm1_results):
+    # Get unique key topics across all files
+    if llm1_results:
+        return list(set(topic for summary in llm1_results for topic in summary.get("key_topics", [])))
+    return []
+
+def get_file_type_distribution(llm1_results):
+    # Get file type distribution across all files
+    if llm1_results:
+        file_types = [
+            summary.get("fileType") or summary.get("file_type")
+            for summary in llm1_results
+            if "fileType" in summary or "file_type" in summary is not None
+        ]
+        return dict(Counter(file_types))
+    return {}
+
+def get_named_entities(llm1_results):
+   # TODO: Use NLP to identify named entities in content for optimized LLM context. [REFACTOR LATER]
+    nlp = spacy.load("en_core_web_sm")
+    if llm1_results:
+        entities = set()
+        for summary in llm1_results:
+            content = summary.get("summary", "")
+            doc = nlp(content)
+            entities.update(ent.text for ent in doc.ents)
+        return list(entities)
+    return []
+
+def get_additional_metrics(llm1_results, parsed_non_code):
+    """This functions calculates additional NLP metrics for the final LLM2 response.
+    Args:
+        llm1_results (dict): The LLM2 response to enhance with additional metrics.
+        Returns:    
+        dict: The enhanced LLM2 response with additional metrics.
+        Response structure:
+        
+        Metrics = {
+            "completeness_score": float,
+            "word_count": int,
+            "contribution_activity": {"design": int, "documentation": int, "other": int},
+        }
+    """
+    completeness_scores = []
+    doc_type_counts: Counter = Counter()
+    doc_type_freq: Counter = Counter()
+    # Analyze each file's contribution to metrics
+    # Get doc_type_counts and doc_type_frequency from parsed files
+    for file_data in parsed_non_code.get("parsed_files", []):
+        file_path = Path(file_data.get("path", file_data.get("name", "unknown.txt")))
+        content = file_data.get("content", "")
+        doc_type = classify_document_type(content, file_path)
+        doc_type_counts[doc_type] += 1
+        
+        freq = file_data.get("contribution_frequency", 1)
+        doc_type_freq[doc_type] += freq
+        
+        score = calculate_completeness_score(content, doc_type)
+        completeness_scores.append(score)
+    
+    
+    metrics = {
+        "completeness_score": sum(completeness_scores)/len(completeness_scores) if completeness_scores else 0,
+        "word_count": sum(file["word_count"] for file in llm1_results) if llm1_results else 0,
+        "contribution_activity": {
+            "doc_type_counts": dict(doc_type_counts),
+            "doc_type_frequency": dict(doc_type_freq)
+        }
+    }
+
+    return metrics
+
+def get_activity_type(llm1_results, activity_key):
+    """This function determines what activity type a contribution belongs to and the amount contributed.
+    Args:
+        llm1_results (dict): The LLM2 response to analyze.
+        activity_key (str): The key representing the activity type to check.
+        Returns: The type of activity contribution."""
+    # TODO: Implement logic to determine activity type contribution using github data & fallback methods
+    return activity_key, 0
+
+#Step 3: Aggregate non code summaries into a single analyzable project
+def aggregate_non_code_summaries(llm1_results):
     """
     This function aggregates the preprocssed llm1 summary of non-code files into one single project for
     the second LLM to analyze.
-    Returns aggregated_project.
+    
+    Creates aggregated_project_metrics and sends it to the second LLM.
+    
+    aggregated_project_metrics = {
+    "projectName": "Project 1",  # Project-level metadata
+    "metadata": {
+        "totalFiles": 3,
+        "totalWordCount": 15000,
+        "totalSentenceCount": 800,
+        "averageReadabilityScore": 65.2,
+        "uniqueKeyTopics": ["data", "research", "well-being"],
+        "mostFrequentWords": ["data", "analysis", "project"],
+        "fileTypeDistribution": {"pdf": 2, "txt": 1},
+        "namedEntities": ["Team 3", "LLM2", "2025"] #TODO: Use NLP to identify named entities for optimized LLM context
+    },
+    "files": [  # File-level data
+        {
+            "file_name": "file1.pdf",
+            "file_type": "pdf",
+            "word_count": 5000,
+            "sentence_count": 200,
+            "readability_score": 70.5,
+            "summary": "First file summary",
+            "keyTopics": ["data", "analysis"]
+        },
     """
-    pass
 
-#TODO Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
-def create_non_code_analysis_prompt(aggregated_project, llm2_metrics):
+    
+    #This is the project object to be sent to LLM2 (Gemini)
+    aggregated_project_metrics = {
+        #Project Level data
+        "Project_Name": get_project_name(llm1_results), # Project Name extracted from file path
+        "totalFiles": get_total_files(llm1_results),
+        "fileNames": get_file_names(llm1_results),
+        "averageReadabilityScore": get_readability_metrics(llm1_results),
+        "uniqueKeyTopics": get_unique_key_topics(llm1_results), # overall unique key topics from all files
+        "fileTypeDistribution": get_file_type_distribution(llm1_results),
+        "namedEntities": get_named_entities(llm1_results),
+        
+        #File-level data
+        "files" : llm1_results if llm1_results else {}
+    }
+    return aggregated_project_metrics
+
+#Step 4: Generate prompt for second LLM (Take into account user preferences in PROMPT)
+def create_non_code_analysis_prompt(aggregated_project_metrics):
     """
-    Create a structured prompt for AI agent analysis using the aggregated llm1 summaries.
+    Create a structured prompt for AI analysis using the aggregated llm1 project summaries.
     Returns formatted prompt string that follows the structure of llm2_metrics.
     """
-    pass
+    user_prefs = UserPreferenceStore.get_latest_preferences_no_email()
 
-#TODO Step 5: Analyze summries using the second LLM
+    # Fetch user preferences from DB if available
+    if UserPreferenceStore.get_latest_preferences_no_email() is not None:
+        user_prefs = UserPreferenceStore.get_latest_preferences_no_email()
+        industry = user_prefs.get("industry")
+        aspiring_job_title = user_prefs.get("job_title")
+        education = user_prefs.get("education")
+        
+    else:   
+        industry = "N/A"  #fallback
+        aspiring_job_title = "N/A"  #fallback
+        education = "N/A"  #fallback
+
+    # Base prompt structure
+    PROMPT = f"""
+    You are a precise and detail-oriented Analyst. 
+    Your task is to analyze the following project and generate accurate, concise skills and resume bullet points based on the metrics and context information provided. 
+    Your task is to analyze the provided project files and generate:
+    - A concise project summary
+    - Resume-ready bullet points
+    - Extracted technical and soft skills
+    - Domain expertise
+    - A readability score
+    
+    Take into account the user's industry, aspiring job title, and education if available.   
+    Ensure the skills and resume bullet points are relevant to the project content provided.
+    All insights MUST be grounded ONLY in the content provided below.
+
+    Project Name: {aggregated_project_metrics["Project_Name"]}
+    
+    Total Files: {aggregated_project_metrics["totalFiles"]}
+    
+    File Names: {", ".join(aggregated_project_metrics["fileNames"])}
+    
+    Average Readability Score: {aggregated_project_metrics["averageReadabilityScore"]}
+    
+    Unique Key Topics: {", ".join(aggregated_project_metrics["uniqueKeyTopics"])}
+    
+    File Type Distribution: {aggregated_project_metrics["fileTypeDistribution"]}
+    
+    Named Entities: {", ".join(aggregated_project_metrics["namedEntities"])}
+    
+    Industry: {industry}
+    
+    Aspiring Job Title: {aspiring_job_title}
+    
+    Education: {education}
+    """
+
+    # Add file-level details
+    file_details = []
+    for file in aggregated_project_metrics.get("files", []):
+        file_details.append(f"""
+                            
+        File Name: {file.get("file_name")}
+        
+        File Type: {file.get("file_type")}
+        
+        Word Count: {file.get("word_count")}
+        
+        Sentence Count: {file.get("sentence_count")}
+        
+        Readability Score: {file.get("readability_score")}
+        
+        Summary: {file.get("summary")}
+        
+        Key Topics: {", ".join(file.get("key_topics", []))}
+        
+        """)
+
+    # Append file-level details to the prompt
+    PROMPT += "\nFile Details:\n" + "\n".join(file_details)
+
+    # Specify the required output format
+    PROMPT += """
+    ──────────────── OUTPUT INSTRUCTIONS (IMPORTANT) ────────────────
+
+    You MUST return ONLY a valid JSON object.
+    No markdown, no comments, no explanations, no trailing commas.
+
+    Do NOT repeat or copy the schema literally. Fill it with real values extracted from your own conducted project analysis.
+
+    If a field has no information, return an empty array or empty string.
+
+    Return JSON matching EXACTLY this schema:
+
+    {
+    "project_summary": "string",
+    "resume_bullets": ["string"],
+    "skills": {
+        "technical_skills": ["string"],
+        "soft_skills": ["string"]
+    }
+    }
+
+    OUTPUT ONLY the JSON object.
+    """
+
+    return PROMPT
+
+#Step 5: Analyze summaries using the second LLM
 def generate_non_code_insights(PROMPT):
     """
     Generates llm2_metrics by calling LLM2 with the formatted prompt.
-    Returns Final_Result
+    Returns Response
     """
-    pass
+    # Create Client for LLM2 (Gemini)
+    LLM2 = GeminiLLMClient(api_key=KEY)
+    response = LLM2.generate(PROMPT)
+    
+    response = clean_response(response)
+    if not response:
+        response = {}
+        raise EnvironmentError("No LLM2 client is available for non-code analysis.")
+    
+    return response
 
-#TODO Step 6: Store results
-def store_non_code_analysis_results(final_result):
+def clean_response(response):
     """
-    Store analysis results in RESUME table and SKILLS table in database.
+    Clean and parse the response from LLM2 to ensure it is valid JSON.
     """
-    pass
+    try:
+        # Attempt to parse the response directly
+        result = json.loads(response)
+        # Add project_name and to response for completeness
+        result["project_name"] = re.search(r'Project Name:\s*(.*)', response).group(1).strip() if re.search(r'Project Name:\s*(.*)', response) else "N/A"
+        return result
+    except json.JSONDecodeError:
+        # If direct parsing fails, try to extract JSON from the response
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            try:
+                result = json.loads(json_match.group(0))
+                return result
+            except json.JSONDecodeError:
+                # Call LLM2 again to reformat response as JSON
+                LLM2 = GeminiLLMClient(api_key=KEY)
+                response = LLM2.generate(response)  
+    raise ValueError("Failed to parse LLM2 response as JSON")
 
-def analyze_non_code_files(parsed_files):
+def analyze_non_code_files(parsed_non_code):
     """
+    Main pipeline to process non-code files, aggregate summaries, and generate project metrics.
     Entry & Main Flow: pre-process files (NLP), aggregate summaries, generate prompt,
     call LLM2, store analysis results.
     """
-    # 1. Pre-Process files (Use LLM1)
-    pre_process_non_code_files(parsed_files)
+    # print("\n" + "=" * 80)
+    # print("Running pre_process_non_code_files...")
+    # print("=" * 80)
 
-    # 2. Aggregate summaries 
-    aggregate_non_code_summaries(llm1_summary)
-    
-    # 3. Generate Analysis Prompt
-    create_non_code_analysis_prompt(aggregated_project)
-    
-    # 4. Call LLM2 for Analysis
-    generate_non_code_insights(PROMPT)
-
-    # 5. Store Data
-    store_non_code_analysis_results(Final_Result)
-
-
-# Hardcoded function for CLI run
-if __name__ == "__main__":
-    # Sample parsed_files object matching the structure from document_parser
-    sample_parsed_files = {
-        "files": [
-            {
-                "path": "/test/project_proposal.pdf",
-                "name": "project_proposal.pdf",
-                "type": "pdf",
-                "content": """Project Overview: This proposal outlines a comprehensive event-driven analytics platform for Team 3. 
-                The system will ingest non-code artifacts to derive resume-ready highlights and map extracted content to skills and contributions.
-                
-                System Architecture: The platform uses an event-driven architecture with queue-based decoupling. 
-                This design ensures scalability and maintainability. The system consists of multiple microservices that communicate through message queues.
-                
-                Key Features: The platform includes document parsing capabilities for PDF, DOCX, and text files. 
-                It implements natural language processing for skill extraction and contribution analysis. 
-                The system provides a dashboard for visualizing project insights and generating resume summaries.
-                
-                Milestones: The project is divided into four main milestones. 
-                M1 focuses on requirements gathering and system design. 
-                M2 implements core parsing and analysis functionality. 
-                M3 adds advanced NLP and visualization features. 
-                M4 focuses on testing, optimization, and deployment.
-                
-                Risks and Mitigation: Key risks include data latency issues and OCR quality concerns. 
-                We will mitigate these through careful system design and robust error handling. 
-                Performance testing will be conducted throughout development.
-                
-                Team Roles: The team consists of backend developers, frontend developers, and a project manager. 
-                Each member has specific responsibilities aligned with their expertise areas.""",
-                "success": True,
-                "error": ""
-            },
-            {
-                "path": "/test/requirements_doc.txt",
-                "name": "requirements_doc.txt",
-                "type": "txt",
-                "content": """Requirements Document for Analytics Platform
-                
-                Functional Requirements:
-                1. The system must parse PDF, DOCX, and text files
-                2. The system must extract key topics and generate summaries
-                3. The system must identify skills and contributions from documents
-                4. The system must provide a user-friendly dashboard interface
-                
-                Non-Functional Requirements:
-                1. The system must process documents within 5 seconds
-                2. The system must support files up to 5MB in size
-                3. The system must maintain 99% uptime
-                4. The system must be secure and protect user data
-                
-                Technical Stack: Python, FastAPI, React, PostgreSQL, Docker
-                Development Timeline: 12 weeks with 4 major milestones
-                Success Criteria: All functional requirements met, positive user feedback""",
-                "success": True,
-                "error": ""
-            },
-            {
-
-                "path":   "/files/file_three.txt",
-                "name": "file_three.pdf",
-                "type": "txt",
-                "content" : """Artificial intelligence (AI) has transformed nearly every industry in the 21st century. 
-                From self-driving cars to medical diagnostics, AI-driven systems are capable of processing 
-                vast amounts of data and identifying complex patterns that humans might overlook. 
-                However, while the potential of AI is immense, the challenges that accompany it are equally significant. 
-                Issues surrounding ethics, data privacy, and algorithmic bias have sparked debates among 
-                technologists, policymakers, and philosophers alike.
-
-                One of the most visible impacts of AI can be seen in healthcare. Machine learning models can now 
-                detect anomalies in medical imaging, predict patient outcomes, and even recommend treatment plans. 
-                In many cases, AI tools have matched or exceeded the accuracy of human specialists. 
-                Yet, this progress also raises important questions: who is responsible when an AI system makes a mistake? 
-                Should patients have the right to refuse treatment recommendations generated by an algorithm?
-
-                In business, AI is being used to automate repetitive tasks and analyze customer behavior at scale. 
-                Recommendation systems on streaming platforms and online stores are prime examples of this technology 
-                in action. These systems continuously learn from user interactions, adapting to provide more personalized 
-                experiences. Still, critics argue that such systems often create “echo chambers,” limiting exposure to 
-                diverse perspectives or products.
-
-                Education is another domain undergoing transformation. Adaptive learning platforms can tailor lessons to 
-                each students progress, providing real-time feedback and helping educators identify areas where students 
-                struggle most. But with this customization comes concern over data collection. How much information should 
-                educational institutions collect about their students? And who ensures that sensitive data is not misused?
-
-                As AI continues to evolve, regulation becomes increasingly critical. Many governments have proposed or 
-                implemented frameworks aimed at ensuring transparency and fairness. The European Union, for instance, 
-                has introduced legislation requiring companies to explain the decisions made by their AI systems. 
-                This push toward explainable AI reflects a growing global consensus: powerful algorithms must remain accountable.
-
-                Looking ahead, the role of AI in creative industries is set to expand dramatically. From generating 
-                artwork and composing music to writing articles and screenplays, AI is blurring the boundaries between 
-                human and machine creativity. This evolution presents both an opportunity and a challenge — can AI truly 
-                be creative, or is it merely reflecting the creativity of its human programmers?
-
-                In conclusion, while AI offers revolutionary benefits, its responsible development and use will determine 
-                whether it serves humanity as a tool for progress or becomes a source of division and control. 
-                Balancing innovation with ethics, privacy, and accountability remains the central challenge in the 
-                next era of technological advancement.""",
-                "success" : True,
-                "error" : ""},
-            {
-                "path": "/test/failed_file.pdf",
-                "name": "failed_file.pdf",
-                "type": "pdf",
-                "content": "",
-                "success": False,
-                "error": "File parsing failed"
-            }
-        ]
-    }
-    
-    print("\n" + "=" * 80)
-    print("Running pre_process_non_code_files...")
-    print("=" * 80)
-    
     try:
-        results = pre_process_non_code_files(
-            sample_parsed_files,
-            max_content_length=50000,
+        # Step 1: Pre-process files
+        llm1_results = pre_process_non_code_files(
+            parsed_non_code,
             language="english"
         )
+       # print("\n✓ Pre-processing completed successfully")
+
+        # Step 2: Aggregate summaries into project metrics
+        project_metrics = aggregate_non_code_summaries(llm1_results)
+        # print("\n✓ Aggregation completed successfully")
         
-        print(f"\n✓ Function executed successfully!")
-        print("\n" + "=" * 80)
-        print("Results:")
-        print("=" * 80)
+        # Step 3: Generate LLM2 Prompt using aggregated project metrics
+        prompt = create_non_code_analysis_prompt(project_metrics)
+        #print("\n✓ Prompt generation completed successfully")
         
-        for i, result in enumerate[Dict](results, 1):
-            print(f"\n--- File {i}: {result['file_name']} ---")
-            print(f"\nSummary ({len(result['summary'])} characters):")
-            print(f"  {result['summary']}")
-            print(f"\nKey Topics ({len(result['key_topics'])} topics):")
-            for j, topic in enumerate(result['key_topics'], 1):
-                print(f"  {j}. {topic}")
-        
-        
+        # Step 4: Call LLM2 for analysis 
+        llm2_results = generate_non_code_insights(prompt)
+        llm2_results["Metrics"] = get_additional_metrics(llm1_results, parsed_non_code)
+        # print("\nLLM2 Results:")
+        # print(llm2_results)
+        print("\n✓ LLM2 analysis completed successfully")
+
     except Exception as e:
-        print(f"\n✗ Error during execution: {e}")
+        print(f"\n✗ Error during pipeline execution: {e}")
         import traceback
         traceback.print_exc()
+    
+    return llm2_results

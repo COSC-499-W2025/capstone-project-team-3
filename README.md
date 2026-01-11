@@ -1,5 +1,8 @@
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20539381&assignment_repo_type=AssignmentRepo)
 
+# Team Contract
+ - [Team Contract](docs/Team%20contract.pdf)
+
 # Project details
 
  - [Data Flow Diagram and Explanation](docs/plan/DFD.md)

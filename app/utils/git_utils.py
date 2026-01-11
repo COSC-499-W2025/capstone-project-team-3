@@ -1,9 +1,13 @@
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
+from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Union, Dict
+from typing import Tuple, Union, Dict
 from datetime import datetime
-import os, json
+import os, json, re, requests
 from typing import Optional
+from urllib.parse import quote
+from pygments.lexers import guess_lexer, guess_lexer_for_filename
+from pygments.util import ClassNotFound
+
 
 
 def detect_git(path: Union[str, Path]) -> bool:
@@ -212,6 +216,11 @@ def extract_code_commit_content_by_author(
         repo = get_repo(path)  # uses existing helper to get Repo object
     except Exception:
         return json.dumps([], indent =2)  # on error, return empty list
+    
+    # Explicit empty repo check
+    if is_repo_empty(path):
+        return json.dumps([], indent=2)
+    
     seen = set()
     out = []
     errors = []
@@ -239,10 +248,11 @@ def extract_code_commit_content_by_author(
             diffs = commit.diff(parent, create_patch=True) 
             
             files_changed_data = []
+            stats = commit.stats.files 
             for d in diffs:
                 #  # Skip binary files - only process code/text files
-                # if not is_code_file(d): 
-                #     continue
+                if not is_code_file(d): 
+                    continue
                 status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
 
                 patch_text = getattr(d, "diff", b"")
@@ -250,6 +260,15 @@ def extract_code_commit_content_by_author(
                     patch = patch_text.decode("utf-8", errors="replace")
                 except Exception:
                     patch = "/* Could not decode patch text */"
+                
+                filename = d.b_path or d.a_path or ""
+                language = detect_language_from_patch(filename, patch)
+                file_stats = stats.get(filename, {})
+                raw_insertions = file_stats.get("insertions", 0)
+                try:
+                    lines_added = int(raw_insertions)
+                except (TypeError, ValueError):
+                    lines_added = None
 
                 files_changed_data.append({
                     "status": status,
@@ -257,6 +276,8 @@ def extract_code_commit_content_by_author(
                     "path_after": d.b_path,
                     "patch": patch, 
                     "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                    "language": language,
+                    "code_lines_added": lines_added
                 })
             # --- END NEW PER-FILE LOGIC ---
         # Handle potential Git command errors by adding to dictionary
@@ -362,3 +383,301 @@ def _is_binary_heuristic(sample: bytes) -> bool:
     ratio = textish / len(sample)
     return ratio < 0.85
 
+GITHUB_API_URL = "https://api.github.com"
+
+# --- Helper to parse remote URL (NEW) ---
+def _parse_remote_url(repo) -> Optional[Tuple[str, str]]:
+    """
+    Parses the repository owner and name from the 'origin' remote URL.
+    Returns (owner, repo_name) or None if parsing fails or not a GitHub repo.
+    """
+    try:
+        # Get the URL for the 'origin' remote
+        url = repo.remotes.origin.url
+    except AttributeError:
+        # No 'origin' remote found
+        return None
+
+    # Regex to capture owner and repo name from common GitHub URL formats (HTTPS or SSH)
+    match = re.search(r'(?:github\.com[/:])([a-zA-Z0-9_-]+)/([a-zA-Z0-9_.-]+?)(\.git)?$', url)
+
+    if match:
+        owner, repo_name = match.groups()[0], match.groups()[1]
+        return owner, repo_name
+    
+    return None
+
+# --- Helper for API calls (NEW) ---
+def _make_github_api_request(url: str, token: str) -> Optional[dict]:
+    """Handles GitHub API GET requests with authentication and basic error checking."""
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"GitHub API Error for {url}: {e}")
+        return None
+    
+def _fetch_all_search_results(url: str, token: str) -> int:
+    """
+    Fetches the total_count from the GitHub Search API, handling pagination 
+    up to a reasonable limit if needed, but primarily relying on total_count.
+    The GitHub Search API returns the total_count directly, making this efficient.
+    """
+    # GitHub Search API total_count is often accurate, we rely on it.
+    data = _make_github_api_request(url, token)
+    return data.get('total_count', 0) if data else 0
+
+def extract_pull_request_metrics(
+    path: Union[str, Path], 
+    author: str, 
+    github_token: str
+) -> Dict[str, int]:
+    """
+    Calculates the number of Pull Requests merged and reviewed by an author 
+    by querying the GitHub Search API for maximum efficiency.
+    """
+    # 1. Setup and Remote Info Retrieval
+    # Assumes 'get_repo' is available in the scope
+    repo = get_repo(path) 
+    remote_info = _parse_remote_url(repo)
+    
+    if not remote_info:
+        # print("Could not parse remote URL or repository is not hosted on GitHub.")
+        return {"prs_merged": 0, "prs_reviewed": 0}
+        
+    owner, repo_name = remote_info
+    encoded_author = quote(author)
+    
+    # --- PRs Merged (Authored Contributions) ---
+    # Metric 1: Count of PRs authored by user that were merged.
+    # Uses the single, efficient Search API call.
+    merged_search_query = f"repo:{owner}/{repo_name} is:pr is:merged author:{encoded_author}"
+    merged_url = f"{GITHUB_API_URL}/search/issues?q={merged_search_query}"
+    
+    prs_merged = _fetch_all_search_results(merged_url, github_token)
+
+    # --- PRs Reviewed (Collaborative Contributions) ---
+    # Metric 2: Count of unique PRs reviewed by the user.
+    # GitHub's 'reviewed-by' operator automatically handles uniqueness and review status.
+    reviewed_search_query = f"repo:{owner}/{repo_name} is:pr reviewed-by:{author}"
+    reviewed_url = f"{GITHUB_API_URL}/search/issues?q={reviewed_search_query}"
+    
+    prs_reviewed = _fetch_all_search_results(reviewed_url, github_token)
+            
+    return {
+        "prs_merged": prs_merged, 
+        "prs_reviewed": prs_reviewed
+    }
+
+def extract_non_code_content_by_author(
+    path: Union[str, Path],
+    author: str,
+    exclude_readme: bool = True,
+    exclude_pdf_docx: bool = True,
+    include_merges: bool = False,
+    max_commits: Optional[int] = None
+) -> str:
+    """
+    Extract non-code file contributions by author.
+    REUSES: Logic from extract_code_commit_content_by_author() and README filtering from verify_user_in_files().
+    
+    Args:
+        path: Path to git repository
+        author: Author name or email
+        exclude_readme: Exclude README files (default: True, reuses verify_user_in_files logic)
+        exclude_pdf_docx: Exclude PDF/DOCX (default: True)
+        include_merges: Include merge commits (default: False)
+        max_commits: Max commits to process (default: None)
+    
+    Returns:
+        JSON string with author's non-code contributions
+    """
+    try:
+        repo = get_repo(path)
+    except Exception:
+        return json.dumps([], indent=2)
+    
+    non_code_exts = {".md", ".txt", ".markdown"}
+    if not exclude_pdf_docx:
+        non_code_exts.update({".pdf", ".docx", ".doc"})
+    
+    seen = set()
+    out = []
+    
+    for commit in repo.iter_commits(rev="--all"):
+        if commit.hexsha in seen:
+            continue
+        seen.add(commit.hexsha)
+        
+        if not author_matches(commit, author):
+            continue
+        
+        is_merge = len(commit.parents) > 1
+        if is_merge and not include_merges:
+            continue
+        
+        try:
+            parent = commit.parents[0] if commit.parents else NULL_TREE
+            diffs = commit.diff(parent, create_patch=True)
+            
+            files_changed_data = []
+            for d in diffs:
+                file_path = d.b_path or d.a_path or ""
+                if not file_path:
+                    continue
+                
+                path_obj = Path(file_path)
+                file_ext = path_obj.suffix.lower()
+                file_name = path_obj.name.lower()
+                
+                if file_ext not in non_code_exts:
+                    continue
+                
+                # REUSE README filtering logic from verify_user_in_files
+                if exclude_readme and file_name.startswith("readme"):
+                    continue
+                
+                status = "A" if d.new_file else "D" if d.deleted_file else "R" if d.renamed_file else "M"
+                patch_text = getattr(d, "diff", b"")
+                try:
+                    patch = patch_text.decode("utf-8", errors="replace")
+                except Exception:
+                    patch = "/* Could not decode patch text */"
+                
+                files_changed_data.append({
+                    "status": status,
+                    "path_before": d.a_path,
+                    "path_after": d.b_path,
+                    "patch": patch,
+                    "size_after": getattr(getattr(d, 'b_blob', None), 'size', None),
+                })
+            
+            if not files_changed_data:
+                continue
+            
+            out.append({
+                "hash": commit.hexsha,
+                "author_name": getattr(commit.author, "name", "") or "",
+                "author_email": getattr(commit.author, "email", "") or "",
+                "authored_datetime": commit.authored_datetime.isoformat(),
+                "committed_datetime": commit.committed_datetime.isoformat(),
+                "message_summary": commit.summary,
+                "message_full": commit.message,
+                "is_merge": is_merge,
+                "files": files_changed_data
+            })
+            
+            if max_commits is not None and len(out) >= max_commits:
+                break
+        
+        except GitCommandError:
+            continue
+    
+    return json.dumps(out, indent=2)
+    
+BINARY_EXTENSIONS = {
+    # Images
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico",
+    # Audio
+    ".mp3", ".wav", ".ogg", ".flac", ".aac",
+    # Video
+    ".mp4", ".mov", ".avi", ".mkv", ".webm",
+    # Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt",
+    # Archives
+    ".zip", ".gz", ".tar", ".rar", ".7z",
+    # Compiled/Binary
+    ".exe", ".dll", ".so", ".o", ".a", ".jar", ".pyc", ".class", ".swf",
+    # Other
+    ".db", ".sqlite", ".dat", ".bin", ".lock", ".DS_Store"
+}
+
+# --- Vendor/build folders to skip entirely ---
+SKIP_DIRS = {
+    ".git", ".github", ".gitlab", ".venv", "venv", "__pycache__", ".idea", ".vscode",
+    "node_modules", "vendor", "dist", "build", "target", ".next", ".gradle", ".mvn",
+    ".cargo", ".pnpm-store", ".tox", ".pytest_cache"
+}
+
+def is_code_file(diff_object) -> bool:
+    """
+    Determines if a diff object represents a code/text file.
+    Returns False for binary, vendor, or very large files.
+    
+    Args:
+        diff_object: A GitPython diff object
+        
+    Returns:
+        bool: True if the file is a code/text file, False if binary or non-code
+    """
+    # --- 1. Get file path ---
+    path_str = diff_object.b_path or diff_object.a_path
+    if not path_str:
+        return False  # No valid path
+    
+    # Normalize slashes for cross-platform consistency
+    norm_path = path_str.replace("\\", "/")
+
+    # --- 2. Skip vendor/build/system folders early ---
+    if any(skip in norm_path for skip in SKIP_DIRS):
+        return False
+
+    # --- 3. Check file extension blacklist ---
+    _, extension = os.path.splitext(path_str)
+    if extension.lower() in BINARY_EXTENSIONS:
+        return False
+
+    # --- 4. Size-based skip ---
+    blob = diff_object.b_blob or diff_object.a_blob
+    if blob and getattr(blob, "size", 0) > 2_000_000:  # 2 MB size limit
+        return False  # Too large to be meaningful source code
+
+    # --- 5. Optional NUL-byte sniff for unknown extensions ---
+    if not extension or extension.lower() not in BINARY_EXTENSIONS:
+        try:
+            if blob:
+                # Read only first 2 KB for efficiency
+                data = blob.data_stream.read(2048)
+                if b"\x00" in data:  # NUL byte → binary
+                    return False
+        except Exception:
+            return False  # Safe fallback
+
+    return True
+
+def detect_language_from_patch(filename: str, patch: str) -> Optional[str]:
+    """
+    Detect the programming language using (1) filename extension, then
+    (2) patch text as a fallback.
+    """
+    # 1. Detect from filename first
+    try:
+        lexer = guess_lexer_for_filename(filename, patch or "")
+        language = lexer.name
+
+        # Inline normalization:
+        language = re.split(r'\+(?=[A-Za-z])', language)[0]  # remove "+Something"
+        language = language.strip().split()[0]               # keep only first token
+        return language
+    except ClassNotFound:
+        pass
+
+    # 2. Detect from patch content (fallback)
+    try:
+        if patch.strip():
+            lexer = guess_lexer(patch)
+            language = lexer.name
+
+            # Inline normalization:
+            language = re.split(r'\+(?=[A-Za-z])', language)[0]
+            language = language.strip().split()[0]
+            return language
+    except ClassNotFound:
+        pass
+
+    return None

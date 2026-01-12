@@ -177,15 +177,3 @@ def build_enhanced_keywords(user_industry: str = None, user_job_title: str = Non
                 break
     
     return domain_keywords
-
-
-def get_job_context(job_title: str) -> str:
-    """Get contextual description for a job title."""
-    if not job_title:
-        return None
-    
-    job_title_lower = job_title.lower()
-    for key, context in JOB_CONTEXT_MAP.items():
-        if key in job_title_lower:
-            return context
-    return None

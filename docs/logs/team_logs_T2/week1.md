@@ -45,7 +45,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| N/A           | Break and planning for Milestone 2 | @KarimKhalil33  |
+|  #436    | User Preference Integration for Code Analysis | @KarimKhalil33  |
 | N/A           | Break and planning for Milestone 2 | @6s-1           |
 | N/A           | Break and planning for Milestone 2 | @abstractafua   |
 | N/A           | Break and planning for Milestone 2 | @dabby04        |

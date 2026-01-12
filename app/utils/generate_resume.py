@@ -1,9 +1,11 @@
-import sqlite3
 from collections import defaultdict
 from app.data.db import get_connection
+import sqlite3
+from typing import Any, DefaultDict, Dict, List, Tuple
 from datetime import datetime
 
-def format_dates(start, end):
+def format_dates(start: str, end: str) -> str:
+    """Format dates shown to months and year"""
     try:
         s = datetime.fromisoformat(start).strftime("%b %Y")
         e = datetime.fromisoformat(end).strftime("%b %Y")
@@ -11,7 +13,8 @@ def format_dates(start, end):
     except Exception:
         return ""
     
-def load_user(cursor):
+def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
+    """Return user info dict from USER_PREFERENCES."""
     cursor.execute("""
         SELECT name, email, github_user, education, job_title
         FROM USER_PREFERENCES
@@ -36,7 +39,8 @@ def load_user(cursor):
         "job_title": row[4],
     }
 
-def load_projects(cursor):
+def load_projects(cursor: sqlite3.Cursor) -> List[Tuple[str, str, int, str, str]]:
+    """Return projects with signature, name, rank, created_at, last_modified."""
     cursor.execute("""
         SELECT project_signature, name, rank, created_at, last_modified
         FROM PROJECT
@@ -44,7 +48,8 @@ def load_projects(cursor):
     """)
     return cursor.fetchall()
 
-def load_resume_bullets(cursor):
+def load_resume_bullets(cursor: sqlite3.Cursor) -> DefaultDict[int, List[str]]:
+    """Return mapping of project_id to resume summary bullets."""
     cursor.execute("""
         SELECT project_id, summary_text
         FROM RESUME_SUMMARY
@@ -54,7 +59,8 @@ def load_resume_bullets(cursor):
         bullets[pid].append(text)
     return bullets
 
-def load_skills(cursor):
+def load_skills(cursor: sqlite3.Cursor) -> DefaultDict[int, List[str]]:
+    """Return mapping of project_id to list of skills."""
     cursor.execute("""
         SELECT skill, project_id
         FROM SKILL_ANALYSIS
@@ -66,7 +72,8 @@ def load_skills(cursor):
 
     return skills_by_project
 
-def limit_skills(skills, max_count=5):
+def limit_skills(skills: List[str], max_count: int = 5) -> List[str]:
+    """Return up to max_count unique skills preserving order."""
     seen = set()
     limited = []
 
@@ -79,7 +86,8 @@ def limit_skills(skills, max_count=5):
 
     return limited
 
-def build_resume_model():
+def build_resume_model() -> Dict[str, Any]:
+    """Return assembled resume model built from the database."""
     conn = get_connection()
     cursor = conn.cursor()
 

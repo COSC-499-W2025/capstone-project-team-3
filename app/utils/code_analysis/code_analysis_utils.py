@@ -42,8 +42,15 @@ def _get_preference_weighted_keywords(base_keywords: List[str], user_prefs: Opti
         
         # Boost score based on industry
         industry = user_prefs.get('industry', '')
-        if industry in TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES:
-            priorities = TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES[industry]
+        # Case-insensitive lookup for industry priorities
+        industry_key = None
+        for key in TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES.keys():
+            if industry.lower() == key.lower():
+                industry_key = key
+                break
+        
+        if industry_key:
+            priorities = TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES[industry_key]
             if any(term in keyword.lower() for term in priorities.get("high", [])):
                 score *= 2.0
             elif any(term in keyword.lower() for term in priorities.get("medium", [])):

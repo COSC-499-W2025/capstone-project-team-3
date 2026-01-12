@@ -24,7 +24,7 @@ class UserPreferenceStore:
             self.conn = sqlite3.connect(str(self.db_path))
     
     # Retrieve latest record of user preferences (Read from DB)
-    def get_latest_preferences(self,email):
+    def get_latest_preferences(self):
         """
         Retrieve the latest user preferences based on the most recent updated_at timestamp.
         """
@@ -33,11 +33,9 @@ class UserPreferenceStore:
             """
             SELECT name, email, github_user, education, industry, job_title
             FROM USER_PREFERENCES
-            WHERE email = ?
             ORDER BY updated_at DESC
             LIMIT 1
             """,
-            (email,)
         )
         row = cur.fetchone()
         if not row:
@@ -56,6 +54,7 @@ class UserPreferenceStore:
             ( name, email, github_user, education, industry, job_title),
         )
         self.conn.commit()
+        
     # Optimized static functions to get latest industry/job/education preferences without email lookup
     @staticmethod
     def get_latest_preferences_no_email():

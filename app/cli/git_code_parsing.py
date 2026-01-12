@@ -29,6 +29,8 @@ def _get_first_existing_path(file_paths: List[str]) -> Path:
     raise ValueError("None of the provided file paths exist on disk.")
 
 def _get_preferred_author_email() -> Tuple[Optional[str], Optional[str]]:
+    #TODO: rename function to _get_preferred_github_user_and_email
+    # implement when touching main to ensure function call sites are updated
     """
     Fetch the most recent GitHub username and email from USER_PREFERENCES.
 
@@ -81,7 +83,9 @@ def run_git_parsing_from_files(
 
     # 2) Fetch the preferred github_user and author email from the DB
     github_user, author_email = _get_preferred_author_email()
-    print(f"[git-analysis] Using github_user: '{github_user}', author email: '{author_email}' from USER_PREFERENCES.")
+    author_identifier = github_user or author_email
+    source = "github_user" if github_user else "author_email"
+    print(f"[git-analysis] Using author identifier ({source}): '{author_identifier}'")
 
     if not author_email and not github_user:
         print(
@@ -103,7 +107,7 @@ def run_git_parsing_from_files(
     # 4) Call commit extraction filtered by this author
     json_output = extract_code_commit_content_by_author(
         path=project_file,
-        author=github_user or author_email,          \
+        author=author_identifier,          \
         include_merges=include_merges,
         max_commits=max_commits,
     )

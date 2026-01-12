@@ -1,5 +1,6 @@
 import sqlite3
 import pytest
+import time
 from app.utils.user_preference_utils import UserPreferenceStore
 
 # --- Utility setup ---
@@ -82,10 +83,11 @@ def test_latest_preference_retrieval (tmp_path):
         github_user="persistGH",
         education="BA",
         industry="Education",
-        job_title="Instructor",
-        updated_at="2024-01-01 10:00:00" # Older record
+        job_title="Instructor"
     )
     store1.close()
+    # Ensure different timestamps between records
+    time.sleep(1)
 
 
     store2 = UserPreferenceStore(db_path=str(db_path))
@@ -95,8 +97,7 @@ def test_latest_preference_retrieval (tmp_path):
         github_user="latestGH",
         education="MA",
         industry="Technology",
-        job_title="Senior Developer",
-        updated_at="2024-02-01 10:00:00" # Newer record
+        job_title="Senior Developer"
     )
     prefs = store2.get_latest_preferences()
     store2.close()
@@ -105,7 +106,7 @@ def test_latest_preference_retrieval (tmp_path):
     assert prefs["github_user"] == "latestGH"
 
 
-def test_latest_preferences_no_email_lookup(temp_store):
+def test_latest_preferences_no_email_lookup(temp_store, monkeypatch):
     """
     Ensure optimized lookup returns latest preferences
     without relying on email.
@@ -119,6 +120,11 @@ def test_latest_preferences_no_email_lookup(temp_store):
         job_title="Scientist",
     )
 
+    # Ensure static lookup uses the temp DB, not the default app DB
+    monkeypatch.setattr(
+        "app.utils.user_preference_utils.get_connection",
+        lambda: temp_store.conn
+    )
     prefs = UserPreferenceStore.get_latest_preferences_no_email()
     assert prefs["industry"] == "Research"
     assert prefs["job_title"] == "Scientist"

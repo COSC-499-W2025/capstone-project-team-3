@@ -72,6 +72,39 @@ def test_persistence_across_sessions(tmp_path):
     assert prefs["name"] == "Persist Name"
     assert prefs["github_user"] == "persistGH"
 
+def test_latest_preference_retrieval (tmp_path):
+    db_path = tmp_path / "prefs.db"
+    store1 = UserPreferenceStore(db_path=str(db_path))
+    create_user_pref_table(store1.conn)
+    store1.save_preferences(
+        name="Persist Name",
+        email="persist@example.com",
+        github_user="persistGH",
+        education="BA",
+        industry="Education",
+        job_title="Instructor",
+        updated_at="2024-01-01 10:00:00" # Older record
+    )
+    store1.close()
+
+
+    store2 = UserPreferenceStore(db_path=str(db_path))
+    store2.save_preferences(
+        name="Latest Name",
+        email="latest@example.com",
+        github_user="latestGH",
+        education="MA",
+        industry="Technology",
+        job_title="Senior Developer",
+        updated_at="2024-02-01 10:00:00" # Newer record
+    )
+    prefs = store2.get_latest_preferences()
+    store2.close()
+
+    assert prefs["name"] == "Latest Name"
+    assert prefs["github_user"] == "latestGH"
+
+
 def test_latest_preferences_no_email_lookup(temp_store):
     """
     Ensure optimized lookup returns latest preferences
@@ -83,7 +116,7 @@ def test_latest_preferences_no_email_lookup(temp_store):
         github_user="ghuser",
         education="PhD",
         industry="Research",
-        job_title="Scientist"
+        job_title="Scientist",
     )
 
     prefs = UserPreferenceStore.get_latest_preferences_no_email()

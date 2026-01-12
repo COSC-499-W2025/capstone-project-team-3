@@ -3,8 +3,7 @@ from app.utils.non_code_analysis.keywords.domain_keywords import (
     BASE_DOMAIN_KEYWORDS,
     INDUSTRY_EXPANSIONS,
     JOB_TITLE_KEYWORDS,
-    build_enhanced_keywords,
-    get_job_context
+    build_enhanced_keywords
 )
 
 
@@ -46,34 +45,4 @@ class TestBuildEnhancedKeywords:
         """Test that invalid industry/job title don't cause errors."""
         result = build_enhanced_keywords("Invalid Industry", "Invalid Job")
         assert len(result) == len(BASE_DOMAIN_KEYWORDS)
-        assert "software" in result["Software Engineering"]
-
-
-class TestGetJobContext:
-    """Test the get_job_context function."""
-    
-    def test_returns_context_for_valid_jobs(self):
-        """Test that valid job titles return appropriate context strings."""
-        se_context = get_job_context("Software Engineer")
-        assert se_context is not None
-        assert isinstance(se_context, str)
-        assert "development" in se_context.lower() or "implementation" in se_context.lower()
-        
-        ds_context = get_job_context("Data Scientist")
-        assert ds_context is not None
-        assert "analytics" in ds_context.lower() or "modeling" in ds_context.lower()
-        
-    def test_returns_none_for_invalid_inputs(self):
-        """Test that invalid/empty inputs return None."""
-        assert get_job_context(None) is None
-        assert get_job_context("") is None
-        assert get_job_context("Invalid Job Title") is None
-        
-    def test_case_insensitive_partial_matching(self):
-        """Test that partial and case-insensitive matching works."""
-        context1 = get_job_context("Software Engineer")
-        context2 = get_job_context("software engineer")
-        context3 = get_job_context("Senior Software Engineer")
-        
-        assert context1 == context2
-        assert context1 == context3 
+        assert "software" in result["Software Engineering"] 

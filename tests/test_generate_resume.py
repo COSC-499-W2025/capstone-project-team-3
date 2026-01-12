@@ -28,7 +28,8 @@ def db_connection(monkeypatch):
             email TEXT,
             github_user TEXT,
             education TEXT,
-            job_title TEXT
+            job_title TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE PROJECT (
@@ -52,7 +53,7 @@ def db_connection(monkeypatch):
 
     # --- Seed Data ---
     cursor.execute("""
-        INSERT INTO USER_PREFERENCES
+        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, education, job_title)
         VALUES (1, 'John Doe', 'john@example.com', 'johndoe', 'University X', 'Developer')
     """)
 

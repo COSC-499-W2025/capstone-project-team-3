@@ -18,7 +18,8 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     cursor.execute("""
         SELECT name, email, github_user, education, job_title
         FROM USER_PREFERENCES
-        WHERE user_id = 1
+        ORDER BY updated_at
+        DESC LIMIT 1
     """)
     row = cursor.fetchone()
 

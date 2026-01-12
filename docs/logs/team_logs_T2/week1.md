@@ -1,7 +1,7 @@
 # Team Log week 1
 
-**Team Name:** Group 3 (Canvas) / Team 15 (GitHub)  
-**Work Performed:** Jan 5, 2025 → Jan 11, 2025
+**Team Name:** Group 3 (Canvas)  
+**Work Performed:** Jan 5, 2026 → Jan 11, 2026
 
 ---
 
@@ -12,11 +12,14 @@
   - Setting up GitHub Actions for CI/CD
   - Working on requirements for Milestone 2
   - Working on bug fix/ enhancement for git code parsing
+  - Downloadable Resume in `.pdf` and `.tex`
   
 - **Associated project board tasks:**
   - Enhance user preference integration in non code non ai analysis. #427
   - Create base utilities for thumbnail file path. #435
   - BUGFIX: Git Code Parsing. #437
+  - Generate downloadable PDF/LaTex resume #431
+  - Generate template for downloadable resume #432
 
 ---
 
@@ -51,7 +54,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |  #436    | User Preference Integration for Code Analysis | @KarimKhalil33  |
 | #435, #434, #427           | Enhancing user preference integration local analysis, implementing base functionality for thumbnail integration. | @6s-1           |
 | N/A           | Break and planning for Milestone 2 | @abstractafua   |
-| N/A           | Break and planning for Milestone 2 | @dabby04        |
+| #431 and #432        | Generate template for downloadable resume, Generate downloadable PDF/LaTex resume | @dabby04        |
 | #291, #292, #429 | CI Pipeline, Create the Plan for the workflow, Bug report - CI failing with ImportError | @PaintedW0lf    |
 | #437          | Bugfix: Git Code Parsing | @kjassani       |
 
@@ -61,8 +64,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| #434           | Implement end-to-end functionality to add thumbnails per project.
-   | @6s-1      |
+| #434           | Implement end-to-end functionality to add thumbnails per project.| @6s-1      |
 
 ---
 
@@ -79,12 +81,12 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 ## Test Report
 
-- **Framework used:** N/A  
-- **Test run date:** N/A  
+- **Framework used:** Pytest  
+- **Test run date:** 11th Jan 2026  
 - **Summary:**  
   - Total tests run: N/A  
-  - Passed: N/A  
-  - Failed: N/A  
+  - Passed: 369  
+  - Failed: 20  
 - **Regression Testing:**  
   - N/A  
 - **Screenshot or Output:**  
@@ -98,7 +100,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 * Everyone looking at potential enhancements and improvements to existing features at their personal levels.
 * Started feature addition for milestone-2.
 
----## Plan for Next Cycle
+---
+## Plan for Next Cycle
 
 * Shift focus to Milestone 2.
 * Work on feature enhancements based on feedback from Milestone 1.

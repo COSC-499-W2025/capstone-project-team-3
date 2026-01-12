@@ -11,11 +11,13 @@
   - Working on enhancements for existing features
   - Setting up GitHub Actions for CI/CD
   - Working on requirements for Milestone 2
+  - Working on bug fix/ enhancement for git code parsing
   - Downloadable Resume in `.pdf` and `.tex`
   
 - **Associated project board tasks:**
   - Enhance user preference integration in non code non ai analysis. #427
   - Create base utilities for thumbnail file path. #435
+  - BUGFIX: Git Code Parsing. #437
   - Generate downloadable PDF/LaTex resume #431
   - Generate template for downloadable resume #432
 
@@ -54,7 +56,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | N/A           | Break and planning for Milestone 2 | @abstractafua   |
 | #431 and #432        | Generate template for downloadable resume, Generate downloadable PDF/LaTex resume | @dabby04        |
 | #291, #292, #429 | CI Pipeline, Create the Plan for the workflow, Bug report - CI failing with ImportError | @PaintedW0lf    |
-| N/A           | Break and planning for Milestone 2 | @kjassani       |
+| #437          | Bugfix: Git Code Parsing | @kjassani       |
 
 ---
 

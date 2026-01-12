@@ -43,18 +43,27 @@ def set_project_thumbnail(project_signature: str, source_image_path: str) -> Dic
     source = Path(source_image_path)
     dest = THUMBNAIL_DIR / f"{project_signature}{source.suffix}"
     
+    # Delete any existing thumbnails with different extensions
+    for existing_file in THUMBNAIL_DIR.glob(f"{project_signature}.*"):
+        try:
+            existing_file.unlink()
+        except Exception:
+            pass  # Continue even if deletion fails
+    
+    # Copy new thumbnail
     try:
-        # Remove old thumbnail if exists and copy new one
-        if dest.exists():
-            dest.unlink()
         shutil.copy2(source, dest)
-        
-        # Update database
+    except Exception as e:
+        return {"status": "error", "reason": f"Failed to copy file: {str(e)}"}
+    
+    # Update database with relative path
+    relative_path = f"data/thumbnails/{dest.name}"
+    try:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE PROJECT SET thumbnail_path = ? WHERE project_signature = ?",
-            (str(dest), project_signature)
+            (relative_path, project_signature)
         )
         
         if cursor.rowcount == 0:
@@ -64,10 +73,15 @@ def set_project_thumbnail(project_signature: str, source_image_path: str) -> Dic
         
         conn.commit()
         conn.close()
-        return {"status": "ok", "thumbnail_path": str(dest)}
+        return {"status": "ok", "thumbnail_path": relative_path}
     
     except Exception as e:
-        return {"status": "error", "reason": f"Failed to set thumbnail: {str(e)}"}
+        # Clean up the copied file if DB update fails
+        try:
+            dest.unlink()
+        except Exception:
+            pass
+        return {"status": "error", "reason": f"Failed to update database: {str(e)}"}
 
 
 def get_project_thumbnail(project_signature: str) -> Optional[str]:
@@ -78,9 +92,20 @@ def get_project_thumbnail(project_signature: str) -> Optional[str]:
     row = cursor.fetchone()
     conn.close()
     
+    if not row or not row[0]:
+        return None
+    
+    # Convert relative path to absolute
+    relative_path = row[0]
+    if relative_path.startswith("data/thumbnails/"):
+        absolute_path = THUMBNAIL_DIR / relative_path.split("/")[-1]
+    else:
+        # Handle legacy absolute paths
+        absolute_path = Path(relative_path)
+    
     # Verify file still exists
-    if row and row[0] and Path(row[0]).exists():
-        return str(row[0])
+    if absolute_path.exists():
+        return str(absolute_path)
     return None
 
 
@@ -91,7 +116,7 @@ def remove_project_thumbnail(project_signature: str) -> Dict[str, str]:
     if not thumbnail_path:
         return {"status": "ok", "message": "No thumbnail to remove"}
     
-    # Delete file
+    # Delete file (get_project_thumbnail returns absolute path)
     try:
         Path(thumbnail_path).unlink(missing_ok=True)
     except Exception as e:

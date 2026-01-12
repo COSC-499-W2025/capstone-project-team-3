@@ -41,47 +41,60 @@ def resume_download():
     )
 
 def compile_pdf(tex: str) -> bytes:
+    """
+    Compile LaTeX source to PDF using pdflatex (single pass).
+
+    Raises HTTPException with LaTeX logs on failure.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Use a stable base name; pdflatex outputs <basename>.pdf
         basename = "resume"
         tex_path = os.path.join(tmpdir, f"{basename}.tex")
+        pdf_path = os.path.join(tmpdir, f"{basename}.pdf")
 
+        # Write LaTeX source
         with open(tex_path, "w", encoding="utf-8") as f:
             f.write(tex)
 
         try:
-            # Run twice to resolve references; do not fail if PDF exists
-            logs = []
-            for _ in range(2):
-                proc = subprocess.run(
-                    ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
-                    cwd=tmpdir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=30,
+            proc = subprocess.run(
+                ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
+                cwd=tmpdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+            )
+
+            # If pdflatex exited non-zero AND no PDF exists → fail
+            if proc.returncode != 0 and not os.path.exists(pdf_path):
+                raise subprocess.CalledProcessError(
+                    proc.returncode,
+                    proc.args,
+                    output=proc.stdout,
+                    stderr=proc.stderr,
                 )
-                logs.append(proc.stdout.decode(errors="ignore"))
-                logs.append(proc.stderr.decode(errors="ignore"))
-                # If process failed but PDF is present, continue
-                pdf_path_try = os.path.join(tmpdir, f"{basename}.pdf")
-                if proc.returncode != 0 and not os.path.exists(pdf_path_try):
-                    raise subprocess.CalledProcessError(proc.returncode, proc.args, output=proc.stdout, stderr=proc.stderr)
-        except subprocess.CalledProcessError as e:
+
+        except subprocess.TimeoutExpired:
             raise HTTPException(
                 status_code=500,
-                detail=(
-                    "LaTeX compilation failed.\n\n"
-                    f"STDOUT:\n{(e.stdout or b'').decode(errors='ignore')[-1500:]}\n\n"
-                    f"STDERR:\n{(e.stderr or b'').decode(errors='ignore')[-1500:]}"
-                ),
+                detail="LaTeX compilation timed out.",
             )
+
         except FileNotFoundError:
             raise HTTPException(
                 status_code=500,
                 detail="pdflatex not found. Is LaTeX installed in the container?",
             )
 
-        pdf_path = os.path.join(tmpdir, f"{basename}.pdf")
+        except subprocess.CalledProcessError as e:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "LaTeX compilation failed.\n\n"
+                    f"STDOUT:\n{(e.output or b'').decode(errors='ignore')[-1500:]}\n\n"
+                    f"STDERR:\n{(e.stderr or b'').decode(errors='ignore')[-1500:]}"
+                ),
+            )
+
         if not os.path.exists(pdf_path):
             raise HTTPException(
                 status_code=500,

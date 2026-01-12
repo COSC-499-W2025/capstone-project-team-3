@@ -83,16 +83,17 @@ def run_git_parsing_from_files(
 
     # 2) Fetch the preferred github_user and author email from the DB
     github_user, author_email = _get_preferred_author_email()
-    author_identifier = github_user or author_email
-    source = "github_user" if github_user else "author_email"
-    print(f"[git-analysis] Using author identifier ({source}): '{author_identifier}'")
-
     if not author_email and not github_user:
         print(
             "[git-analysis] No user email or username found in USER_PREFERENCES. "
             "Skipping Git analysis."
         )
         return "[]"
+    
+    author_identifier = github_user or author_email
+    source = "github_user" if github_user else "author_email"
+    print(f"[git-analysis] Using author identifier ({source}): '{author_identifier}'")
+
 
     # 3) Check if repository is collaborative (for logging only)
     try:

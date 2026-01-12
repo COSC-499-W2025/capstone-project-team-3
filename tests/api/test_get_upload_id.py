@@ -22,19 +22,23 @@ def app(tmp_path, monkeypatch):
     return app
 
 
-def test_resolve_upload_ok(app, tmp_path, monkeypatch):
+def test_resolve_upload_ok(app, monkeypatch):
     """Test that project uploads and resolves with an ok status."""
     client = TestClient(app)
-    upload_dir = tmp_path / "uploads"
+    
+    # Get the UPLOAD_DIR that was set in the fixture
+    upload_dir = os.getenv("UPLOAD_DIR")
 
     # Create dummy zip file in the temp upload directory
-    upload_file = upload_dir / "123.zip"
-    upload_file.write_text("dummy")
+    upload_file_path = os.path.join(upload_dir, "123.zip")
+    with open(upload_file_path, "w") as f:
+        f.write("dummy")
 
     response = client.get("/resolve-upload/123")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert "123.zip" in response.json()["path"]
+    # Verify the path returned matches the UPLOAD_DIR environment variable
+    assert response.json()["path"] == os.path.join(upload_dir, "123.zip")
 
 
 def test_resolve_upload_pending(app):

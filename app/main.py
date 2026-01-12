@@ -11,6 +11,7 @@ from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main
 from app.api.routes.upload_page import router as upload_page_router
 from app.api.routes.get_upload_id import router as upload_resolver_router 
+from app.api.routes.resume import router as resume_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
@@ -43,6 +44,7 @@ load_dotenv()
 app = FastAPI(title="Project Insights")
 app.include_router(upload_page_router)
 app.include_router(upload_resolver_router, prefix="/api")
+app.include_router(resume_router)
 
 def display_startup_info():
     """Display startup information including API key status."""
@@ -420,6 +422,9 @@ def main():
                                 for bullet in bullets:
                                     print(f"      • {bullet}")
                                 print()  # Empty line between projects
+                            
+                            print("Download your resume in Latex/PDF format here:")
+                            print("   → http://localhost:8000/resume")
                         else:
                             print("\n📭 No resume bullets found in database.")
                     else:

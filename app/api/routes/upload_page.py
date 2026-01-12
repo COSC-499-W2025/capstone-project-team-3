@@ -6,7 +6,8 @@ import shutil
 
 router = APIRouter()
 
-UPLOAD_DIR = "/app/uploads"
+# Use relative path for uploads directory, or fall back to environment variable
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "app/uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/upload-file", response_class=HTMLResponse)

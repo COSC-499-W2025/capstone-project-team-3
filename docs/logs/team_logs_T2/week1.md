@@ -13,6 +13,7 @@
   - Working on requirements for Milestone 2
   - Working on bug fix/ enhancement for git code parsing
   - Downloadable Resume in `.pdf` and `.tex`
+  - Optimize User Preference Retrieval 
   
 - **Associated project board tasks:**
   - Enhance user preference integration in non code non ai analysis. #427
@@ -20,6 +21,7 @@
   - BUGFIX: Git Code Parsing. #437
   - Generate downloadable PDF/LaTex resume #431
   - Generate template for downloadable resume #432
+  - Optimize User Preference Retrieval  #440
 
 ---
 
@@ -53,10 +55,11 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 |  #436    | User Preference Integration for Code Analysis | @KarimKhalil33  |
 | #435, #434, #427           | Enhancing user preference integration local analysis, implementing base functionality for thumbnail integration. | @6s-1           |
-| N/A           | Break and planning for Milestone 2 | @abstractafua   |
+| #440          | Optimize User Preference Retrieval | @abstractafua   |
 | #431 and #432        | Generate template for downloadable resume, Generate downloadable PDF/LaTex resume | @dabby04        |
 | #291, #292, #429 | CI Pipeline, Create the Plan for the workflow, Bug report - CI failing with ImportError | @PaintedW0lf    |
 | #437          | Bugfix: Git Code Parsing | @kjassani       |
+
 
 ---
 

@@ -12,7 +12,7 @@ Flow:
 
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.utils.git_utils import extract_code_commit_content_by_author, is_collaborative
 from app.data.db import get_connection
 

@@ -1,4 +1,9 @@
 class ResumeTemplate:
+    
+    # Placeholders in LATEX_TEMPLATE are:
+    # name, email, links_block, edu_school, edu_degree, edu_dates, edu_gpa_line,
+    # skills_table, projects
+    
     LATEX_TEMPLATE = r"""
     \documentclass[a4paper]{article}
     \usepackage{fullpage}
@@ -70,31 +75,31 @@ class ResumeTemplate:
 
     \vspace*{-2pt}
     \begin{center}
-    {\Huge \scshape {{name}}}\\
+    {\Huge \scshape {{name}}}\\ % adding name of user
     \vspace{2pt}
 
     \vspace*{2pt}
-    \href{mailto:{email}}{{{email}}}\\
-    {links_block}
+    \href{mailto:{email}}{{{email}}}\\ % adding email of user
+    {links_block} % links block (will be updated based on user info - LinkedIn, Github,...)
     \end{center}
 
     \header{Education}
     \vspace{2mm}
-    \textbf{{edu_school}}\\
-    {edu_degree} \hfill {edu_dates}\\
-    {edu_gpa_line}
+    \textbf{{edu_school}}\\ %degree added by user
+    {edu_degree} \hfill {edu_dates}\\ % role/aspiring added here - dates included if provided
+    {edu_gpa_line} % gpa can be added if provided by user
     \vspace{2mm}
 
     \header{Skills}
     \vspace{2mm}
     \begin{longtable}{p{4cm}p{12cm}}
-    {skills_table}
+    {skills_table} % skills are filled in here
     \end{longtable}
     \vspace{1mm}
 
     \header{Projects / Experience}
     \vspace{2mm}
-    {projects}
+    {projects} % projects are filled in here, includes name, skills, duration, and bullets
 
     \end{document}
     """

@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 import tempfile
 import os
 import json
+import re
 from jinja2 import Template
 from app.utils.latex_template import ResumeTemplate
 
@@ -9,8 +10,13 @@ def escape_latex(text: str) -> str:
     """
     Escapes LaTeX special characters to avoid compilation issues later.
     """
-    replacements = {
-        "\\": r"\textbackslash{}",
+    # Normalize Unicode punctuation first
+    text = (text.replace("–", "--")
+             .replace("—", "---")
+             .replace("“", "``")
+             .replace("”", "''")
+             .replace("’", "'"))
+    mapping = {
         "&": r"\&",
         "%": r"\%",
         "$": r"\$",
@@ -20,16 +26,9 @@ def escape_latex(text: str) -> str:
         "}": r"\}",
         "~": r"\textasciitilde{}",
         "^": r"\textasciicircum{}",
-        # Normalize Unicode dashes/quotes to LaTeX-friendly forms
-        "–": "--",   # en dash
-        "—": "---",  # em dash
-        "“": "``",
-        "”": "''",
-        "’": "'",
+        "\\": r"\textbackslash{}",
     }
-    for k, v in replacements.items():
-        text = text.replace(k, v)
-    return text
+    return re.sub(r'[&%$#_{}~^\\]', lambda m: mapping[m.group(0)], text)
 
 
 def render_skills(skills: Dict[str, List[str]]) -> str:

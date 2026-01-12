@@ -45,17 +45,31 @@ class UserPreferenceStore:
 
     # Save/Update user preferences (Write to DB)
     def save_preferences(self, name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
+        
         cur = self.conn.cursor()
-        cur.execute(
-            """
-            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            ( name, email, github_user, education, industry, job_title),
-        )
+        cur.execute("SELECT 1 FROM USER_PREFERENCES LIMIT 1")
+        exists = cur.fetchone() is not None
+
+        if exists:
+            cur.execute(
+                """
+                UPDATE USER_PREFERENCES
+                SET name = ?, email = ?, github_user = ?, education = ?, industry = ?, job_title = ?, updated_at = CURRENT_TIMESTAMP
+                """,
+                (name, email, github_user, education, industry, job_title),
+            )
+        else:
+
+            cur.execute(
+                """
+                INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                ( name, email, github_user, education, industry, job_title),
+            )
         self.conn.commit()
         
-    # Optimized static functions to get latest industry/job/education preferences without email lookup
+    # Optimized static function to get latest industry/job/education preferences without email lookup
     @staticmethod
     def get_latest_preferences_no_email():
         store = UserPreferenceStore()
@@ -64,7 +78,6 @@ class UserPreferenceStore:
             """
             SELECT industry, job_title, education
             FROM USER_PREFERENCES
-            ORDER BY updated_at DESC
             LIMIT 1
             """
         )
@@ -88,6 +101,7 @@ class UserPreferenceStore:
             """
         )
         row = cur.fetchone()
+        store.close()
         if not row:
             return None
         keys = [ "name", "email", "education", "industry", "job_title"]

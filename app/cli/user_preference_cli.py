@@ -34,20 +34,20 @@ class UserPreferences:
             if choice == "no":
                 print("Keeping existing preferences.")
                 return
-        else: 
-            name = input("Enter your full name: ").strip()
-            github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
-        
-            while True:
-                education = input("Enter your educational background: ").strip()
-                print(f"Industry options: {industry_options}")
-                industry = input("Select your industry (type one of the options): ").strip()
-                job_title = input("Enter your job title (current or aspiring): ").strip()
+             
+        name = input("Enter your full name: ").strip()
+        github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
+    
+        while True:
+            education = input("Enter your educational background: ").strip()
+            print(f"Industry options: {industry_options}")
+            industry = input("Select your industry (type one of the options): ").strip()
+            job_title = input("Enter your job title (current or aspiring): ").strip()
 
-                if not education or not industry or not job_title:
-                    print("Missing fields are required. Please try again.")
-                else:
-                    break
+            if not education or not industry or not job_title:
+                print("Missing fields are required. Please try again.")
+            else:
+                break
 
         self.store.save_preferences(
             name=name,

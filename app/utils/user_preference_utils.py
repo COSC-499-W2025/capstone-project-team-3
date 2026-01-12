@@ -47,25 +47,13 @@ class UserPreferenceStore:
     def save_preferences(self, name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
         
         cur = self.conn.cursor()
-        cur.execute("SELECT 1 FROM USER_PREFERENCES LIMIT 1")
-        exists = cur.fetchone() is not None
 
-        if exists:
-            cur.execute(
-                """
-                UPDATE USER_PREFERENCES
-                SET name = ?, email = ?, github_user = ?, education = ?, industry = ?, job_title = ?, updated_at = CURRENT_TIMESTAMP
-                """,
-                (name, email, github_user, education, industry, job_title),
-            )
-        else:
-
-            cur.execute(
-                """
-                INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                ( name, email, github_user, education, industry, job_title),
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (name, email, github_user, education, industry, job_title),
             )
         self.conn.commit()
         

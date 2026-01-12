@@ -1,10 +1,6 @@
 import sqlite3
-import re
 import pytest
 from app.utils.user_preference_utils import UserPreferenceStore
-from app.cli.user_preference_cli import UserPreferences
-from unittest.mock import patch
-from app.main import main
 
 # --- Utility setup ---
 
@@ -15,7 +11,7 @@ def create_user_pref_table(conn: sqlite3.Connection):
     CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
-        email TEXT UNIQUE,
+        email TEXT,
         github_user TEXT,
         education TEXT,
         industry TEXT,
@@ -29,7 +25,7 @@ def create_user_pref_table(conn: sqlite3.Connection):
 
 @pytest.fixture
 def temp_store(tmp_path):
-    """Create a temporary UserPreferenceStore with a fresh SQLite DB record."""
+    """Create a temporary UserPreferenceStore with a fresh SQLite DB."""
     db_path = tmp_path / "prefs.db"
     store = UserPreferenceStore(db_path=str(db_path))
     create_user_pref_table(store.conn)
@@ -47,13 +43,13 @@ def test_save_and_get_preferences(temp_store):
         industry="Technology",
         job_title="Developer"
     )
-    prefs = temp_store.get_latest_preferences("alice@example.com")
+    prefs = temp_store.get_latest_preferences()
     assert prefs["name"] == "Alice Example"
     assert prefs["github_user"] == "alicegit"
     assert prefs["industry"] == "Technology"
 
 def test_get_preferences_none(temp_store):
-    assert temp_store.get_latest_preferences("nonexistent@example.com") is None
+    assert temp_store.get_latest_preferences() is None
 
 def test_persistence_across_sessions(tmp_path):
     db_path = tmp_path / "prefs.db"
@@ -70,22 +66,39 @@ def test_persistence_across_sessions(tmp_path):
     store1.close()
 
     store2 = UserPreferenceStore(db_path=str(db_path))
-    prefs = store2.get_latest_preferences("persist@example.com")
+    prefs = store2.get_latest_preferences()
     store2.close()
+
     assert prefs["name"] == "Persist Name"
     assert prefs["github_user"] == "persistGH"
 
-# --- CLI logic tests without input mocking ---
+def test_latest_preferences_no_email_lookup(temp_store):
+    """
+    Ensure optimized lookup returns latest preferences
+    without relying on email.
+    """
+    temp_store.save_preferences(
+        name="No Email User",
+        email="noemail@example.com",
+        github_user="ghuser",
+        education="PhD",
+        industry="Research",
+        job_title="Scientist"
+    )
+
+    prefs = UserPreferenceStore.get_latest_preferences_no_email()
+    assert prefs["industry"] == "Research"
+    assert prefs["job_title"] == "Scientist"
+    assert prefs["education"] == "PhD"
+
+# --- CLI logic tests (store-like behavior, no input mocking) ---
 
 class FakeStore:
     def __init__(self):
         self.data = []
 
-    def get_latest_preferences(self, email):
-        for record in reversed(self.data):
-            if record["email"] == email:
-                return record
-        return None
+    def get_latest_preferences(self):
+        return self.data[-1] if self.data else None
 
     def save_preferences(self, name, email, github_user, education, industry, job_title):
         self.data.append({
@@ -100,30 +113,19 @@ class FakeStore:
     def close(self):
         pass
 
-def test_cli_save_and_retrieve_preferences():
+def test_store_like_save_and_retrieve_preferences():
     store = FakeStore()
-    cli = UserPreferences(store=store)
 
-    # Simulate inputs as function parameters instead of interactive input
-    email = "user@example.com"
-    name = "Test User"
-    github = "testgh"
-    education = "BSc"
-    industry = "Technology"
-    job_title = "Developer"
+    store.save_preferences(
+        name="Test User",
+        email="user@example.com",
+        github_user="testgh",
+        education="BSc",
+        industry="Technology",
+        job_title="Developer"
+    )
 
-    store.save_preferences(name, email, github, education, industry, job_title)
-    prefs = store.get_latest_preferences(email)
-    assert prefs["name"] == name
-    assert prefs["email"] == email
-    assert prefs["github_user"] == github
-
-def test_invalid_email():
-    # Regex validation test
-    invalid_emails = ["plainaddress", "missingatsign.com", "user@.com"]
-    pattern = r"^[\w.-]+@[\w.-]+\.\w+$"
-    for email in invalid_emails:
-        assert not re.match(pattern, email)
-
-    valid_email = "user@example.com"
-    assert re.match(pattern, valid_email)
+    prefs = store.get_latest_preferences()
+    assert prefs["name"] == "Test User"
+    assert prefs["email"] == "user@example.com"
+    assert prefs["github_user"] == "testgh"

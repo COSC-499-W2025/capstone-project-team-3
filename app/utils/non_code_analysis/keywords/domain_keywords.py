@@ -144,13 +144,34 @@ JOB_CONTEXT_MAP = {
     "devops engineer": "emphasizing automation and infrastructure",
 }
 
+# ===== NEW MAPPING: CLI INDUSTRY TO DOMAIN =====
+CLI_INDUSTRY_TO_DOMAIN = {
+    "Technology": "Software Engineering",
+    "Finance": "Business",
+    "Healthcare": "Healthcare",
+    "Education": "Education",
+    "Research": "Research",
+    "Manufacturing": "Business",
+    "Retail": "Business",
+    "Government": "Project Management",
+    "Non-profit": "Project Management",
+    "Other": None
+}
+
+
+def get_mapped_industry(cli_industry: str) -> str:
+    """
+    Helper to map CLI industry values to domain keywords.
+    """
+    return CLI_INDUSTRY_TO_DOMAIN.get(cli_industry, cli_industry)
+
 
 def build_enhanced_keywords(user_industry: str = None, user_job_title: str = None):
     """
     Build enhanced keyword dictionary based on user preferences.
     
     Args:
-        user_industry: User's target industry
+        user_industry: User's target industry (CLI format like "Technology")
         user_job_title: User's job title
         
     Returns:
@@ -159,11 +180,16 @@ def build_enhanced_keywords(user_industry: str = None, user_job_title: str = Non
     # Start with base keywords (make a copy)
     domain_keywords = {k: list(v) for k, v in BASE_DOMAIN_KEYWORDS.items()}
     
+    # Map CLI industry to domain keyword set
+    mapped_industry = None
+    if user_industry:
+        mapped_industry = get_mapped_industry(user_industry)
+    
     # Enhancement 1: Add industry-specific keywords
-    if user_industry and user_industry in INDUSTRY_EXPANSIONS:
-        if user_industry not in domain_keywords:
-            domain_keywords[user_industry] = []
-        domain_keywords[user_industry].extend(INDUSTRY_EXPANSIONS[user_industry])
+    if mapped_industry and mapped_industry in INDUSTRY_EXPANSIONS:
+        if mapped_industry not in domain_keywords:
+            domain_keywords[mapped_industry] = []
+        domain_keywords[mapped_industry].extend(INDUSTRY_EXPANSIONS[mapped_industry])
     
     # Enhancement 2: Add job-title-specific keywords
     if user_job_title:

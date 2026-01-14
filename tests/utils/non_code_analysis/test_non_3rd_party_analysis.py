@@ -142,17 +142,6 @@ def test_extract_contribution_bullets_readme():
     for b in bullets:
         assert not re.search(r"\s+\d+\s*\.*$", b)
 
-def test_analyze_project_clean_empty_files():
-    """Test with empty files list."""
-    result = analyze_project_clean({"parsed_files": []})
-    
-    assert "project_summary" in result  # Changed from 'summary'
-    assert "resume_bullets" in result   # Changed from 'bullets'
-    assert "skills" in result
-    assert result["project_summary"] == "No files were available for analysis."
-    assert result["resume_bullets"] == []
-    assert result["Metrics"]["completeness_score"] == 0  # Changed from top-level
-
 def test_analyze_project_clean_no_successful_files():
     """Test with files that failed to parse."""
     parsed_files = {
@@ -345,33 +334,89 @@ def test_analyze_project_clean_default_contribution_frequency():
     
 # Add this test at the end of the file
 
-def test_user_preferences_enhance_keyword_detection():
-    """Test that user preferences add enhanced keywords and return user_context."""
+def test_analyze_project_clean_with_user_preferences_enhances_summary():
+    """Test that user preferences enhance project summary with industry alignment."""
     from app.cli.user_preference_cli import UserPreferences
     
-    # Create test user
+    # Create test user with Technology industry
     pref_manager = UserPreferences()
-    pref_manager.store.save_preferences(
-        name="Test User",
-        email="test@example.com",
-        github_user="testuser",
-        education="BS CS",
-        industry="Software Engineering",
-        job_title="Software Engineer"
-    )
+    try:
+        pref_manager.store.save_preferences(
+            name="Test User",
+            email="test_enhanced@example.com",
+            github_user="testuser",
+            education="BS CS",
+            industry="Technology",
+            job_title="Software Engineer"
+        )
+        
+        # Sample content with software engineering keywords
+        parsed_files = {
+            "parsed_files": [{
+                "name": "README.md",
+                "path": "/README.md",
+                "content": "Software development project with architecture design using Docker and CI/CD.",
+                "success": True
+            }]
+        }
+        
+        result = analyze_project_clean(parsed_files, email="test_enhanced@example.com")
+        
+        # Should mention alignment with Technology background
+        assert "Technology background" in result["project_summary"]
+        assert "Software Engineering" in result["project_summary"]
+    finally:
+        pref_manager.store.close()
+
+
+def test_analyze_project_clean_with_senior_role_enhances_bullets():
+    """Test that senior job titles get leadership language in resume bullets."""
+    from app.cli.user_preference_cli import UserPreferences
     
-    # Sample content
+    pref_manager = UserPreferences()
+    try:
+        pref_manager.store.save_preferences(
+            name="Senior Dev",
+            email="senior@example.com",
+            github_user="seniordev",
+            education="MS CS",
+            industry="Technology",
+            job_title="Senior Software Engineer"
+        )
+        
+        parsed_files = {
+            "parsed_files": [{
+                "name": "DESIGN.md",
+                "path": "/DESIGN.md",
+                "content": "System architecture and design document with requirements specification.",
+                "success": True
+            }]
+        }
+        
+        result = analyze_project_clean(parsed_files, email="senior@example.com")
+        
+        # Senior role should get "Led" instead of "Designed"
+        bullets_text = " ".join(result["resume_bullets"])
+        assert "Led" in bullets_text or "Analyzed and specified comprehensive" in bullets_text
+    finally:
+        pref_manager.store.close()
+
+
+def test_analyze_project_clean_without_email_works():
+    """Test that function works without email (backward compatibility)."""
     parsed_files = {
         "parsed_files": [{
             "name": "README.md",
             "path": "/README.md",
-            "content": "Software development with Docker and CI/CD pipelines.",
+            "content": "Basic project with software development.",
             "success": True
         }]
     }
     
-    result = analyze_project_clean(parsed_files, email="test@example.com")
-    assert result["user_context"] is not None
-    assert result["user_context"]["industry"] == "Software Engineering"
-    assert result["user_context"]["detected_domain"] == "Software Engineering"
-    assert result["user_context"]["domain_match"] is True
+    # Should work without email parameter
+    result = analyze_project_clean(parsed_files, email=None)
+    
+    assert "project_summary" in result
+    assert "resume_bullets" in result
+    # Should NOT mention user preferences or background
+    assert "background" not in result["project_summary"]

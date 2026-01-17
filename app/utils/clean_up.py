@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Optional
 import shutil
+import os
 
-DEFAULT_UPLOADS_DIR = "/app/uploads"
+DEFAULT_UPLOADS_DIR = os.getenv("UPLOAD_DIR", "app/uploads")
 
 def cleanup_upload(upload_id: str, extracted_dir: Optional[str] = None, delete_extracted: bool = False) -> dict:
 	"""Delete artifacts (project contents) after generating insights"""

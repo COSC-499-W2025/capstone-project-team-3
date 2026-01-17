@@ -25,7 +25,7 @@ class UserPreferences:
             else:
                 break  # Exit the loop when a valid email is entered
 
-        existing_preferences = self.store.get_latest_preferences(email)
+        existing_preferences = self.store.get_latest_preferences()
         if existing_preferences:
             print("Existing preferences found: ")
             for k, v in existing_preferences.items():
@@ -34,9 +34,10 @@ class UserPreferences:
             if choice == "no":
                 print("Keeping existing preferences.")
                 return
-
+             
         name = input("Enter your full name: ").strip()
         github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
+    
         while True:
             education = input("Enter your educational background: ").strip()
             print(f"Industry options: {industry_options}")
@@ -59,11 +60,11 @@ class UserPreferences:
         print("Preferences saved successfully.")
 
 
-    def get_latest_preferences(self, email):
+    def get_latest_preferences(self):
         """
         Retrieve the latest user preferences.
         """
-        return self.store.get_latest_preferences(email)
+        return self.store.get_latest_preferences()
 
 if __name__ == "__main__":
         UserPreferences().manage_preferences()

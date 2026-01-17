@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS CONSENT (
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    email TEXT UNIQUE,
+    email TEXT,
     github_user TEXT,
     industry TEXT,
     education TEXT,
@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     rank INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    summary TEXT
+    summary TEXT,
+    thumbnail_path TEXT
 );
 
 --Analyzed Git Data---

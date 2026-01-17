@@ -13,6 +13,9 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
+from app.cli.user_preference_cli import UserPreferences
+from app.utils.non_code_analysis.keywords.domain_keywords import (
+    build_enhanced_keywords)
 
 SPACY_AVAILABLE = True
 KEYBERT_AVAILABLE = True
@@ -389,21 +392,39 @@ def calculate_completeness_score(content: str, doc_type: str) -> int:
     completeness = int((found / len(patterns)) * 100)
     return min(max(completeness, 0), 100)
 
-def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
+from typing import Dict, Any, List
+from collections import Counter
+from pathlib import Path
+import re
+from app.cli.user_preference_cli import UserPreferences
+from app.utils.non_code_analysis.keywords.domain_keywords import build_enhanced_keywords
+
+
+def analyze_project_clean(parsed_files: Dict[str, Any], email: str = None) -> Dict[str, Any]:
     """
-    Clean project-wide analysis:
-    - One high-level summary
-    - 4–5 project-level bullet points
-    - Combined skills across all successful files
-    - Document type frequencies (counts and contribution frequencies per type)
-    - Per-file document type and contribution frequency
+    Clean project-wide analysis with optional user preference integration.
+    
+    Args:
+        parsed_files: Dictionary containing parsed file data
+        email: Optional user email to load preferences (used ONLY for keyword detection)
     """
+    
+    # Load user preferences if email provided (ONLY for keyword detection)
+    user_prefs = None
+    if email:
+        pref_manager = UserPreferences()
+        user_prefs = pref_manager.get_latest_preferences(email)
+        if user_prefs:
+            print(f"✅ Using preferences for enhanced keyword detection")
+            print(f"   Industry: {user_prefs.get('industry')}")
+            print(f"   Job Title: {user_prefs.get('job_title')}")
+    
     # Handle both "files" and "parsed_files" keys for compatibility
     files = parsed_files.get("parsed_files") or parsed_files.get("files", [])
     
     if not files:
         return {
-            "project_summary": "",
+            "project_summary": "No files were available for analysis.",
             "resume_bullets": [],
             "skills": {
                 "technical_skills": [],
@@ -416,7 +437,13 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                     "doc_type_counts": {},
                     "doc_type_frequency": {}
                 }
-            }
+            },
+            "user_context": {
+                "detected_domain": None,
+                "domain_match": False,
+                "industry": user_prefs.get('industry') if user_prefs else None,
+                "job_title": user_prefs.get('job_title') if user_prefs else None
+            } if user_prefs else None
         }
 
     project_content = ""
@@ -468,7 +495,13 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                     "doc_type_counts": {},
                     "doc_type_frequency": {}
                 }
-            }
+            },
+            "user_context": {
+                "detected_domain": None,
+                "domain_match": False,
+                "industry": user_prefs.get('industry') if user_prefs else None,
+                "job_title": user_prefs.get('job_title') if user_prefs else None
+            } if user_prefs else None
         }
 
     project_content_lower = project_content.lower()
@@ -497,25 +530,30 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     else:
         doc_phrase = ", ".join(doc_phrases[:-1]) + " and " + doc_phrases[-1]
 
-    domain_keywords = {
-        "Software Engineering": ["software", "code", "api", "system", "development", "application"],
-        "Data Science": ["data", "analysis", "model", "dataset", "analytics", "visualization"],
-        "Business": ["business", "strategy", "market", "revenue", "customer", "sales"],
-        "Healthcare": ["health", "medical", "patient", "treatment", "clinical"],
-        "Education": ["education", "learning", "curriculum", "student", "course"],
-        "Research": ["research", "study", "experiment", "hypothesis", "findings"],
-        "Design": ["design", "ui", "ux", "prototype", "wireframe", "interface"],
-        "Project Management": ["project", "milestone", "deliverable", "timeline", "agile"],
-        "AI / Machine Learning": ["artificial intelligence", "ai", "machine learning", "model", "algorithm"],
-    }
+    
+    # Build keywords with user preferences
+    user_industry = user_prefs.get('industry') if user_prefs else None
+    user_job_title = user_prefs.get('job_title') if user_prefs else None
+    
+    domain_keywords = build_enhanced_keywords(user_industry, user_job_title)
 
-    detected_domain = None
-    max_score = 0
+    # Weighted scoring with user preference boost
+    detected_domains = {}
     for domain, kws in domain_keywords.items():
         score = sum(1 for kw in kws if kw in project_content_lower)
-        if score > max_score:
-            max_score = score
-            detected_domain = domain
+        
+        # Boost score if domain matches user's industry (1.5x multiplier)
+        if user_industry and domain.lower() == user_industry.lower():
+            score = score * 1.5
+        
+        if score > 0:
+            detected_domains[domain] = score
+
+    # Find highest scoring domain
+    detected_domain = None
+    if detected_domains:
+        detected_domain = max(detected_domains.items(), key=lambda x: x[1])[0]
+    
 
     has_architecture = any(w in project_content_lower for w in ["architecture", "design", "microservice", "event-driven"])
     has_requirements = any(w in project_content_lower for w in ["requirement", "requirements", "specification", "non-functional"])
@@ -527,8 +565,10 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
 
     summary_parts = []
     summary_parts.append(f"Across this project, the user created {doc_phrase}.")
+    
     if detected_domain:
         summary_parts.append(f"The documentation is primarily in the {detected_domain} domain.")
+    
     if has_architecture:
         summary_parts.append("It describes the system architecture and key design decisions.")
     if has_requirements:
@@ -537,8 +577,10 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         summary_parts.append("It outlines parsing, analysis, and NLP-driven capabilities for working with non-code artifacts.")
     if has_risks_or_testing:
         summary_parts.append("It also discusses risks, testing, and reliability or performance considerations.")
+    
     if len(summary_parts) == 1:
         summary_parts.append("The documents collectively describe the goals, behaviour, and constraints of the project.")
+    
     final_summary = " ".join(part.strip() for part in summary_parts)
 
     bullets: List[str] = []
@@ -597,5 +639,13 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
                 "doc_type_counts": dict(doc_type_counts),
                 "doc_type_frequency": dict(doc_type_freq)
             }
-        }
+        },
+        "user_context": {
+            "detected_domain": detected_domain,
+            "domain_scores": detected_domains, 
+            "domain_match": detected_domain and user_prefs and detected_domain.lower() == user_prefs.get('industry', '').lower(),
+            "industry": user_prefs.get('industry') if user_prefs else None,
+            "job_title": user_prefs.get('job_title') if user_prefs else None,
+            "keywords_used": len(domain_keywords.get(detected_domain, [])) if detected_domain else 0
+        } if email else None 
     }

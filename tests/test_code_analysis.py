@@ -5,7 +5,8 @@ from app.utils.code_analysis.code_analysis_utils import (
     aggregate_github_individual_metrics, analyze_github_development_patterns, analyze_github_project, analyze_parsed_project, extract_technical_keywords_from_github, generate_github_resume_summary, infer_roles_from_file,
     extract_technical_keywords_from_parsed,
     analyze_code_patterns_from_parsed,
-    calculate_advanced_complexity_from_parsed, aggregate_parsed_files_metrics, generate_resume_summary_from_parsed
+    calculate_advanced_complexity_from_parsed, aggregate_parsed_files_metrics, generate_resume_summary_from_parsed,
+    analyze_github_commit_patterns, infer_roles_from_commit_files, _detect_frameworks
 )
 # Import test data from fixtures
 from tests.fixtures.test_data import (
@@ -126,11 +127,50 @@ def test_new_json_structure_compatibility():
     except Exception as e:
         assert False, f"New structure analysis failed: {e}"
 
+def test_newly_added_functions():
+    """Test newly added functions in code analysis utils."""
+    print_section("🔧 NEW FUNCTIONS TESTING")
+    
+    # Test framework detection
+    frameworks = _detect_frameworks(["react", "django", "flask", "tensorflow"])
+    print_subsection("Framework Detection", frameworks)
+    assert "React" in frameworks or "Django" in frameworks
+    
+    # Test commit patterns analysis
+    sample_commits = [{
+        "author": "user1",
+        "date": "2023-12-01T10:00:00Z", 
+        "message": "feat: add authentication",
+        "files": ["auth.py", "utils.py"]
+    }]
+    patterns = analyze_github_commit_patterns(sample_commits)
+    print_subsection("Commit Patterns Keys", list(patterns.keys()))
+    # Check that the function returns the expected structure
+    assert "commit_frequency" in patterns or "work_style" in patterns
+    
+    # Test role inference from commit files  
+    test_files = [
+        {"path_after": "frontend/app.js"}, 
+        {"path_after": "backend/models.py"}, 
+        {"path_after": "tests/test.py"}
+    ]
+    roles = infer_roles_from_commit_files(test_files)
+    print_subsection("Inferred Roles", roles)
+    assert isinstance(roles, set)
+
 def test_edge_cases_and_robustness():
     """Test edge cases with null values, empty structures, and mixed formats."""
     print_section("🛡️ EDGE CASES & ROBUSTNESS")
     
     try:
+        # Test with None input
+        keywords = extract_technical_keywords_from_parsed(None)
+        assert keywords == [], "Should return empty list for None input"
+        
+        # Test with empty input
+        keywords = extract_technical_keywords_from_parsed([])
+        assert keywords == [], "Should return empty list for empty input"
+        
         # Test with edge case files (null values, empty entities, missing fields)
         keywords = extract_technical_keywords_from_parsed(edge_case_files)
         print_subsection("Keywords from Edge Cases", keywords[:5] if keywords else ["None"])

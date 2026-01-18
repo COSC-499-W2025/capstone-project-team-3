@@ -14,6 +14,7 @@ class ResumeFilter(BaseModel):
 
 @router.get("/resume", response_class=HTMLResponse)
 def resume_page():
+    """ This is to generate a resume for all projects (like having a master resume)"""
     resume_model = build_resume_model()
     tex = generate_resume_tex(resume_model)
     preview = tex.replace("<", "&lt;").replace(">", "&gt;")
@@ -23,8 +24,8 @@ def resume_page():
             <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
                 <h2>Resume Export</h2>
                 <p>Download your LaTeX/PDF resume:</p>
-                <p><a href="/resume/download-tex">Download resume.tex</a></p>
-                <p><a href="/resume/download-pdf">Download resume.pdf</a></p>
+                <p><a href="/resume/export/tex">Download resume.tex</a></p>
+                <p><a href="/resume/export/pdf">Download resume.pdf</a></p>
                 <h3>Preview (LaTeX)</h3>
                 <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
         + preview
@@ -33,10 +34,52 @@ def resume_page():
         </html>
         """
     )
+    
+@router.post("/resume/generate", response_class=HTMLResponse)
+def generate_resume(filter: ResumeFilter):
+    """
+    This is to generate a resume for selected projects 
+    
+    Example use-cases:
+    - Allowing a user to tailor their resume for a certain job
+    - Generating a resume for the top three ranked projects
+    """
+    resume_model = build_resume_model(
+        project_ids=filter.project_ids
+    )
 
-@router.get("/resume/download-tex")
+    tex = generate_resume_tex(resume_model)
+    preview = (
+        tex.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+    return f"""
+    <html>
+        <body>
+            <h2>Generated Resume</h2>
+            <p>Projects included: {", ".join(filter.project_ids)}</p>
+            <pre style="white-space: pre-wrap;">{preview}</pre>
+        </body>
+    </html>
+    """
+
+@router.get("/resume/export/tex")
 def resume_download():
+    """ This method downloads a resume in .tex for all projects (downloading default master resume)"""
     resume_model = build_resume_model()
+    tex = generate_resume_tex(resume_model)
+    return Response(
+        content=tex,
+        media_type="application/x-tex",
+        headers={"Content-Disposition": "attachment; filename=resume.tex"},
+    )
+
+@router.post("/resume/export/tex")
+def resume_tex_filtered(filter: ResumeFilter):
+    """This method downloads a resume for specified projects."""
+    resume_model = build_resume_model(filter.project_ids)
     tex = generate_resume_tex(resume_model)
     return Response(
         content=tex,
@@ -108,8 +151,9 @@ def compile_pdf(tex: str) -> bytes:
         with open(pdf_path, "rb") as f:
             return f.read()
         
-@router.get("/resume/download-pdf")
+@router.get("/resume/export/pdf")
 def resume_pdf():
+    """ This method downloads a resume in .pdf for all projects (downloading default master resume)"""
     resume_model = build_resume_model()
     tex = generate_resume_tex(resume_model)
     pdf_bytes = compile_pdf(tex)
@@ -119,40 +163,14 @@ def resume_pdf():
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
     
-@router.get("/resume/{id}", response_class=HTMLResponse)
-# Possible issues to work on
-# Get resume/id - id would be project signature
-
-def resume_page_for_project(id: str):
-    """Render LaTeX preview for a single project by signature."""
-    resume_model = build_resume_model(project_ids=[id])
+@router.post("/resume/export/pdf")
+def resume_pdf_filtered(filter: ResumeFilter):
+    """This method downloads a resume for specified projects."""
+    resume_model = build_resume_model(filter.project_ids)
     tex = generate_resume_tex(resume_model)
-    preview = tex.replace("<", "&lt;").replace(">", "&gt;")
-    return (
-        """
-        <html>
-            <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-                <h2>Resume Export (Single Project)</h2>
-                <p><a href="/resume">Back to all projects</a></p>
-                <h3>Preview (LaTeX)</h3>
-                <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
-        + preview
-        + """</pre>
-            </body>
-        </html>
-        """
+    pdf_bytes = compile_pdf(tex)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
-
-# JSON endpoints for front-end consumption
-@router.get("/resume/model")
-def get_resume_model():
-    """Return the full resume model (all projects) as JSON."""
-    return build_resume_model()
-
-@router.post("/resume/model")
-def get_resume_model_filtered(filter: ResumeFilter):
-    """Return a resume model filtered to the provided project IDs."""
-    return build_resume_model(project_ids=filter.project_ids)
-    
-# allow user to choose project they want on a resume
-# post /resume/generate- why would this be a post?

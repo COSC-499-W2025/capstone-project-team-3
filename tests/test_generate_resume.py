@@ -17,7 +17,9 @@ def db_connection(monkeypatch):
     Create an in-memory SQLite database matching the schema
     and patch get_connection() to return it.
     """
-    conn = sqlite3.connect(":memory:")
+    # Use a shared in-memory database URI so each new connection sees the same DB
+    uri = "file:test_resume_db?mode=memory&cache=shared"
+    conn = sqlite3.connect(uri, uri=True)
     cursor = conn.cursor()
 
     # --- Schema ---
@@ -91,8 +93,9 @@ def db_connection(monkeypatch):
 
     conn.commit()
 
-    # Patch get_connection()
-    monkeypatch.setattr(mod, "get_connection", lambda: conn)
+    # Patch get_connection() to return a NEW connection to the same shared in-memory DB
+    # This avoids 'Cannot operate on a closed database' when code closes its own connection.
+    monkeypatch.setattr(mod, "get_connection", lambda: sqlite3.connect(uri, uri=True))
 
     yield conn
     conn.close()
@@ -168,4 +171,28 @@ def test_load_skills(db_connection):
     assert "Python" in skills["p1"]
     assert "ExtraSkill" in skills["p1"]
     assert skills["p2"] == ["Python", "Machine Learning"]
+
+
+def test_build_resume_model_filters_projects(db_connection):
+    """Tests that build_resume_model filters projects by selected IDs and unions skills accordingly."""
+    # Single project selection
+    model_single = mod.build_resume_model(project_ids=["p1"])
+    assert isinstance(model_single, dict)
+    assert len(model_single["projects"]) == 1
+    assert model_single["projects"][0]["title"] == "Alpha_Project"
+    # Top-level skills should include all skills from p1
+    assert set(model_single["skills"]["Skills"]) == {
+        "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill"
+    }
+
+    # Multiple project selection
+    model_multi = mod.build_resume_model(project_ids=["p1", "p2"])
+    assert isinstance(model_multi, dict)
+    # Ordered by rank DESC → p1 then p2
+    titles = [p["title"] for p in model_multi["projects"]]
+    assert titles == ["Alpha_Project", "Beta Project"]
+    # Union of skills from both projects
+    assert set(model_multi["skills"]["Skills"]) == {
+        "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill", "Machine Learning"
+    }
 

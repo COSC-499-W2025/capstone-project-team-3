@@ -17,7 +17,7 @@ def resume_page():
     """ This is to generate a resume for all projects (like having a master resume)"""
     resume_model = build_resume_model()
     tex = generate_resume_tex(resume_model)
-    preview = tex.replace("<", "&lt;").replace(">", "&gt;")
+    preview = tex.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return (
         """
         <html>
@@ -35,7 +35,7 @@ def resume_page():
         """
     )
     
-@router.post("/resume/generate", response_class=HTMLResponse)
+@router.post("/resume/preview", response_class=HTMLResponse)
 def generate_resume(filter: ResumeFilter):
     """
     This is to generate a resume for selected projects 

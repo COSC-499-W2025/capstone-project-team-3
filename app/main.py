@@ -237,7 +237,7 @@ def main():
                                 except Exception as e:
                                     print(f"⚠️ AI non-code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
-                                    non_code_analysis_results = analyze_project_clean(parsed_non_code)
+                                    non_code_analysis_results = analyze_project_clean(parsed_non_code, email=email)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
                                 try:
@@ -268,8 +268,8 @@ def main():
                         print(f"✅ Starting Local analysis for {project_name}")
                         
                         try:
-                            # Run non-3rd party analysis (no LLM) using parsed_non_code
-                            non_code_local_results = analyze_project_clean(parsed_non_code)
+                            # Run non-3rd party analysis (no LLM) using parsed_non_code with user preferences
+                            non_code_local_results = analyze_project_clean(parsed_non_code, email=email)
                             print(f"✅ Non Code Analysis completed successfully!")
                         except Exception as e:
                             print(f"⚠️ Non Code Local analysis failed: {e}")

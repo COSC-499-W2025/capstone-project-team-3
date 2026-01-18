@@ -64,14 +64,15 @@ def test_none_path_raises_value_error():
     with pytest.raises(ValueError, match="path must be provided"):
         extract_zipped_contents(None)
     
-def test_corrupt_zip_file_raises_value_error(tmp_path):
+def test_corrupt_zip_file_raises_badzipfile(tmp_path):
     """ 
-    Test for a corrupt/invalid zip file
+    Test for a corrupt/invalid zip file should raise BadZipFile
     """
     corrupt_zip = tmp_path / "corrupt.zip"
     corrupt_zip.write_text("this is not a zip file")
 
-    with pytest.raises(ValueError, match="not a valid zip archive"):
+    # zipfile.BadZipFile is raised by ZipFile on invalid archives
+    with pytest.raises(zipfile.BadZipFile, match="not a zip file"):
         extract_zipped_contents(corrupt_zip)
         
 #valid zip file

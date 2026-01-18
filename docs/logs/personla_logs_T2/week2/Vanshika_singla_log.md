@@ -3,6 +3,8 @@
 ---
 ## Entry for Week 2, Jan 12 - Jan 18
 
+![Personal Log](../../../screenshots/vanshika_week2T2.png)
+
 ### Type of Tasks Worked On
 - Implemented API endpoints for privacy consent management
 - Added automated tests for consent API endpoints

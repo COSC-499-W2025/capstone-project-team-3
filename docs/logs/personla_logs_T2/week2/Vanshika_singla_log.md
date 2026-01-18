@@ -73,12 +73,22 @@ Created docker.yml workflow that validates Docker images build successfully on e
 Both workflows complement the existing CI pipeline and security scans to provide comprehensive automated testing and validation. and this is helping us alot to work on the tests that are failing currently
 
 ---
+### Reviewing and colaboration 
+- With my previous work, i had added ci workflow, the tests that are failing now teammates are aware of them and are fixing them one by one.
+- Reviewed https://github.com/COSC-499-W2025/capstone-project-team-3/pull/474
+- Reviewed logs for the other teammates
 
+
+--- 
 ### Progress Summary
 - **Completed this week:**
-Successfully implemented privacy consent API endpoints with full test coverage, enabling web-based consent management. Created two essential CI/CD workflows (Docker Build and Test Coverage) that automate quality assurance and deployment validation. Updated workflow documentation in .github/workflows/README.md.
+Successfully implemented privacy consent API endpoints with full test coverage, enabling web-based consent management. Created two essential CI/CD workflows (Docker Build and Test Coverage) that automate quality assurance and deployment validation. Updated workflow documentation in .github/workflows/README.md which kind of updates my previous Progress over the last weeks goals for workflow- i worked on setting up one workflow last week and 2 of them were done this week along with other tasks. 
 
 ---
+###Blockers
+- i was working on API endpoint for the first time and i was the first to work on it, it had alot of issues and arragements to be made for the over all structure- To solve- i had to do alot of pivioting back and forth on my API related code. 
+- We are still strugling to make complete sense of the Milestone requirements so it was hard for me to see how feature 21 in requirments would mean for our Project, for which am laying out the LOGIC
+
 
 ### Reflection
 **What Went Well:**

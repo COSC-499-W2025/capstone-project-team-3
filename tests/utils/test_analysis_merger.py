@@ -1,4 +1,5 @@
 from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db
+from app.utils.retrieve_insights_utils import get_projects_by_signatures
 
 def test_merge_analysis_results():
     
@@ -6,7 +7,7 @@ def test_merge_analysis_results():
         "resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
-            "technical_keywords": ["FastAPI", "pytest"],
+            "roles": ["FastAPI", "pytest"],
             "code_files_changed": 5
         }
     }
@@ -70,10 +71,10 @@ def test_store_and_retrieve_results_in_db():
     store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
 
     # Retrieve results from DB
-    retrieved_results = retrieve_results_from_db(project_signature)
+    retrieved_results = get_projects_by_signatures(project_signature)
 
     assert retrieved_results["summary"] == merged_results["summary"]
-    assert retrieved_results["skills"]["technical_skills"] == merged_results["skills"]["technical_skills"]
-    assert retrieved_results["skills"]["soft_skills"] == merged_results["skills"]["soft_skills"]
+    assert retrieved_results["skills"] == merged_results["skills"]["technical_skills"]
+    assert retrieved_results["skills"] == merged_results["skills"]["soft_skills"]
     assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
     assert retrieved_results["metrics"] == merged_results["metrics"]

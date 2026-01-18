@@ -347,11 +347,11 @@ def test_analyze_project_clean_default_contribution_frequency():
 
 def test_user_preferences_enhance_keyword_detection():
     """Test that user preferences add enhanced keywords and return user_context."""
-    from app.cli.user_preference_cli import UserPreferences
+    from app.utils.user_preference_utils import UserPreferenceStore
     
     # Create test user
-    pref_manager = UserPreferences()
-    pref_manager.store.save_preferences(
+    pref_manager = UserPreferenceStore()
+    pref_manager.save_preferences(
         name="Test User",
         email="test@example.com",
         github_user="testuser",

@@ -85,7 +85,7 @@ Both workflows complement the existing CI pipeline and security scans to provide
 Successfully implemented privacy consent API endpoints with full test coverage, enabling web-based consent management. Created two essential CI/CD workflows (Docker Build and Test Coverage) that automate quality assurance and deployment validation. Updated workflow documentation in .github/workflows/README.md which kind of updates my previous Progress over the last weeks goals for workflow- i worked on setting up one workflow last week and 2 of them were done this week along with other tasks. 
 
 ---
-###Blockers
+### Blockers
 - i was working on API endpoint for the first time and i was the first to work on it, it had alot of issues and arragements to be made for the over all structure- To solve- i had to do alot of pivioting back and forth on my API related code. 
 - We are still strugling to make complete sense of the Milestone requirements so it was hard for me to see how feature 21 in requirments would mean for our Project, for which am laying out the LOGIC
 

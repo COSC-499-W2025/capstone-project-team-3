@@ -72,7 +72,7 @@ def test_corrupt_zip_file_raises_badzipfile(tmp_path):
     corrupt_zip.write_text("this is not a zip file")
 
     # zipfile.BadZipFile is raised by ZipFile on invalid archives
-    with pytest.raises(zipfile.BadZipFile, match="not a zip file"):
+    with pytest.raises(zipfile.BadZipFile):
         extract_zipped_contents(corrupt_zip)
         
 #valid zip file

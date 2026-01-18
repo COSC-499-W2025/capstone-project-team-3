@@ -2,11 +2,15 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model
 from app.utils.generate_resume_tex import generate_resume_tex
+from pydantic import BaseModel
 import subprocess
 import tempfile
 import os
 
 router = APIRouter()
+
+class ResumeFilter(BaseModel):
+    project_ids: list[str]
 
 @router.get("/resume", response_class=HTMLResponse)
 def resume_page():
@@ -19,8 +23,8 @@ def resume_page():
             <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
                 <h2>Resume Export</h2>
                 <p>Download your LaTeX/PDF resume:</p>
-                <p><a href="/resume/download">Download resume.tex</a></p>
-                <p><a href="/resume/pdf">Download resume.pdf</a></p>
+                <p><a href="/resume/download-tex">Download resume.tex</a></p>
+                <p><a href="/resume/download-pdf">Download resume.pdf</a></p>
                 <h3>Preview (LaTeX)</h3>
                 <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
         + preview
@@ -30,7 +34,7 @@ def resume_page():
         """
     )
 
-@router.get("/resume/download")
+@router.get("/resume/download-tex")
 def resume_download():
     resume_model = build_resume_model()
     tex = generate_resume_tex(resume_model)
@@ -104,7 +108,7 @@ def compile_pdf(tex: str) -> bytes:
         with open(pdf_path, "rb") as f:
             return f.read()
         
-@router.get("/resume/pdf")
+@router.get("/resume/download-pdf")
 def resume_pdf():
     resume_model = build_resume_model()
     tex = generate_resume_tex(resume_model)
@@ -114,3 +118,41 @@ def resume_pdf():
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
+    
+@router.get("/resume/{id}", response_class=HTMLResponse)
+# Possible issues to work on
+# Get resume/id - id would be project signature
+
+def resume_page_for_project(id: str):
+    """Render LaTeX preview for a single project by signature."""
+    resume_model = build_resume_model(project_ids=[id])
+    tex = generate_resume_tex(resume_model)
+    preview = tex.replace("<", "&lt;").replace(">", "&gt;")
+    return (
+        """
+        <html>
+            <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+                <h2>Resume Export (Single Project)</h2>
+                <p><a href="/resume">Back to all projects</a></p>
+                <h3>Preview (LaTeX)</h3>
+                <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
+        + preview
+        + """</pre>
+            </body>
+        </html>
+        """
+    )
+
+# JSON endpoints for front-end consumption
+@router.get("/resume/model")
+def get_resume_model():
+    """Return the full resume model (all projects) as JSON."""
+    return build_resume_model()
+
+@router.post("/resume/model")
+def get_resume_model_filtered(filter: ResumeFilter):
+    """Return a resume model filtered to the provided project IDs."""
+    return build_resume_model(project_ids=filter.project_ids)
+    
+# allow user to choose project they want on a resume
+# post /resume/generate- why would this be a post?

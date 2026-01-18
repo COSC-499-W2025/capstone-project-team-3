@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 from app.main import app
+from app.data.db import get_connection, init_db
 import pytest
 import tempfile
-import sqlite3
 from pathlib import Path
 
 client = TestClient(app)
@@ -14,7 +14,7 @@ def test_db():
         db_path = Path(tmp.name)
         
         # Initialize test database with schema
-        conn = sqlite3.connect(db_path)
+        conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS CONSENT (
@@ -29,12 +29,15 @@ def test_db():
         
         # Override DB_PATH in the router
         from app.api.routes import privacy_consent
-        original_db_path = privacy_consent.DB_PATH
+        from app.data import db
+        original_db_path = db.DB_PATH
+        db.DB_PATH = db_path
         privacy_consent.DB_PATH = db_path
         
         yield db_path
         
         # Restore original DB_PATH and cleanup
+        db.DB_PATH = original_db_path
         privacy_consent.DB_PATH = original_db_path
         db_path.unlink(missing_ok=True)
 

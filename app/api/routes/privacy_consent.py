@@ -1,11 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.utils.consent_utils import record_consent, has_consent, revoke_consent
-from pathlib import Path
-import sqlite3
+from app.data.db import get_connection, DB_PATH
 
 router = APIRouter()
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "app.sqlite3"
 
 class ConsentRequest(BaseModel):
     accepted: bool
@@ -23,7 +21,7 @@ def get_consent_status():
     """Check if user has given consent."""
     try:
         has_given_consent = has_consent(DB_PATH)
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT timestamp FROM CONSENT ORDER BY id DESC LIMIT 1")
         result = cursor.fetchone()

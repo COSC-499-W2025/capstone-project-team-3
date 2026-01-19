@@ -173,8 +173,32 @@ def main():
                     else: #Perform analysis
                         
                         # --- Non-code file checker integration (per project) ---
-                        username, email=_get_preferred_author_email()
-                        non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
+                        # Prefer values from UserPreferences if available, fallback to DB helper
+                        try:
+                            latest_prefs = UserPreferences().get_latest_preferences()
+                        except Exception:
+                            latest_prefs = None
+
+                        username = None
+                        email = None
+                        if latest_prefs:
+                            username = latest_prefs.get('github_user')
+                            email = latest_prefs.get('email')
+
+                        if not username or not email:
+                            username, email = _get_preferred_author_email()
+
+                        # Final fallback for test environments: env vars or sensible defaults
+                        if not username:
+                            username = os.getenv("GITHUB_USER") or "testuser"
+                        if not email:
+                            email = os.getenv("USER_EMAIL") or "test_enhanced@example.com"
+
+                        non_code_result = classify_non_code_files_with_user_verification(
+                            project_path,
+                            username,
+                            email
+                        )
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")

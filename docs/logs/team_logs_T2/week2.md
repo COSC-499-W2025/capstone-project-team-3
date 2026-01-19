@@ -7,8 +7,7 @@
 
 ---
 
-## Personal Logs for Week 2
-- (../personla_logs_T2/week2)
+## [Personal Logs for Week 2](../personal_logs_T2/week2)
 
 ---
 
@@ -74,10 +73,10 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#451, #450, #452] | Implement end-to-end user preference integration in local non code analysis, BugFix: DB Connection Leak Fix in user preference integration | @6s-1 | 
 | [#456, #457, #453] | Privacy consent API endpoints, consent API testing , Create Automated Coverage testing in CI pipeline  | @PaintedW0lf | 
 | [#460] | Fix Failing tests  | @abstractafua | 
----
-| [#451, #450, #452] | Implement end-to-end user preference integration in local non code analysis, BugFix: DB Connection Leak Fix in user preference integration | @6s-1 | | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
+| [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
 | [#490] | API endpoint for GET /projects/{signature} | @kjassani |
+|[#476, #477, #481, #473, #475, #478, 484]| Update generate_resume.py to include project_ids in some methods,	Add resume endpoints,	Create tests for code analysis part 1, Fix failing tests for main and path_utils, Create endpoint for resume generation - Tailored,	Allow user to download tailored resume, Create endpoint for GET /projects | @dabby04
 
 ## In Progress Tasks
 
@@ -85,9 +84,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------|----------|
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434)           | Implement end-to-end functionality to add thumbnails per project. | @6s-1      |
 | #454          | Create docker build for CI pipeline                                     | In progress, we are failing this currently, which may/maynot be due to pre-existing issues   |
-
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
-[#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
+|[#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
 
 ---
@@ -123,7 +121,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 * All failing tests resolved, CI/CD pipeline now functioning properly
 * Team collaboration effective with thorough code reviews and feedback
 
----## Plan for Next Cycle
+--- 
+## Plan for Next Cycle
 
 * Monitor user preference integration in production
 * Continue work on remaining Milestone 2 features

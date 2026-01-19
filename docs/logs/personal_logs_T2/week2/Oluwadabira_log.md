@@ -20,7 +20,7 @@ Building on my work from last week, I made improvements to the endpoints for gen
   - Updated methods in generate_resume.py: the methods updated are load_projects and build_resume_model
   - Added POST endpoints in api/routes/resume.py for resume generation and exporting to .tex and .pdf
   - Added and updated their related test classes.
-- **[PR #485 - Added endpoint for GET/projects and improved resume preview for selected projects](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/485)** 🔄 In Review
+- **[PR #485 - Added endpoint for GET/projects and improved resume preview for selected projects](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/485)** ✅ Merged
   - Added API endpoint for GET /projects in `api/routes/projects.py`
   - Made updates to the GET /resume endpoint to access one when no project_signatures are provided (master resume) and one when signatures are provided (tailored resume)
 
@@ -33,9 +33,9 @@ Building on my work from last week, I made improvements to the endpoints for gen
 | [#477](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/477) | Add resume endpoints| ✅ Closed |
 | [#481](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/481) | Create tests for code analysis part 1 | ✅ Closed |
 | [#473](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/473) | Fix failing tests for main and path_utils | ✅ Closed |
-| [#475](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/475) | Create endpoint for resume generation - Tailored | In progress |
-| [#478](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/478) | Allow user to download tailored resume | In progress |
-| [#484](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/484) | Create endpoint for GET /projects | In progress |
+| [#475](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/475) | Create endpoint for resume generation - Tailored | ✅ Closed |
+| [#478](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/478) | Allow user to download tailored resume | ✅ Closed |
+| [#484](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/484) | Create endpoint for GET /projects | ✅ Closed |
 
 ---
 

@@ -75,3 +75,38 @@ def test_get_projects_skills_limited_to_five(mock_load_skills, mock_load_project
     data = response.json()
     assert data[0]["skills"] == ["s1", "s2", "s3", "s4", "s5"]
     mock_get_conn.return_value.close.assert_called_once()
+
+
+@patch("app.api.routes.projects.get_connection")
+@patch("app.api.routes.projects.load_projects")
+@patch("app.api.routes.projects.load_skills")
+def test_get_project_returns_single_project(mock_load_skills, mock_load_projects, mock_get_conn):
+    """Ensure /projects/{signature} returns a single project with top skills."""
+    mock_cursor = MagicMock()
+    mock_get_conn.return_value.cursor.return_value = mock_cursor
+
+    mock_load_projects.return_value = [
+        ("sig-1", "Project One", 1, "2020-01-01", "2020-02-01")
+    ]
+    mock_load_skills.return_value = {"sig-1": ["Python", "FastAPI", "Docker", "SQL", "AWS", "Extra"]}
+
+    client = TestClient(app)
+    response = client.get("/projects/sig-1")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["id"] == "sig-1"
+    assert data["name"] == "Project One"
+    assert data["skills"] == ["Python", "FastAPI", "Docker", "SQL", "AWS"]
+    mock_get_conn.return_value.close.assert_called_once()
+
+
+@patch("app.api.routes.projects.get_connection")
+@patch("app.api.routes.projects.load_projects", return_value=[])
+def test_get_project_not_found(mock_load_projects, mock_get_conn):
+    """Ensure /projects/{signature} returns 404 when project is missing."""
+    client = TestClient(app)
+    response = client.get("/projects/unknown")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project not found"
+    mock_get_conn.return_value.close.assert_called_once()

@@ -117,15 +117,24 @@ def format_date(dt_str):
 def get_projects_by_signatures(signatures: list):
     """
     Get project information for specific project signatures.
+    Accepts either a single signature (str) or a list of signatures.
+    If a single signature is supplied, returns a single project dict (or None).
+    If a list is supplied, returns a list of project dicts.
     
     Args:
         signatures (list): List of project signature strings
         
     Returns:
         list: List of project dictionaries with name, summary, duration, skills, created_at, rank, metrics, resume_bullets
+        dict: Single project dictionary if single signature provided
     """
     if not signatures:
-        return []
+        return [] if isinstance(signatures, (list, tuple)) else None
+    
+    single_input = False
+    if isinstance(signatures, str):
+        single_input = True
+        signatures = [signatures]
     
     # Connect to the database
     conn = get_connection()
@@ -158,7 +167,15 @@ def get_projects_by_signatures(signatures: list):
         # Convert metrics to dictionary format
         for metric_row in cur.fetchall():
             metric_name, metric_value = metric_row
-            metrics[metric_name] = metric_value
+            # Try to deserialize JSON values stored as text (lists/dicts/numeric strings)
+            parsed_value = metric_value
+            if isinstance(metric_value, str):
+                try:
+                    parsed_value = json.loads(metric_value)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    # keep original string if not JSON
+                    parsed_value = metric_value
+            metrics[metric_name] = parsed_value
         
 
         # Get resume bullets for this project - FIXED
@@ -210,4 +227,8 @@ def get_projects_by_signatures(signatures: list):
         })
     
     conn.close()
+
+    if single_input:
+        return projects[0] if projects else None
+
     return projects

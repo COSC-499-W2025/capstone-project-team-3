@@ -105,7 +105,8 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_metrics = code_analysis_results.get("Metrics", {})
     
     # Extract & Format code resume bullets
-    code_resume_bullets = code_analysis_results.get("Resume_bullets", [])
+    # Accept either 'resume_bullets' or 'Resume_bullets' (tests/use-cases vary)
+    code_resume_bullets = code_analysis_results.get("resume_bullets") or code_analysis_results.get("Resume_bullets") or []
     code_resume_bullets = [
     bullet.strip() if bullet.strip().endswith('.') else bullet.strip() + '.'
     for bullet in code_resume_bullets if bullet.strip() ]

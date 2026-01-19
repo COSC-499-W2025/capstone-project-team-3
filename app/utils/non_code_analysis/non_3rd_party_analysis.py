@@ -13,7 +13,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
-from app.cli.user_preference_cli import UserPreferences
+from app.utils.user_preference_utils import UserPreferenceStore
 from app.utils.non_code_analysis.keywords.domain_keywords import (
     build_enhanced_keywords)
 
@@ -408,13 +408,11 @@ def analyze_project_clean(parsed_files: Dict[str, Any], email: str = None) -> Di
         parsed_files: Dictionary containing parsed file data
         email: Optional user email to load preferences (used ONLY for keyword detection)
     """
-    
-    # Load user preferences if email provided (ONLY for keyword detection)
+
+    # Load user preferences for keyword detection
     user_prefs = None
-    if email:
-        pref_manager = UserPreferences()
-        user_prefs = pref_manager.get_latest_preferences(email)
-        if user_prefs:
+    user_prefs = UserPreferenceStore().get_latest_preferences_no_email()
+    if user_prefs:
             print(f"✅ Using preferences for enhanced keyword detection")
             print(f"   Industry: {user_prefs.get('industry')}")
             print(f"   Job Title: {user_prefs.get('job_title')}")

@@ -403,6 +403,7 @@ def test_main_integrates_non_code_file_checker():
          patch('app.main.LLMConsentManager') as mock_llm_manager, \
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification') as mock_non_code_checker, \
+         patch('app.main._get_preferred_author_email', return_value=('testuser','test_enhanced@example.com')), \
          patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
         
@@ -444,6 +445,7 @@ def test_main_calls_parsing_with_classification_results():
          patch('app.main.LLMConsentManager') as mock_llm_manager, \
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main._get_preferred_author_email', return_value=('testuser','test_enhanced@example.com')), \
          patch('app.main.parsed_input_text') as mock_parse, \
          patch('app.main.display_startup_info'), \
          patch('builtins.input', return_value='exit'), \
@@ -889,6 +891,7 @@ def test_main_calls_analyze_project_clean_in_local_mode():
          patch('app.main.LLMConsentManager') as mock_llm_manager, \
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
+         patch('app.main._get_preferred_author_email', return_value=('testuser','test_enhanced@example.com')), \
          patch('app.main.parsed_input_text') as mock_parse, \
          patch('app.main.analyze_project_clean') as mock_analyze_clean, \
          patch('app.main.detect_git', return_value=False), \

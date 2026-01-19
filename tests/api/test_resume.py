@@ -45,6 +45,28 @@ def test_resume_page(mock_tex, mock_model, client, fake_resume_model):
 
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_preview_selected_projects(mock_tex, mock_model, client, fake_resume_model):
+    """Verify POST /resume/preview renders HTML for selected project signatures."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = r"\\documentclass{preview}"
+
+    selected = ["sig_alpha_project/hash", "sig_gamma_project/hash"]
+    response = client.post("/resume/preview", json={"project_ids": selected})
+
+    assert response.status_code == 200
+    # Title and selected projects listed
+    assert "Generated Resume" in response.text
+    assert "sig_alpha_project/hash" in response.text
+    assert "sig_gamma_project/hash" in response.text
+    # Preview contains LaTeX from generate_resume_tex
+    assert "\\documentclass" in response.text
+
+    # Ensure builder was invoked with the selected project IDs
+    mock_model.assert_called_once_with(project_ids=selected)
+
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
 def test_resume_download_tex(mock_tex, mock_model, client, fake_resume_model):
     """Ensure the LaTeX resume is downloadable as a .tex file."""
     mock_model.return_value = fake_resume_model

@@ -171,6 +171,12 @@ def main():
                     else: #Perform analysis
                         
                         # --- Non-code file checker integration (per project) ---
+                        # Prefer values from UserPreferences if available, fallback to DB helper
+                        try:
+                            latest_prefs = UserPreferences().get_latest_preferences()
+                        except Exception:
+                            latest_prefs = None
+
                         username, email=_get_preferred_author_email()
                         non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
                         print(f"--- Non-Code File Checker Results for {project_name} ---")

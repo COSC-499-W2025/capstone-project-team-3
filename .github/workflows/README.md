@@ -9,7 +9,7 @@ This directory contains GitHub Actions workflows for automated testing and quali
 - **Purpose**: Runs all tests with pytest and generates coverage reports
 - **Why**: Catches bugs before they reach production
 
-### 2. **Docker Build** (`docker.yml`)- TODO
+### 2. **Docker Build** (`docker.yml`)
 - **Triggers**: On every PR and push to main/master
 - **Purpose**: Validates that Docker images build successfully
 - **Why**: Prevents deployment failures due to Docker issues
@@ -19,7 +19,7 @@ This directory contains GitHub Actions workflows for automated testing and quali
 - **Purpose**: Scans dependencies for known vulnerabilities
 - **Why**: Keeps the project secure from vulnerable packages
 
-### 4. **Test Coverage** (`coverage.yml`) -TODO
+### 4. **Test Coverage** (`coverage.yml`)
 - **Triggers**: On every PR and push to main/master
 - **Purpose**: Generates detailed test coverage reports
 - **Why**: Helps identify untested code paths

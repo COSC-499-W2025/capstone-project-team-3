@@ -30,6 +30,13 @@
   - Fix failing tests in test_non_code_file_checker.py #468
   - Refactor code analysis part 2 - Extract user preferences and text processing #469
   - Create tests for code analysis part 1 #481
+  - Create endpoint for GET /projects	#484
+  - Optimization and Refactoring for Resume generation and download	#479
+  - Allow user to download tailored resume	#478
+  - Add resume endpoints	#477
+  - Update generate_resume.py to include project_ids in some methods	#476
+  - Create endpoint for resume generation - Tailored	#475
+  - Fix failing tests for `main` and `path_utils`	#473
   
 
 ---

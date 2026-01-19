@@ -20,5 +20,8 @@ jobs:
       - name: Build Docker image
         run: docker build --platform=linux/amd64 -t myapp .
       
+      - name: Create dummy .env file
+        run: echo "GEMINI_API_KEY=dummy_key_for_ci" > .env
+      
       - name: Test Docker Compose
         run: docker compose config

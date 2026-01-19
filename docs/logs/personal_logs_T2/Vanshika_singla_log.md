@@ -36,7 +36,7 @@
 |---------------|-------------------------------------------------------------------------|------------|
 | #456          | API/POST CONSENT MANAGER                                                | Closed     |
 | #457          | Testing for consent-API                                                 | Closed     |
-| #453          | Create Automated Coverage testing in CI pipeline                        | Its done, but not merged yet     |
+| #453          | Create Automated Coverage testing in CI pipeline                        | Its done, but not merged yet as its a part of docker pipeline and its in process  |
 | #454          | Create docker build for CI pipeline                                     | In progress, we are failing this currently, which may/maynot be due to pre-existing issues   |
 
 ---
@@ -77,6 +77,7 @@ Both workflows complement the existing CI pipeline and security scans to provide
 - With my previous work, i had added ci workflow, the tests that are failing now teammates are aware of them and are fixing them one by one.
 - Reviewed https://github.com/COSC-499-W2025/capstone-project-team-3/pull/474
 - Reviewed logs for the other teammates
+- Reviewed - https://github.com/COSC-499-W2025/capstone-project-team-3/pull/482
 
 
 --- 

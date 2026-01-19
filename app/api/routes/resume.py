@@ -1,3 +1,5 @@
+from typing import Optional, List
+from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model
@@ -13,29 +15,47 @@ class ResumeFilter(BaseModel):
     project_ids: list[str]
 
 @router.get("/resume", response_class=HTMLResponse)
-def resume_page():
-    """ This is to generate a resume for all projects (like having a master resume)"""
-    resume_model = build_resume_model()
+def resume_page(project_ids: Optional[List[str]] = Query(None)):
+    """
+    GET preview endpoint.
+    - No project_ids → master resume
+    - project_ids provided → filtered resume
+    """
+
+    resume_model = build_resume_model(project_ids=project_ids)
     tex = generate_resume_tex(resume_model)
-    preview = tex.replace("<", "&lt;").replace(">", "&gt;")
-    return (
-        """
-        <html>
-            <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-                <h2>Resume Export</h2>
-                <p>Download your LaTeX/PDF resume:</p>
-                <p><a href="/resume/export/tex">Download resume.tex</a></p>
-                <p><a href="/resume/export/pdf">Download resume.pdf</a></p>
-                <h3>Preview (LaTeX)</h3>
-                <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
-        + preview
-        + """</pre>
-            </body>
-        </html>
-        """
+
+    preview = (
+        tex.replace("&", "&amp;")
+           .replace("<", "&lt;")
+           .replace(">", "&gt;")
     )
+
+    # Build export links dynamically
+    if project_ids:
+        params = "&".join(f"project_ids={pid}" for pid in project_ids)
+        tex_link = f"/resume/export/tex?{params}"
+        pdf_link = f"/resume/export/pdf?{params}"
+        title = "Resume Export (Selected Projects)"
+    else:
+        tex_link = "/resume/export/tex"
+        pdf_link = "/resume/export/pdf"
+        title = "Resume Export (All Projects)"
+
+    return f"""
+    <html>
+        <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+            <h2>{title}</h2>
+            <p>Download your LaTeX/PDF resume:</p>
+            <p><a href="{tex_link}">Download resume.tex</a></p>
+            <p><a href="{pdf_link}">Download resume.pdf</a></p>
+            <h3>Preview (LaTeX)</h3>
+            <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
+        </body>
+    </html>
+    """
     
-@router.post("/resume/generate", response_class=HTMLResponse)
+@router.post("/resume/preview", response_class=HTMLResponse)
 def generate_resume(filter: ResumeFilter):
     """
     This is to generate a resume for selected projects 
@@ -66,10 +86,10 @@ def generate_resume(filter: ResumeFilter):
     """
 
 @router.get("/resume/export/tex")
-def resume_download():
-    """ This method downloads a resume in .tex for all projects (downloading default master resume)"""
-    resume_model = build_resume_model()
+def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
+    resume_model = build_resume_model(project_ids=project_ids)
     tex = generate_resume_tex(resume_model)
+
     return Response(
         content=tex,
         media_type="application/x-tex",
@@ -152,11 +172,11 @@ def compile_pdf(tex: str) -> bytes:
             return f.read()
         
 @router.get("/resume/export/pdf")
-def resume_pdf():
-    """ This method downloads a resume in .pdf for all projects (downloading default master resume)"""
-    resume_model = build_resume_model()
+def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
+    resume_model = build_resume_model(project_ids=project_ids)
     tex = generate_resume_tex(resume_model)
     pdf_bytes = compile_pdf(tex)
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

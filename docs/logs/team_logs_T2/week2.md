@@ -18,6 +18,7 @@
   - Complete user preference integration within main workflow
   - Continue thumbnail integration development
   - Working on requirements for Milestone 2
+  - Work on API's and displaying why each project is scored higher than the other
   
 - **Associated project board tasks:**
   - Integrate User Preferences within the main and local analysis workflow. #451
@@ -26,6 +27,9 @@
   - API/POST CONSENT MANAGER - Enable web-based consent management. #456
   - Create Automated Coverage testing in CI pipeline. #453
   - Create docker build for CI pipeline. #454
+  - Fix failing tests in test_non_code_file_checker.py #468
+  - Refactor code analysis part 2 - Extract user preferences and text processing #469
+  - Create tests for code analysis part 1 #481
   
 
 ---
@@ -63,6 +67,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 
 ---
+| [#451, #450, #452] | Implement end-to-end user preference integration in local non code analysis, BugFix: DB Connection Leak Fix in user preference integration | @6s-1 | | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
+| [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |---
 
 ## In Progress Tasks
 
@@ -71,6 +77,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434)           | Implement end-to-end functionality to add thumbnails per project. | @6s-1      |
 | #454          | Create docker build for CI pipeline                                     | In progress, we are failing this currently, which may/maynot be due to pre-existing issues   |
 
+| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
 
 ---
 
@@ -101,9 +108,13 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 ## Reflection
 
 * Test coverage improved with comprehensive test suites for new features
+* Code refactoring approach proven successful - modular PRs easier to review
+* All failing tests resolved, CI/CD pipeline now functioning properly
+* Team collaboration effective with thorough code reviews and feedback
 
 ---## Plan for Next Cycle
 
 * Monitor user preference integration in production
 * Continue work on remaining Milestone 2 features
+* Discuss API plans and UI details 
 

@@ -30,7 +30,7 @@ def get_portfolio_resume_insights():
         authors = []
         if "author" in metrics:
             # If author is stored as metric
-            authors = [metrics["author"]["value"]]
+            authors = [metrics["author"]]
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))
@@ -52,8 +52,11 @@ def get_portfolio_resume_insights():
             "metrics": metrics
         })
 
-    # Top ranked projects (by rank limit to top 5)
-    top_projects = sorted(projects, key=lambda x: x["rank"], reverse=True)[:5]
+    # Top ranked projects (by rank, Handle None, limit to top 5)
+        def _rank_key(proj):
+            r = proj.get("rank")
+            return r if isinstance(r, int) else 0
+    top_projects = sorted(projects, key=_rank_key, reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
     chronological = sorted(projects, key=lambda x: (x["created_at"]), reverse=True)[:10]
@@ -69,11 +72,19 @@ def get_portfolio_resume_insights():
     bullets = []
     for row in cur.fetchall():
         project_name, summary_text = row
-        bullets.append({
-            "project_name": project_name,
-            "bullet": summary_text
-        })
-    
+    try:
+            # Try to parse as JSON first (for arrays)
+            parsed = json.loads(summary_text)
+            if isinstance(parsed, list):
+                # extend with list of bullets (assume strings)
+                bullets.extend(parsed)
+            else:
+                # store as plain string for single-summary entries
+                bullets.append(summary_text)
+    except (json.JSONDecodeError, TypeError):
+            bullets.append(summary_text)
+
+
     conn.close()
     
     # Return structured portfolio object and resume object

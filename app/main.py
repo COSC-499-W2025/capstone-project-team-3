@@ -18,7 +18,12 @@ from app.utils.code_analysis.code_analysis_utils import analyze_github_project, 
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow 
 from app.utils.delete_insights_utils import get_projects
-from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
+from app.cli.retrieve_insights_cli import (
+    lookup_past_insights,
+    display_specific_projects,
+    get_portfolio_resume_insights,
+    prompt_rank_override,
+)
 from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
@@ -326,6 +331,14 @@ def main():
                                 if len(proj['skills']) > 5:
                                     skills_text += f" + {len(proj['skills']) - 5} more"
                                 print(f"      🛠️  Key skills: {skills_text}")
+
+                        override_projects = prompt_rank_override(portfolio["top_projects"])
+                        if override_projects:
+                            print(f"\n🏆 Top Ranked Projects (Session Override):")
+                            for i, proj in enumerate(override_projects, 1):
+                                skills_count = len(proj['skills'])
+                                rank_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}️⃣"
+                                print(f"   {rank_emoji} {proj['name']} — Score: {proj['rank']} — ({proj['duration']}) — {skills_count} skills")
                         print(f"\n📜 All Projects in Chronological Order ({len(portfolio['chronological'])} recent):")
                         for i, proj in enumerate(portfolio["chronological"], 1):
                             skills_count = len(proj['skills'])

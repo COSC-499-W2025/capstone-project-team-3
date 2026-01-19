@@ -43,6 +43,7 @@ def get_portfolio_resume_insights():
         duration = f"{format_date(created_at)} - {format_date(last_modified)}"
         
         projects.append({
+            "project_signature": signature,
             "name": name,
             "summary": summary,
             "duration": duration,

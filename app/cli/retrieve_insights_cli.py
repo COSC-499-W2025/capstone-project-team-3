@@ -132,6 +132,83 @@ def get_specific_projects_info(project_signatures):
     
     return formatted_output
 
+def _print_rank_override_projects(projects):
+    print("\nProjects available for session rank override:")
+    for idx, proj in enumerate(projects, start=1):
+        sig = proj.get("project_signature") or ""
+        sig_display = f"{sig[:12]}..." if sig else "unknown"
+        print(f"  {idx}. {proj.get('name', 'Unknown')} — signature: {sig_display}")
+
+def _resolve_project_choice(choice, projects, used_signatures):
+    if not choice:
+        return None, "Please enter a project number or signature prefix."
+
+    if choice.isdigit():
+        idx = int(choice)
+        if idx < 1 or idx > len(projects):
+            return None, "Number out of range. Try again."
+        selected = projects[idx - 1]
+    else:
+        matches = [
+            p for p in projects
+            if (p.get("project_signature") or "").startswith(choice)
+        ]
+        if not matches:
+            return None, "No project signature matches that input."
+        if len(matches) > 1:
+            return None, "Signature prefix is ambiguous. Enter more characters."
+        selected = matches[0]
+
+    sig = selected.get("project_signature") or ""
+    if sig in used_signatures:
+        return None, "Project already selected. Choose a different project."
+
+    return selected, None
+
+def prompt_rank_override(projects):
+    if not projects:
+        return None
+
+    answer = input("\nOverride project ranking for this session? (yes/no): ").strip().lower()
+    if answer not in ("y", "yes"):
+        return None
+
+    _print_rank_override_projects(projects)
+    override = []
+    used_signatures = set()
+
+    while len(override) < len(projects):
+        rank_num = len(override) + 1
+        choice = input(
+            f"Enter project signature or number for rank {rank_num} "
+            "(or 'done' to finish): "
+        ).strip().lower()
+
+        if choice in ("done", "exit", "quit"):
+            break
+
+        selected, error = _resolve_project_choice(choice, projects, used_signatures)
+        if error:
+            print(error)
+            continue
+
+        override.append(selected)
+        used_signatures.add(selected.get("project_signature"))
+
+    if not override:
+        print("No rank overrides provided. Keeping original order.")
+        return None
+
+    if len(override) < len(projects):
+        remaining = [
+            p for p in projects
+            if p.get("project_signature") not in used_signatures
+        ]
+        override.extend(remaining)
+        print("Filled remaining ranks with the original order.")
+
+    return override
+
 def display_specific_projects(project_signatures):
     """
     Display detailed information for specific projects.

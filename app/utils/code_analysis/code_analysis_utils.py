@@ -5,196 +5,11 @@ from datetime import datetime
 from collections import Counter, defaultdict
 import re
 from .patterns.tech_patterns import TechnicalPatterns
+from .text_processing import split_camelcase_and_filter, extract_meaningful_filename_keywords, get_top_keywords
+from .user_preferences import load_user_preferences, get_preference_weighted_keywords, enhance_resume_bullets_with_preferences, prioritize_patterns_by_preferences
 
 
-# === USER PREFERENCE HELPERS (for future refactoring) ===
-def _load_user_preferences(email: Optional[str]) -> Optional[Dict]:
-    """Load user preferences if email provided. Returns None if not available."""
-    if not email:
-        return None
-    
-    try:
-        from app.cli.user_preference_cli import UserPreferences
-        pref_manager = UserPreferences()
-        user_prefs = pref_manager.get_latest_preferences(email)
-        
-        if user_prefs:
-            print(f"✅ Enhancing code analysis with user preferences")
-            print(f"   Industry: {user_prefs.get('industry')} | Job Title: {user_prefs.get('job_title')}")
-        
-        return user_prefs
-    except ImportError:
-        print("⚠️  User preferences not available - using standard analysis")
-        return None
-
-def _get_preference_weighted_keywords(base_keywords: List[str], user_prefs: Optional[Dict]) -> List[str]:
-    """
-    Reorder and prioritize keywords based on user preferences for better relevance.
-    Instead of adding new keywords, this focuses on highlighting the most relevant ones.
-    """
-    if not user_prefs or not base_keywords:
-        return base_keywords
-    
-    # Score keywords based on relevance using shared patterns
-    keyword_scores = {}
-    for keyword in base_keywords:
-        score = 1.0  # Default score
-        
-        # Boost score based on industry
-        industry = user_prefs.get('industry', '')
-        # Case-insensitive lookup for industry priorities
-        industry_key = None
-        for key in TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES.keys():
-            if industry.lower() == key.lower():
-                industry_key = key
-                break
-        
-        if industry_key:
-            priorities = TechnicalPatterns.INDUSTRY_KEYWORD_PRIORITIES[industry_key]
-            if any(term in keyword.lower() for term in priorities.get("high", [])):
-                score *= 2.0
-            elif any(term in keyword.lower() for term in priorities.get("medium", [])):
-                score *= 1.5
-        
-        # Boost score based on job title
-        job_title = user_prefs.get('job_title', '').lower()
-        for job_key, terms in TechnicalPatterns.JOB_KEYWORD_PRIORITIES.items():
-            if job_key in job_title:
-                if any(term in keyword.lower() for term in terms):
-                    score *= 1.5
-                break
-        
-        keyword_scores[keyword] = score
-    
-    # Return keywords sorted by relevance score (highest first), then alphabetically
-    return sorted(base_keywords, key=lambda k: (-keyword_scores[k], k))
-
-def _enhance_resume_bullets_with_preferences(base_bullets: List[str], user_prefs: Optional[Dict], metrics: Dict) -> List[str]:
-    """
-    Enhance resume bullets to be more targeted to user's career goals.
-    Focus on emphasizing relevant skills and experiences.
-    """
-    if not user_prefs or not base_bullets:
-        return base_bullets
-    
-    industry = user_prefs.get('industry', '').lower()
-    job_title = user_prefs.get('job_title', '').lower()
-    
-    enhanced_bullets = []
-    for bullet in base_bullets:
-        enhanced_bullet = bullet
-        
-        # Add industry-specific emphasis where appropriate using shared patterns
-        for ind_key, emphasis_terms in TechnicalPatterns.INDUSTRY_RESUME_ENHANCEMENTS.items():
-            if ind_key in industry:
-                # Replace generic terms with more specific ones
-                if "comprehensive" in enhanced_bullet.lower() and ind_key == "software engineering":
-                    enhanced_bullet = enhanced_bullet.replace("comprehensive", "scalable and maintainable")
-                elif "analysis" in enhanced_bullet.lower() and ind_key == "data science":
-                    enhanced_bullet = enhanced_bullet.replace("analysis", "data-driven analysis")
-                break
-        
-        # Prioritize job-relevant action verbs using shared patterns
-        for job_key, action_verbs in TechnicalPatterns.JOB_ACTION_VERBS.items():
-            if job_key in job_title:
-                # If bullet starts with generic terms, try to use more specific ones
-                if enhanced_bullet.lower().startswith("created") and "engineered" in action_verbs:
-                    enhanced_bullet = enhanced_bullet.replace("Created", "Engineered", 1)
-                elif enhanced_bullet.lower().startswith("worked on") and "developed" in action_verbs:
-                    enhanced_bullet = enhanced_bullet.replace("Worked on", "Developed", 1)
-                break
-        
-        enhanced_bullets.append(enhanced_bullet)
-    
-    return enhanced_bullets
-
-def _prioritize_patterns_by_preferences(patterns: Dict, user_prefs: Optional[Dict]) -> Dict:
-    """
-    Reorder detected patterns to emphasize those most relevant to user's career goals.
-    """
-    if not user_prefs:
-        return patterns
-    
-    industry = user_prefs.get('industry', '').lower()
-    job_title = user_prefs.get('job_title', '').lower()
-    
-    enhanced_patterns = patterns.copy()
-    
-    # Reorder patterns based on relevance using shared pattern priorities
-    for category in ["design_patterns", "architectural_patterns", "frameworks_detected"]:
-        if category in enhanced_patterns:
-            current_items = enhanced_patterns[category]
-            if current_items:
-                # Get priority items for this category and industry
-                priority_items = []
-                for ind_key, priorities in TechnicalPatterns.PATTERN_PRIORITIES.items():
-                    if ind_key in industry and category.replace("_detected", "") in priorities:
-                        priority_items = priorities[category.replace("_detected", "")]
-                        break
-                
-                # Reorder: priority items first, then others
-                prioritized = []
-                remaining = list(current_items)
-                
-                for priority_item in priority_items:
-                    for item in current_items:
-                        if priority_item.lower() in item.lower() and item not in prioritized:
-                            prioritized.append(item)
-                            if item in remaining:
-                                remaining.remove(item)
-                
-                enhanced_patterns[category] = prioritized + remaining
-    
-    return enhanced_patterns
-
-
-def _split_camelcase_and_filter(text: str, min_length: int = 2) -> Set[str]:
-    """
-    Helper: Split camelCase/snake_case text and filter by length.
-    Shared logic for both GitHub and parsed file keyword extraction.
-    """
-    if not text or len(text) <= min_length:
-        return set()
-    
-    # Split camelCase and snake_case
-    words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', text)
-    
-    # Filter by length and common terms
-    filtered_words = {
-        word.lower() for word in words 
-        if len(word) > min_length and word.lower() not in TechnicalPatterns.COMMON_TERMS
-    }
-    
-    return filtered_words
-
-def _extract_meaningful_filename_keywords(filenames: List[str]) -> Set[str]:
-    """
-    Helper: Extract meaningful keywords from file names and paths.
-    Shared logic for processing file paths.
-    """
-    tech_terms = set()
-    
-    for filename in filenames:
-        if not filename or len(filename) <= 2:
-            continue
-            
-        # Skip git and markdown files
-        if filename.endswith(('.git', '.md')):
-            continue
-        
-        # Remove extension and process
-        name_without_ext = filename.split('.')[0]
-        tech_terms.update(_split_camelcase_and_filter(name_without_ext))
-    
-    return tech_terms
-
-def _get_top_keywords(keywords: Set[str], limit: int = 15) -> List[str]:
-    """
-    Helper: Get top keywords sorted alphabetically.
-    Shared logic for returning final keyword lists.
-    """
-    return sorted(list(keywords))[:limit]
-
+# === KEYWORD EXTRACTION FUNCTIONS ===
 def extract_technical_keywords_from_github(commits: List[Dict], user_prefs: Optional[Dict] = None) -> List[str]:
     """
     Extract technical keywords from GitHub commit messages and file changes.
@@ -224,13 +39,13 @@ def extract_technical_keywords_from_github(commits: List[Dict], user_prefs: Opti
         tech_terms.update(message_words & TechnicalPatterns.GITHUB_TECH_KEYWORDS)
     
     # Extract meaningful file name keywords using shared helper
-    filename_keywords = _extract_meaningful_filename_keywords(all_file_names)
+    filename_keywords = extract_meaningful_filename_keywords(all_file_names)
     tech_terms.update(filename_keywords)
     
-    base_keywords = _get_top_keywords(tech_terms)
+    base_keywords = get_top_keywords(tech_terms)
     
     # Prioritize keywords based on user preferences for better relevance
-    return _get_preference_weighted_keywords(base_keywords, user_prefs)
+    return get_preference_weighted_keywords(base_keywords, user_prefs)
 
 
 
@@ -294,12 +109,12 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict], user_prefs:
     
     # Process identifiers using shared camelCase splitting
     for identifier in all_identifiers:
-        tech_keywords.update(_split_camelcase_and_filter(identifier))
+        tech_keywords.update(split_camelcase_and_filter(identifier))
     
-    base_keywords = _get_top_keywords(tech_keywords)
+    base_keywords = get_top_keywords(tech_keywords)
     
     # Prioritize keywords based on user preferences for better relevance
-    return _get_preference_weighted_keywords(base_keywords, user_prefs)
+    return get_preference_weighted_keywords(base_keywords, user_prefs)
 
 def _detect_frameworks(imports: List[str]) -> List[str]:
     """Helper: Detect frameworks from imports."""
@@ -1353,7 +1168,7 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None, email: Opt
         email: Optional user email for preference-enhanced analysis
     """
     # Load user preferences for quality enhancement
-    user_prefs = _load_user_preferences(email)
+    user_prefs = load_user_preferences(email)
     
     # Get analysis with preference-enhanced keyword prioritization
     metrics = aggregate_parsed_files_metrics(parsed_files)
@@ -1362,7 +1177,7 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None, email: Opt
     complexity_analysis = calculate_advanced_complexity_from_parsed(parsed_files)
     
     # Prioritize patterns based on user preferences for better relevance
-    code_patterns = _prioritize_patterns_by_preferences(code_patterns, user_prefs)
+    code_patterns = prioritize_patterns_by_preferences(code_patterns, user_prefs)
     
     # Enhanced metrics for analysis
     metrics["technical_keywords"] = technical_keywords
@@ -1402,7 +1217,7 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None, email: Opt
         resume_bullets = [str(resume_bullets)] if resume_bullets else []
     
     # Enhance resume bullets with user preference targeting
-    resume_bullets = _enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
+    resume_bullets = enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
     
     return {
         "Resume_bullets": resume_bullets,  # Enhanced for user preferences
@@ -1437,7 +1252,7 @@ def analyze_github_project(commits: List[Dict], llm_client=None, email: Optional
         email: Optional user email for preference-enhanced analysis
     """
     # Load user preferences for quality enhancement
-    user_prefs = _load_user_preferences(email)
+    user_prefs = load_user_preferences(email)
     
     # Get analysis with preference-enhanced keyword prioritization
     metrics = aggregate_github_individual_metrics(commits)
@@ -1482,7 +1297,7 @@ def analyze_github_project(commits: List[Dict], llm_client=None, email: Optional
         resume_bullets = [str(resume_bullets)] if resume_bullets else []
     
     # Enhance resume bullets with user preference targeting
-    resume_bullets = _enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
+    resume_bullets = enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
     
     return {
         "Resume_bullets": resume_bullets,  # Enhanced for user preferences

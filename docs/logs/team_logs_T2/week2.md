@@ -30,6 +30,7 @@
   - Fix failing tests in test_non_code_file_checker.py #468
   - Refactor code analysis part 2 - Extract user preferences and text processing #469
   - Create tests for code analysis part 1 #481
+  - Fix failing tests #460
   
 
 ---
@@ -64,8 +65,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | [#451, #450, #452] | Implement end-to-end user preference integration in local non code analysis, BugFix: DB Connection Leak Fix in user preference integration | @6s-1 | 
 | [#456, #457, #453] | Privacy consent API endpoints, consent API testing , Create Automated Coverage testing in CI pipeline  | @PaintedW0lf | 
-
-
+| [#460] | Fix Failing tests  | @abstractafua | 
 ---
 | [#451, #450, #452] | Implement end-to-end user preference integration in local non code analysis, BugFix: DB Connection Leak Fix in user preference integration | @6s-1 | | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |---
@@ -78,6 +78,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | #454          | Create docker build for CI pipeline                                     | In progress, we are failing this currently, which may/maynot be due to pre-existing issues   |
 
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
+| [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
 
 ---
 

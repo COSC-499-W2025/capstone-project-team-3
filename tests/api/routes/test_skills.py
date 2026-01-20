@@ -89,16 +89,16 @@ def test_get_skills_frequency(setup_test_db):
     assert fastapi_skill["frequency"] == 1
 
 
-def test_get_skills_sorted_by_frequency(setup_test_db):
-    """Test that skills are sorted by frequency (descending)."""
+def test_get_skills_sorted_alphabetically(setup_test_db):
+    """Test that skills are sorted alphabetically."""
     response = client.get("/api/skills")
     assert response.status_code == 200
     
     skills = response.json()
-    frequencies = [skill["frequency"] for skill in skills]
+    skill_names = [skill["skill"] for skill in skills]
     
-    # Check that frequencies are in descending order
-    assert frequencies == sorted(frequencies, reverse=True)
+    # Check that skill names are in alphabetical order
+    assert skill_names == sorted(skill_names)
 
 
 def test_get_skills_includes_technical_and_soft(setup_test_db):
@@ -151,3 +151,69 @@ def test_get_skills_unique_by_source(setup_test_db):
     sources = [s["source"] for s in python_skills]
     assert "technical" in sources
     assert "soft" in sources
+
+
+def test_get_frequent_skills_returns_list(setup_test_db):
+    """Test that GET /api/skills/frequent returns a list."""
+    response = client.get("/api/skills/frequent")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_frequent_skills_default_limit(setup_test_db):
+    """Test that frequent skills respects default limit."""
+    response = client.get("/api/skills/frequent")
+    assert response.status_code == 200
+    
+    skills = response.json()
+    # Should return at most 10 skills (default limit)
+    assert len(skills) <= 10
+
+
+def test_get_frequent_skills_custom_limit(setup_test_db):
+    """Test that frequent skills respects custom limit."""
+    response = client.get("/api/skills/frequent?limit=3")
+    assert response.status_code == 200
+    
+    skills = response.json()
+    # Should return exactly 3 skills
+    assert len(skills) == 3
+
+
+def test_get_frequent_skills_sorted_by_frequency(setup_test_db):
+    """Test that frequent skills are sorted by frequency (descending)."""
+    response = client.get("/api/skills/frequent")
+    assert response.status_code == 200
+    
+    skills = response.json()
+    frequencies = [skill["frequency"] for skill in skills]
+    
+    # Check that frequencies are in descending order
+    assert frequencies == sorted(frequencies, reverse=True)
+
+
+def test_get_frequent_skills_most_common_first(setup_test_db):
+    """Test that most frequently used skill appears first."""
+    response = client.get("/api/skills/frequent")
+    assert response.status_code == 200
+    
+    skills = response.json()
+    
+    # Python appears in both projects, so should be first (or tied for first)
+    python_skill = next((s for s in skills if s["skill"] == "Python"), None)
+    assert python_skill is not None
+    assert python_skill["frequency"] == 2
+    
+    # First skill should have frequency >= Python's frequency
+    assert skills[0]["frequency"] >= python_skill["frequency"]
+
+
+def test_get_frequent_skills_limit_validation(setup_test_db):
+    """Test that limit parameter is validated."""
+    # Test limit too high (should still work, just capped)
+    response = client.get("/api/skills/frequent?limit=100")
+    assert response.status_code == 422  # Validation error
+    
+    # Test limit too low
+    response = client.get("/api/skills/frequent?limit=0")
+    assert response.status_code == 422  # Validation error

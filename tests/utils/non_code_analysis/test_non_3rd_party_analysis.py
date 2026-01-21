@@ -3,7 +3,7 @@ Unit tests for non_3rd_party_analysis.py
 Tests document classification based on filename patterns and content analysis.
 """
 import re
-import pytest
+import pytest 
 import sys
 from pathlib import Path
 
@@ -334,72 +334,69 @@ def test_analyze_project_clean_default_contribution_frequency():
     
 # Add this test at the end of the file
 
-def test_analyze_project_clean_with_user_preferences_enhances_summary():
+def test_analyze_project_clean_with_user_preferences_enhances_summary(monkeypatch):
     """Test that user preferences enhance project summary with industry alignment."""
-    from app.cli.user_preference_cli import UserPreferences
+    from app.utils.user_preference_utils import UserPreferenceStore
     
     # Create test user with Technology industry
-    pref_manager = UserPreferences()
-    try:
-        pref_manager.store.save_preferences(
-            name="Test User",
-            email="test_enhanced@example.com",
-            github_user="testuser",
-            education="BS CS",
-            industry="Technology",
-            job_title="Software Engineer"
-        )
-        
+    fake_prefs = {
+        "name": "Test User",
+        "email": "test_enhanced@example.com",
+        "github_user": "testuser",
+        "education": "BS CS",
+        "industry": "Technology",
+        "job_title": "Software Engineer"
+    }
+    
+    monkeypatch.setattr(UserPreferenceStore, "get_latest_preferences_no_email", lambda: fake_prefs)
+
         # Sample content with software engineering keywords
-        parsed_files = {
-            "parsed_files": [{
-                "name": "README.md",
-                "path": "/README.md",
-                "content": "Software development project with architecture design using Docker and CI/CD.",
-                "success": True
-            }]
-        }
+    parsed_files = {
+        "parsed_files": [{
+            "name": "README.md",
+            "path": "/README.md",
+            "content": "Software development project with architecture design using Docker and CI/CD.",
+            "success": True
+        }]
+    }
         
-        result = analyze_project_clean(parsed_files, email="test_enhanced@example.com")
+    result = analyze_project_clean(parsed_files)
         
         # Should mention alignment with Technology background
-        assert "Technology background" in result["project_summary"]
-        assert "Software Engineering" in result["project_summary"]
-    finally:
-        pref_manager.store.close()
+    assert "Technology background" in result["project_summary"]
+    assert "Software Engineering" in result["project_summary"]
 
 
-def test_analyze_project_clean_with_senior_role_enhances_bullets():
+def test_analyze_project_clean_with_senior_role_enhances_bullets(monkeypatch):
     """Test that senior job titles get leadership language in resume bullets."""
-    from app.cli.user_preference_cli import UserPreferences
-    
-    pref_manager = UserPreferences()
-    try:
-        pref_manager.store.save_preferences(
-            name="Senior Dev",
-            email="senior@example.com",
-            github_user="seniordev",
-            education="MS CS",
-            industry="Technology",
-            job_title="Senior Software Engineer"
-        )
-        
-        parsed_files = {
-            "parsed_files": [{
-                "name": "DESIGN.md",
-                "path": "/DESIGN.md",
-                "content": "System architecture and design document with requirements specification.",
-                "success": True
-            }]
+    from app.utils.user_preference_utils import UserPreferenceStore
+
+    fake_prefs = {
+            "name": "Senior Dev",
+            "email": "senior@example.com",
+            "github_user": "seniordev",
+            "education": "MS CS",
+            "industry": "Technology",
+            "job_title": "Senior Software Engineer"
         }
-        
-        result = analyze_project_clean(parsed_files, email="senior@example.com")
-        
-        # Senior role should get "Led" instead of "Designed"
-        bullets_text = " ".join(result["resume_bullets"])
-        assert "Led" in bullets_text or "Analyzed and specified comprehensive" in bullets_text
-    finally:
-        pref_manager.store.close()
+
+    monkeypatch.setattr(UserPreferenceStore, "get_latest_preferences_no_email", lambda: fake_prefs)
+
+    parsed_files = {
+        "parsed_files": [{
+            "name": "DESIGN.md",
+            "path": "/DESIGN.md",
+            "content": "System architecture and design document with requirements specification.",
+            "success": True
+        }]
+    }
+
+    result = analyze_project_clean(parsed_files)
+
+    # Senior role should get "Led" instead of "Designed"
+    bullets_text = " ".join(result["resume_bullets"])
+    assert "Led" in bullets_text or "Analyzed and specified comprehensive" in bullets_text
+
 
 
 def test_analyze_project_clean_without_email_works():
@@ -414,9 +411,7 @@ def test_analyze_project_clean_without_email_works():
     }
     
     # Should work without email parameter
-    result = analyze_project_clean(parsed_files, email=None)
+    result = analyze_project_clean(parsed_files)
     
     assert "project_summary" in result
     assert "resume_bullets" in result
-    # Should NOT mention user preferences or background
-    assert "background" not in result["project_summary"]

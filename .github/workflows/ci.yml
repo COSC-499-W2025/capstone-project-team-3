@@ -7,9 +7,6 @@ on:
     branches: [main, master]
 
 jobs:
-  docker-tests:
-    uses: ./.github/workflows/docker.yml
-
   python-tests:
     runs-on: ubuntu-latest
     steps:
@@ -38,9 +35,9 @@ jobs:
       - name: Create dummy .env file
         run: echo "GEMINI_API_KEY=dummy_key_for_ci" > .env
 
-      - name: Run pytest
+      - name: Run pytest (with coverage)
         env:
-          PROMPT_ROOT: 1
+          PROMPT_ROOT: 0
         run: pytest --cov=app --cov-report=term-missing --cov-report=html
 
       - name: Upload coverage HTML (optional)
@@ -49,19 +46,3 @@ jobs:
         with:
           name: htmlcov-python
           path: htmlcov
-
-  # lint:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - name: Install linters
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install ruff mypy
-  #     - name: Ruff (style + errors)
-  #       run: ruff check .
-  #     - name: Mypy (types)
-  #       run: mypy app

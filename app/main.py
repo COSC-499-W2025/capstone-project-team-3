@@ -10,8 +10,11 @@ from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main
 from app.api.routes.upload_page import router as upload_page_router
+
+from app.api.routes.privacy_consent import router as privacy_consent_router 
 from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.api.routes.resume import router as resume_router
+from app.api.routes.projects import router as projects_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
@@ -44,7 +47,9 @@ load_dotenv()
 app = FastAPI(title="Project Insights")
 app.include_router(upload_page_router)
 app.include_router(upload_resolver_router, prefix="/api")
+app.include_router(privacy_consent_router, prefix="/api")
 app.include_router(resume_router)
+app.include_router(projects_router, prefix="/api")
 
 def display_startup_info():
     """Display startup information including API key status."""
@@ -168,6 +173,12 @@ def main():
                     else: #Perform analysis
                         
                         # --- Non-code file checker integration (per project) ---
+                        # Prefer values from UserPreferences if available, fallback to DB helper
+                        try:
+                            latest_prefs = UserPreferences().get_latest_preferences()
+                        except Exception:
+                            latest_prefs = None
+
                         username, email=_get_preferred_author_email()
                         non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
@@ -237,7 +248,7 @@ def main():
                                 except Exception as e:
                                     print(f"⚠️ AI non-code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
-                                    non_code_analysis_results = analyze_project_clean(parsed_non_code)
+                                    non_code_analysis_results = analyze_project_clean(parsed_non_code, email=email)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
                                 try:
@@ -268,8 +279,8 @@ def main():
                         print(f"✅ Starting Local analysis for {project_name}")
                         
                         try:
-                            # Run non-3rd party analysis (no LLM) using parsed_non_code
-                            non_code_local_results = analyze_project_clean(parsed_non_code)
+                            # Run non-3rd party analysis (no LLM) using parsed_non_code with user preferences
+                            non_code_local_results = analyze_project_clean(parsed_non_code, email=email)
                             print(f"✅ Non Code Analysis completed successfully!")
                         except Exception as e:
                             print(f"⚠️ Non Code Local analysis failed: {e}")

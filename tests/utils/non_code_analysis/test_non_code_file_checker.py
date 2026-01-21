@@ -305,11 +305,15 @@ def test_filter_non_code_files_large_list(tmp_path):
 # Tests for collect_git_non_code_files_with_metadata() 
 # ============================================================================
 
-def _make_mock_commit(author_email, files):
+def _make_mock_commit(author_email, files, author_name=None):
     """Helper to create mock commit objects."""
     commit = MagicMock()
     commit.author = MagicMock()
     commit.author.email = author_email
+    # Set author name based on email if not provided
+    if author_name is None:
+        author_name = author_email.split('@')[0]
+    commit.author.name = author_name
     commit.stats = MagicMock()
     commit.stats.files = files
     return commit
@@ -807,19 +811,22 @@ def test_verify_user_in_files_mixed():
     metadata = {
         "collab.pdf": {
             "path": "/path/collab.pdf",
-            "authors": ["user@example.com", "other@example.com"]
+            "authors": ["user@example.com", "other@example.com"],
+            "usernames": ["user", "other"]
         },
         "solo.md": {
             "path": "/path/solo.md",
-            "authors": ["user@example.com"]
+            "authors": ["user@example.com"],
+            "usernames": ["user"]
         },
         "others.docx": {
             "path": "/path/others.docx",
-            "authors": ["other@example.com", "another@example.com"]
+            "authors": ["other@example.com", "another@example.com"],
+            "usernames": ["other", "another"]
         }
     }
     
-    result = verify_user_in_files(metadata, "user@example.com")
+    result = verify_user_in_files(metadata, "user@example.com", "user")
     
     assert len(result["user_collaborative"]) == 1
     assert "/path/collab.pdf" in result["user_collaborative"]
@@ -836,15 +843,17 @@ def test_verify_user_in_files_user_not_in_any():
     metadata = {
         "file1.pdf": {
             "path": "/path/file1.pdf",
-            "authors": ["other@example.com"]
+            "authors": ["other@example.com"],
+            "usernames": ["other"]
         },
         "file2.md": {
             "path": "/path/file2.md",
-            "authors": ["another@example.com"]
+            "authors": ["another@example.com"],
+            "usernames": ["another"]
         }
     }
     
-    result = verify_user_in_files(metadata, "user@example.com")
+    result = verify_user_in_files(metadata, "user@example.com", "user")
     
     assert result["user_collaborative"] == []
     assert result["user_solo"] == []
@@ -853,7 +862,7 @@ def test_verify_user_in_files_user_not_in_any():
 
 def test_verify_user_in_files_empty_metadata():
     """Test verifying user with empty metadata."""
-    result = verify_user_in_files({}, "user@example.com")
+    result = verify_user_in_files({}, "user@example.com", "user")
     assert result["user_collaborative"] == []
     assert result["user_solo"] == []
     assert result["others_only"] == []
@@ -863,22 +872,26 @@ def test_verify_user_in_files_includes_readme_for_collaborative():
     metadata = {
         "README.md": {
             "path": "/repo/README.md",
-            "authors": ["other@example.com"]
+            "authors": ["other@example.com"],
+            "usernames": ["other"]
         },
         "readme.txt": {
             "path": "/repo/readme.txt",
-            "authors": []
+            "authors": [],
+            "usernames": []
         },
         "ReadMe.docx": {
             "path": "/repo/ReadMe.docx",
-            "authors": ["someone@example.com"]
+            "authors": ["someone@example.com"],
+            "usernames": ["someone"]
         },
         "notes.pdf": {
             "path": "/repo/notes.pdf",
-            "authors": ["other@example.com"]
+            "authors": ["other@example.com"],
+            "usernames": ["other"]
         }
     }
-    result = verify_user_in_files(metadata, "user@example.com")
+    result = verify_user_in_files(metadata, "user@example.com", "user")
     # All README variants should be in user_solo for full content parsing
     assert "/repo/README.md" in result["user_solo"]
     assert "/repo/readme.txt" in result["user_solo"]
@@ -1029,17 +1042,19 @@ def test_classify_git_repo_with_custom_email(mock_collect, mock_detect_git):
     mock_collect.return_value = {
         "file.pdf": {
             "path": "/repo/file.pdf",
-            "authors": ["custom@example.com", "other@example.com"]
+            "authors": ["custom@example.com", "other@example.com"],
+            "usernames": ["custom", "other"]
         }
     }
     
     result = classify_non_code_files_with_user_verification(
         '/path/to/repo',
-        user_email="custom@example.com"
+        user_email="custom@example.com",
+        username="custom"
     )
     
     assert result["user_identity"]["email"] == "custom@example.com"
-    assert result["user_identity"]["name"] == ""
+    assert result["user_identity"]["name"] == "custom"
     assert len(result["collaborative"]) == 1
 
 
@@ -1361,21 +1376,28 @@ def test_classify_parametrized_users(mock_collect, mock_detect_git, user_email, 
     mock_collect.return_value = {
         "shared.pdf": {
             "path": "/repo/shared.pdf",
-            "authors": ["alice@example.com", "bob@example.com"]
+            "authors": ["alice@example.com", "bob@example.com"],
+            "usernames": ["alice", "bob"]
         },
         "alice_solo.md": {
             "path": "/repo/alice_solo.md",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["alice"]
         },
         "bob_solo.txt": {
             "path": "/repo/bob_solo.txt",
-            "authors": ["bob@example.com"]
+            "authors": ["bob@example.com"],
+            "usernames": ["bob"]
         }
     }
     
+    # Extract username from email for the test
+    username = user_email.split('@')[0]
+    
     result = classify_non_code_files_with_user_verification(
         '/path/to/repo',
-        user_email=user_email
+        user_email=user_email,
+        username=username
     )
     
     assert len(result["collaborative"]) == expected_collab

@@ -1,38 +1,105 @@
+from typing import Optional, List
+from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model
 from app.utils.generate_resume_tex import generate_resume_tex
+from pydantic import BaseModel
 import subprocess
 import tempfile
 import os
 
 router = APIRouter()
 
+class ResumeFilter(BaseModel):
+    project_ids: list[str]
+
 @router.get("/resume", response_class=HTMLResponse)
-def resume_page():
-    resume_model = build_resume_model()
+def resume_page(project_ids: Optional[List[str]] = Query(None)):
+    """
+    GET preview endpoint.
+    - No project_ids → master resume
+    - project_ids provided → filtered resume
+    """
+
+    resume_model = build_resume_model(project_ids=project_ids)
     tex = generate_resume_tex(resume_model)
-    preview = tex.replace("<", "&lt;").replace(">", "&gt;")
-    return (
-        """
-        <html>
-            <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-                <h2>Resume Export</h2>
-                <p>Download your LaTeX/PDF resume:</p>
-                <p><a href="/resume/download">Download resume.tex</a></p>
-                <p><a href="/resume/pdf">Download resume.pdf</a></p>
-                <h3>Preview (LaTeX)</h3>
-                <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">"""
-        + preview
-        + """</pre>
-            </body>
-        </html>
-        """
+
+    preview = (
+        tex.replace("&", "&amp;")
+           .replace("<", "&lt;")
+           .replace(">", "&gt;")
     )
 
-@router.get("/resume/download")
-def resume_download():
-    resume_model = build_resume_model()
+    # Build export links dynamically
+    if project_ids:
+        params = "&".join(f"project_ids={pid}" for pid in project_ids)
+        tex_link = f"/resume/export/tex?{params}"
+        pdf_link = f"/resume/export/pdf?{params}"
+        title = "Resume Export (Selected Projects)"
+    else:
+        tex_link = "/resume/export/tex"
+        pdf_link = "/resume/export/pdf"
+        title = "Resume Export (All Projects)"
+
+    return f"""
+    <html>
+        <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+            <h2>{title}</h2>
+            <p>Download your LaTeX/PDF resume:</p>
+            <p><a href="{tex_link}">Download resume.tex</a></p>
+            <p><a href="{pdf_link}">Download resume.pdf</a></p>
+            <h3>Preview (LaTeX)</h3>
+            <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
+        </body>
+    </html>
+    """
+    
+@router.post("/resume/preview", response_class=HTMLResponse)
+def generate_resume(filter: ResumeFilter):
+    """
+    This is to generate a resume for selected projects 
+    
+    Example use-cases:
+    - Allowing a user to tailor their resume for a certain job
+    - Generating a resume for the top three ranked projects
+    """
+    resume_model = build_resume_model(
+        project_ids=filter.project_ids
+    )
+
+    tex = generate_resume_tex(resume_model)
+    preview = (
+        tex.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+    return f"""
+    <html>
+        <body>
+            <h2>Generated Resume</h2>
+            <p>Projects included: {", ".join(filter.project_ids)}</p>
+            <pre style="white-space: pre-wrap;">{preview}</pre>
+        </body>
+    </html>
+    """
+
+@router.get("/resume/export/tex")
+def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
+    resume_model = build_resume_model(project_ids=project_ids)
+    tex = generate_resume_tex(resume_model)
+
+    return Response(
+        content=tex,
+        media_type="application/x-tex",
+        headers={"Content-Disposition": "attachment; filename=resume.tex"},
+    )
+
+@router.post("/resume/export/tex")
+def resume_tex_filtered(filter: ResumeFilter):
+    """This method downloads a resume for specified projects."""
+    resume_model = build_resume_model(filter.project_ids)
     tex = generate_resume_tex(resume_model)
     return Response(
         content=tex,
@@ -104,9 +171,22 @@ def compile_pdf(tex: str) -> bytes:
         with open(pdf_path, "rb") as f:
             return f.read()
         
-@router.get("/resume/pdf")
-def resume_pdf():
-    resume_model = build_resume_model()
+@router.get("/resume/export/pdf")
+def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
+    resume_model = build_resume_model(project_ids=project_ids)
+    tex = generate_resume_tex(resume_model)
+    pdf_bytes = compile_pdf(tex)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=resume.pdf"},
+    )
+    
+@router.post("/resume/export/pdf")
+def resume_pdf_filtered(filter: ResumeFilter):
+    """This method downloads a resume for specified projects."""
+    resume_model = build_resume_model(filter.project_ids)
     tex = generate_resume_tex(resume_model)
     pdf_bytes = compile_pdf(tex)
     return Response(

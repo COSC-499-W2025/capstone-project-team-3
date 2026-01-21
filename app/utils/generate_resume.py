@@ -1,7 +1,7 @@
 from collections import defaultdict
 from app.data.db import get_connection
 import sqlite3
-from typing import Any, DefaultDict, Dict, List, Tuple
+from typing import Any, DefaultDict, Dict, List, Tuple, Optional
 from datetime import datetime
 
 def format_dates(start: str, end: str) -> str:
@@ -40,14 +40,30 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "job_title": row[4],
     }
 
-def load_projects(cursor: sqlite3.Cursor) -> List[Tuple[str, str, int, str, str]]:
-    """Return projects with signature, name, rank, created_at, last_modified."""
-    cursor.execute("""
-        SELECT project_signature, name, rank, created_at, last_modified
-        FROM PROJECT
-        ORDER BY rank DESC
-    """)
-    return cursor.fetchall()
+def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, int, str, str]]:
+    """Return projects with signature, name, rank, created_at, last_modified.
+    If project_ids are provided, return only those projects.
+    """
+    if project_ids:
+        # Build a dynamic IN clause safely
+        placeholders = ",".join(["?"] * len(project_ids))
+        query = f"""
+            SELECT project_signature, name, rank, created_at, last_modified
+            FROM PROJECT
+            WHERE project_signature IN ({placeholders})
+            ORDER BY rank DESC
+        """
+        cursor.execute(query, project_ids)
+        return cursor.fetchall()
+    else:
+        cursor.execute(
+            """
+            SELECT project_signature, name, rank, created_at, last_modified
+            FROM PROJECT
+            ORDER BY rank DESC
+            """
+        )
+        return cursor.fetchall()
 
 def load_resume_bullets(cursor: sqlite3.Cursor) -> DefaultDict[int, List[str]]:
     """Return mapping of project_id to resume summary bullets."""
@@ -87,34 +103,45 @@ def limit_skills(skills: List[str], max_count: int = 5) -> List[str]:
 
     return limited
 
-def build_resume_model() -> Dict[str, Any]:
-    """Return assembled resume model built from the database."""
+def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Return assembled resume model built from the database.
+    If project_ids are provided, include only those projects in the list.
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
     user = load_user(cursor)
-    projects_raw = load_projects(cursor)
+    projects_raw = load_projects(cursor, project_ids=project_ids)
     bullets_map = load_resume_bullets(cursor)
     skills_map = load_skills(cursor)
 
     projects = []
 
-    for project_id, name, rank, created_at, last_modified in projects_raw:
-        raw_skills = skills_map.get(project_id, [])
+    selected_ids = set(pid for pid, *_ in projects_raw)
+
+    for pid, name, rank, created_at, last_modified in projects_raw:
+        raw_skills = skills_map.get(pid, [])
         limited_skills = limit_skills(raw_skills, max_count=5)
 
         projects.append({
             "title": name,
             "dates": format_dates(created_at, last_modified),
             "skills": ", ".join(limited_skills),
-            "bullets": bullets_map.get(project_id, [])
+            "bullets": bullets_map.get(pid, [])
         })
 
-    all_skills = sorted({
-        skill
-        for skills in skills_map.values()
-        for skill in skills
-    })
+    if selected_ids:
+        # Union of skills for selected projects
+        union = set()
+        for sid in selected_ids:
+            union.update(skills_map.get(sid, []))
+        all_skills = sorted(union)
+    else:
+        all_skills = sorted({
+            skill
+            for skills in skills_map.values()
+            for skill in skills
+        })
 
     conn.close()
 

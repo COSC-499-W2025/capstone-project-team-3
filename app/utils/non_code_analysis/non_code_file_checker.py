@@ -324,7 +324,7 @@ def classify_non_code_files_with_user_verification(
             user_email = user_identity.get("email", "")
             username = user_identity.get("name","")
         else:
-            user_identity = {"name": "", "email": user_email}
+            user_identity = {"name": username, "email": user_email}
         
         if not username or not user_email:
             # Can't determine user - treat as error case

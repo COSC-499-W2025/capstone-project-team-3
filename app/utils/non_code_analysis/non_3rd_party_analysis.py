@@ -13,7 +13,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
-from app.cli.user_preference_cli import UserPreferences
+from app.utils.user_preference_utils import UserPreferenceStore
 from app.utils.non_code_analysis.keywords.domain_keywords import (
     build_enhanced_keywords, get_mapped_industry)
 

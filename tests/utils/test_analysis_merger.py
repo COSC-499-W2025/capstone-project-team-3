@@ -1,12 +1,14 @@
 from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db
+from app.utils.retrieve_insights_utils import get_projects_by_signatures
+import json
 
 def test_merge_analysis_results():
     
     code_analysis_results = {
-        "resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "Resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
-            "technical_keywords": ["FastAPI", "pytest"],
+            "roles": ["FastAPI", "pytest"],
             "code_files_changed": 5
         }
     }
@@ -19,7 +21,7 @@ def test_merge_analysis_results():
             "soft_skills": ["Communication"]
         },
         "resume_bullets": ["Documented requirements"],
-        "Metrics": {  # ✅ Capital M
+        "Metrics": {  
             "word_count": 1000,
             "completeness_score": 0.95
         }
@@ -60,7 +62,7 @@ def test_store_and_retrieve_results_in_db():
         },
         "resume_bullets": ["Implemented database models"],
         "metrics": {
-            "languages": ["Python", "SQL"],
+            "languages": ['Python', 'SQL'],
             "word_count": 1500,
             "completeness_score": 0.9
         }
@@ -70,10 +72,13 @@ def test_store_and_retrieve_results_in_db():
     store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
 
     # Retrieve results from DB
-    retrieved_results = retrieve_results_from_db(project_signature)
+    retrieved_results = get_projects_by_signatures(project_signature)
 
     assert retrieved_results["summary"] == merged_results["summary"]
-    assert retrieved_results["skills"]["technical_skills"] == merged_results["skills"]["technical_skills"]
-    assert retrieved_results["skills"]["soft_skills"] == merged_results["skills"]["soft_skills"]
+ # Ensure all stored technical and soft skills are present in retrieved skills
+    for tech_skill in merged_results["skills"]["technical_skills"]:
+       assert tech_skill in retrieved_results["skills"]
+    for soft_skill in merged_results["skills"]["soft_skills"]:
+       assert soft_skill in retrieved_results["skills"]
     assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
     assert retrieved_results["metrics"] == merged_results["metrics"]

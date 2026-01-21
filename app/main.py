@@ -14,6 +14,7 @@ from app.api.routes.upload_page import router as upload_page_router
 from app.api.routes.privacy_consent import router as privacy_consent_router 
 from app.api.routes.get_upload_id import router as upload_resolver_router 
 from app.api.routes.resume import router as resume_router
+from app.api.routes.skills import router as skills_router
 from app.api.routes.projects import router as projects_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
@@ -49,6 +50,7 @@ app.include_router(upload_page_router)
 app.include_router(upload_resolver_router, prefix="/api")
 app.include_router(privacy_consent_router, prefix="/api")
 app.include_router(resume_router)
+app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 
 def display_startup_info():

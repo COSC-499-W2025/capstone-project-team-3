@@ -35,6 +35,12 @@ jobs:
       - name: Create dummy .env file
         run: echo "GEMINI_API_KEY=dummy_key_for_ci" > .env
 
+      - name: Start FastAPI server (background)
+        run: |
+          python -m pip install uvicorn
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 >/dev/null 2>&1 &
+          sleep 2
+
       - name: Run pytest (with coverage)
         env:
           PROMPT_ROOT: 0

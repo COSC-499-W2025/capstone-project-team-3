@@ -77,6 +77,9 @@ def lookup_past_insights():
             for bullet in items:
                 print(f"   • {bullet}")
         print("\n" + "="*60)
+        
+        print("Download your resume in Latex/PDF format here:")
+        print("   → http://localhost:8000/resume")
     else:
         print("Skipping display of past insights.")
         return

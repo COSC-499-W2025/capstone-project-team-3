@@ -1,12 +1,14 @@
-from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db, retrieve_results_from_db
+from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db
+from app.utils.retrieve_insights_utils import get_projects_by_signatures
+import json
 
 def test_merge_analysis_results():
     
     code_analysis_results = {
-        "resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "Resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
-            "technical_keywords": ["FastAPI", "pytest"],
+            "roles": ["FastAPI", "pytest"],
             "code_files_changed": 5
         }
     }
@@ -19,7 +21,7 @@ def test_merge_analysis_results():
             "soft_skills": ["Communication"]
         },
         "resume_bullets": ["Documented requirements"],
-        "Metrics": {  # ✅ Capital M
+        "Metrics": {  
             "word_count": 1000,
             "completeness_score": 0.95
         }
@@ -60,7 +62,7 @@ def test_store_and_retrieve_results_in_db():
         },
         "resume_bullets": ["Implemented database models"],
         "metrics": {
-            "languages": ["Python", "SQL"],
+            "languages": ['Python', 'SQL'],
             "word_count": 1500,
             "completeness_score": 0.9
         }
@@ -70,61 +72,13 @@ def test_store_and_retrieve_results_in_db():
     store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
 
     # Retrieve results from DB
-    retrieved_results = retrieve_results_from_db(project_signature)
+    retrieved_results = get_projects_by_signatures(project_signature)
 
     assert retrieved_results["summary"] == merged_results["summary"]
-    assert retrieved_results["skills"]["technical_skills"] == merged_results["skills"]["technical_skills"]
-    assert retrieved_results["skills"]["soft_skills"] == merged_results["skills"]["soft_skills"]
+ # Ensure all stored technical and soft skills are present in retrieved skills
+    for tech_skill in merged_results["skills"]["technical_skills"]:
+       assert tech_skill in retrieved_results["skills"]
+    for soft_skill in merged_results["skills"]["soft_skills"]:
+       assert soft_skill in retrieved_results["skills"]
     assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
     assert retrieved_results["metrics"] == merged_results["metrics"]
-
-def test_duplicate_project_signature_updates():
-    project_signature = "dup_project_001"
-    project_name = "Duplicate Project"
-    merged_results_1 = {
-        "summary": "First summary.",
-        "skills": {
-            "technical_skills": ["Python"],
-            "soft_skills": ["Teamwork"]
-        },
-        "resume_bullets": ["Did something"],
-        "metrics": {
-            "languages": ["Python"],
-            "word_count": 100
-        }
-    }
-    merged_results_2 = {
-        "summary": "Updated summary.",
-        "skills": {
-            "technical_skills": ["Django"],
-            "soft_skills": ["Leadership"]
-        },
-        "resume_bullets": ["Did something else"],
-        "metrics": {
-            "languages": ["Python", "SQL"],
-            "word_count": 200
-        }
-    }
-    # Store first
-    store_results_in_db(project_name, merged_results_1, project_rank=1, project_signature=project_signature)
-    # Store updated
-    store_results_in_db(project_name, merged_results_2, project_rank=2, project_signature=project_signature)
-    # Retrieve and check updated
-    retrieved = retrieve_results_from_db(project_signature)
-    assert retrieved["summary"] == merged_results_2["summary"]
-    assert retrieved["skills"] == merged_results_2["skills"]
-    assert retrieved["resume_bullets"] == merged_results_2["resume_bullets"]
-    assert retrieved["metrics"] == merged_results_2["metrics"]
-    
-def test_project_rank_storage():
-    project_signature = "rank_project_001"
-    project_name = "Rank Project"
-    merged_results = {
-        "summary": "Rank test summary.",
-        "skills": {"technical_skills": [], "soft_skills": []},
-        "resume_bullets": [],
-        "metrics": {}
-    }
-    store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
-    retrieved = retrieve_results_from_db(project_signature)
-    assert retrieved

@@ -328,8 +328,9 @@ def test_run_scan_flow_with_real_timestamps(tmp_path):
     # Verify timestamps are not None and contain recent date
     assert stored_created is not None
     assert stored_modified is not None
-    assert "2025" in str(stored_created)  # Should be current year
-    assert "2025" in str(stored_modified)
+    current_year = str(datetime.now().year)
+    assert current_year in str(stored_created) 
+    assert current_year in str(stored_modified)
 
 def test_store_project_without_timestamps_uses_defaults(tmp_path):
     """Test that when no timestamps are provided, current time is used."""

@@ -1,63 +1,19 @@
 import json
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 import os
 from datetime import datetime
 from collections import Counter, defaultdict
 import re
 from .patterns.tech_patterns import TechnicalPatterns
+from .text_processing import split_camelcase_and_filter, extract_meaningful_filename_keywords, get_top_keywords
+from .user_preferences import load_user_preferences, get_preference_weighted_keywords, enhance_resume_bullets_with_preferences, prioritize_patterns_by_preferences
 
 
-def _split_camelcase_and_filter(text: str, min_length: int = 2) -> Set[str]:
-    """
-    Helper: Split camelCase/snake_case text and filter by length.
-    Shared logic for both GitHub and parsed file keyword extraction.
-    """
-    if not text or len(text) <= min_length:
-        return set()
-    
-    # Split camelCase and snake_case
-    words = re.findall(r'[A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', text)
-    
-    # Filter by length and common terms
-    filtered_words = {
-        word.lower() for word in words 
-        if len(word) > min_length and word.lower() not in TechnicalPatterns.COMMON_TERMS
-    }
-    
-    return filtered_words
-
-def _extract_meaningful_filename_keywords(filenames: List[str]) -> Set[str]:
-    """
-    Helper: Extract meaningful keywords from file names and paths.
-    Shared logic for processing file paths.
-    """
-    tech_terms = set()
-    
-    for filename in filenames:
-        if not filename or len(filename) <= 2:
-            continue
-            
-        # Skip git and markdown files
-        if filename.endswith(('.git', '.md')):
-            continue
-        
-        # Remove extension and process
-        name_without_ext = filename.split('.')[0]
-        tech_terms.update(_split_camelcase_and_filter(name_without_ext))
-    
-    return tech_terms
-
-def _get_top_keywords(keywords: Set[str], limit: int = 15) -> List[str]:
-    """
-    Helper: Get top keywords sorted alphabetically.
-    Shared logic for returning final keyword lists.
-    """
-    return sorted(list(keywords))[:limit]
-
-def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
+# === KEYWORD EXTRACTION FUNCTIONS ===
+def extract_technical_keywords_from_github(commits: List[Dict], user_prefs: Optional[Dict] = None) -> List[str]:
     """
     Extract technical keywords from GitHub commit messages and file changes.
-    Optimized with set-based lookup for performance.
+    Optimized with set-based lookup for performance and user preference-enhanced relevance.
     """
     all_messages = []
     all_file_names = []
@@ -83,17 +39,20 @@ def extract_technical_keywords_from_github(commits: List[Dict]) -> List[str]:
         tech_terms.update(message_words & TechnicalPatterns.GITHUB_TECH_KEYWORDS)
     
     # Extract meaningful file name keywords using shared helper
-    filename_keywords = _extract_meaningful_filename_keywords(all_file_names)
+    filename_keywords = extract_meaningful_filename_keywords(all_file_names)
     tech_terms.update(filename_keywords)
     
-    return _get_top_keywords(tech_terms)
+    base_keywords = get_top_keywords(tech_terms)
+    
+    # Prioritize keywords based on user preferences for better relevance
+    return get_preference_weighted_keywords(base_keywords, user_prefs)
 
 
 
-def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str]:
+def extract_technical_keywords_from_parsed(parsed_files: List[Dict], user_prefs: Optional[Dict] = None) -> List[str]:
     """
     Extract meaningful technical keywords from parsed files using shared helpers.
-    Updated to handle new JSON structure with entities.
+    Updated to handle new JSON structure with entities and user preference-enhanced relevance.
     """
     all_identifiers = []
     all_imports = []
@@ -150,9 +109,12 @@ def extract_technical_keywords_from_parsed(parsed_files: List[Dict]) -> List[str
     
     # Process identifiers using shared camelCase splitting
     for identifier in all_identifiers:
-        tech_keywords.update(_split_camelcase_and_filter(identifier))
+        tech_keywords.update(split_camelcase_and_filter(identifier))
     
-    return _get_top_keywords(tech_keywords)
+    base_keywords = get_top_keywords(tech_keywords)
+    
+    # Prioritize keywords based on user preferences for better relevance
+    return get_preference_weighted_keywords(base_keywords, user_prefs)
 
 def _detect_frameworks(imports: List[str]) -> List[str]:
     """Helper: Detect frameworks from imports."""
@@ -1195,15 +1157,27 @@ def infer_roles_from_file(file):
     return roles
 
 # Main entry point for local project analysis
-def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
+def analyze_parsed_project(parsed_files: List[Dict], llm_client=None, email: Optional[str] = None) -> Dict:
     """
     Analyze a project from parsed file dicts and return a structured JSON summary.
+    User preferences enhance the relevance and targeting of extracted data.
+    
+    Args:
+        parsed_files: List of parsed file dictionaries
+        llm_client: Optional LLM client for resume generation
+        email: Optional user email for preference-enhanced analysis
     """
-    # Get existing rich analysis
+    # Load user preferences for quality enhancement
+    user_prefs = load_user_preferences(email)
+    
+    # Get analysis with preference-enhanced keyword prioritization
     metrics = aggregate_parsed_files_metrics(parsed_files)
-    technical_keywords = extract_technical_keywords_from_parsed(parsed_files)
+    technical_keywords = extract_technical_keywords_from_parsed(parsed_files, user_prefs)
     code_patterns = analyze_code_patterns_from_parsed(parsed_files)
     complexity_analysis = calculate_advanced_complexity_from_parsed(parsed_files)
+    
+    # Prioritize patterns based on user preferences for better relevance
+    code_patterns = prioritize_patterns_by_preferences(code_patterns, user_prefs)
     
     # Enhanced metrics for analysis
     metrics["technical_keywords"] = technical_keywords
@@ -1242,8 +1216,11 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
     if not isinstance(resume_bullets, list):
         resume_bullets = [str(resume_bullets)] if resume_bullets else []
     
+    # Enhance resume bullets with user preference targeting
+    resume_bullets = enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
+    
     return {
-        "Resume_bullets": resume_bullets,  # Always an array
+        "Resume_bullets": resume_bullets,  # Enhanced for user preferences
         "Metrics": {
             "languages": metrics["languages"],
             "total_files": metrics["total_files"],
@@ -1257,20 +1234,29 @@ def analyze_parsed_project(parsed_files: List[Dict], llm_client=None) -> Dict:
             "code_files_changed": metrics["code_files_changed"],
             "doc_files_changed": metrics["doc_files_changed"],
             "test_files_changed": metrics["test_files_changed"],
-            "technical_keywords": technical_keywords,
-            "code_patterns": code_patterns,
+            "technical_keywords": technical_keywords,  # Prioritized by preferences
+            "code_patterns": code_patterns,  # Prioritized by preferences
             "complexity_analysis": complexity_analysis
         }
     }
 
 # Main entry point for github project analysis
-def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
+def analyze_github_project(commits: List[Dict], llm_client=None, email: Optional[str] = None) -> Dict:
     """
     Analyze a project from GitHub commit dicts and return a structured JSON summary.
+    User preferences enhance the relevance and targeting of extracted data.
+    
+    Args:
+        commits: List of GitHub commit dictionaries
+        llm_client: Optional LLM client for resume generation
+        email: Optional user email for preference-enhanced analysis
     """
-    # Get existing rich analysis
+    # Load user preferences for quality enhancement
+    user_prefs = load_user_preferences(email)
+    
+    # Get analysis with preference-enhanced keyword prioritization
     metrics = aggregate_github_individual_metrics(commits)
-    technical_keywords = extract_technical_keywords_from_github(commits)
+    technical_keywords = extract_technical_keywords_from_github(commits, user_prefs)
     development_patterns = analyze_github_development_patterns(commits)
     commit_patterns = analyze_github_commit_patterns(commits)
     
@@ -1310,8 +1296,11 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
     if not isinstance(resume_bullets, list):
         resume_bullets = [str(resume_bullets)] if resume_bullets else []
     
+    # Enhance resume bullets with user preference targeting
+    resume_bullets = enhance_resume_bullets_with_preferences(resume_bullets, user_prefs, metrics)
+    
     return {
-        "Resume_bullets": resume_bullets,  # Always an array
+        "Resume_bullets": resume_bullets,  # Enhanced for user preferences
         "Metrics": {
             "authors": metrics["authors"],
             "total_commits": metrics["total_commits"],
@@ -1326,7 +1315,7 @@ def analyze_github_project(commits: List[Dict], llm_client=None) -> Dict:
             "languages": metrics["languages"],
             "total_lines": metrics["total_lines"],
             "roles": metrics["roles"],
-            "technical_keywords": technical_keywords,
+            "technical_keywords": technical_keywords,  # Prioritized by preferences
             "development_patterns": development_patterns,
             "commit_patterns": commit_patterns
         }

@@ -13,6 +13,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
+from app.utils.user_preference_utils import UserPreferenceStore
 from app.cli.user_preference_cli import UserPreferences
 from app.utils.non_code_analysis.keywords.domain_keywords import (
     build_enhanced_keywords, get_mapped_industry)
@@ -393,34 +394,27 @@ def calculate_completeness_score(content: str, doc_type: str) -> int:
     return min(max(completeness, 0), 100)
 
 
-def analyze_project_clean(parsed_files: Dict[str, Any], email: str = None) -> Dict[str, Any]:
+def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
     Clean project-wide analysis with optional user preference integration.
     
     Args:
         parsed_files: Dictionary containing parsed file data
-        email: Optional user email to load preferences (used ONLY for keyword detection)
     """
     
     
     # Load user preferences if email provided (ONLY for keyword detection)
     user_prefs = None
-    pref_manager = None
     
-    if email:
-        try:
-            pref_manager = UserPreferences()
-            user_prefs = pref_manager.get_latest_preferences(email)
+    try:
+            
+            user_prefs =  UserPreferenceStore.get_latest_preferences_no_email()
             if user_prefs:
                 print(f"✅ Using preferences for enhanced keyword detection")
                 print(f"   Industry: {user_prefs.get('industry')}")
                 print(f"   Job Title: {user_prefs.get('job_title')}")
-        except Exception as e:
+    except Exception as e:
             print(f"⚠️ Could not load preferences: {e}")
-        finally:
-            # FIXED: Always close DB connection
-            if pref_manager and hasattr(pref_manager, 'store'):
-                pref_manager.store.close()
     
     
     # Handle both "files" and "parsed_files" keys for compatibility

@@ -85,12 +85,48 @@ def test_post_portfolio_generate(mock_portfolio_data):
         assert "X-Portfolio-Generated" in response.headers
 
 def test_post_portfolio_generate_empty_projects():
-    """Test POST /portfolio/generate with empty project_ids."""
-    payload = {"project_ids": []}
-    response = client.post("/api/portfolio/generate", json=payload)
-    
-    assert response.status_code == 400
-    assert "project_ids list cannot be empty" in response.json()["detail"]
+    """Test POST /portfolio/generate with empty project_ids - should return all projects."""
+    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+        # Mock return for all projects (empty filter)
+        mock_portfolio = {
+            "user": {"name": "Test User"},
+            "overview": {"total_projects": 3},
+            "projects": [{"id": "proj1"}, {"id": "proj2"}, {"id": "proj3"}],
+            "metadata": {"generated_at": "2025-01-01T00:00:00", "filtered": False}
+        }
+        mock_build.return_value = mock_portfolio
+        
+        payload = {"project_ids": []}
+        response = client.post("/api/portfolio/generate", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["overview"]["total_projects"] == 3
+        assert len(data["projects"]) == 3
+        assert data["metadata"]["filtered"] == False
+        # Verify mock was called with empty list (treated as None internally)
+        mock_build.assert_called_once_with(project_ids=[])
+
+def test_post_portfolio_generate_null_projects():
+    """Test POST /portfolio/generate with null project_ids - should return all projects.""" 
+    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+        mock_portfolio = {
+            "user": {"name": "Test User"},
+            "overview": {"total_projects": 3}, 
+            "projects": [{"id": "proj1"}, {"id": "proj2"}, {"id": "proj3"}],
+            "metadata": {"generated_at": "2025-01-01T00:00:00", "filtered": False}
+        }
+        mock_build.return_value = mock_portfolio
+        
+        payload = {"project_ids": None}
+        response = client.post("/api/portfolio/generate", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["overview"]["total_projects"] == 3
+        assert len(data["projects"]) == 3
+        assert data["metadata"]["filtered"] == False
+        mock_build.assert_called_once_with(project_ids=None)
 
 def test_portfolio_generation_database_error():
     """Test portfolio generation with database error."""

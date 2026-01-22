@@ -23,10 +23,7 @@ def generate_portfolio(filter: PortfolioFilter):
     Returns comprehensive portfolio data including overview, projects, skills timeline, etc.
     """
     try:
-        print(f"[DEBUG] Portfolio API called with project_ids: {filter.project_ids}")
         portfolio_model = build_portfolio_model(project_ids=filter.project_ids)
-        print(f"[DEBUG] Portfolio generated with {len(portfolio_model.get('projects', []))} projects")
-        print(f"[DEBUG] Overview: {portfolio_model.get('overview', {})}")
         
         return JSONResponse(
             content=portfolio_model,

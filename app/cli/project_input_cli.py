@@ -20,7 +20,7 @@ def main(argv=None):
     scan_parser = subparsers.add_parser("scan", help="Scan files in a project folder")
     scan_parser.add_argument("--root", type=str, required=True, help="Root directory to scan")
     scan_parser.add_argument("--exclude", type=str, nargs="*", default=[], help="Additional file patterns to exclude (e.g., *.pdf *.docx)")
-    scan_parser.add_argument("--similarity-threshold", type=float, default=20.0, help="Similarity threshold for project matching (default: 20.0)")
+    scan_parser.add_argument("--similarity-threshold", type=float, default=70.0, help="Similarity threshold for project matching (default: 70.0)")
 
     # Add other subcommands for your teammates here...
 

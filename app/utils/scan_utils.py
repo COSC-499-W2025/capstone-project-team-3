@@ -200,7 +200,7 @@ def get_all_file_signatures_from_db() -> set:
             sigs.update(json.loads(row[0]))
     return sigs
 
-def find_similar_project_and_update(current_signatures: List[str], threshold: float = 20.0) -> Optional[tuple]:
+def find_similar_project_and_update(current_signatures: List[str], threshold: float = 70.0) -> Optional[tuple]:
     """Find similar project and update it. Returns (project_name, similarity_percentage) or None."""
     conn = get_connection()
     cursor = conn.cursor()
@@ -228,7 +228,7 @@ def find_similar_project_and_update(current_signatures: List[str], threshold: fl
     return None
 
 
-def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 20.0) -> dict:
+def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 70.0) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.

@@ -1,13 +1,7 @@
 import argparse
 from pathlib import Path
 from app.utils.scan_utils import (
-    scan_project_files,
-    get_project_signature,
-    extract_file_metadata,
-    extract_file_signature,
-    store_project_in_db,
-    project_signature_exists,
-    calculate_project_score
+    run_scan_flow
 )
 
 def has_consent():
@@ -26,6 +20,7 @@ def main(argv=None):
     scan_parser = subparsers.add_parser("scan", help="Scan files in a project folder")
     scan_parser.add_argument("--root", type=str, required=True, help="Root directory to scan")
     scan_parser.add_argument("--exclude", type=str, nargs="*", default=[], help="Additional file patterns to exclude (e.g., *.pdf *.docx)")
+    scan_parser.add_argument("--similarity-threshold", type=float, default=20.0, help="Similarity threshold for project matching (default: 20.0)")
 
     # Add other subcommands for your teammates here...
 
@@ -36,31 +31,21 @@ def main(argv=None):
             print("User consent not found. Please run the consent CLI first.")
             return
         print("Consent verified. Scanning files...")
-        files = scan_project_files(args.root, exclude_patterns=args.exclude)
         
-        # check if project folder is empty
-        if not files:
-            print("No files found to scan in the specified directory. Skipping analysis.")
-            return
+        # Use the updated scan flow with similarity detection
+        result = run_scan_flow(args.root, exclude=args.exclude, similarity_threshold=args.similarity_threshold)
         
-        print(f"Scanned files (excluding patterns {args.exclude}):")
-        for f in files:
-            print(f)
-        metadata_list = [extract_file_metadata(f) for f in files]
-        file_signatures = [extract_file_signature(f, args.root) for f in files]
-        signature = get_project_signature(file_signatures)
-        size_bytes = sum(m["size_bytes"] for m in metadata_list)
-        name = Path(args.root).name
-        path = str(Path(args.root).resolve())
-        
-        score = calculate_project_score(file_signatures)
-        print(f"Project analysis score: {score}% of files already analyzed.")
-        if project_signature_exists(signature):
-            print("Project already analyzed. Skipping analysis.")
+        if result["skip_analysis"]:
+            if result["reason"] == "no_files":
+                print("No files found to scan in the specified directory. Skipping analysis.")
+            elif result["reason"] == "already_analyzed":
+                print("Project already analyzed. Skipping analysis.")
             return 0
+        elif result["reason"] == "updated_existing":
+            print(f"Updated existing project '{result['updated_project']}' with new files.")
+            return 1
         else:
-            store_project_in_db(signature, name, path, file_signatures, size_bytes)
-            print("Stored project and file signatures in DB. Proceeding with analysis.")
+            print("Stored new project and file signatures in DB. Proceeding with analysis.")
             return 1
     
     # Add logic for other subcommands here...

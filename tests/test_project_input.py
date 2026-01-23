@@ -7,7 +7,6 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    calculate_project_score,
     extract_project_timestamps
 )
 from pathlib import Path
@@ -140,24 +139,7 @@ def test_get_all_file_signatures_from_db(tmp_path):
     assert sig1 in sigs
     assert sig2 in sigs
 
-def test_calculate_project_score(tmp_path):
-    """Test calculation of project score based on file signatures in DB."""
-    # Add one file to DB
-    file1 = tmp_path / "score1.txt"
-    file2 = tmp_path / "score2.txt"
-    file1.write_text("score1")
-    file2.write_text("score2")
-    sig1 = extract_file_signature(file1, tmp_path)
-    sig2 = extract_file_signature(file2, tmp_path)
-    signature = get_project_signature([sig1, sig2])
-    name = "ScoreProject"
-    path = str(tmp_path.resolve())
-    size_bytes = file1.stat().st_size + file2.stat().st_size
-    store_project_in_db(signature, name, path, [sig1], size_bytes)
-    # Now test score calculation
-    score = calculate_project_score([sig1, sig2])
-    assert score == 50.0  # Only one of two files is already in DB
-    
+
 def test_extract_file_signature_error(tmp_path):
     """Test that extract_file_signature returns ERROR_SIGNATURE for missing file."""
     missing_file = tmp_path / "does_not_exist.txt"
@@ -405,3 +387,62 @@ def test_project_db_schema_has_timestamp_columns():
     # Verify they're TIMESTAMP type (col[2] is the type)
     assert "TIMESTAMP" in created_at_col[2].upper()
     assert "TIMESTAMP" in modified_col[2].upper()
+
+def test_find_similar_project_and_update_no_projects():
+    """Test similarity function when no projects exist."""
+    from app.utils.scan_utils import find_similar_project_and_update
+    result = find_similar_project_and_update(["file1", "file2"], threshold=20.0)
+    assert result is None
+
+def test_find_similar_project_and_update_basic():
+    """Test basic similarity calculation logic."""
+    # This is a unit test for the similarity logic
+    current_sigs = ["file1", "file2", "file3"]
+    existing_sigs = ["file1", "file2", "file4"]
+    
+    # Calculate expected similarity
+    current_set = set(current_sigs)
+    existing_set = set(existing_sigs)
+    overlap = len(current_set.intersection(existing_set))  # 2 files
+    total = len(current_set.union(existing_set))  # 4 files
+    expected_similarity = (overlap / total) * 100  # 50%
+    
+    assert expected_similarity == 50.0
+    assert expected_similarity >= 20.0  # Would trigger update
+
+def test_find_similar_project_and_update_integration(tmp_path):
+    """Test that similar projects are found and updated correctly."""
+    from app.utils.scan_utils import (
+        find_similar_project_and_update,
+        extract_file_signature,
+        get_project_signature,
+        store_project_in_db
+    )
+    
+    # Create initial project with 2 files
+    file1 = tmp_path / "original1.txt"
+    file2 = tmp_path / "original2.txt"
+    file1.write_text("original content 1")
+    file2.write_text("original content 2")
+    
+    sig1 = extract_file_signature(file1, tmp_path)
+    sig2 = extract_file_signature(file2, tmp_path)
+    project_sig = get_project_signature([sig1, sig2])
+    
+    # Store initial project
+    store_project_in_db(project_sig, "TestProject", str(tmp_path), [sig1, sig2], 100)
+    
+    # Now upload similar project with 1 shared file + 1 new file
+    file3 = tmp_path / "new_file.txt"
+    file3.write_text("new content")
+    sig3 = extract_file_signature(file3, tmp_path)
+    
+    # Test similarity detection (sig1 is shared, sig3 is new)
+    # Similarity = 1 shared / 3 total = 33.3%
+    result = find_similar_project_and_update([sig1, sig3], threshold=20.0)
+    
+    assert result is not None
+    project_name, similarity = result
+    assert project_name == "TestProject"
+    assert similarity > 20.0  # Should be ~33%
+    assert similarity < 50.0

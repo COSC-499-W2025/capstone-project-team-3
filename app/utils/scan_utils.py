@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 import hashlib
 import json
 import time 
@@ -200,16 +200,35 @@ def get_all_file_signatures_from_db() -> set:
             sigs.update(json.loads(row[0]))
     return sigs
 
-def calculate_project_score(current_file_signatures: List[str]) -> float:
-    """Calculate what % of current project files have already been analyzed."""
-    db_sigs = get_all_file_signatures_from_db()
-    if not current_file_signatures:
-        return 0.0
-    already_analyzed = sum(1 for sig in current_file_signatures if sig in db_sigs)
-    return round((already_analyzed / len(current_file_signatures)) * 100, 2)
+def find_similar_project_and_update(current_signatures: List[str], threshold: float = 20.0) -> Optional[tuple]:
+    """Find similar project and update it. Returns (project_name, similarity_percentage) or None."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT project_signature, name, file_signatures FROM PROJECT")
+    projects = cursor.fetchall()
+    
+    for project_sig, project_name, file_sigs_json in projects:
+        existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
+        current_set = set(current_signatures)
+        existing_set = set(existing_sigs)
+        overlap = len(current_set.intersection(existing_set))
+        total = len(current_set.union(existing_set))
+        similarity = (overlap / total) * 100 if total > 0 else 0.0
+        
+        if similarity >= threshold:
+            # Update existing project
+            merged_sigs = list(current_set.union(existing_set))
+            cursor.execute("UPDATE PROJECT SET file_signatures = ?, last_modified = CURRENT_TIMESTAMP WHERE project_signature = ?", 
+                         (json.dumps(merged_sigs), project_sig))
+            conn.commit()
+            conn.close()
+            return (project_name, similarity)
+    
+    conn.close()
+    return None
 
 
-def run_scan_flow(root: str, exclude: list = None) -> dict:
+def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 20.0) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
@@ -236,12 +255,10 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     # Extract project timestamps
     timestamps = extract_project_timestamps(root, filtered_files=files)
     
-    # Store signatures in DB with actual timestamps
-
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
     
-    # Check if project already exists
+    # Check if exact project already exists
     if project_signature_exists(project_signature):
         print("100.0% of this Project was analyzed in the past.")
         return {
@@ -251,11 +268,22 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
             "reason": "already_analyzed",
             "signature": project_signature
         }
-    # Project is new - calculate score and store
-    score = calculate_project_score(file_signatures)
-    print(f"{score}% of files in this project was analyzed in the past.")
     
-    # Store new project
+    # Check for similar projects and update
+    result = find_similar_project_and_update(file_signatures, similarity_threshold)
+    if result:
+        project_name, similarity = result
+        print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")
+        return {
+            "files": files,
+            "skip_analysis": False,
+            "score": similarity,
+            "reason": "updated_existing",
+            "signature": None,
+            "updated_project": project_name
+        }
+    
+    # Project is new - store it
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
@@ -272,7 +300,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     return {
         "files": files,
         "skip_analysis": False,
-        "score": score,
+        "score": 0.0,
         "reason": "new_project",
         "signature": project_signature
     }

@@ -529,6 +529,7 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     
     print(f"🔍 User Industry (CLI): {user_industry}")
     print(f"🔍 Mapped Domain: {mapped_user_industry}")
+    print(f"🔍 Job Title: {user_job_title}")
 
     # Enhanced domain detection with user preference boost
     detected_domains = {}

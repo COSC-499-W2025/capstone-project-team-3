@@ -7,6 +7,16 @@ from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from pathlib import Path
 from app.cli.git_code_parsing import run_git_parsing_from_files
 
+# Prevent DB writes from main() during tests by stubbing store_results_in_db
+@pytest.fixture(autouse=True)
+def _stub_store_results(monkeypatch):
+    def _noop(*args, **kwargs):
+        return None
+    monkeypatch.setattr(
+        "app.utils.analysis_merger_utils.store_results_in_db",
+        _noop,
+    )
+
 
 @pytest.fixture(autouse=True)
 def mock_os_operations():

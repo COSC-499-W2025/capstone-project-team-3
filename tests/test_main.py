@@ -959,8 +959,8 @@ def test_main_calls_analyze_project_clean_in_local_mode():
         
         main()
         
-        # Verify analyze_project_clean was called with parsed_non_code
-        mock_analyze_clean.assert_called_once_with(mock_parsed_data,email="test_enhanced@example.com")
+        # Verify analyze_project_clean was called with parsed_non_code (no email parameter)
+        mock_analyze_clean.assert_called_once_with(mock_parsed_data)
 
 def test_main_calls_ai_non_code_analysis_pipeline():
     """In AI mode, main() calls analyze_non_code_files with parsed_non_code."""

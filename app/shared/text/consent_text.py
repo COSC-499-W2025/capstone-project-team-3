@@ -31,7 +31,7 @@ DATA STORAGE:
 - All results stored in local database
 - No cloud upload or sharing of your data
 
-DATA RETENTION: TODO
+DATA RETENTION: 
 - Data kept until explicitly deleted by you
 - Use '--clear-data' command to remove all stored information
 

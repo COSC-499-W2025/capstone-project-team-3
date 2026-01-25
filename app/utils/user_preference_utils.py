@@ -44,20 +44,20 @@ class UserPreferenceStore:
         return dict(zip(keys, row))
 
     # Save/Update user preferences (Write to DB)
-    def save_preferences(self, name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
+    def save_preferences(self, user_id: int,  name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
         
         cur = self.conn.cursor()
 
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title)
+            VALUES (?,?, ?, ?, ?, ?, ?)
             """,
-            (name, email, github_user, education, industry, job_title),
+            (user_id, name, email, github_user, education, industry, job_title),
             )
         self.conn.commit()
         
-    # Optimized static function to get latest industry/job/education preferences without email lookup
+    # Optimized static function to get user's latest industry,job & education preferences without email lookup
     @staticmethod
     def get_latest_preferences_no_email():
         store = UserPreferenceStore()
@@ -76,6 +76,7 @@ class UserPreferenceStore:
         keys = ["industry", "job_title", "education"]
         return dict(zip(keys, row))
     
+    # Method to retrive user's name, email, education, industry, and job title
     @staticmethod
     def get_user_info():
         store = UserPreferenceStore()

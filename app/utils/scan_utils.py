@@ -200,7 +200,19 @@ def get_all_file_signatures_from_db() -> set:
             sigs.update(json.loads(row[0]))
     return sigs
 
-def find_similar_project_and_update(current_signatures: List[str], threshold: float = 70.0) -> Optional[tuple]:
+def calculate_project_similarity(current_signatures: List[str], existing_signatures: List[str]) -> float:
+    """Calculate Jaccard similarity between two sets of file signatures.
+    
+    Returns:
+        Similarity percentage (0-100) based on file overlap.
+    """
+    current_set = set(current_signatures)
+    existing_set = set(existing_signatures)
+    overlap = len(current_set.intersection(existing_set))
+    total = len(current_set.union(existing_set))
+    return (overlap / total) * 100 if total > 0 else 0.0
+
+def find_and_update_similar_project(current_signatures: List[str], threshold: float = 70.0) -> Optional[tuple]:
     """Find similar project and update it. Returns (project_name, similarity_percentage) or None."""
     conn = get_connection()
     cursor = conn.cursor()
@@ -209,15 +221,13 @@ def find_similar_project_and_update(current_signatures: List[str], threshold: fl
     
     for project_sig, project_name, file_sigs_json in projects:
         existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
-        current_set = set(current_signatures)
-        existing_set = set(existing_sigs)
-        overlap = len(current_set.intersection(existing_set))
-        total = len(current_set.union(existing_set))
-        similarity = (overlap / total) * 100 if total > 0 else 0.0
+        
+        # Calculate similarity using helper function
+        similarity = calculate_project_similarity(current_signatures, existing_sigs)
         
         if similarity >= threshold:
             # Update existing project
-            merged_sigs = list(current_set.union(existing_set))
+            merged_sigs = list(set(current_signatures).union(set(existing_sigs)))
             cursor.execute("UPDATE PROJECT SET file_signatures = ?, last_modified = CURRENT_TIMESTAMP WHERE project_signature = ?", 
                          (json.dumps(merged_sigs), project_sig))
             conn.commit()
@@ -270,7 +280,7 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
         }
     
     # Check for similar projects and update
-    result = find_similar_project_and_update(file_signatures, similarity_threshold)
+    result = find_and_update_similar_project(file_signatures, similarity_threshold)
     if result:
         project_name, similarity = result
         print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")

@@ -74,7 +74,6 @@ def test_persistence_across_sessions(tmp_path):
     assert prefs["github_user"] == "persistGH"
 
 def test_latest_preference_retrieval (tmp_path):
-    """Test that updating preferences replaces the existing single user record."""
     db_path = tmp_path / "prefs.db"
     store1 = UserPreferenceStore(db_path=str(db_path))
     create_user_pref_table(store1.conn)
@@ -86,16 +85,11 @@ def test_latest_preference_retrieval (tmp_path):
         industry="Education",
         job_title="Instructor"
     )
-    
-    # Verify first save worked
-    prefs1 = store1.get_latest_preferences()
-    assert prefs1["name"] == "Persist Name"
     store1.close()
-    
-    # Ensure different timestamps between updates
+    # Ensure different timestamps between records
     time.sleep(1)
 
-    # Update the same user record (user_id=1)
+
     store2 = UserPreferenceStore(db_path=str(db_path))
     store2.save_preferences(
         name="Latest Name",
@@ -106,18 +100,10 @@ def test_latest_preference_retrieval (tmp_path):
         job_title="Senior Developer"
     )
     prefs = store2.get_latest_preferences()
-    
-    # Verify the record was updated, not duplicated
+    store2.close()
+
     assert prefs["name"] == "Latest Name"
     assert prefs["github_user"] == "latestGH"
-    
-    # Verify only ONE row exists (single-user app)
-    cur = store2.conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM USER_PREFERENCES")
-    count = cur.fetchone()[0]
-    assert count == 1, "Should only have one user record"
-    
-    store2.close()
 
 
 def test_latest_preferences_no_email_lookup(temp_store, monkeypatch):

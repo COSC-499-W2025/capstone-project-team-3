@@ -215,9 +215,9 @@ def get_projects_by_signatures(signatures: list):
             
         # Check for specific baseline metrics and include authors
         authors = []
-        if "author" in metrics:
+        if "authors" in metrics:
             # If author is stored as metric
-            authors = [metrics["author"]]
+            authors = [metrics["authors"]]
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))

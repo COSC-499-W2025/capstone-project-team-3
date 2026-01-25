@@ -388,32 +388,40 @@ def test_project_db_schema_has_timestamp_columns():
     assert "TIMESTAMP" in created_at_col[2].upper()
     assert "TIMESTAMP" in modified_col[2].upper()
 
-def test_find_similar_project_and_update_no_projects():
+def test_calculate_project_similarity():
+    """Test the similarity calculation helper function."""
+    from app.utils.scan_utils import calculate_project_similarity
+    
+    # Test identical projects
+    sigs1 = ["file1", "file2", "file3"]
+    sigs2 = ["file1", "file2", "file3"]
+    assert calculate_project_similarity(sigs1, sigs2) == 100.0
+    
+    # Test partial overlap (50%)
+    sigs1 = ["file1", "file2", "file3"]
+    sigs2 = ["file1", "file2", "file4"]
+    expected = (2 / 4) * 100  # 2 common / 4 total
+    assert calculate_project_similarity(sigs1, sigs2) == expected
+    
+    # Test no overlap
+    sigs1 = ["file1", "file2"]
+    sigs2 = ["file3", "file4"]
+    assert calculate_project_similarity(sigs1, sigs2) == 0.0
+    
+    # Test empty lists
+    assert calculate_project_similarity([], ["file1"]) == 0.0
+    assert calculate_project_similarity(["file1"], []) == 0.0
+
+def test_find_and_update_similar_project_no_projects():
     """Test similarity function when no projects exist."""
-    from app.utils.scan_utils import find_similar_project_and_update
-    result = find_similar_project_and_update(["file1", "file2"], threshold=20.0)
+    from app.utils.scan_utils import find_and_update_similar_project
+    result = find_and_update_similar_project(["file1", "file2"], threshold=20.0)
     assert result is None
 
-def test_find_similar_project_and_update_basic():
-    """Test basic similarity calculation logic."""
-    # This is a unit test for the similarity logic
-    current_sigs = ["file1", "file2", "file3"]
-    existing_sigs = ["file1", "file2", "file4"]
-    
-    # Calculate expected similarity
-    current_set = set(current_sigs)
-    existing_set = set(existing_sigs)
-    overlap = len(current_set.intersection(existing_set))  # 2 files
-    total = len(current_set.union(existing_set))  # 4 files
-    expected_similarity = (overlap / total) * 100  # 50%
-    
-    assert expected_similarity == 50.0
-    assert expected_similarity >= 20.0  # Would trigger update
-
-def test_find_similar_project_and_update_integration(tmp_path):
+def test_find_and_update_similar_project_integration(tmp_path):
     """Test that similar projects are found and updated correctly."""
     from app.utils.scan_utils import (
-        find_similar_project_and_update,
+        find_and_update_similar_project,
         extract_file_signature,
         get_project_signature,
         store_project_in_db
@@ -439,7 +447,7 @@ def test_find_similar_project_and_update_integration(tmp_path):
     
     # Test similarity detection (sig1 is shared, sig3 is new)
     # Similarity = 1 shared / 3 total = 33.3%
-    result = find_similar_project_and_update([sig1, sig3], threshold=20.0)
+    result = find_and_update_similar_project([sig1, sig3], threshold=20.0)
     
     assert result is not None
     project_name, similarity = result
@@ -447,13 +455,13 @@ def test_find_similar_project_and_update_integration(tmp_path):
     assert similarity > 20.0  # Should be ~33%
     assert similarity < 50.0
 
-def test_find_similar_project_and_update_default_threshold():
+def test_find_and_update_similar_project_default_threshold():
     """Test that the default threshold is 70%."""
-    from app.utils.scan_utils import find_similar_project_and_update
+    from app.utils.scan_utils import find_and_update_similar_project
     import inspect
     
     # Get the function signature
-    sig = inspect.signature(find_similar_project_and_update)
+    sig = inspect.signature(find_and_update_similar_project)
     default_threshold = sig.parameters['threshold'].default
     
     # Verify default is 70%

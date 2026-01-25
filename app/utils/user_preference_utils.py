@@ -48,10 +48,19 @@ class UserPreferenceStore:
         
         cur = self.conn.cursor()
 
+        # UPSERT: Insert if no row exists (user_id=1), otherwise UPDATE existing row
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title, updated_at)
+            VALUES (1, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                name = excluded.name,
+                email = excluded.email,
+                github_user = excluded.github_user,
+                education = excluded.education,
+                industry = excluded.industry,
+                job_title = excluded.job_title,
+                updated_at = CURRENT_TIMESTAMP
             """,
             (name, email, github_user, education, industry, job_title),
             )

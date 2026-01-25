@@ -1,9 +1,21 @@
+import pytest
 from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db
 from app.utils.retrieve_insights_utils import get_projects_by_signatures
 import json
 import pytest
 
-def test_merge_analysis_results():
+# Isolate DB for tests in this file to avoid touching app.sqlite3
+from app.data import db as dbmod
+
+@pytest.fixture(scope="function")
+def isolated_db(tmp_path, monkeypatch):
+    test_db = tmp_path / "analysis_merger.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    # yield so tests can run using the isolated DB
+    yield
+
+def test_merge_analysis_results(isolated_db):
     
     code_analysis_results = {
         "Resume_bullets": ["Built REST API", "Wrote unit tests"],
@@ -51,7 +63,7 @@ def test_merge_analysis_results():
     assert merged["metrics"]["word_count"] == 1000
     assert merged["metrics"]["completeness_score"] == 0.95
     
-def test_store_and_retrieve_results_in_db():
+def test_store_and_retrieve_results_in_db(isolated_db):
 
     project_signature = "test_project_002"
     project_name = "DB Test Project"

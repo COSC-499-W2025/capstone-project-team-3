@@ -59,29 +59,121 @@ def detect_language(file_path: Path) -> str | None:
     """
     
     try:
-        lexer = guess_lexer_for_filename(file_path.name, file_path.read_text(encoding="utf-8"))
-        language= lexer.name
+        # Try multiple encodings
+        encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+        content = None
+        
+        for encoding in encodings:
+            try:
+                content = file_path.read_text(encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            # Fallback with error replacement
+            content = file_path.read_text(encoding='utf-8', errors='replace')
+        
+        lexer = guess_lexer_for_filename(file_path.name, content)
+        language = lexer.name
         language = re.split(r'\+(?=[A-Za-z])', language)[0].strip()
         language = language.split()[0]
         return language
-    except (ClassNotFound, FileNotFoundError, UnicodeDecodeError, OSError):
+    except (ClassNotFound, FileNotFoundError, OSError):
         return None
 
 def count_lines_of_code(file_path: Path) -> int:
     """Return the number of lines of code in the given source file."""
-    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
-    count = analysis.code_count
-    return count
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            analysis = SourceAnalysis.from_file(str(file_path), "pygount", encoding=encoding)
+            return analysis.code_count
+        except Exception:
+            continue
+    
+    # If all encodings fail, try with error handling
+    try:
+        # Read content manually and count lines (fallback method)
+        content = None
+        for encoding in encodings:
+            try:
+                content = file_path.read_text(encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            content = file_path.read_text(encoding='utf-8', errors='replace')
+        
+        # Simple line counting as fallback
+        return len([line for line in content.splitlines() if line.strip() and not line.strip().startswith('#')])
+    except Exception:
+        return 0
 
 def count_lines_of_documentation(file_path: Path) -> int:
     """Return the number of documentation lines in the given source file."""
-    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
-    count = analysis.documentation_count
-    return count
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            analysis = SourceAnalysis.from_file(str(file_path), "pygount", encoding=encoding)
+            return analysis.documentation_count
+        except Exception:
+            continue
+    
+    # Fallback to manual counting if pygount fails with all encodings
+    content = None
+    for encoding in encodings:
+        try:
+            content = file_path.read_text(encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    
+    if content is None:
+        content = file_path.read_text(encoding='utf-8', errors='replace')
+    
+    # Basic documentation line counting
+    lines = content.splitlines()
+    doc_lines = 0
+    
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith(('#', '//', '/*', '*', '--', '"""', "'''")):
+            doc_lines += 1
+    
+    return doc_lines
 
 def extract_contents(file_path: Path) -> str:
     """Extracts the contents of the given file."""
-    return file_path.read_text(encoding="utf-8")
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            return file_path.read_text(encoding=encoding)
+        except UnicodeDecodeError as e:
+            print(f"Failed to read {file_path} with {encoding}: {e}")
+            if encoding == 'utf-8':  # Debug the first encoding failure
+                try:
+                    with open(file_path, 'rb') as f:
+                        raw_bytes = f.read()
+                    print(f"Bytes around position {e.start}: {raw_bytes[max(0, e.start-10):e.start+10]}")
+                    print(f"Problematic byte at position {e.start}: 0x{raw_bytes[e.start]:02x}")
+                except Exception as debug_e:
+                    print(f"Debug read failed: {debug_e}")
+            continue
+        except Exception as e:
+            print(f"Other error reading {file_path} with {encoding}: {e}")
+            continue
+    
+    # If all encodings fail, use utf-8 with error handling
+    try:
+        return file_path.read_text(encoding='utf-8', errors='replace')
+    except Exception:
+        # Last resort: return empty string if file can't be read at all
+        return ""
 
 # ---- Helper methods for extract_imports ----
 def collect_node_types(node: Node, seen: Set[str] | None = None) -> Set[str]:

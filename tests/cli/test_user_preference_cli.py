@@ -2,6 +2,7 @@ import sqlite3
 import pytest
 import time
 from app.utils.user_preference_utils import UserPreferenceStore
+from app.cli.user_preference_cli import USER
 
 # --- Utility setup ---
 
@@ -37,6 +38,7 @@ def temp_store(tmp_path):
 
 def test_save_and_get_preferences(temp_store):
     temp_store.save_preferences(
+        user_id=USER,
         name="Alice Example",
         email="alice@example.com",
         github_user="alicegit",
@@ -57,6 +59,7 @@ def test_persistence_across_sessions(tmp_path):
     store1 = UserPreferenceStore(db_path=str(db_path))
     create_user_pref_table(store1.conn)
     store1.save_preferences(
+        user_id=USER,
         name="Persist Name",
         email="persist@example.com",
         github_user="persistGH",
@@ -78,6 +81,7 @@ def test_latest_preference_retrieval (tmp_path):
     store1 = UserPreferenceStore(db_path=str(db_path))
     create_user_pref_table(store1.conn)
     store1.save_preferences(
+        user_id=USER,
         name="Persist Name",
         email="persist@example.com",
         github_user="persistGH",
@@ -92,6 +96,7 @@ def test_latest_preference_retrieval (tmp_path):
 
     store2 = UserPreferenceStore(db_path=str(db_path))
     store2.save_preferences(
+        user_id=2,
         name="Latest Name",
         email="latest@example.com",
         github_user="latestGH",
@@ -112,6 +117,7 @@ def test_latest_preferences_no_email_lookup(temp_store, monkeypatch):
     without relying on email.
     """
     temp_store.save_preferences(
+        user_id=USER,
         name="No Email User",
         email="noemail@example.com",
         github_user="ghuser",
@@ -139,8 +145,9 @@ class FakeStore:
     def get_latest_preferences(self):
         return self.data[-1] if self.data else None
 
-    def save_preferences(self, name, email, github_user, education, industry, job_title):
+    def save_preferences(self,user_id, name, email, github_user, education, industry, job_title):
         self.data.append({
+            user_id: USER,
             "name": name,
             "email": email,
             "github_user": github_user,
@@ -156,6 +163,7 @@ def test_store_like_save_and_retrieve_preferences():
     store = FakeStore()
 
     store.save_preferences(
+        user_id=USER,
         name="Test User",
         email="user@example.com",
         github_user="testgh",

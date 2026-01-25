@@ -1,5 +1,6 @@
 from app.utils.user_preference_utils import UserPreferenceStore
 import re
+USER = 1  # Assuming a single local user with ID 1
 
 "This file manages user preferences via CLI by prompting the user. This will later on be replaced by UI"
 
@@ -32,7 +33,21 @@ class UserPreferences:
             if choice == "no":
                 print("Keeping existing preferences.")
                 return
-        else:   
+            else:
+                print("Updating preferences. Please enter new values.\n")  
+
+                name = input("Enter your full name: ").strip()
+                email = input("Enter your email: ").strip()
+                while not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+                        print("Invalid email format. Please try again.")
+                        email = input("Enter your email: ").strip()
+                github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
+                education = input("Enter your educational background: ").strip()
+                print(f"Industry options: {industry_options}")
+                industry = input("Select your industry (type one of the options): ").strip()
+                job_title = input("Enter your job title (current or aspiring): ").strip()
+        else:
+            user_id=USER
             name = input("Enter your full name: ").strip()
             email = input("Enter your email: ").strip()
             while not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
@@ -48,7 +63,7 @@ class UserPreferences:
                 print("Missing fields are required. Please try again.")
 
         self.store.save_preferences(
-            user_id = 1, # Assume local single user with id 1
+            user_id = user_id, # Assume local single user with id 1
             name=name,
             email=email,
             github_user=github,

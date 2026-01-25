@@ -143,27 +143,6 @@ def get_overview_stats(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] 
     }
 
 def categorize_projects_by_type(cursor: sqlite3.Cursor, project_ids: List[str]) -> Dict[str, List[str]]:
-    """Separate GitHub projects from local projects."""
-    github_projects = []
-    local_projects = []
-    
-    for project_id in project_ids:
-        cursor.execute("""
-            SELECT 1 FROM DASHBOARD_DATA 
-            WHERE project_id = ? AND metric_name = 'total_commits'
-        """, (project_id,))
-        
-        if cursor.fetchone():  # Has commits = GitHub project
-            github_projects.append(project_id)
-        else:  # Local project
-            local_projects.append(project_id)
-    
-    return {
-        "github": github_projects,
-        "local": local_projects
-    }
-
-def categorize_projects_by_type(cursor: sqlite3.Cursor, project_ids: List[str]) -> Dict[str, List[str]]:
     """Categorize projects as GitHub or Local based on metrics."""
     github_projects = []
     local_projects = []
@@ -234,13 +213,6 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "type": "GitHub" if is_github else "Local",
             "metrics": metrics,
             "skills": limited_skills,
-            "lines_of_code": metrics.get("total_lines", 0),
-            "files_count": metrics.get("total_files", 0),
-            "total_commits": metrics.get("total_commits", 0),
-            "primary_language": metrics.get("languages", "Unknown"),
-            "functions": metrics.get("functions", 0),
-            "classes": metrics.get("classes", 0),
-            "complexity": metrics.get("complexity_analysis", "N/A")
         })
 
     # Calculate project type analysis if projects selected

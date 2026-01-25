@@ -155,7 +155,7 @@ def extract_contents(file_path: Path) -> str:
             return file_path.read_text(encoding=encoding)
         except UnicodeDecodeError as e:
             print(f"Failed to read {file_path} with {encoding}: {e}")
-            if encoding == 'utf-8':  # Debug the first encoding failure
+            if encoding == 'utf-8':  
                 try:
                     with open(file_path, 'rb') as f:
                         raw_bytes = f.read()

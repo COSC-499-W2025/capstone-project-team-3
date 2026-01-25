@@ -95,8 +95,6 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         print("⚠️ WARNING: non_code_analysis_results is empty or None")
         non_code_analysis_results = {"Metrics": {}, "resume_bullets": [], "skills": {}, "project_summary": ""}
     
-    # Debug: Show what non-code analysis returned
-    print(f"\n🔍 DEBUG non_code_analysis_results:")
     print(f"   - Keys: {list(non_code_analysis_results.keys())}")
     print(f"   - project_summary: '{non_code_analysis_results.get('project_summary', 'KEY NOT FOUND')[:100]}'...")
     print(f"   - resume_bullets count: {len(non_code_analysis_results.get('resume_bullets', []))}")
@@ -232,8 +230,6 @@ def build_summary(code_resume_bullets, non_code_summary,MAX_SENTENCES, project_n
     Returns:
         summary (str): Generated summary.
     """
-    # Debug output
-    print(f"\n🔍 DEBUG build_summary:")
     print(f"   - code_resume_bullets: {len(code_resume_bullets) if code_resume_bullets else 0} items")
     print(f"   - non_code_summary: '{non_code_summary[:100] if non_code_summary else 'EMPTY'}...'")
     print(f"   - project_name: {project_name}")

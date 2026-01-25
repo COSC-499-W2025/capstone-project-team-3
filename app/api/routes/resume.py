@@ -128,10 +128,10 @@ def compile_pdf(tex: str) -> bytes:
     tex_path = os.path.join(build_dir, f"{basename}.tex")
     pdf_path = os.path.join(build_dir, f"{basename}.pdf")
 
-    with open(tex_path, "w", encoding="utf-8") as f:
-        f.write(tex)
-
     try:
+        with open(tex_path, "w", encoding="utf-8") as f:
+            f.write(tex)
+
         proc = subprocess.run(
             ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
             cwd=build_dir,
@@ -147,6 +147,9 @@ def compile_pdf(tex: str) -> bytes:
                 output=proc.stdout,
                 stderr=proc.stderr,
             )
+
+        with open(pdf_path, "rb") as f:
+            return f.read()
 
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "LaTeX compilation timed out.")
@@ -166,14 +169,8 @@ def compile_pdf(tex: str) -> bytes:
                 "stderr": (e.stderr or b"").decode(errors="ignore")[-1500:],
             },
         )
-
-    with open(pdf_path, "rb") as f:
-        pdf_bytes = f.read()
-
-    # Optional cleanup (recommended)
-    shutil.rmtree(build_dir, ignore_errors=True)
-
-    return pdf_bytes
+    finally:
+        shutil.rmtree(build_dir, ignore_errors=True)
 
 def get_or_compile_pdf(tex: str) -> bytes:
     """Return a cached PDF for the given LaTeX source, compiling and caching it if necessary."""

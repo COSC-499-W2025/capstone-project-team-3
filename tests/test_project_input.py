@@ -446,3 +446,15 @@ def test_find_similar_project_and_update_integration(tmp_path):
     assert project_name == "TestProject"
     assert similarity > 20.0  # Should be ~33%
     assert similarity < 50.0
+
+def test_find_similar_project_and_update_default_threshold():
+    """Test that the default threshold is 70%."""
+    from app.utils.scan_utils import find_similar_project_and_update
+    import inspect
+    
+    # Get the function signature
+    sig = inspect.signature(find_similar_project_and_update)
+    default_threshold = sig.parameters['threshold'].default
+    
+    # Verify default is 70%
+    assert default_threshold == 70.0

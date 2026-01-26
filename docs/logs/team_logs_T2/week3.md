@@ -20,6 +20,7 @@
   - Working on fixing Milestone-1 feedback
   - Implementing portfolio generation API endpoints
   - Fixing encoding issues for file parsing with special characters
+  - Peer Testing Preparation
   
 - **Associated project board tasks for this week:**
   - Non Code Analysis Troubleshooting #512
@@ -37,6 +38,8 @@
   - Fixed Resume Bullets & Suppressed Terminal Warnings – #526
   - Fixed Test Data Stored in Database – #532
   - Optimized PDF Compilation & Removed Redundancy – #531
+  - Fix Failing tests - #460
+  - User Preference Return Troubleshoot - #513
 
 ---
 
@@ -70,7 +73,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
 | [#505, #506, #522, #488] | API endpoint for user preferences, Testing of user preference API endpoint , Logic for Feature 21 and 22 for M2 ,  Investigate and fix Docker pipeline failures   | @PaintedW0lf | 
-| [#460] | Fix Failing tests  | @abstractafua | 
+| [#460, #534] | Fix Failing tests, Troubleshoot user preference return | @abstractafua | 
 | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
 | [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |

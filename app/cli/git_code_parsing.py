@@ -105,9 +105,21 @@ def run_git_parsing_from_files(
         )
         return "[]"
     
-    author_identifier = github_user or author_email
-    source = "github_user" if github_user else "author_email"
-    print(f"[git-analysis] Using author identifier ({source}): '{author_identifier}'")
+    author_identifiers = []
+    for ident in (author_email, github_user):
+        if ident and ident not in author_identifiers:
+            author_identifiers.append(ident)
+
+    selected_identifiers = author_identifiers
+    if len(author_identifiers) > 1:
+        print(
+            "[git-analysis] Using author identifiers: "
+            f"{', '.join(author_identifiers)}"
+        )
+
+    if len(selected_identifiers) == 1:
+        source = "author_email" if selected_identifiers[0] == author_email else "github_user"
+        print(f"[git-analysis] Using author identifier ({source}): '{selected_identifiers[0]}'")
 
 
     # 2) Group files by repo root to support nested repositories
@@ -131,7 +143,7 @@ def run_git_parsing_from_files(
         # 4) Call commit extraction filtered by this author
         repo_json = extract_code_commit_content_by_author(
             path=repo_root,
-            author=author_identifier,
+            author=selected_identifiers,
             include_merges=include_merges,
             max_commits=max_commits,
         )

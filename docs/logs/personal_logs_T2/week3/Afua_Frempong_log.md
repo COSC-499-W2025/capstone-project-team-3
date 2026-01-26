@@ -27,7 +27,7 @@
 ### Associated Project Board Tasks
 | Task/Issue ID | Title                      | Status     |
 |---------------|----------------------------|------------|
-| #513      | Troubleshoot User Preference Return | In-Progress |
+| #513      | Troubleshoot User Preference Return | Completed |
 | #459 | Customize and save information about a portfolio showcase project | In-Progress
 | #460 | Fix Failing tests | Completed
 
@@ -38,9 +38,9 @@
 ### Progress Summary
 - **Completed this week:**  
 - Fix failing Tests 
+- Task/fix/user preference return 
 
-- **In Progress this week:**  
-  - User Preference Return Troubleshoot 
+- **In Progress this week:**   
   - FR 27: Customize and save information about a portfolio showcase project
   - Update DB to include PORTFOLIO Table 
 

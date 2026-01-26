@@ -1,9 +1,20 @@
 import datetime
+import pytest
 from app.data.db import get_connection
 from app.utils.delete_insights_utils import (
 	get_projects,
 	delete_project_by_signature,
 )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def isolated_db(tmp_path, monkeypatch):
+	"""Use a per-test temporary SQLite DB so schema/data don't touch the real DB."""
+	from app.data import db as dbmod
+	test_db = tmp_path / "delete_insights.sqlite3"
+	monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+	dbmod.init_db()
+	yield
 
 
 def _insert_project(project_signature: str, name: str):

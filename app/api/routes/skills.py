@@ -74,3 +74,44 @@ def get_frequent_skills(limit: Optional[int] = Query(10, ge=1, le=50)):
 
     conn.close()
     return skills
+
+
+@router.get("/skills/chronological", response_model=List[Dict[str, Any]])
+def get_chronological_skills(limit: Optional[int] = Query(10, ge=1, le=50)):
+    """
+    Return skills ordered by most recent usage (based on project last_modified date).
+    
+    Args:
+        limit: Number of skills to return (default: 10, max: 50)
+    
+    Returns:
+        List of skills sorted by most recent usage with last used date
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Query to get skills ordered by most recent usage
+    cursor.execute("""
+        SELECT 
+            s.skill,
+            MAX(p.last_modified) as latest_use,
+            s.source,
+            COUNT(DISTINCT s.project_id) as frequency
+        FROM SKILL_ANALYSIS s
+        JOIN PROJECT p ON s.project_id = p.project_signature
+        GROUP BY s.skill, s.source
+        ORDER BY latest_use DESC, s.skill ASC
+        LIMIT ?
+    """, (limit,))
+
+    skills = []
+    for skill, latest_use, source, frequency in cursor.fetchall():
+        skills.append({
+            "skill": skill,
+            "latest_use": latest_use,
+            "source": source,
+            "frequency": frequency
+        })
+
+    conn.close()
+    return skills

@@ -16,6 +16,7 @@ from app.api.routes.get_upload_id import router as upload_resolver_router
 from app.api.routes.resume import router as resume_router
 from app.api.routes.skills import router as skills_router
 from app.api.routes.projects import router as projects_router
+from app.api.routes.portfolio import router as portfolio_router
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
@@ -52,6 +53,7 @@ app.include_router(privacy_consent_router, prefix="/api")
 app.include_router(resume_router)
 app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(portfolio_router, prefix="/api")
 
 def display_startup_info():
     """Display startup information including API key status."""
@@ -250,7 +252,7 @@ def main():
                                 except Exception as e:
                                     print(f"⚠️ AI non-code analysis failed: {e}")
                                     print("🔄 Falling back to local non-code analysis...")
-                                    non_code_analysis_results = analyze_project_clean(parsed_non_code, email=email)
+                                    non_code_analysis_results = analyze_project_clean(parsed_non_code)
                                  # --- NON-CODE ANALYSIS (AI) ---
 
                                 try:
@@ -282,10 +284,12 @@ def main():
                         
                         try:
                             # Run non-3rd party analysis (no LLM) using parsed_non_code with user preferences
-                            non_code_local_results = analyze_project_clean(parsed_non_code, email=email)
+                            non_code_local_results = analyze_project_clean(parsed_non_code)
                             print(f"✅ Non Code Analysis completed successfully!")
                         except Exception as e:
                             print(f"⚠️ Non Code Local analysis failed: {e}")
+                            import traceback
+                            traceback.print_exc()
                             non_code_local_results = {}
                         
                         try:

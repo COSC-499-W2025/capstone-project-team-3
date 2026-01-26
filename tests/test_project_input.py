@@ -1,3 +1,4 @@
+import pytest
 from app.utils.scan_utils import (
     run_scan_flow,
     scan_project_files,
@@ -14,6 +15,18 @@ from pathlib import Path
 from unittest.mock import patch
 from datetime import datetime
 from app.data.db import get_connection
+
+
+@pytest.fixture(scope="function", autouse=True)
+def isolated_db(tmp_path, monkeypatch):
+    """Route all DB calls in this test file to a per-test SQLite file.
+    Ensures schema creation and writes do not affect the app's real database.
+    """
+    from app.data import db as dbmod
+    test_db = tmp_path / "project_input.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    yield
 
 def test_scan_project_files_excludes_patterns(tmp_path):
     """Test that files matching exclude patterns are not returned."""

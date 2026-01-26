@@ -175,20 +175,39 @@ def compile_pdf(tex: str) -> bytes:
 def get_or_compile_pdf(tex: str) -> bytes:
     """Return a cached PDF for the given LaTeX source, compiling and caching it if necessary."""
     h = tex_hash(tex)
-    pdf_path = os.path.join(PDF_CACHE_DIR, f"{h}.pdf")
 
-    # Return cached PDF if it already exists
-    if os.path.exists(pdf_path):
+    # Validate hash: must be 64 lowercase hex chars (sha256 hexdigest)
+    if not isinstance(h, str) or len(h) != 64 or not all(c in "0123456789abcdef" for c in h):
+        raise HTTPException(400, "Invalid cache key")
+
+    # Build safe cache path and ensure it stays within the cache dir
+    pdf_path = os.path.join(PDF_CACHE_DIR, f"{h}.pdf")
+    base = os.path.abspath(PDF_CACHE_DIR)
+    target = os.path.abspath(pdf_path)
+    if os.path.commonpath([base, target]) != base:
+        raise HTTPException(400, "Invalid cache path")
+
+    # Return cached PDF if it already exists and is not a symlink
+    if os.path.exists(pdf_path) and not os.path.islink(pdf_path):
         with open(pdf_path, "rb") as f:
             return f.read()
 
     # Compile the PDF since it is not cached
     pdf_bytes = compile_pdf(tex)
 
-    # Cache the compiled PDF for future requests
-    with open(pdf_path, "wb") as f:
+    # Atomic write to avoid partial files; avoid writing through symlinks
+    tmp_path = pdf_path + ".tmp"
+    with open(tmp_path, "wb") as f:
         f.write(pdf_bytes)
 
+    # If a symlink exists at the final path, remove it before replace
+    if os.path.islink(pdf_path):
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+    os.replace(tmp_path, pdf_path)
     return pdf_bytes
         
 @router.get("/resume/export/pdf")

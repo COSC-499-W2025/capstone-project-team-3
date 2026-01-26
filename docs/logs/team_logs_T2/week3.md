@@ -20,6 +20,7 @@
   - Working on fixing Milestone-1 feedback
   - Implementing portfolio generation API endpoints
   - Fixing encoding issues for file parsing with special characters
+  - Peer Testing Preparation
   
 - **Associated project board tasks for this week:**
   - Non Code Analysis Troubleshooting #512
@@ -34,6 +35,8 @@
   - Fixed Resume Bullets & Suppressed Terminal Warnings – #526
   - Fixed Test Data Stored in Database – #532
   - Optimized PDF Compilation & Removed Redundancy – #531
+  - Fix Failing tests - #460
+  - User Preference Return Troubleshoot - #513
 
 ---
 

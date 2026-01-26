@@ -29,7 +29,12 @@
   - Add GET API End point for retrieving frequency sorted skills. #499  
   - Portfolio generation POST API endpoint #508
   - Fix failing test with hardcoded year #503
-  - Encoding error when parsing files with special characters #536
+  - Encoding error when parsing files with special characters #536  - Added Missing Import for Project – #495
+  - Updates to CI/CD Workflow – #502
+  - Fixed Resume Bullets & Suppressed Terminal Warnings – #526
+  - Fixed Test Data Stored in Database – #532
+  - Optimized PDF Compilation & Removed Redundancy – #531
+
 ---
 
 ## Burnup Chart
@@ -66,7 +71,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
 | [#490] | API endpoint for GET /projects/{signature} | @kjassani |
-|[#476, #477, #481, #473, #475, #478, 484]| Update generate_resume.py to include project_ids in some methods,	Add resume endpoints,	Create tests for code analysis part 1, Fix failing tests for main and path_utils, Create endpoint for resume generation - Tailored,	Allow user to download tailored resume, Create endpoint for GET /projects | @dabby04
+| #484, #517, #530 | Create endpoint for GET /projects, Fix Missing Resume Bullets, Test data being stored in main database | @dabby04 |
+
 
 ## In Progress Tasks
 
@@ -78,6 +84,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
 |[#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
+| [#479](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/479)|Optimization and Refactoring for Resume generation and download|@dabby04|
 
 ---
 

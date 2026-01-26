@@ -31,10 +31,10 @@
 |----------|-------|--------|
 | [#498](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/498) | GET API for all skills | ✅ Closed |
 | [#499](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/499) | GET API for frequency-sorted skills | ✅ Closed |
-| [#511](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/511) | GET API for chronologically-sorted skills | 🔄 Awaiting Reviews |
-| [#512](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/512) |Non Code Analysis Troubleshooting  | 🔄 Awaiting Reviews |
+| [#511](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/511) | GET API for chronologically-sorted skills |  ✅ Closed |
+| [#512](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/512) |Non Code Analysis Troubleshooting  | ✅ Closed |
 | [#528](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/528) |Troubleshoot user preferences error
-  | 🔄 Awaiting Reviews |
+  | ✅ Closed |
 
 ---
 

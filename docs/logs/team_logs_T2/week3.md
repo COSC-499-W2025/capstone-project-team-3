@@ -87,7 +87,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
   - Bugfix/ improvements for Milestone 1
   - Planning for remaining Milestone 2 requirements
 
-### Jan 24, 2026 – Team Meeting (All members present)
+### Jan 25, 2026 – Team Meeting (All members present)
 - Peer Testing:
   - Task List
   - Script

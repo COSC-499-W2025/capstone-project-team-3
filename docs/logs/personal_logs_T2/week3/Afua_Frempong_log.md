@@ -5,7 +5,7 @@
 ## Entry for Jan 19th, 2025 → Jan 26th, 2025
 
 ### Type of Tasks Worked On
-![Personal Log](../../../docs/screenshots/Week 3 Personal Log T2_Afua.png)
+![Personal Log](<../../../docs/screenshots/Week 3 Personal Log T2_Afua.png>)
 ---
 
 ### Recap of Weekly Goals

@@ -43,8 +43,8 @@ def test_run_git_parsing_returns_empty_when_no_user_email(tmp_path, monkeypatch)
 
 def test_run_git_parsing_uses_email_and_calls_extraction(tmp_path, monkeypatch):
     """
-    When USER_PREFERENCES has an email, run_git_parsing_from_files:
-    - uses that email as the author filter
+    When USER_PREFERENCES has both github_user and email, run_git_parsing_from_files:
+    - uses both identifiers for author matching
     - calls extract_code_commit_content_by_author
     - returns its JSON result.
     """
@@ -104,7 +104,7 @@ def test_run_git_parsing_uses_email_and_calls_extraction(tmp_path, monkeypatch):
         # extract_code_commit_content_by_author called with the correct args
         mock_extract.assert_called_once_with(
             path=repo_root,
-            author="testuser",
+            author=["testuser@example.com", "testuser"],
             include_merges=False,
             max_commits=10,
         )
@@ -157,7 +157,7 @@ def test_run_git_parsing_uses_email_when_username_missing(tmp_path, monkeypatch,
         mock_collab.assert_called_once_with(repo_root)
         mock_extract.assert_called_once_with(
             path=repo_root,
-            author="testuser@example.com",
+            author=["testuser@example.com"],
             include_merges=False,
             max_commits=10,
         )
@@ -194,7 +194,7 @@ def test_run_git_parsing_uses_username_when_email_missing(tmp_path, monkeypatch,
         mock_collab.assert_called_once_with(repo_root)
         mock_extract.assert_called_once_with(
             path=repo_root,
-            author="testuser",
+            author=["testuser"],
             include_merges=False,
             max_commits=10,
         )
@@ -304,7 +304,7 @@ def test_run_git_parsing_skips_non_repo_then_finds_repo(tmp_path, monkeypatch):
         assert mock_get_repo.call_count == 2
         mock_extract.assert_called_once_with(
             path=repo_root,
-            author="testuser",
+            author=["testuser"],
             include_merges=False,
             max_commits=10,
         )
@@ -338,7 +338,7 @@ def test_run_git_parsing_resolves_nested_path_to_repo_root(tmp_path, monkeypatch
         mock_get_repo.assert_called_once_with(nested_file)
         mock_extract.assert_called_once_with(
             path=repo_root,
-            author="testuser",
+            author=["testuser"],
             include_merges=False,
             max_commits=10,
         )

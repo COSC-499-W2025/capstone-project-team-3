@@ -53,9 +53,12 @@ def get_portfolio_resume_insights():
         })
 
     # Top ranked projects (by rank, Handle None, limit to top 5)
-        def _rank_key(proj):
-            r = proj.get("rank")
-            return r if isinstance(r, int) else 0
+    def _rank_key(proj):
+        r = proj.get("rank")
+        try:
+            return float(r)
+        except (TypeError, ValueError):
+            return 0.0
     top_projects = sorted(projects, key=_rank_key, reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
@@ -72,7 +75,7 @@ def get_portfolio_resume_insights():
     bullets = []
     for row in cur.fetchall():
         project_name, summary_text = row
-    try:
+        try:
             # Try to parse as JSON first (for arrays)
             parsed = json.loads(summary_text)
             if isinstance(parsed, list):
@@ -81,7 +84,7 @@ def get_portfolio_resume_insights():
             else:
                 # store as plain string for single-summary entries
                 bullets.append(summary_text)
-    except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError):
             bullets.append(summary_text)
 
 

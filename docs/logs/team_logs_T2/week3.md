@@ -26,6 +26,9 @@
   - Troubleshoot user preferences error #528
   - Add GET API Endpoint for retrieving skills in chronological order. #511
   - Add GET API Endpoint for retrieving all skills. #498
+  - Add GET API End point for retrieving frequency sorted skills. #499
+  - Improve Git Author Matching #535
+  - Multi-repo Git parsing + nested repo aggregation #515
   - Add GET API End point for retrieving frequency sorted skills. #499  
   - Portfolio generation POST API endpoint #508
   - Fix failing test with hardcoded year #503
@@ -70,9 +73,8 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#460] | Fix Failing tests  | @abstractafua | 
 | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
-| [#490] | API endpoint for GET /projects/{signature} | @kjassani |
-| #484, #517, #530 | Create endpoint for GET /projects, Fix Missing Resume Bullets, Test data being stored in main database | @dabby04 |
-
+| [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
+|[#476, #477, #481, #473, #475, #478, 484]| Update generate_resume.py to include project_ids in some methods,	Add resume endpoints,	Create tests for code analysis part 1, Fix failing tests for main and path_utils, Create endpoint for resume generation - Tailored,	Allow user to download tailored resume, Create endpoint for GET /projects | @dabby04
 
 ## In Progress Tasks
 
@@ -93,9 +95,16 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 ### Jan 22, 2026 – Team Meeting (All members present)
 - Initial discussions on:
   - Figma design for UI
+  - Bugfix/ improvements for Milestone 1
   - Planning for remaining Milestone 2 requirements
   - Portfolio display design demo by @KarimKhalil33
   - Preparation for upcoming peer testing sessions
+
+### Jan 25, 2026 – Team Meeting (All members present)
+- Peer Testing:
+  - Task List
+  - Script
+  - Google forms for feedback
 
 ---
 

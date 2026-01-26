@@ -14,8 +14,7 @@ services:
     ports:
       - 8000:8000
     volumes:
-    # - ./app/data:/app/app/data DB persistence removed for Development 
-    # - ./:/app:cached # bind mount the repository into the container so changes are immediate for Development
+      - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
     environment:
       - PROMPT_ROOT=1

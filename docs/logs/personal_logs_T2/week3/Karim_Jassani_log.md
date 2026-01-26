@@ -30,6 +30,11 @@
 
 
 #### **[PR #539 - Improve Git author matching](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/539)** 
+
+**Update**: Closing this PR because its functionality has already been merged via PR #539. 
+
+Context: PR #535 introduced the nested Git repo support. While #535 was still open, I rebased PR #539 on top of PR #535 to continue development. As a result, PR #539 included all functionality from #535 in addition to its own changes. Since PR #539 was merged first, the changes from this PR are already present in main, making this PR redundant.
+
   - Unified GitHub noreply emails and real emails under a single author identity
   - Added normalization helpers to support multiple identifiers per author
   - Implemented parsing for GitHub noreply emails by extracting username component

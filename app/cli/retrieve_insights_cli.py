@@ -159,7 +159,7 @@ def display_specific_projects(project_signatures):
         print(f"\n{i}. 🗂️  {proj['name']}")
         print(f"   📅 Duration: {proj['duration']}")
         print(f"   📝 Summary: {proj['summary']}")
-        print(f"   🏆 Rank: {proj['rank']}")
+        print(f"   🏆 Score: {proj['rank']}")
         
         # Skills
         print(f"   🛠️  Skills ({len(proj['skills'])}):")

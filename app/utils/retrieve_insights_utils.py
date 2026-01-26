@@ -3,6 +3,22 @@ import json
 from app.data.db import get_connection
 
 
+def _normalize_authors(value):
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(a) for a in parsed if a is not None and str(a).strip()]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return [value] if value.strip() else []
+    if isinstance(value, (list, tuple, set)):
+        return [str(a) for a in value if a is not None and str(a).strip()]
+    return [str(value)]
+
+
 def get_portfolio_resume_insights():
     
     # Connect to the database
@@ -30,7 +46,7 @@ def get_portfolio_resume_insights():
         authors = []
         if "authors" in metrics:
             # If author is stored as metric
-            authors = [metrics["authors"]]
+            authors = _normalize_authors(metrics["authors"])
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))
@@ -53,9 +69,12 @@ def get_portfolio_resume_insights():
         })
 
     # Top ranked projects (by rank, Handle None, limit to top 5)
-        def _rank_key(proj):
-            r = proj.get("rank")
-            return r if isinstance(r, int) else 0
+    def _rank_key(proj):
+        r = proj.get("rank")
+        try:
+            return float(r)
+        except (TypeError, ValueError):
+            return 0.0
     top_projects = sorted(projects, key=_rank_key, reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
@@ -217,7 +236,7 @@ def get_projects_by_signatures(signatures: list):
         authors = []
         if "authors" in metrics:
             # If author is stored as metric
-            authors = [metrics["authors"]]
+            authors = _normalize_authors(metrics["authors"])
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))

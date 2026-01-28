@@ -1,0 +1,167 @@
+"""
+Tests for chronological_utils.py - ChronologicalManager utility class.
+"""
+
+import pytest
+import sqlite3
+from pathlib import Path
+from app.utils.chronological_utils import ChronologicalManager
+
+
+@pytest.fixture
+def temp_db(tmp_path):
+    """Create a temporary database with test projects."""
+    db_path = tmp_path / "test_chronology.db"
+    conn = sqlite3.connect(str(db_path))
+    cur = conn.cursor()
+    
+    # Create PROJECT table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS PROJECT (
+            project_signature TEXT PRIMARY KEY,
+            name TEXT,
+            path TEXT,
+            created_at TIMESTAMP,
+            last_modified TIMESTAMP
+        )
+    """)
+    
+    # Insert test projects
+    test_projects = [
+        ('proj1', 'Project One', '/path/to/proj1', '2024-01-15 10:00:00', '2024-06-20 15:30:00'),
+        ('proj2', 'Project Two', '/path/to/proj2', '2023-05-15T08:00:00', '2024-03-20T12:00:00'),
+        ('proj3', 'Project Three', '/path/to/proj3', '2024-12-01', '2025-01-15')
+    ]
+    
+    cur.executemany("""
+        INSERT INTO PROJECT (project_signature, name, path, created_at, last_modified)
+        VALUES (?, ?, ?, ?, ?)
+    """, test_projects)
+    
+    conn.commit()
+    conn.close()
+    
+    yield db_path
+    
+    if db_path.exists():
+        db_path.unlink()
+
+
+class TestChronologicalManager:
+    """Test ChronologicalManager utility class."""
+    
+    def test_initialization(self, temp_db):
+        """Test manager initialization with custom db path."""
+        manager = ChronologicalManager(db_path=temp_db)
+        assert manager.db_path == temp_db
+        assert manager.conn is not None
+        manager.close()
+    
+    def test_get_all_projects(self, temp_db):
+        """Test retrieving all projects from database."""
+        manager = ChronologicalManager(db_path=temp_db)
+        projects = manager.get_all_projects()
+        
+        assert len(projects) == 3
+        assert all('project_signature' in p for p in projects)
+        assert all('name' in p for p in projects)
+        assert all('created_at' in p for p in projects)
+        assert all('last_modified' in p for p in projects)
+        
+        # Verify projects are ordered by name
+        assert projects[0]['name'] == 'Project One'
+        assert projects[1]['name'] == 'Project Three'
+        assert projects[2]['name'] == 'Project Two'
+        
+        manager.close()
+    
+    def test_get_all_projects_empty_database(self, tmp_path):
+        """Test getting projects from empty database."""
+        db_path = tmp_path / "empty.db"
+        conn = sqlite3.connect(str(db_path))
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS PROJECT (
+                project_signature TEXT PRIMARY KEY,
+                name TEXT,
+                path TEXT,
+                created_at TIMESTAMP,
+                last_modified TIMESTAMP
+            )
+        """)
+        conn.commit()
+        conn.close()
+        
+        manager = ChronologicalManager(db_path=db_path)
+        projects = manager.get_all_projects()
+        
+        assert projects == []
+        manager.close()
+    
+    def test_update_project_dates(self, temp_db):
+        """Test updating project dates."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Update dates
+        manager.update_project_dates('proj1', '2024-02-01', '2024-07-01')
+        
+        # Verify update
+        project = manager.get_project_by_signature('proj1')
+        assert project['created_at'] == '2024-02-01'
+        assert project['last_modified'] == '2024-07-01'
+        
+        manager.close()
+    
+    def test_update_project_dates_with_timestamps(self, temp_db):
+        """Test updating dates with full timestamps."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        manager.update_project_dates('proj2', '2024-03-15 09:30:00', '2024-08-20 14:45:00')
+        
+        project = manager.get_project_by_signature('proj2')
+        assert '2024-03-15' in project['created_at']
+        assert '2024-08-20' in project['last_modified']
+        
+        manager.close()
+    
+    def test_get_project_by_signature(self, temp_db):
+        """Test getting a specific project by signature."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        project = manager.get_project_by_signature('proj2')
+        
+        assert project is not None
+        assert project['project_signature'] == 'proj2'
+        assert project['name'] == 'Project Two'
+        assert project['path'] == '/path/to/proj2'
+        assert '2023-05-15' in project['created_at']
+        assert '2024-03-20' in project['last_modified']
+        
+        manager.close()
+    
+    def test_get_project_by_signature_not_found(self, temp_db):
+        """Test getting a non-existent project."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        project = manager.get_project_by_signature('nonexistent_project')
+        assert project is None
+        
+        manager.close()
+    
+    def test_close_connection(self, temp_db):
+        """Test closing database connection."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Connection should be open
+        assert manager.conn is not None
+        
+        # Close connection
+        manager.close()
+        
+        # After closing, attempting to use connection should fail
+        with pytest.raises(sqlite3.ProgrammingError):
+            manager.conn.execute("SELECT 1")
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

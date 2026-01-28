@@ -450,10 +450,11 @@ def test_find_and_update_similar_project_integration(tmp_path):
     result = find_and_update_similar_project([sig1, sig3], threshold=20.0)
     
     assert result is not None
-    project_name, similarity = result
+    project_name, similarity, returned_sig = result
     assert project_name == "TestProject"
     assert similarity > 20.0  # Should be ~33%
     assert similarity < 50.0
+    assert returned_sig == project_sig  # Should return the existing project signature
 
 def test_find_and_update_similar_project_default_threshold():
     """Test that the default threshold is 70%."""

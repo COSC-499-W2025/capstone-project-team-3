@@ -1,3 +1,4 @@
+import pytest
 from app.utils.scan_utils import (
     run_scan_flow,
     scan_project_files,
@@ -14,6 +15,18 @@ from pathlib import Path
 from unittest.mock import patch
 from datetime import datetime
 from app.data.db import get_connection
+
+
+@pytest.fixture(scope="function", autouse=True)
+def isolated_db(tmp_path, monkeypatch):
+    """Route all DB calls in this test file to a per-test SQLite file.
+    Ensures schema creation and writes do not affect the app's real database.
+    """
+    from app.data import db as dbmod
+    test_db = tmp_path / "project_input.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    yield
 
 def test_scan_project_files_excludes_patterns(tmp_path):
     """Test that files matching exclude patterns are not returned."""
@@ -328,8 +341,9 @@ def test_run_scan_flow_with_real_timestamps(tmp_path):
     # Verify timestamps are not None and contain recent date
     assert stored_created is not None
     assert stored_modified is not None
-    assert "2025" in str(stored_created)  # Should be current year
-    assert "2025" in str(stored_modified)
+    current_year = str(datetime.now().year)
+    assert current_year in str(stored_created) 
+    assert current_year in str(stored_modified)
 
 def test_store_project_without_timestamps_uses_defaults(tmp_path):
     """Test that when no timestamps are provided, current time is used."""

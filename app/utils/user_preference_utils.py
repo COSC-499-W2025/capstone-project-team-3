@@ -24,7 +24,7 @@ class UserPreferenceStore:
             self.conn = sqlite3.connect(str(self.db_path))
     
     # Retrieve latest record of user preferences (Read from DB)
-    def get_latest_preferences(self,email):
+    def get_latest_preferences(self):
         """
         Retrieve the latest user preferences based on the most recent updated_at timestamp.
         """
@@ -33,11 +33,9 @@ class UserPreferenceStore:
             """
             SELECT name, email, github_user, education, industry, job_title
             FROM USER_PREFERENCES
-            WHERE email = ?
             ORDER BY updated_at DESC
             LIMIT 1
             """,
-            (email,)
         )
         row = cur.fetchone()
         if not row:
@@ -46,17 +44,20 @@ class UserPreferenceStore:
         return dict(zip(keys, row))
 
     # Save/Update user preferences (Write to DB)
-    def save_preferences(self, name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
+    def save_preferences(self, user_id: int,  name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
+        
         cur = self.conn.cursor()
+
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (name, email, github_user, education, industry, job_title)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title)
+            VALUES (?,?, ?, ?, ?, ?, ?)
             """,
-            ( name, email, github_user, education, industry, job_title),
-        )
+            (user_id, name, email, github_user, education, industry, job_title),
+            )
         self.conn.commit()
-    # Optimized static functions to get latest industry/job/education preferences without email lookup
+        
+    # Optimized static function to get user's latest industry,job & education preferences without email lookup
     @staticmethod
     def get_latest_preferences_no_email():
         store = UserPreferenceStore()
@@ -65,7 +66,6 @@ class UserPreferenceStore:
             """
             SELECT industry, job_title, education
             FROM USER_PREFERENCES
-            ORDER BY updated_at DESC
             LIMIT 1
             """
         )
@@ -76,6 +76,7 @@ class UserPreferenceStore:
         keys = ["industry", "job_title", "education"]
         return dict(zip(keys, row))
     
+    # Method to retrive user's name, email, education, industry, and job title
     @staticmethod
     def get_user_info():
         store = UserPreferenceStore()
@@ -89,6 +90,7 @@ class UserPreferenceStore:
             """
         )
         row = cur.fetchone()
+        store.close()
         if not row:
             return None
         keys = [ "name", "email", "education", "industry", "job_title"]

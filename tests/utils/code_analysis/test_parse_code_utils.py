@@ -2,6 +2,9 @@ import pytest
 from pathlib import Path
 from tree_sitter import Node 
 from unittest.mock import MagicMock, patch
+import tempfile
+import os
+import pytest
 from app.utils.code_analysis.parse_code_utils import (detect_language,
                                              count_lines_of_code,
                                              count_lines_of_documentation,
@@ -331,6 +334,55 @@ def test_parse_code_flow_basic_python(tmp_path, python_import_patterns):
     assert any(dep.startswith("app.utils") for dep in entry["dependencies_internal"]), "Internal dependency missing"
     assert "metrics" in entry and {"average_function_length", "comment_ratio"}.issubset(entry["metrics"].keys())
 
+
+def test_extract_contents_with_utf8_encoding(tmp_path):
+    """Test extract_contents successfully reads UTF-8 encoded files."""
+    file_path = tmp_path / "utf8_test.py"
+    content = "# Comment with UTF-8: café, naïve\nprint('Hello World')\n"
+    file_path.write_text(content, encoding='utf-8')
+    
+    extracted = extract_contents(file_path)
+    assert extracted == content
+    assert "café" in extracted
+
+def test_extract_contents_with_latin1_fallback(tmp_path):
+    """Test extract_contents falls back to latin-1 when UTF-8 fails."""
+    file_path = tmp_path / "latin1_test.py"
+    content = "# Comment with special chars\nprint('test')\n"
+    
+    # Write with latin-1 encoding
+    with open(file_path, 'w', encoding='latin-1') as f:
+        f.write(content)
+    
+    extracted = extract_contents(file_path)
+    assert "print('test')" in extracted
+    assert len(extracted) > 0
+
+def test_extract_contents_with_error_replacement():
+    """Test extract_contents uses error='replace' as final fallback."""
+    with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.py') as f:
+        # Create bytes that will cause encoding issues
+        f.write(b"print('hello')\n\x81\x82\nprint('world')\n")
+        temp_path = Path(f.name)
+    
+    try:
+        extracted = extract_contents(temp_path)
+        assert "print('hello')" in extracted
+        assert "print('world')" in extracted
+        assert len(extracted) > 0  # Should not be empty
+    finally:
+        os.unlink(temp_path)
+
+def test_count_lines_of_code_with_encoding_issues(tmp_path):
+    """Test count_lines_of_code handles encoding issues gracefully."""
+    file_path = tmp_path / "encoding_test.py"
+    
+    content = "# Comment with special chars\ndef function():\n    return 42\n"
+    with open(file_path, 'w', encoding='latin-1') as f:
+        f.write(content)
+    
+    count = count_lines_of_code(file_path)
+    assert count >= 0  # Should not crash and return a valid count
 
 def test_parse_code_flow_non_matching_top_level(tmp_path, python_import_patterns):
     """If provided top-level dirs don't match path segments, fallback to filename only."""

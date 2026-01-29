@@ -50,8 +50,22 @@ def lookup_past_insights():
             print("\n" + "-"*40 + "\n")
 
         print("🏆 Top Ranked Projects:\n")
-        for proj in portfolio["top_projects"]:
-            print(f"   🥇 {proj['name']} — ({proj['duration']}) \n ({proj['summary']})")
+        for i, proj in enumerate(portfolio["top_projects"], 1):
+                            skills_count = len(proj['skills'])
+                            rank_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}️⃣"
+                            print(f"   {rank_emoji} {proj['name']} — Score: {proj['rank']} — ({proj['duration']}) — {skills_count} skills")
+                            
+                            # Show summry of project
+                            if proj['summary']:
+                                print(f"      📝 Summary: {proj['summary']}")
+                                
+                            # Show a few key skills for top projects
+                            if proj['skills']:
+                                top_skills_preview = sorted(set(proj['skills']))[:5]
+                                skills_text = ", ".join(top_skills_preview)
+                                if len(proj['skills']) > 5:
+                                    skills_text += f" + {len(proj['skills']) - 5} more"
+                                print(f"      🛠️  Key skills: {skills_text}")
         print("\n📜 Chronological List of Projects:\n")
         for proj in portfolio["chronological"]:
             print(f"   ⏳ {proj['name']} — ({proj['duration']})")
@@ -77,6 +91,9 @@ def lookup_past_insights():
             for bullet in items:
                 print(f"   • {bullet}")
         print("\n" + "="*60)
+        
+        print("Download your resume in Latex/PDF format here:")
+        print("   → http://localhost:8000/resume")
     else:
         print("Skipping display of past insights.")
         return
@@ -156,7 +173,7 @@ def display_specific_projects(project_signatures):
         print(f"\n{i}. 🗂️  {proj['name']}")
         print(f"   📅 Duration: {proj['duration']}")
         print(f"   📝 Summary: {proj['summary']}")
-        print(f"   🏆 Rank: {proj['rank']}")
+        print(f"   🏆 Score: {proj['rank']}")
         
         # Skills
         print(f"   🛠️  Skills ({len(proj['skills'])}):")

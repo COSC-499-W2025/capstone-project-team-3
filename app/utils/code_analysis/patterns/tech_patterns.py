@@ -129,3 +129,109 @@ class TechnicalPatterns:
     DOC_EXTS = {".md"}
     TEST_EXTS = {"test_", "_test.py", ".test.py", ".test.js", ".test.ts", ".test.jsx", ".test.tsx",
                  ".spec.py", ".spec.js", ".spec.ts", ".spec.jsx", ".spec.tsx"}
+
+    # === USER PREFERENCE ENHANCEMENT PATTERNS ===
+    
+    # Industry-specific keyword priorities for enhanced relevance
+    # Higher priority keywords appear first in results and get better scoring
+    # "high" = directly relevant to core industry functions
+    # "medium" = supporting technologies and concepts
+    INDUSTRY_KEYWORD_PRIORITIES = {
+        "Software Engineering": {
+            "high": ["api", "rest", "microservices", "database", "server", "client", 
+                    "authentication", "backend", "frontend", "service", "endpoint"],
+            "medium": ["framework", "library", "component", "module", "interface", 
+                      "middleware", "integration", "deployment"]
+        },
+        "Data Science": {
+            "high": ["data", "analysis", "model", "dataset", "visualization", "pipeline", 
+                    "ml", "algorithm", "statistical", "prediction", "feature"],
+            "medium": ["pandas", "numpy", "jupyter", "sklearn", "analytics", "insights", 
+                      "regression", "classification", "clustering"]
+        },
+        "AI / Machine Learning": {
+            "high": ["model", "neural", "training", "algorithm", "prediction", 
+                    "classification", "regression", "optimization", "deep"],
+            "medium": ["tensorflow", "pytorch", "scikit", "learning", "ai", "mlops", 
+                      "hyperparameter", "feature", "ensemble"]
+        },
+        "Business": {
+            "high": ["analytics", "dashboard", "reporting", "metrics", "kpi", 
+                    "business", "revenue", "customer"],
+            "medium": ["intelligence", "crm", "erp", "workflow", "automation", "roi"]
+        },
+        "Healthcare": {
+            "high": ["medical", "clinical", "patient", "health", "treatment", "diagnosis"],
+            "medium": ["hipaa", "ehr", "emr", "telemedicine", "records"]
+        },
+        "Education": {
+            "high": ["learning", "educational", "student", "course", "curriculum", "assessment"],
+            "medium": ["lms", "e-learning", "mooc", "canvas", "moodle"]
+        }
+    }
+    
+    # Job title specific keyword priorities
+    # Keywords most commonly associated with specific job roles
+    # Used to emphasize role-relevant technical actions and concepts
+    JOB_KEYWORD_PRIORITIES = {
+        "software engineer": ["debug", "test", "refactor", "optimize", "implement", 
+                            "develop", "architecture", "scalable", "maintainable"],
+        "data scientist": ["analyze", "visualize", "model", "predict", "statistical", 
+                         "insight", "correlation", "hypothesis", "experiment"],
+        "devops engineer": ["deploy", "automate", "monitor", "pipeline", "infrastructure", 
+                          "container", "orchestration", "scaling", "reliability"],
+        "ml engineer": ["model", "deploy", "pipeline", "training", "optimization", 
+                       "mlops", "serving", "monitoring", "feature"],
+        "backend developer": ["api", "database", "server", "authentication", "security", 
+                            "performance", "scalability", "microservice"],
+        "frontend developer": ["responsive", "component", "state", "ui", "ux", 
+                             "accessibility", "performance", "optimization"]
+    }
+    
+    # Industry-specific resume enhancement terms
+    # Adjectives and qualifiers that strengthen resume language for specific industries
+    # Applied to existing achievements to make them more impactful and targeted
+    INDUSTRY_RESUME_ENHANCEMENTS = {
+        "software engineering": ["scalable", "robust", "efficient", "maintainable", 
+                               "production-ready", "high-performance", "distributed"],
+        "data science": ["insights", "data-driven", "predictive", "analytical", 
+                        "statistical", "evidence-based", "actionable"],
+        "ai / machine learning": ["intelligent", "automated", "predictive", "optimized", 
+                                "learning-based", "adaptive", "self-improving"]
+    }
+    
+    # Job-specific action verbs for resume enhancement
+    # Strong action verbs preferred by hiring managers for specific roles
+    # Used to replace generic verbs ("worked on" → "engineered") for better impact
+    JOB_ACTION_VERBS = {
+        "software engineer": ["engineered", "developed", "implemented", "architected", 
+                            "built", "designed", "optimized"],
+        "data scientist": ["analyzed", "modeled", "discovered", "predicted", "visualized", 
+                         "investigated", "derived"],
+        "devops engineer": ["automated", "deployed", "orchestrated", "streamlined", 
+                          "optimized", "scaled", "maintained"],
+        "ml engineer": ["trained", "deployed", "optimized", "automated", "scaled", 
+                       "monitored", "fine-tuned"]
+    }
+    
+    # Pattern priorities by domain for better relevance
+    # Reorders detected technical patterns to emphasize domain-relevant ones first
+    # Helps highlight the most important architectural/design patterns for each field
+    PATTERN_PRIORITIES = {
+        "software engineering": {
+            "design_patterns": ["Factory Pattern", "Observer Pattern", "Strategy Pattern", 
+                              "Singleton Pattern", "Repository Pattern"],
+            "architectural_patterns": ["RESTful API Architecture", "Microservices Architecture", 
+                                     "MVC Architecture", "Service-Oriented Architecture"],
+            "frameworks": ["React", "Express.js", "Spring", "Django", "Flask"]
+        },
+        "data science": {
+            "frameworks": ["Pandas", "NumPy", "Scikit-learn", "Matplotlib", "Jupyter"],
+            "architectural_patterns": ["Data Pipeline Architecture", "ETL Architecture", 
+                                     "Event-Driven Architecture"]
+        },
+        "ai / machine learning": {
+            "frameworks": ["TensorFlow", "PyTorch", "Keras", "Scikit-learn"],
+            "architectural_patterns": ["Model Serving Architecture", "ML Pipeline Architecture"]
+        }
+    }

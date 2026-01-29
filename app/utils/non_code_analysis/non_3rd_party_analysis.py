@@ -13,6 +13,10 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 from keybert import KeyBERT
+from app.utils.user_preference_utils import UserPreferenceStore
+from app.cli.user_preference_cli import UserPreferences
+from app.utils.non_code_analysis.keywords.domain_keywords import (
+    build_enhanced_keywords, get_mapped_industry)
 
 SPACY_AVAILABLE = True
 KEYBERT_AVAILABLE = True
@@ -389,21 +393,36 @@ def calculate_completeness_score(content: str, doc_type: str) -> int:
     completeness = int((found / len(patterns)) * 100)
     return min(max(completeness, 0), 100)
 
+
 def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Clean project-wide analysis:
-    - One high-level summary
-    - 4–5 project-level bullet points
-    - Combined skills across all successful files
-    - Document type frequencies (counts and contribution frequencies per type)
-    - Per-file document type and contribution frequency
+    Clean project-wide analysis with optional user preference integration.
+    
+    Args:
+        parsed_files: Dictionary containing parsed file data
     """
+    
+    
+    # Load user preferences if email provided (ONLY for keyword detection)
+    user_prefs = None
+    
+    try:
+            
+            user_prefs =  UserPreferenceStore.get_latest_preferences_no_email()
+            if user_prefs:
+                print(f"✅ Using preferences for enhanced keyword detection")
+                print(f"   Industry: {user_prefs.get('industry')}")
+                print(f"   Job Title: {user_prefs.get('job_title')}")
+    except Exception as e:
+            print(f"⚠️ Could not load preferences: {e}")
+    
+    
     # Handle both "files" and "parsed_files" keys for compatibility
     files = parsed_files.get("parsed_files") or parsed_files.get("files", [])
     
     if not files:
         return {
-            "project_summary": "",
+            "project_summary": " ",
             "resume_bullets": [],
             "skills": {
                 "technical_skills": [],
@@ -497,25 +516,41 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     else:
         doc_phrase = ", ".join(doc_phrases[:-1]) + " and " + doc_phrases[-1]
 
-    domain_keywords = {
-        "Software Engineering": ["software", "code", "api", "system", "development", "application"],
-        "Data Science": ["data", "analysis", "model", "dataset", "analytics", "visualization"],
-        "Business": ["business", "strategy", "market", "revenue", "customer", "sales"],
-        "Healthcare": ["health", "medical", "patient", "treatment", "clinical"],
-        "Education": ["education", "learning", "curriculum", "student", "course"],
-        "Research": ["research", "study", "experiment", "hypothesis", "findings"],
-        "Design": ["design", "ui", "ux", "prototype", "wireframe", "interface"],
-        "Project Management": ["project", "milestone", "deliverable", "timeline", "agile"],
-        "AI / Machine Learning": ["artificial intelligence", "ai", "machine learning", "model", "algorithm"],
-    }
+    
+    # Extract user preference values
+    user_industry = user_prefs.get('industry') if user_prefs else None
+    user_job_title = user_prefs.get('job_title') if user_prefs else None
+    
+    # Build enhanced keywords with user preferences
+    domain_keywords = build_enhanced_keywords(user_industry, user_job_title)
+    
+    # Map CLI industry to internal domain name
+    mapped_user_industry = get_mapped_industry(user_industry) if user_industry else None
+    
+    print(f"🔍 User Industry (CLI): {user_industry}")
+    print(f"🔍 Mapped Domain: {mapped_user_industry}")
+    print(f"🔍 Job Title: {user_job_title}")
 
-    detected_domain = None
-    max_score = 0
+    # Enhanced domain detection with user preference boost
+    detected_domains = {}
     for domain, kws in domain_keywords.items():
         score = sum(1 for kw in kws if kw in project_content_lower)
-        if score > max_score:
-            max_score = score
-            detected_domain = domain
+        
+        # Apply 1.5x boost if domain matches user's mapped industry
+        original_score = score
+        if mapped_user_industry and domain == mapped_user_industry:
+            score = int(score * 1.5)
+            print(f"🎯 BOOST APPLIED: {domain} ({original_score} → {score})")
+        
+        if score > 0:
+            detected_domains[domain] = score
+            print(f"   Domain '{domain}': score = {score}")
+
+    # Find highest scoring domain
+    detected_domain = None
+    if detected_domains:
+        detected_domain = max(detected_domains.items(), key=lambda x: x[1])[0]
+        print(f"✅ Detected Domain: {detected_domain}")
 
     has_architecture = any(w in project_content_lower for w in ["architecture", "design", "microservice", "event-driven"])
     has_requirements = any(w in project_content_lower for w in ["requirement", "requirements", "specification", "non-functional"])
@@ -525,10 +560,17 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
     )
     has_risks_or_testing = any(w in project_content_lower for w in ["risk", "mitigation", "testing", "performance", "latency", "uptime"])
 
+    # Enhanced project summary with user context
     summary_parts = []
     summary_parts.append(f"Across this project, the user created {doc_phrase}.")
+    
+    # Add industry-aligned language if user preferences match detected domain
     if detected_domain:
-        summary_parts.append(f"The documentation is primarily in the {detected_domain} domain.")
+        if mapped_user_industry and detected_domain == mapped_user_industry:
+            summary_parts.append(f"The documentation is primarily in the {detected_domain} domain, aligning with their {user_industry} background.")
+        else:
+            summary_parts.append(f"The documentation is primarily in the {detected_domain} domain.")
+    
     if has_architecture:
         summary_parts.append("It describes the system architecture and key design decisions.")
     if has_requirements:
@@ -537,17 +579,39 @@ def analyze_project_clean(parsed_files: Dict[str, Any]) -> Dict[str, Any]:
         summary_parts.append("It outlines parsing, analysis, and NLP-driven capabilities for working with non-code artifacts.")
     if has_risks_or_testing:
         summary_parts.append("It also discusses risks, testing, and reliability or performance considerations.")
+    
     if len(summary_parts) == 1:
         summary_parts.append("The documents collectively describe the goals, behaviour, and constraints of the project.")
+    
     final_summary = " ".join(part.strip() for part in summary_parts)
 
+    # Enhanced resume bullets with user context
     bullets: List[str] = []
+    
+    # Check if user has senior/leadership role
+    is_senior_role = False
+    is_analyst_role = False
+    if user_job_title:
+        job_lower = user_job_title.lower()
+        is_senior_role = any(role in job_lower for role in ["architect", "senior", "lead", "principal", "staff"])
+        is_analyst_role = any(role in job_lower for role in ["analyst", "manager", "product"])
+        print(f"🎯 Job Title Analysis: Senior={is_senior_role}, Analyst={is_analyst_role}")
+    
     if has_architecture:
-        bullets.append("Designed or documented the system architecture and overall platform structure.")
+        if is_senior_role:
+            bullets.append("Led system architecture design and documented overall platform structure with technical rationale.")
+        else:
+            bullets.append("Designed or documented the system architecture and overall platform structure.")
+    
     if has_requirements:
-        bullets.append("Specified functional and non-functional requirements for how the platform should behave.")
+        if is_analyst_role:
+            bullets.append("Analyzed and specified comprehensive functional and non-functional requirements for platform behavior.")
+        else:
+            bullets.append("Specified functional and non-functional requirements for how the platform should behave.")
+    
     if has_nlp_or_parsing:
         bullets.append("Outlined parsing and NLP-based analysis of non-code artifacts to extract skills and contributions.")
+    
     if has_risks_or_testing:
         bullets.append("Identified key risks, mitigation strategies, and testing or performance considerations.")
 

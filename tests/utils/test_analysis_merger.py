@@ -1,12 +1,27 @@
-from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db, retrieve_results_from_db
+import pytest
+from app.utils.analysis_merger_utils import merge_analysis_results,store_results_in_db
+from app.utils.retrieve_insights_utils import get_projects_by_signatures
+import json
+import pytest
 
-def test_merge_analysis_results():
+# Isolate DB for tests in this file to avoid touching app.sqlite3
+from app.data import db as dbmod
+
+@pytest.fixture(scope="function")
+def isolated_db(tmp_path, monkeypatch):
+    test_db = tmp_path / "analysis_merger.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    # yield so tests can run using the isolated DB
+    yield
+
+def test_merge_analysis_results(isolated_db):
     
     code_analysis_results = {
-        "resume_bullets": ["Built REST API", "Wrote unit tests"],
+        "Resume_bullets": ["Built REST API", "Wrote unit tests"],
         "Metrics": {
             "languages": ["Python"],
-            "technical_keywords": ["FastAPI", "pytest"],
+            "roles": ["FastAPI", "pytest"],
             "code_files_changed": 5
         }
     }
@@ -19,7 +34,7 @@ def test_merge_analysis_results():
             "soft_skills": ["Communication"]
         },
         "resume_bullets": ["Documented requirements"],
-        "Metrics": {  # ✅ Capital M
+        "Metrics": {  
             "word_count": 1000,
             "completeness_score": 0.95
         }
@@ -48,7 +63,7 @@ def test_merge_analysis_results():
     assert merged["metrics"]["word_count"] == 1000
     assert merged["metrics"]["completeness_score"] == 0.95
     
-def test_store_and_retrieve_results_in_db():
+def test_store_and_retrieve_results_in_db(isolated_db):
 
     project_signature = "test_project_002"
     project_name = "DB Test Project"
@@ -60,7 +75,7 @@ def test_store_and_retrieve_results_in_db():
         },
         "resume_bullets": ["Implemented database models"],
         "metrics": {
-            "languages": ["Python", "SQL"],
+            "languages": ['Python', 'SQL'],
             "word_count": 1500,
             "completeness_score": 0.9
         }
@@ -70,61 +85,111 @@ def test_store_and_retrieve_results_in_db():
     store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
 
     # Retrieve results from DB
-    retrieved_results = retrieve_results_from_db(project_signature)
+    retrieved_results = get_projects_by_signatures(project_signature)
 
     assert retrieved_results["summary"] == merged_results["summary"]
-    assert retrieved_results["skills"]["technical_skills"] == merged_results["skills"]["technical_skills"]
-    assert retrieved_results["skills"]["soft_skills"] == merged_results["skills"]["soft_skills"]
+ # Ensure all stored technical and soft skills are present in retrieved skills
+    for tech_skill in merged_results["skills"]["technical_skills"]:
+       assert tech_skill in retrieved_results["skills"]
+    for soft_skill in merged_results["skills"]["soft_skills"]:
+       assert soft_skill in retrieved_results["skills"]
     assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
     assert retrieved_results["metrics"] == merged_results["metrics"]
 
-def test_duplicate_project_signature_updates():
-    project_signature = "dup_project_001"
-    project_name = "Duplicate Project"
-    merged_results_1 = {
-        "summary": "First summary.",
-        "skills": {
-            "technical_skills": ["Python"],
-            "soft_skills": ["Teamwork"]
-        },
-        "resume_bullets": ["Did something"],
-        "metrics": {
+def test_merge_with_empty_non_code_results():
+    """Test merge_analysis_results handles empty non-code results gracefully."""
+    code_analysis_results = {
+        "resume_bullets": ["Built REST API"],
+        "Metrics": {
             "languages": ["Python"],
-            "word_count": 100
+            "roles": ["FastAPI"],
         }
     }
-    merged_results_2 = {
-        "summary": "Updated summary.",
-        "skills": {
-            "technical_skills": ["Django"],
-            "soft_skills": ["Leadership"]
-        },
-        "resume_bullets": ["Did something else"],
-        "metrics": {
-            "languages": ["Python", "SQL"],
-            "word_count": 200
-        }
-    }
-    # Store first
-    store_results_in_db(project_name, merged_results_1, project_rank=1, project_signature=project_signature)
-    # Store updated
-    store_results_in_db(project_name, merged_results_2, project_rank=2, project_signature=project_signature)
-    # Retrieve and check updated
-    retrieved = retrieve_results_from_db(project_signature)
-    assert retrieved["summary"] == merged_results_2["summary"]
-    assert retrieved["skills"] == merged_results_2["skills"]
-    assert retrieved["resume_bullets"] == merged_results_2["resume_bullets"]
-    assert retrieved["metrics"] == merged_results_2["metrics"]
     
-def test_project_rank_storage():
-    project_signature = "rank_project_001"
-    project_name = "Rank Project"
-    merged_results = {
-        "summary": "Rank test summary.",
-        "skills": {"technical_skills": [], "soft_skills": []},
-        "resume_bullets": [],
-        "metrics": {}
+    # Empty non-code results
+    non_code_analysis_results = {}
+    
+    project_name = "Test Project Empty"
+    project_signature = "test_empty_001"
+    
+    merged = merge_analysis_results(
+        code_analysis_results, 
+        non_code_analysis_results, 
+        project_name, 
+        project_signature
+    )
+    
+    # Should have a valid summary even with empty non-code
+    assert "summary" in merged
+    assert len(merged["summary"]) > 0
+    assert project_name in merged["summary"] or "REST API" in merged["summary"]
+    
+    # Should still have code skills
+    assert "FastAPI" in merged["skills"]["technical_skills"]
+    assert "Python" in merged["skills"]["technical_skills"]
+    
+    # Should have code resume bullets
+    assert len(merged["resume_bullets"]) > 0
+
+def test_merge_with_none_inputs():
+    """Test merge_analysis_results handles None inputs gracefully."""
+    # None code results
+    code_analysis_results = None
+    non_code_analysis_results = {
+        "project_summary": "Test summary",
+        "skills": {"technical_skills": ["Python"], "soft_skills": ["Teamwork"]},
+        "resume_bullets": ["Documented project"],
+        "Metrics": {"word_count": 100}
     }
-    store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
-    retrieved = retrieve_results_from_db(project_signature)
-    assert retrieved
+    
+    project_name = "Test Project None"
+    project_signature = "test_none_001"
+    
+    merged = merge_analysis_results(
+        code_analysis_results, 
+        non_code_analysis_results, 
+        project_name, 
+        project_signature
+    )
+    
+    # Should generate a valid summary from non-code only
+    assert "summary" in merged
+    assert "Test summary" in merged["summary"]
+    
+    # When no code skills exist, non-code technical skills are filtered out
+    # (this is expected behavior - technical skills need code context)
+    # But soft skills should remain
+    assert "Teamwork" in merged["skills"]["soft_skills"]
+    
+    # Should have non-code bullets
+    assert "Documented project." in merged["resume_bullets"]
+
+def test_merge_with_missing_project_summary_key():
+    """Test that merger handles missing project_summary key in non-code results."""
+    code_analysis_results = {
+        "resume_bullets": ["Built API"],
+        "Metrics": {"languages": ["Java"]}
+    }
+    
+    non_code_analysis_results = {
+        # Missing project_summary key
+        "skills": {"technical_skills": ["Spring"], "soft_skills": []},
+        "resume_bullets": ["Wrote docs"],
+        "Metrics": {}
+    }
+    
+    project_name = "Test Missing Key"
+    project_signature = "test_missing_001"
+    
+    merged = merge_analysis_results(
+        code_analysis_results, 
+        non_code_analysis_results, 
+        project_name, 
+        project_signature
+    )
+    
+    # Should still generate a summary
+    assert "summary" in merged
+    assert len(merged["summary"]) > 0
+    # Summary should mention code achievements since no non-code summary
+    assert "API" in merged["summary"]

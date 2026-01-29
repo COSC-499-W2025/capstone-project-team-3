@@ -18,14 +18,14 @@ class UserPreferences:
         """
         Prompt user to enter or update their preferences via CLI.
         """
-        while True:
-            email = input("Enter your email: ").strip()
-            if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
-                print("Invalid email format. Please try again.")
-            else:
-                break  # Exit the loop when a valid email is entered
+        print("="*60)
+        print("USER PREFERENCES")
+        print("="*60)
+        
+        user_id = 1  # Default user ID for single-user local setup
 
-        existing_preferences = self.store.get_latest_preferences(email)
+        # Check for existing preferences
+        existing_preferences = self.store.get_latest_preferences()
         if existing_preferences:
             print("Existing preferences found: ")
             for k, v in existing_preferences.items():
@@ -34,10 +34,25 @@ class UserPreferences:
             if choice == "no":
                 print("Keeping existing preferences.")
                 return
-
-        name = input("Enter your full name: ").strip()
-        github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
-        while True:
+            else:
+                print("Updating preferences. Please enter new values.\n")  
+                name = input("Enter your full name: ").strip()
+                email = input("Enter your email: ").strip()
+                while not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+                        print("Invalid email format. Please try again.")
+                        email = input("Enter your email: ").strip()
+                github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
+                education = input("Enter your educational background: ").strip()
+                print(f"Industry options: {industry_options}")
+                industry = input("Select your industry (type one of the options): ").strip()
+                job_title = input("Enter your job title (current or aspiring): ").strip()
+        else:
+            name = input("Enter your full name: ").strip()
+            email = input("Enter your email: ").strip()
+            while not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email):
+                    print("Invalid email format. Please try again.")
+                    email = input("Enter your email: ").strip()
+            github = input("Enter your GitHub username if you have one(or leave blank): ").strip()
             education = input("Enter your educational background: ").strip()
             print(f"Industry options: {industry_options}")
             industry = input("Select your industry (type one of the options): ").strip()
@@ -45,10 +60,9 @@ class UserPreferences:
 
             if not education or not industry or not job_title:
                 print("Missing fields are required. Please try again.")
-            else:
-                break
 
         self.store.save_preferences(
+            user_id = user_id,
             name=name,
             email=email,
             github_user=github,
@@ -59,11 +73,11 @@ class UserPreferences:
         print("Preferences saved successfully.")
 
 
-    def get_latest_preferences(self, email):
+    def get_latest_preferences(self):
         """
         Retrieve the latest user preferences.
         """
-        return self.store.get_latest_preferences(email)
+        return self.store.get_latest_preferences()
 
 if __name__ == "__main__":
         UserPreferences().manage_preferences()

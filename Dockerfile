@@ -9,6 +9,16 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        texlive-latex-base \
+        texlive-latex-extra \
+        texlive-fonts-recommended \
+        texlive-fonts-extra \
+        latexmk \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
@@ -20,6 +30,9 @@ ENV NLTK_DATA=/usr/local/share/nltk_data
 ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface/transformers
 ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
+
+# Suppress noisy warnings globally in container
+ENV PYTHONWARNINGS="ignore::DeprecationWarning,ignore::FutureWarning,ignore:Using `TRANSFORMERS_CACHE` is deprecated:FutureWarning,ignore:All support for the `google.generativeai` package has ended:FutureWarning","ignore:pkg_resources is deprecated as an API:UserWarning"
 
 WORKDIR /app
 

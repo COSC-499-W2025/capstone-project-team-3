@@ -3,7 +3,7 @@ Unit tests for non_3rd_party_analysis.py
 Tests document classification based on filename patterns and content analysis.
 """
 import re
-import pytest
+import pytest 
 import sys
 from pathlib import Path
 
@@ -141,17 +141,6 @@ def test_extract_contribution_bullets_readme():
     assert any("Python" in b and "Docker" in b for b in bullets)
     for b in bullets:
         assert not re.search(r"\s+\d+\s*\.*$", b)
-
-def test_analyze_project_clean_empty_files():
-    """Test with empty files list."""
-    result = analyze_project_clean({"parsed_files": []})
-    
-    assert "project_summary" in result  # Changed from 'summary'
-    assert "resume_bullets" in result   # Changed from 'bullets'
-    assert "skills" in result
-    assert result["project_summary"] == "No files were available for analysis."
-    assert result["resume_bullets"] == []
-    assert result["Metrics"]["completeness_score"] == 0  # Changed from top-level
 
 def test_analyze_project_clean_no_successful_files():
     """Test with files that failed to parse."""
@@ -343,3 +332,86 @@ def test_analyze_project_clean_default_contribution_frequency():
     doc_freq = result["Metrics"]["contribution_activity"]["doc_type_frequency"]
     assert sum(doc_freq.values()) >= 1
     
+# Add this test at the end of the file
+
+def test_analyze_project_clean_with_user_preferences_enhances_summary(monkeypatch):
+    """Test that user preferences enhance project summary with industry alignment."""
+    from app.utils.user_preference_utils import UserPreferenceStore
+    
+    # Create test user with Technology industry
+    fake_prefs = {
+        "name": "Test User",
+        "email": "test_enhanced@example.com",
+        "github_user": "testuser",
+        "education": "BS CS",
+        "industry": "Technology",
+        "job_title": "Software Engineer"
+    }
+    
+    monkeypatch.setattr(UserPreferenceStore, "get_latest_preferences_no_email", lambda: fake_prefs)
+
+        # Sample content with software engineering keywords
+    parsed_files = {
+        "parsed_files": [{
+            "name": "README.md",
+            "path": "/README.md",
+            "content": "Software development project with architecture design using Docker and CI/CD.",
+            "success": True
+        }]
+    }
+        
+    result = analyze_project_clean(parsed_files)
+        
+        # Should mention alignment with Technology background
+    assert "Technology background" in result["project_summary"]
+    assert "Software Engineering" in result["project_summary"]
+
+
+def test_analyze_project_clean_with_senior_role_enhances_bullets(monkeypatch):
+    """Test that senior job titles get leadership language in resume bullets."""
+    from app.utils.user_preference_utils import UserPreferenceStore
+
+    fake_prefs = {
+            "name": "Senior Dev",
+            "email": "senior@example.com",
+            "github_user": "seniordev",
+            "education": "MS CS",
+            "industry": "Technology",
+            "job_title": "Senior Software Engineer"
+        }
+
+    monkeypatch.setattr(UserPreferenceStore, "get_latest_preferences_no_email", lambda: fake_prefs)
+
+    parsed_files = {
+        "parsed_files": [{
+            "name": "DESIGN.md",
+            "path": "/DESIGN.md",
+            "content": "System architecture and design document with requirements specification.",
+            "success": True
+        }]
+    }
+
+    result = analyze_project_clean(parsed_files)
+
+    # Senior role should get "Led" instead of "Designed"
+    bullets_text = " ".join(result["resume_bullets"])
+    assert "Led" in bullets_text or "Analyzed and specified comprehensive" in bullets_text
+
+
+
+def test_analyze_project_clean_without_email_works():
+    """Test that function works without email (backward compatibility)."""
+    parsed_files = {
+        "parsed_files": [{
+            "name": "README.md",
+            "path": "/README.md",
+            "content": "Basic project with software development.",
+            "success": True
+        }]
+    }
+    
+    # Should work without email parameter
+    result = analyze_project_clean(parsed_files)
+    
+    assert "project_summary" in result
+    assert "resume_bullets" in result

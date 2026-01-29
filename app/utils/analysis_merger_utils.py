@@ -87,6 +87,19 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     """
     # ------------------------------- EXTRACTION LOGIC ----------------------------------
     
+    # Add validation for empty or None inputs
+    if not code_analysis_results:
+        print("⚠️ WARNING: code_analysis_results is empty or None")
+        code_analysis_results = {"Metrics": {}, "resume_bullets": []}
+    if not non_code_analysis_results:
+        print("⚠️ WARNING: non_code_analysis_results is empty or None")
+        non_code_analysis_results = {"Metrics": {}, "resume_bullets": [], "skills": {}, "project_summary": ""}
+    
+    print(f"   - Keys: {list(non_code_analysis_results.keys())}")
+    print(f"   - project_summary: '{non_code_analysis_results.get('project_summary', 'KEY NOT FOUND')[:100]}'...")
+    print(f"   - resume_bullets count: {len(non_code_analysis_results.get('resume_bullets', []))}")
+    print(f"   - skills: {non_code_analysis_results.get('skills', {})}")
+    
     # Detect git metrics (if git present, send git metrics to project ranker)
     if 'authors' in code_analysis_results.get("Metrics", {}):
         git_metrics = code_analysis_results.get("Metrics", {})
@@ -105,7 +118,8 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     code_metrics = code_analysis_results.get("Metrics", {})
     
     # Extract & Format code resume bullets
-    code_resume_bullets = code_analysis_results.get("Resume_bullets", [])
+    # Accept either 'resume_bullets' or 'Resume_bullets' (tests/use-cases vary)
+    code_resume_bullets = code_analysis_results.get("resume_bullets") or code_analysis_results.get("Resume_bullets") or []
     code_resume_bullets = [
     bullet.strip() if bullet.strip().endswith('.') else bullet.strip() + '.'
     for bullet in code_resume_bullets if bullet.strip() ]
@@ -216,16 +230,23 @@ def build_summary(code_resume_bullets, non_code_summary,MAX_SENTENCES, project_n
     Returns:
         summary (str): Generated summary.
     """
-    achievements = ", ".join(remove_past_tense_action_verb(b) for b in code_resume_bullets[:MAX_SENTENCES])
+    print(f"   - code_resume_bullets: {len(code_resume_bullets) if code_resume_bullets else 0} items")
+    print(f"   - non_code_summary: '{non_code_summary[:100] if non_code_summary else 'EMPTY'}...'")
+    print(f"   - project_name: {project_name}")
+    
+    achievements = ", ".join(remove_past_tense_action_verb(b) for b in code_resume_bullets[:MAX_SENTENCES]) if code_resume_bullets else ""
     
     if non_code_summary and not code_resume_bullets:
-        return non_code_summary.strip()
+        result = non_code_summary.strip()
     elif not non_code_summary and code_resume_bullets:
-        return f"Key technical achievements include : {achievements}."
+        result = f"Key technical achievements include : {achievements}."
     elif non_code_summary and code_resume_bullets:
-        return f"{non_code_summary.strip()} Key technical achievements include : {achievements}."
+        result = f"{non_code_summary.strip()} Key technical achievements include : {achievements}."
     else:
-        return "User contributed to the production of {project_name}"   
+        result = f"User contributed to the production of {project_name}"
+    
+    print(f"   ✅ Generated summary: '{result[:100]}...'")
+    return result
 
 
 def get_project_rank(code_metrics, non_code_metrics, git_metrics):

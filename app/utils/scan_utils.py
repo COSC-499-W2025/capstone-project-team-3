@@ -16,7 +16,7 @@ EXCLUDE_PATTERNS = [
     "env",
     "venv",
     "build",
-    "lib"
+    "lib",
     "dist",
     ".pytest_cache",
     # Compiled/binary files (not analyzable)
@@ -212,31 +212,53 @@ def calculate_project_similarity(current_signatures: List[str], existing_signatu
     total = len(current_set.union(existing_set))
     return (overlap / total) * 100 if total > 0 else 0.0
 
-def find_and_update_similar_project(current_signatures: List[str], threshold: float = 70.0) -> Optional[tuple]:
-    """Find similar project and update it. Returns (project_name, similarity_percentage, project_signature) or None."""
+def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = 70.0) -> Optional[tuple]:
+    """
+    Find a similar project and replace it with the new upload.
+    
+    Args:
+        current_signatures: File signatures from the current upload
+        new_project_sig: The already-calculated project signature for the new upload
+        threshold: Minimum similarity percentage to consider a match
+    
+    Returns (project_name, similarity_percentage, new_project_signature) or None.
+    """
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT project_signature, name, file_signatures FROM PROJECT")
+    cursor.execute("SELECT project_signature, name, file_signatures, path, size_bytes, created_at FROM PROJECT")
     projects = cursor.fetchall()
     
-    for project_sig, project_name, file_sigs_json in projects:
+    for old_project_sig, project_name, file_sigs_json, path, size_bytes, created_at in projects:
         existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
         
-        # Calculate similarity using helper function
+        # Calculate similarity
         similarity = calculate_project_similarity(current_signatures, existing_sigs)
         
         # Debug: Print similarity value for each comparison
         print(f"[DEBUG] Comparing with project '{project_name}': similarity = {similarity:.2f}% (threshold: {threshold}%)")
         
         if similarity >= threshold:
-            # Update existing project
-            merged_sigs = list(set(current_signatures).union(set(existing_sigs)))
-            cursor.execute("UPDATE PROJECT SET file_signatures = ?, last_modified = CURRENT_TIMESTAMP WHERE project_signature = ?", 
-                         (json.dumps(merged_sigs), project_sig))
+            print(f"[DEBUG] Match found! Updating project '{project_name}'")
+            print(f"[DEBUG] Old signature: {old_project_sig}")
+            print(f"[DEBUG] New signature: {new_project_sig}")
+            
+            # Delete the old project entry (CASCADE will clean up related tables)
+            cursor.execute("DELETE FROM PROJECT WHERE project_signature = ?", (old_project_sig,))
             conn.commit()
             conn.close()
-            print(f"[DEBUG] Match found! Updated project '{project_name}' with signature: {project_sig}")
-            return (project_name, similarity, project_sig)
+            
+            # Use existing function to store the updated project
+            store_project_in_db(
+                signature=new_project_sig,
+                name=project_name,
+                path=path,
+                file_signatures=current_signatures,
+                size_bytes=size_bytes,
+                created_at=created_at,  # Preserve original creation date
+                last_modified=datetime.now()  # Update modification time
+            )
+            
+            return (project_name, similarity, new_project_sig)
     
     conn.close()
     return None
@@ -284,16 +306,16 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
         }
     
     # Check for similar projects and update
-    result = find_and_update_similar_project(file_signatures, similarity_threshold)
+    result = find_and_update_similar_project(file_signatures, project_signature, similarity_threshold)
     if result:
-        project_name, similarity, existing_project_sig = result
+        project_name, similarity, new_sig = result
         print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")
         return {
             "files": files,
             "skip_analysis": False,
             "score": similarity,
             "reason": "updated_existing",
-            "signature": existing_project_sig,  # Return the existing project's signature for analysis storage
+            "signature": new_sig,
             "updated_project": project_name
         }
     

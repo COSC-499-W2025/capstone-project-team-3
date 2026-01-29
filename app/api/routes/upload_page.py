@@ -6,8 +6,9 @@ import shutil
 
 router = APIRouter()
 
-UPLOAD_DIR = "/app/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Use relative path from project root instead of absolute /app path
+UPLOAD_DIR = Path(__file__).parent.parent.parent / "data" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.get("/upload-file", response_class=HTMLResponse)
 def upload_page():

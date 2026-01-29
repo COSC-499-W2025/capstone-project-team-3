@@ -73,18 +73,18 @@ def get_overview_stats(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] 
     cursor.execute(f"SELECT COUNT(*) FROM PROJECT {project_filter}", params)
     total_projects = cursor.fetchone()[0]
     
-    # Average rank (score)
+    # Average score
     if project_filter:
         cursor.execute(f"""
-            SELECT AVG(CAST(rank AS FLOAT)) 
+            SELECT AVG(CAST(score AS FLOAT)) 
             FROM PROJECT 
-            {project_filter} AND rank IS NOT NULL
+            {project_filter} AND score IS NOT NULL
         """, params)
     else:
         cursor.execute("""
-            SELECT AVG(CAST(rank AS FLOAT)) 
+            SELECT AVG(CAST(score AS FLOAT)) 
             FROM PROJECT 
-            WHERE rank IS NOT NULL
+            WHERE score IS NOT NULL
         """)
     avg_score = cursor.fetchone()[0] or 0
     
@@ -193,7 +193,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     projects = []
     selected_ids = [pid for pid, *_ in projects_raw]
 
-    for pid, name, rank, created_at, last_modified in projects_raw:
+    for pid, name, score, created_at, last_modified in projects_raw:
         metrics = project_metrics.get(pid, {})
         project_skills = skills_map.get(pid, [])
         
@@ -206,7 +206,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         projects.append({
             "id": pid,
             "title": name,
-            "rank": float(rank) if rank else 0,
+            "score": float(score) if score else 0,
             "dates": format_dates(created_at, last_modified),
             "created_at": created_at,
             "last_modified": last_modified,

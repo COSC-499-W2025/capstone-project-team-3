@@ -144,10 +144,11 @@ class ChronologicalCLI:
             if not user_input:
                 return current_value
             
-            # Validate date format
+            # Validate date format and normalize it
             try:
-                datetime.strptime(user_input, '%Y-%m-%d')
-                return user_input
+                date_obj = datetime.strptime(user_input, '%Y-%m-%d')
+                # Return normalized format with leading zeros (YYYY-MM-DD)
+                return date_obj.strftime('%Y-%m-%d')
             except ValueError:
                 print("  Invalid date format. Please use YYYY-MM-DD (e.g., 2024-01-15)")
 

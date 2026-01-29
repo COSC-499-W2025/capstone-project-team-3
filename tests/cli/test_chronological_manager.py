@@ -70,6 +70,44 @@ class TestChronologicalCLI:
         assert cli._format_date('2024-01-15') == '2024-01-15'
         
         manager.close()
+    
+    def test_date_normalization_with_missing_leading_zeros(self, temp_db, monkeypatch):
+        """Test that dates without leading zeros are normalized correctly."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Simulate user input with missing leading zeros
+        inputs = iter(['2025-2-1'])  # Missing leading zeros
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        result = cli._get_date_input("Enter date", "2024-01-01")
+        
+        # Should normalize to have leading zeros
+        assert result == '2025-02-01'
+        
+        manager.close()
+    
+    def test_date_normalization_consistency(self, temp_db, monkeypatch):
+        """Test that different input formats result in the same normalized output."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        test_cases = [
+            '2025-2-1',      # No leading zeros
+            '2025-02-1',     # Partial leading zeros
+            '2025-2-01',     # Partial leading zeros (different)
+            '2025-02-01',    # Full leading zeros
+        ]
+        
+        expected = '2025-02-01'
+        
+        for test_input in test_cases:
+            inputs = iter([test_input])
+            monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+            result = cli._get_date_input("Enter date", "2024-01-01")
+            assert result == expected, f"Failed for input: {test_input}"
+        
+        manager.close()
 
 
 if __name__ == "__main__":

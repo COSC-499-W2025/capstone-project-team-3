@@ -16,7 +16,7 @@ def test_post_thumbnail_success(dummy_image, monkeypatch):
     def mock_update_project_thumbnail(project_id, image_path):
         assert project_id == "test_project"
         assert image_path.startswith("static/thumbnails/test_project_")
-    monkeypatch.setattr("app.manager.llm_consent_manager.update_project_thumbnail", mock_update_project_thumbnail)
+    monkeypatch.setattr("app.api.routes.post_thumbnail.update_project_thumbnail", mock_update_project_thumbnail)
 
     response = client.post(
         "/portfolio/project/thumbnail",

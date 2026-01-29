@@ -1,7 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from app.manager.llm_consent_manager import update_project_thumbnail
+from app.data.db import get_connection
 
 router = APIRouter()
+
+
+def update_project_thumbnail(project_signature: str, thumbnail_path: str) -> None:
+    """Update the thumbnail_path for a project in the database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE PROJECT SET thumbnail_path = ? WHERE project_signature = ?",
+        (thumbnail_path, project_signature)
+    )
+    conn.commit()
+    conn.close()
 
 @router.post("/portfolio/project/thumbnail")
 async def set_project_thumbnail(

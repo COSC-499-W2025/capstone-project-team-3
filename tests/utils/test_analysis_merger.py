@@ -82,7 +82,7 @@ def test_store_and_retrieve_results_in_db(isolated_db):
     }
 
     # Store results in DB
-    store_results_in_db(project_name, merged_results, project_rank=1, project_signature=project_signature)
+    store_results_in_db(project_name, merged_results, project_score=1, project_signature=project_signature)
 
     # Retrieve results from DB
     retrieved_results = get_projects_by_signatures(project_signature)

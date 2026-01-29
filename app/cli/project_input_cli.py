@@ -7,7 +7,7 @@ from app.utils.scan_utils import (
     extract_file_signature,
     store_project_in_db,
     project_signature_exists,
-    calculate_project_score
+    calculate_project_scan_score
 )
 
 def has_consent():
@@ -53,8 +53,8 @@ def main(argv=None):
         name = Path(args.root).name
         path = str(Path(args.root).resolve())
         
-        score = calculate_project_score(file_signatures)
-        print(f"Project analysis score: {score}% of files already analyzed.")
+        scan_score = calculate_project_scan_score(file_signatures)
+        print(f"Project scan score: {scan_score}% of files already analyzed.")
         if project_signature_exists(signature):
             print("Project already analyzed. Skipping analysis.")
             return 0

@@ -26,10 +26,10 @@ def get_portfolio_resume_insights():
     cur = conn.cursor()
     
     # Build Portfolio: Project name, summary, duration, skills
-    cur.execute("SELECT project_signature, name, rank, summary, created_at, last_modified FROM PROJECT")
+    cur.execute("SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT")
     projects = []
     for row in cur.fetchall():
-        signature, name, rank, summary, created_at, last_modified = row
+        signature, name, score, summary, created_at, last_modified = row
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
         skills = [s[0] for s in cur.fetchall()]
@@ -64,18 +64,18 @@ def get_portfolio_resume_insights():
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "rank": rank,
+            "score": score,
             "metrics": metrics
         })
 
-    # Top ranked projects (by rank, Handle None, limit to top 5)
-    def _rank_key(proj):
-        r = proj.get("rank")
+    # Top ranked projects (by score, handle None, limit to top 5)
+    def _score_key(proj):
+        r = proj.get("score")
         try:
             return float(r)
         except (TypeError, ValueError):
             return 0.0
-    top_projects = sorted(projects, key=_rank_key, reverse=True)[:5]
+    top_projects = sorted(projects, key=_score_key, reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
     chronological = sorted(projects, key=lambda x: (x["created_at"]), reverse=True)[:10]
@@ -158,7 +158,7 @@ def get_projects_by_signatures(signatures: list):
         signatures (list): List of project signature strings
         
     Returns:
-        list: List of project dictionaries with name, summary, duration, skills, created_at, rank, metrics, resume_bullets
+        list: List of project dictionaries with name, summary, duration, skills, created_at, score, metrics, resume_bullets
         dict: Single project dictionary if single signature provided
     """
     if not signatures:
@@ -178,7 +178,7 @@ def get_projects_by_signatures(signatures: list):
     for signature in signatures:
         # Get project basic info
         cur.execute(
-            "SELECT project_signature, name, rank, summary, created_at, last_modified FROM PROJECT WHERE project_signature=?", 
+            "SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT WHERE project_signature=?", 
             (signature,)
         )
         
@@ -187,7 +187,7 @@ def get_projects_by_signatures(signatures: list):
             # Skip if project not found
             continue
             
-        sig, name, rank, summary, created_at, last_modified = project_row
+        sig, name, score, summary, created_at, last_modified = project_row
         
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
@@ -254,7 +254,7 @@ def get_projects_by_signatures(signatures: list):
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "rank": rank,
+            "score": score,
             "metrics": metrics,
             "resume_bullets": resume_bullets
         })

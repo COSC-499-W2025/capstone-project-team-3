@@ -20,7 +20,7 @@ def get_projects():
     skills_map = load_skills(cursor)
 
     projects = []
-    for pid, name, rank, created_at, last_modified in projects_raw:
+    for pid, name, score, created_at, last_modified in projects_raw:
         raw_skills = skills_map.get(pid, [])
         # Optional: limit to top 5 for terminal display
         top_skills = raw_skills[:5]

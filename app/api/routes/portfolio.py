@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from fastapi import Query, APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from app.utils.generate_portfolio import build_portfolio_model
@@ -14,7 +14,9 @@ router = APIRouter()
 class PortfolioFilter(BaseModel):
     project_ids: Optional[List[str]] = None
 
-class EditPayload(BaseModel):
+# Payload model for editing project details
+class ProjectEdit(BaseModel):
+    project_signature: str
     project_name: Optional[str] = None # TBD Project Name length limit 
     project_summary: Optional[str] = None # TBD Project Summary length limit
     created_at: Optional[datetime] = None
@@ -31,7 +33,8 @@ class EditPayload(BaseModel):
             raise ValueError("rank must be between 0.0 and 1.0")
         return value
 
-
+class BatchEditPayload(BaseModel):
+    edits: List[ProjectEdit] 
 
 @router.post("/portfolio/generate")
 def generate_portfolio(filter: PortfolioFilter):
@@ -66,80 +69,99 @@ def generate_portfolio(filter: PortfolioFilter):
             detail=f"Error generating portfolio for projects {filter.project_ids}: {str(e)}"
         )
 
-@router.post("/portfolio/{project_signature}/edit")
-def edit_portfolio(project_signature: str, payload: EditPayload):
+@router.post("/portfolio/edit")
+def edit_portfolio(payload: BatchEditPayload):
     """
-    POST /portfolio/{id}/edit
-    Edit portfolio project details such as the summary, skills, and duration of a project.
-    * This API call is more like a PATCH since only provided fields are updated.
-    --> i.e; This endpoint is an update, not a creation.
-    Body example:
-    {
-      "project_name": "Edited Project Name",
-      "project_summary": "Edited summary",
-      "created_at": "2024-01-01",
-      "last_modified": "2024-02-02",
-      "rank" : 0.95 # TODO replace rank with score percentage once DB is updated
-    }
+    POST/portfolio/edit
+    Edit one to many portfolio projects in a single query.
     """
-    # Map payload fields to DB columns
-    field_map = {
-    "project_name": "name",
-    "project_summary": "summary",
-    "created_at": "created_at",
-    "last_modified": "last_modified",
-    "rank": "rank",
-    }
-
-    # Initialization
-    fields, values = [], []
+    if not payload.edits:
+        raise HTTPException(status_code=400, detail="No edits provided")
+    
+    ALLOWED_FIELDS = {"project_name", "project_summary", "created_at", "last_modified", "rank"}
+    field_map = {"project_name": "name", "project_summary": "summary", "created_at": "created_at", "last_modified": "last_modified", "rank": "rank"}
+    
     conn, cur = None, None
 
-    data = payload.model_dump(exclude_unset=True)
-
-    # Validate at least one field is provided
-    if not data:
-        raise HTTPException(status_code=400, detail="At least one field must be provided for update")
-                
-    # Append fields and values to be updated
-    for key, value in data.items():
-        column = field_map[key]
-        if not column:
-            continue
-        fields.append(f"{column} = ?")
-        values.append(value)
-
     try:
-            # Open DB connection
-        conn = get_connection() 
+        conn = get_connection()
         cur = conn.cursor()
-
-        # Ensure project exists
-        cur.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (project_signature,))
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="Project not found")
-    
-        # Apply Updates to project fields provided
-        query = f"UPDATE PROJECT SET {', '.join(fields)} WHERE project_signature = ?"
-        values.append(project_signature)
-        cur.execute(query, tuple(values))
-
-        # Commit changes
+        
+        # Collect all project signatures
+        project_sigs = [edit.project_signature for edit in payload.edits]
+        
+        # Build a map of which projects update which fields
+        field_updates = {}  # {field_name: {project_sig: value}}
+        
+        for edit in payload.edits:
+            data = edit.model_dump(exclude_unset=True)
+            project_sig = data.pop("project_signature")
+            
+            if not data:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No fields provided for project {project_sig}"
+                )
+            
+            for key, value in data.items():
+                if key not in ALLOWED_FIELDS:
+                    raise HTTPException(status_code=400, detail=f"Invalid field: {key}")
+                
+                column = field_map[key]
+                if column not in field_updates:
+                    field_updates[column] = {}
+                field_updates[column][project_sig] = value
+        
+        # Build SQL CASE statements for each column
+        set_clauses = []
+        params = []
+        
+        for column, updates in field_updates.items():
+            case_parts = []
+            for project_sig, value in updates.items():
+                case_parts.append("WHEN project_signature = ? THEN ?")
+                params.extend([project_sig, value])
+            
+            case_parts.append(f"ELSE {column}")  # Keep existing value
+            case_statement = f"{column} = CASE {' '.join(case_parts)} END"
+            set_clauses.append(case_statement)
+        
+        # Build final query
+        placeholders = ','.join(['?'] * len(project_sigs))
+        query = f"""
+            UPDATE PROJECT 
+            SET {', '.join(set_clauses)}
+            WHERE project_signature IN ({placeholders})
+        """
+        
+        params.extend(project_sigs)
+        cur.execute(query, tuple(params))
+        
+        if cur.rowcount <=0:
+            raise HTTPException(status_code=404, detail="No projects found")
+        
         conn.commit()
-        return JSONResponse(status_code=200, content={"status": "ok", "project_updated": project_signature})
-    except HTTPException: # Re-raise known HTTP exceptions
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "ok",
+                "projects_updated": project_sigs,
+                "count": cur.rowcount
+            }
+        )
+        
+    except HTTPException:
         if conn:
             conn.rollback()
         raise
-    except Exception: # Handle unexpected errors
+    except Exception as e:
         if conn:
             conn.rollback()
-        logger.exception(f"Failed to edit project: {project_signature}")
-        raise HTTPException(status_code=500, detail="Failed to edit project")
+        logger.exception(f"Failed to edit projects : : {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to edit projects")
     finally:
         if cur:
             cur.close()
         if conn:
             conn.close()
-
-# TODO Batch Edit endpoint functionality for edit of multiple projects at once 

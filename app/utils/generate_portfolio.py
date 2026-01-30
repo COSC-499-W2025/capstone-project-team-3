@@ -25,16 +25,47 @@ def load_project_metrics(cursor: sqlite3.Cursor) -> DefaultDict[str, Dict[str, A
     for project_id, metric_name, metric_value in cursor.fetchall():
         try:
             # Convert numeric values
-            if metric_name in ['total_lines', 'files_count', 'total_commits']:
+            if metric_name in ['total_lines', 'files_count', 'total_commits', 'total_files', 'functions', 'components', 'classes', 'code_files_changed', 'doc_files_changed', 'test_files_changed', 'word_count']:
                 metrics[project_id][metric_name] = int(metric_value) if metric_value else 0
-            elif metric_name in ['avg_complexity']:
+            elif metric_name in ['avg_complexity', 'average_function_length', 'average_comment_ratio', 'completeness_score']:
                 metrics[project_id][metric_name] = float(metric_value) if metric_value else 0.0
+            elif metric_name in ['languages', 'roles', 'technical_keywords', 'authors']:
+                # Parse JSON arrays
+                try:
+                    metrics[project_id][metric_name] = json.loads(metric_value) if metric_value else []
+                except (json.JSONDecodeError, TypeError):
+                    metrics[project_id][metric_name] = metric_value or []
+            elif metric_name in ['code_patterns', 'complexity_analysis', 'contribution_activity', 'development_patterns', 'commit_patterns']:
+                # Parse complex JSON objects
+                try:
+                    metrics[project_id][metric_name] = json.loads(metric_value) if metric_value else {}
+                except (json.JSONDecodeError, TypeError):
+                    metrics[project_id][metric_name] = {}
             else:
                 metrics[project_id][metric_name] = metric_value
         except (ValueError, TypeError):
             metrics[project_id][metric_name] = metric_value
     
     return metrics
+
+def load_project_summaries(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, str]:
+    """Load project summaries from RESUME_SUMMARY table."""
+    summaries = {}
+    
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT project_id, summary_text
+            FROM RESUME_SUMMARY 
+            WHERE project_id IN ({placeholders})
+        """, project_ids)
+    else:
+        cursor.execute("SELECT project_id, summary_text FROM RESUME_SUMMARY")
+    
+    for project_id, summary_text in cursor.fetchall():
+        summaries[project_id] = summary_text or ""
+    
+    return summaries
 
 def load_skills_with_dates(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str]]:
     """Return skills with their first usage dates for timeline view."""
@@ -176,6 +207,132 @@ def get_skills_timeline(cursor: sqlite3.Cursor, project_ids: Optional[List[str]]
     
     return sorted(timeline, key=lambda x: x["year"])
 
+def get_language_distribution(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, int]:
+    """Get distribution of programming languages across projects."""
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT metric_value 
+            FROM DASHBOARD_DATA 
+            WHERE project_id IN ({placeholders}) AND metric_name = 'languages'
+        """, project_ids)
+    else:
+        cursor.execute("SELECT metric_value FROM DASHBOARD_DATA WHERE metric_name = 'languages'")
+    
+    language_count = defaultdict(int)
+    for (lang_json,) in cursor.fetchall():
+        try:
+            languages = json.loads(lang_json) if isinstance(lang_json, str) else lang_json
+            if isinstance(languages, list):
+                for lang in languages:
+                    language_count[lang] += 1
+        except:
+            pass
+    
+    return dict(language_count)
+
+def get_project_complexity_distribution(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Get project complexity distribution for size analysis."""
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT project_id, metric_value 
+            FROM DASHBOARD_DATA 
+            WHERE project_id IN ({placeholders}) AND metric_name = 'total_lines'
+        """, project_ids)
+    else:
+        cursor.execute("SELECT project_id, metric_value FROM DASHBOARD_DATA WHERE metric_name = 'total_lines'")
+    
+    size_distribution = {"small": 0, "medium": 0, "large": 0}
+    project_sizes = []
+    
+    for project_id, lines_str in cursor.fetchall():
+        try:
+            lines = int(lines_str) if lines_str else 0
+            project_sizes.append({"project_id": project_id, "lines": lines})
+            
+            if lines < 1000:
+                size_distribution["small"] += 1
+            elif lines < 3000:
+                size_distribution["medium"] += 1
+            else:
+                size_distribution["large"] += 1
+        except (ValueError, TypeError):
+            size_distribution["small"] += 1
+    
+    return {
+        "distribution": size_distribution,
+        "project_sizes": project_sizes,
+        "avg_size": sum(p["lines"] for p in project_sizes) / len(project_sizes) if project_sizes else 0
+    }
+
+def get_score_distribution(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Get project score distribution for quality analysis."""
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT project_signature, rank 
+            FROM PROJECT 
+            WHERE project_signature IN ({placeholders}) AND rank IS NOT NULL
+        """, project_ids)
+    else:
+        cursor.execute("SELECT project_signature, rank FROM PROJECT WHERE rank IS NOT NULL")
+    
+    score_ranges = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
+    project_scores = []
+    
+    for project_id, rank_str in cursor.fetchall():
+        try:
+            score = float(rank_str)
+            project_scores.append({"project_id": project_id, "score": score})
+            
+            if score >= 0.9:
+                score_ranges["excellent"] += 1
+            elif score >= 0.8:
+                score_ranges["good"] += 1
+            elif score >= 0.7:
+                score_ranges["fair"] += 1
+            else:
+                score_ranges["poor"] += 1
+        except (ValueError, TypeError):
+            score_ranges["fair"] += 1
+    
+    return {
+        "distribution": score_ranges,
+        "project_scores": project_scores,
+        "avg_score": sum(p["score"] for p in project_scores) / len(project_scores) if project_scores else 0
+    }
+
+def get_monthly_activity(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, int]:
+    """Get monthly project activity for timeline visualization."""
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT created_at, last_modified 
+            FROM PROJECT 
+            WHERE project_signature IN ({placeholders})
+        """, project_ids)
+    else:
+        cursor.execute("SELECT created_at, last_modified FROM PROJECT")
+    
+    monthly_activity = defaultdict(int)
+    
+    for created_at, last_modified in cursor.fetchall():
+        try:
+            # Count creation month
+            if created_at:
+                month = datetime.fromisoformat(created_at).strftime('%Y-%m')
+                monthly_activity[month] += 1
+                
+            # Count modification month if different
+            if last_modified and last_modified != created_at:
+                month = datetime.fromisoformat(last_modified).strftime('%Y-%m')
+                monthly_activity[month] += 0.5  # Weight modifications less than creations
+        except Exception:
+            continue
+    
+    return dict(sorted(monthly_activity.items()))
+
 def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """Return assembled portfolio model built from the database.
     If project_ids are provided, include only those projects.
@@ -189,6 +346,13 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     overview_stats = get_overview_stats(cursor, project_ids)
     skills_timeline = get_skills_timeline(cursor, project_ids)
     project_metrics = load_project_metrics(cursor)
+    project_summaries = load_project_summaries(cursor, project_ids)
+    
+    # New data for enhanced graphs
+    language_distribution = get_language_distribution(cursor, project_ids)
+    complexity_distribution = get_project_complexity_distribution(cursor, project_ids)
+    score_distribution = get_score_distribution(cursor, project_ids)
+    monthly_activity = get_monthly_activity(cursor, project_ids)
 
     projects = []
     selected_ids = [pid for pid, *_ in projects_raw]
@@ -196,12 +360,20 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     for pid, name, rank, created_at, last_modified in projects_raw:
         metrics = project_metrics.get(pid, {})
         project_skills = skills_map.get(pid, [])
+        project_summary = project_summaries.get(pid, "")
         
         # Limit skills for display
         limited_skills = limit_skills(project_skills, max_count=10)
         
         # Determine project type based on if we have commit data
         is_github = metrics.get("total_commits", 0) > 0
+        
+        # Extract detailed analysis data
+        complexity_analysis = metrics.get("complexity_analysis", {})
+        commit_patterns = metrics.get("commit_patterns", {})
+        development_patterns = metrics.get("development_patterns", {})
+        code_patterns = metrics.get("code_patterns", {})
+        contribution_activity = metrics.get("contribution_activity", {})
         
         projects.append({
             "id": pid,
@@ -211,8 +383,41 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "created_at": created_at,
             "last_modified": last_modified,
             "type": "GitHub" if is_github else "Local",
-            "metrics": metrics,
+            "summary": project_summary,
+            "metrics": {
+                # Basic metrics
+                "total_lines": metrics.get("total_lines", 0),
+                "total_commits": metrics.get("total_commits", 0),
+                "total_files": metrics.get("total_files", 0),
+                "code_files_changed": metrics.get("code_files_changed", 0),
+                "doc_files_changed": metrics.get("doc_files_changed", 0),
+                "test_files_changed": metrics.get("test_files_changed", 0),
+                "functions": metrics.get("functions", 0),
+                "components": metrics.get("components", 0),
+                "classes": metrics.get("classes", 0),
+                "average_function_length": metrics.get("average_function_length", 0),
+                "average_comment_ratio": metrics.get("average_comment_ratio", 0),
+                "completeness_score": metrics.get("completeness_score", 0),
+                "word_count": metrics.get("word_count", 0),
+                # Lists/Arrays
+                "languages": metrics.get("languages", []),
+                "roles": metrics.get("roles", []),
+                "technical_keywords": metrics.get("technical_keywords", []),
+                "authors": metrics.get("authors", []),
+                # Complex analysis objects
+                "complexity_analysis": complexity_analysis,
+                "commit_patterns": commit_patterns,
+                "development_patterns": development_patterns,
+                "code_patterns": code_patterns,
+                "contribution_activity": contribution_activity,
+            },
             "skills": limited_skills,
+            # Editable fields (for UI)
+            "editable": {
+                "rank": True,
+                "summary": True,
+                "dates": True
+            }
         })
 
     # Calculate project type analysis if projects selected
@@ -264,6 +469,16 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
                 "count": len(project_type_analysis["local"]),
                 "stats": local_stats
             }
+        },
+        "graphs": {
+            "language_distribution": language_distribution,
+            "complexity_distribution": complexity_distribution,
+            "score_distribution": score_distribution,
+            "monthly_activity": monthly_activity,
+            "top_skills": dict(list(defaultdict(int, {
+                skill: len([p for p in projects if skill in skills_map.get(p["id"], [])])
+                for skill in set(skill for project_skills in skills_map.values() for skill in project_skills)
+            }).items())[:10])  # Top 10 most used skills
         },
         "metadata": {
             "generated_at": datetime.now().isoformat(),

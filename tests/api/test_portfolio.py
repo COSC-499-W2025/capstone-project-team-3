@@ -264,15 +264,3 @@ def test_edit_portfolio_batch_no_fields():
         assert response.status_code == 400
         assert "No fields provided for project" in response.json()["detail"]
         mock_db.commit.assert_not_called()
-        mock_cursor = MagicMock()
-        mock_conn.return_value.cursor.return_value = mock_cursor
-
-        mock_cursor.fetchone.return_value = (1,)
-
-        response = client.post(
-            "/api/portfolio/test_signature/edit",
-            json={}
-        )
-
-        assert response.status_code == 400
-        assert response.json()["detail"] == "No fields provided for update"

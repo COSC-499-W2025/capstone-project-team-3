@@ -1075,6 +1075,7 @@ def test_main_user_preferences():
         patch("app.main.init_db"), \
         patch("app.main.seed_db"), \
         patch("app.main.UserPreferences") as MockUserPreferences, \
+        patch.dict(os.environ, {"PROMPT_ROOT": "0"}, clear=False), \
         patch("builtins.input", side_effect=[
             "testuser@example.com",  # email
             "yes",                   # update preferences

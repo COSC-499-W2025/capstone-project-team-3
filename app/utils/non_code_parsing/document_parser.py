@@ -185,11 +185,14 @@ def _get_all_file_commit_counts(repo_path, author):
         commits = json.loads(commits_json)
         
         counts = {}
+        # Git returns paths relative to repo root, so resolve relative to repo_path
+        repo_base = Path(repo_path).resolve()
         for commit in commits:
             for file_data in commit.get("files", []):
                 file_path = file_data.get("path_after") or file_data.get("path_before", "")
                 if file_path:
-                    resolved = str(Path(file_path).resolve())
+                    # Join with repo_base to get absolute path
+                    resolved = str((repo_base / file_path).resolve())
                     counts[resolved] = counts.get(resolved, 0) + 1
         
         return counts
@@ -207,25 +210,30 @@ def _parse_collaborative_files(repo_path, author, commit_counts):
         )
         commits = json.loads(commits_json)
         
+        # Git returns paths relative to repo root, so resolve relative to repo_path
+        repo_base = Path(repo_path).resolve()
+        
         file_patches = {}
         for commit in commits:
             for file_data in commit.get("files", []):
                 file_path = file_data.get("path_after") or file_data.get("path_before", "")
                 if not file_path:
                     continue
+                
+                # Resolve relative to repo_path for consistency with commit_counts
+                resolved = str((repo_base / file_path).resolve())
                     
-                if file_path not in file_patches:
-                    file_patches[file_path] = []
-                file_patches[file_path].append(file_data.get("patch", ""))
+                if resolved not in file_patches:
+                    file_patches[resolved] = {"name": Path(file_path).name, "patches": []}
+                file_patches[resolved]["patches"].append(file_data.get("patch", ""))
         
         results = []
-        for file_path, patches in file_patches.items():
-            resolved = str(Path(file_path).resolve())
+        for resolved, data in file_patches.items():
             results.append({
                 "path": resolved,
-                "name": Path(file_path).name,
-                "type": Path(file_path).suffix.lower().lstrip('.'),
-                "content": "\n\n".join(patches),
+                "name": data["name"],
+                "type": Path(resolved).suffix.lower().lstrip('.'),
+                "content": "\n\n".join(data["patches"]),
                 "success": True,
                 "error": "",
                 "contribution_frequency": commit_counts.get(resolved, 1)

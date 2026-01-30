@@ -206,8 +206,9 @@ def verify_user_in_files(
     """
     Verify which files the user actually contributed to vs files by others only.
     
-    README files are treated specially - they go to user_solo (non-collaborative)
-    so they get full content parsing instead of git diff extraction.
+    README files and binary files (PDF, DOCX) are treated specially - they go to 
+    user_solo (non-collaborative) so they get full content parsing instead of 
+    git diff extraction (which doesn't work for binary files).
     
     Args:
         file_metadata: Output from collect_git_non_code_files_with_metadata()
@@ -216,26 +217,58 @@ def verify_user_in_files(
     Returns:
         {
             "user_collaborative": [paths],    # Files with user + at least 1 other (extract git diffs)
-            "user_solo": [paths],             # Files with ONLY user OR README (parse full content)
+            "user_solo": [paths],             # Files with ONLY user OR README/PDF/DOCX (parse full content)
             "others_only": [paths]            # Files WITHOUT user
         }
     """
     user_collaborative = []
     user_solo = []
     others_only = []
+    
+    # Binary/special extensions that can't be parsed via git diff
+    non_diffable_extensions = {".pdf", ".docx", ".doc"}
 
     for file_path, info in file_metadata.items():
         authors = info.get("authors", [])
         usernames = info.get("usernames", [])
         path_obj = Path(info["path"])
         is_readme = path_obj.name.lower().startswith("readme")
+        is_non_diffable = path_obj.suffix.lower() in non_diffable_extensions
 
-        # README files always go to user_solo for full content parsing
-        if is_readme:
+        # README and binary files (PDF/DOCX) always go to user_solo for full content parsing
+        # since git diff extraction doesn't work for these file types
+        if is_readme or is_non_diffable:
             user_solo.append(info["path"])
             continue
 
-        if username in usernames or user_email in authors:
+        # Case-insensitive comparison for username and email matching
+        username_lower = username.lower() if username else ""
+        user_email_lower = user_email.lower() if user_email else ""
+        usernames_lower = [u.lower() for u in usernames]
+        authors_lower = [a.lower() for a in authors]
+        
+        # Check multiple matching strategies:
+        # 1. Exact username match in usernames list (case-insensitive)
+        # 2. Exact email match in authors (emails) list (case-insensitive)
+        # 3. Username contained in GitHub noreply email (e.g., "PaintedW0lf" in "97552907+PaintedW0lf@users.noreply.github.com")
+        user_is_author = False
+        
+        # Strategy 1: Exact username match (case-insensitive)
+        if username_lower and username_lower in usernames_lower:
+            user_is_author = True
+        
+        # Strategy 2: Exact email match (case-insensitive)
+        if user_email_lower and user_email_lower in authors_lower:
+            user_is_author = True
+        
+        # Strategy 3: Username contained in any author email (GitHub noreply format)
+        if username_lower and not user_is_author:
+            for author in authors_lower:
+                if username_lower in author:
+                    user_is_author = True
+                    break
+        
+        if user_is_author:
             if len(authors) == 1:
                 user_solo.append(info["path"])
             else:

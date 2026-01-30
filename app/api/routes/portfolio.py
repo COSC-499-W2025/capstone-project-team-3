@@ -74,6 +74,27 @@ def edit_portfolio(payload: BatchEditPayload):
     """
     POST/portfolio/edit
     Edit one to many portfolio projects in a single query.
+
+    {
+  "edits": [
+    {
+      "project_signature": "sig1",
+      "project_name": "New Name 1",
+      "project_summary": "New summary 1",
+      "created_at": "2024-01-15",
+      "last_modified": "2024-06-10",
+      "rank": 0.8
+    },
+    {
+      "project_signature": "sig2",
+      'project_name': "Updated Project 2",
+      "project_summary": "Updated summary",
+      "last_modified": "2024-06-12",
+      "created_at": "2024-02-20",
+      "rank": 1.1 
+    }
+  ]
+ }
     """
     if not payload.edits:
         raise HTTPException(status_code=400, detail="No edits provided")

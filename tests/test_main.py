@@ -438,7 +438,8 @@ def test_main_integrates_non_code_file_checker():
         
         main()
         
-        mock_non_code_checker.assert_called_once_with("/tmp/project1","testuser","test_enhanced@example.com")
+        # Note: function signature is (project_path, email, username)
+        mock_non_code_checker.assert_called_once_with("/tmp/project1", "test_enhanced@example.com", "testuser")
 
 
 # ============================================================================

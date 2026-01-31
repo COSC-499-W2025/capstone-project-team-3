@@ -85,6 +85,32 @@ CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
+
+-- Table for resume versions --
+CREATE TABLE IF NOT EXISTS RESUME (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--Table to edited resume details --
+CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    project_id TEXT NOT NULL,
+
+    project_name TEXT,     -- optional override
+    start_date DATETIME,       -- optional override
+    end_date DATETIME,         -- optional override
+    skills JSON,
+    bullets JSON,          -- optional edited bullets for this resume
+
+    display_order INTEGER,
+
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
+);
+
 """
 
 # --- DB Setup Functions ---
@@ -316,6 +342,31 @@ def seed_db():
                 INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text)
                 VALUES (?, ?)
             """, (project_id, bullet))
+            
+    # --- RESUME ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO RESUME (id, name, created_at)
+        VALUES (?, ?, ?)
+    """, (1, "John's Resume", "2026-01-30"))
+
+    # --- RESUME_PROJECT ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        1,  # resume_id
+        "sig_alpha_project/hash",  # project_id
+        "Alpha Project (Resume)",  # project_name override
+        "2024-01-01",  # start_date
+        "2024-06-01",  # end_date
+        json.dumps(["Python", "Flask"]),  # skills
+        json.dumps([
+            "Built a Flask web app for task management.",
+            "Led a team of 4 developers."
+        ]),  # bullets
+        1  # display_order
+    ))
 
     conn.commit()
     conn.close()

@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, MagicMock, mock_open
 from app.api.routes.portfolio import router
 
 # Create a test FastAPI app with the portfolio router
@@ -287,3 +287,129 @@ class TestPortfolioDataStructure:
             assert "generated_at" in metadata
             assert "total_projects" in metadata
             assert "filtered" in metadata
+
+def test_edit_portfolio_batch_success():
+    with patch("app.api.routes.portfolio.get_connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_db = mock_conn.return_value
+        mock_db.cursor.return_value = mock_cursor
+
+        # Simulate successful update
+        mock_cursor.rowcount = 2
+
+        payload = {
+            "edits": [
+                {
+                    "project_signature": "sig1",
+                    "project_name": "Batch Name 1",
+                    "rank": 0.8
+                },
+                {
+                    "project_signature": "sig2",
+                    "project_summary": "Batch summary 2",
+                    "rank": 0.7
+                }
+            ]
+        }
+
+        response = client.post("/api/portfolio/edit", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert set(data["projects_updated"]) == {"sig1", "sig2"}
+        assert data["count"] == 2
+
+        mock_db.commit.assert_called_once()
+        mock_cursor.execute.assert_called_once()
+
+def test_edit_portfolio_batch_not_found():
+    with patch("app.api.routes.portfolio.get_connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_db = mock_conn.return_value
+        mock_db.cursor.return_value = mock_cursor
+
+        # Simulate no rows updated
+        mock_cursor.rowcount = 0
+
+        payload = {
+            "edits": [
+                {
+                    "project_signature": "missing_sig",
+                    "project_name": "Should not update"
+                }
+            ]
+        }
+
+        response = client.post("/api/portfolio/edit", json=payload)
+        assert response.status_code == 404
+        assert response.json()["detail"] == "No projects found"
+        mock_db.commit.assert_not_called()
+
+def test_edit_portfolio_batch_partial_fields():
+    with patch("app.api.routes.portfolio.get_connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_db = mock_conn.return_value
+        mock_db.cursor.return_value = mock_cursor
+
+        mock_cursor.rowcount = 1
+
+        payload = {
+            "edits": [
+                {
+                    "project_signature": "sig1",
+                    "project_name": "Only Name"
+                }
+            ]
+        }
+
+        response = client.post("/api/portfolio/edit", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["projects_updated"] == ["sig1"]
+        assert data["count"] == 1
+
+        mock_db.commit.assert_called_once()
+        mock_cursor.execute.assert_called_once()
+
+def test_edit_portfolio_batch_db_error():
+    with patch("app.api.routes.portfolio.get_connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_db = mock_conn.return_value
+        mock_db.cursor.return_value = mock_cursor
+
+        mock_cursor.execute.side_effect = Exception("DB write failed")
+
+        payload = {
+            "edits": [
+                {
+                    "project_signature": "sig1",
+                    "project_name": "Crash Me"
+                }
+            ]
+        }
+
+        response = client.post("/api/portfolio/edit", json=payload)
+        assert response.status_code == 500
+        assert "Failed to edit projects" in response.json()["detail"]
+        mock_db.rollback.assert_called_once()
+
+def test_edit_portfolio_batch_no_fields():
+    with patch("app.api.routes.portfolio.get_connection") as mock_conn:
+        mock_cursor = MagicMock()
+        mock_db = mock_conn.return_value
+        mock_db.cursor.return_value = mock_cursor
+
+        # No fields provided to edit
+        payload = {
+            "edits": [
+                {
+                    "project_signature": "sig1"
+                }
+            ]
+        }
+
+        response = client.post("/api/portfolio/edit", json=payload)
+        assert response.status_code == 400
+        assert "No fields provided for project" in response.json()["detail"]
+        mock_db.commit.assert_not_called()

@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict
 from fastapi import Query, APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
 from app.utils.generate_portfolio import build_portfolio_model
 from pydantic import BaseModel, field_validator
 from app.data.db import get_connection
@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 router = APIRouter()
-
-class PortfolioFilter(BaseModel):
-    project_ids: Optional[List[str]] = None
 
 # Payload model for editing project details
 class ProjectEdit(BaseModel):
@@ -36,28 +33,42 @@ class ProjectEdit(BaseModel):
 class BatchEditPayload(BaseModel):
     edits: List[ProjectEdit] 
 
-@router.post("/portfolio/generate")
-def generate_portfolio(filter: PortfolioFilter):
+
+@router.get("/portfolio")
+def get_portfolio(project_ids: Optional[str] = Query(None, description="Comma-separated list of project IDs to include")):
     """
-    POST /portfolio/generate endpoint.
-    Generate portfolio data for selected projects.
+    GET /portfolio endpoint.
+    Returns comprehensive portfolio dashboard data with all visualizations.
     
-    Example request body:
-    {
-        "project_ids": ["project_sig_1", "project_sig_2", "project_sig_3"]
-    }
+    Query parameters:
+    - project_ids: Optional comma-separated list of project IDs (default: all projects)
     
-    Returns comprehensive portfolio data including overview, projects, skills timeline, etc.
+    Returns rich portfolio data perfect for creating sophisticated graphs:
+    - Overview statistics (projects, scores, skills, languages, lines of code)
+    - Individual project details with metrics
+    - Skills timeline for development progression
+    - Language distribution for pie charts
+    - Project complexity distribution for bar charts
+    - Score distribution for quality analysis
+    - Monthly activity timeline
+    - Project type analysis (GitHub vs Local)
+    - Top skills usage
     """
     try:
-        portfolio_model = build_portfolio_model(project_ids=filter.project_ids)
+        # Parse project_ids if provided
+        parsed_project_ids = None
+        if project_ids:
+            parsed_project_ids = [pid.strip() for pid in project_ids.split(",") if pid.strip()]
+        
+        portfolio_model = build_portfolio_model(project_ids=parsed_project_ids)
         
         return JSONResponse(
             content=portfolio_model,
             headers={
                 "Content-Type": "application/json",
-                "X-Portfolio-Projects": str(len(filter.project_ids) if filter.project_ids else 0),
-                "X-Portfolio-Generated": portfolio_model["metadata"]["generated_at"]
+                "X-Portfolio-Projects": str(portfolio_model["metadata"]["total_projects"]),
+                "X-Portfolio-Generated": portfolio_model["metadata"]["generated_at"],
+                "X-Portfolio-Filtered": str(portfolio_model["metadata"]["filtered"])
             }
         )
         
@@ -66,7 +77,7 @@ def generate_portfolio(filter: PortfolioFilter):
     except Exception as e:
         raise HTTPException(
             status_code=500, 
-            detail=f"Error generating portfolio for projects {filter.project_ids}: {str(e)}"
+            detail=f"Error generating portfolio: {str(e)}"
         )
 
 @router.post("/portfolio/edit")
@@ -186,3 +197,38 @@ def edit_portfolio(payload: BatchEditPayload):
             cur.close()
         if conn:
             conn.close()
+
+
+@router.get("/portfolio-dashboard", response_class=HTMLResponse)
+def portfolio_dashboard():
+    """
+    Serve the Portfolio Dashboard UI
+    """
+    # Get the path to the static HTML file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(current_dir, "..", "..", "static", "portfolio.html")
+    
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    else:
+        return HTMLResponse(
+            content="<h1>Portfolio Dashboard not found</h1>", 
+            status_code=404
+        )
+
+@router.get("/static/portfolio.js")
+def portfolio_js():
+    """
+    Serve the Portfolio Dashboard JavaScript file
+    """
+    # Get the path to the static JS file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    js_path = os.path.join(current_dir, "..", "..", "static", "portfolio.js")
+    
+    if os.path.exists(js_path):
+        with open(js_path, 'r', encoding='utf-8') as f:
+            js_content = f.read()
+        return Response(content=js_content, media_type="application/javascript")
+    else:
+        raise HTTPException(status_code=404, detail="JavaScript file not found")

@@ -18,6 +18,7 @@ from app.api.routes.user_preferences import router as user_preferences_router
 from app.api.routes.skills import router as skills_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.portfolio import router as portfolio_router
+
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
@@ -56,6 +57,7 @@ app.include_router(user_preferences_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
+
 
 def display_startup_info():
     """Display startup information including API key status."""

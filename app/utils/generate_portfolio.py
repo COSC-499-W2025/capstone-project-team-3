@@ -271,19 +271,19 @@ def get_score_distribution(cursor: sqlite3.Cursor, project_ids: Optional[List[st
     if project_ids:
         placeholders = ",".join(["?"] * len(project_ids))
         cursor.execute(f"""
-            SELECT project_signature, rank 
+            SELECT project_signature, score 
             FROM PROJECT 
-            WHERE project_signature IN ({placeholders}) AND rank IS NOT NULL
+            WHERE project_signature IN ({placeholders}) AND score IS NOT NULL
         """, project_ids)
     else:
-        cursor.execute("SELECT project_signature, rank FROM PROJECT WHERE rank IS NOT NULL")
+        cursor.execute("SELECT project_signature, score FROM PROJECT WHERE score IS NOT NULL")
     
     score_ranges = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
     project_scores = []
     
-    for project_id, rank_str in cursor.fetchall():
+    for project_id, score_str in cursor.fetchall():
         try:
-            score = float(rank_str)
+            score = float(score_str)
             project_scores.append({"project_id": project_id, "score": score})
             
             if score >= 0.9:
@@ -379,6 +379,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "id": pid,
             "title": name,
             "score": float(score) if score else 0,
+            "rank": float(score) if score else 0,
             "dates": format_dates(created_at, last_modified),
             "created_at": created_at,
             "last_modified": last_modified,

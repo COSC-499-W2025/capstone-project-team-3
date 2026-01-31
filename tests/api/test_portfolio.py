@@ -270,7 +270,7 @@ class TestPortfolioDataStructure:
             project = projects[0]
             assert "id" in project
             assert "title" in project
-            assert "rank" in project
+            assert "score" in project
             assert "metrics" in project
             assert "skills" in project
             

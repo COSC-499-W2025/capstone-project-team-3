@@ -28,7 +28,7 @@ def get_projects():
         projects.append({
             "id": pid,
             "name": name,
-            "score": float(rank) if rank else 0.0,
+            "score": float(score) if score else 0.0,
             "skills": top_skills
         })
 
@@ -48,7 +48,7 @@ def get_project(signature: str):
         raise HTTPException(status_code=404, detail="Project not found")
 
     skills_map = load_skills(cursor)
-    pid, name, rank, _, _ = project_rows[0]
+    pid, name, score, _, _ = project_rows[0]
     raw_skills = skills_map.get(pid, [])
     top_skills = raw_skills[:5]
 
@@ -56,6 +56,6 @@ def get_project(signature: str):
     return {
         "id": pid,
         "name": name,
-        "score": float(rank) if rank else 0.0,
+        "score": float(score) if score else 0.0,
         "skills": top_skills,
     }

@@ -15,7 +15,9 @@ def test_all_tables_created():
         "GIT_HISTORY",
         "SKILL_ANALYSIS",
         "DASHBOARD_DATA",
-        "RESUME_SUMMARY"
+        "RESUME_SUMMARY",
+        "RESUME",
+        "RESUME_PROJECT"
     ]
 
     # Get all table names in the current database

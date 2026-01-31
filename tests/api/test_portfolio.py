@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 from app.api.routes.portfolio import router
 
 # Create a test FastAPI app with the portfolio router
@@ -36,18 +36,28 @@ def mock_portfolio_data():
                 "summary": "A test project",
                 "dates": "Jan 2024 – Mar 2024",
                 "type": "GitHub",
-                "metrics": {"total_commits": 25, "total_lines": 2000},
-                "technical_skills": ["Python", "FastAPI"],
-                "soft_skills": ["Problem Solving"],
-                "all_skills": ["Python", "FastAPI", "Problem Solving"]
+                "metrics": {
+                    "total_commits": 25, 
+                    "total_lines": 2000,
+                    "technical_keywords": ["API", "testing"],
+                    "languages": ["Python", "JavaScript"]
+                },
+                "skills": ["Python", "FastAPI", "Problem Solving"]
             }
         ],
         "skills_timeline": [
-            {"skill": "Python", "project": "Test Project 1", "date": "2024-01-15", "source": "technical"}
+            {"skill": "Python", "first_used": "2024-01-15", "year": 2024}
         ],
         "project_type_analysis": {
             "github": {"count": 2, "stats": {"avg_score": 0.88}},
             "local": {"count": 1, "stats": {"avg_score": 0.75}}
+        },
+        "graphs": {
+            "language_distribution": {"Python": 2, "JavaScript": 1},
+            "complexity_distribution": {"distribution": {"small": 1, "medium": 2, "large": 0}},
+            "score_distribution": {"distribution": {"excellent": 1, "good": 2, "fair": 0, "poor": 0}},
+            "monthly_activity": {"2024-01": 2, "2024-02": 1},
+            "top_skills": {"Python": 3, "FastAPI": 2}
         },
         "metadata": {
             "generated_at": "2024-01-01T10:00:00",
@@ -57,84 +67,223 @@ def mock_portfolio_data():
         }
     }
 
-def test_post_portfolio_generate(mock_portfolio_data):
-    """Test POST /portfolio/generate endpoint."""
-    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
-        mock_build.return_value = mock_portfolio_data
-        
-        payload = {"project_ids": ["proj1", "proj2", "proj3"]}
-        response = client.post("/api/portfolio/generate", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        # Check required fields
-        assert "user" in data
-        assert "overview" in data
-        assert "projects" in data
-        assert "skills_timeline" in data
-        assert "project_type_analysis" in data
-        assert "metadata" in data
-        
-        # Check metadata
-        assert data["metadata"]["filtered"] == True
-        assert len(data["metadata"]["project_ids"]) == 3
-        
-        # Check headers
-        assert "X-Portfolio-Projects" in response.headers
-        assert "X-Portfolio-Generated" in response.headers
 
-def test_post_portfolio_generate_empty_projects():
-    """Test POST /portfolio/generate with empty project_ids - should return all projects."""
-    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
-        # Mock return for all projects (empty filter)
-        mock_portfolio = {
-            "user": {"name": "Test User"},
-            "overview": {"total_projects": 3},
-            "projects": [{"id": "proj1"}, {"id": "proj2"}, {"id": "proj3"}],
-            "metadata": {"generated_at": "2025-01-01T00:00:00", "filtered": False}
-        }
-        mock_build.return_value = mock_portfolio
-        
-        payload = {"project_ids": []}
-        response = client.post("/api/portfolio/generate", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["overview"]["total_projects"] == 3
-        assert len(data["projects"]) == 3
-        assert data["metadata"]["filtered"] == False
-        # Verify mock was called with empty list (treated as None internally)
-        mock_build.assert_called_once_with(project_ids=[])
+class TestPortfolioEndpoints:
+    """Test suite for portfolio API endpoints."""
+    
+    def test_get_portfolio_all_projects(self, mock_portfolio_data):
+        """Test GET /portfolio endpoint without filters (all projects)."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = mock_portfolio_data
+            
+            response = client.get("/api/portfolio")
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            # Check required fields
+            assert "user" in data
+            assert "overview" in data
+            assert "projects" in data
+            assert "skills_timeline" in data
+            assert "project_type_analysis" in data
+            assert "graphs" in data
+            assert "metadata" in data
+            
+            # Check metadata for no filtering
+            assert data["metadata"]["total_projects"] == 3
+            assert data["metadata"]["filtered"] == True  # Mock data has filtered=True
+            
+            # Check headers
+            assert "X-Portfolio-Projects" in response.headers
+            assert "X-Portfolio-Generated" in response.headers
+            assert "X-Portfolio-Filtered" in response.headers
+            
+            # Verify mock was called with None (no filtering)
+            mock_build.assert_called_once_with(project_ids=None)
 
-def test_post_portfolio_generate_null_projects():
-    """Test POST /portfolio/generate with null project_ids - should return all projects.""" 
-    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
-        mock_portfolio = {
-            "user": {"name": "Test User"},
-            "overview": {"total_projects": 3}, 
-            "projects": [{"id": "proj1"}, {"id": "proj2"}, {"id": "proj3"}],
-            "metadata": {"generated_at": "2025-01-01T00:00:00", "filtered": False}
-        }
-        mock_build.return_value = mock_portfolio
-        
-        payload = {"project_ids": None}
-        response = client.post("/api/portfolio/generate", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["overview"]["total_projects"] == 3
-        assert len(data["projects"]) == 3
-        assert data["metadata"]["filtered"] == False
-        mock_build.assert_called_once_with(project_ids=None)
+    def test_get_portfolio_with_project_ids(self, mock_portfolio_data):
+        """Test GET /portfolio endpoint with specific project IDs."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = mock_portfolio_data
+            
+            response = client.get("/api/portfolio?project_ids=proj1,proj2,proj3")
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            # Check that data is returned properly
+            assert "overview" in data
+            assert data["overview"]["total_projects"] == 3
+            assert len(data["projects"]) == 1  # Mock data has 1 project
+            
+            # Verify mock was called with parsed project IDs
+            mock_build.assert_called_once_with(project_ids=["proj1", "proj2", "proj3"])
 
-def test_portfolio_generation_database_error():
-    """Test portfolio generation with database error."""
-    with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
-        mock_build.side_effect = Exception("Database connection failed")
+    def test_get_portfolio_with_whitespace_project_ids(self):
+        """Test GET /portfolio endpoint with project IDs containing whitespace."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = {
+                "user": {"name": "Test User"},
+                "overview": {"total_projects": 2},
+                "projects": [],
+                "skills_timeline": [],
+                "project_type_analysis": {"github": {"count": 0}, "local": {"count": 0}},
+                "graphs": {},
+                "metadata": {"generated_at": "2024-01-01T10:00:00", "total_projects": 2, "filtered": True}
+            }
+            
+            response = client.get("/api/portfolio?project_ids= proj1 , proj2 ,")
+            
+            assert response.status_code == 200
+            
+            # Verify whitespace was stripped and empty strings removed
+            mock_build.assert_called_once_with(project_ids=["proj1", "proj2"])
+
+    def test_get_portfolio_empty_project_ids(self):
+        """Test GET /portfolio endpoint with empty project_ids string."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = {
+                "user": {"name": "Test User"},
+                "overview": {"total_projects": 3},
+                "projects": [],
+                "skills_timeline": [],
+                "project_type_analysis": {"github": {"count": 0}, "local": {"count": 0}},
+                "graphs": {},
+                "metadata": {"generated_at": "2024-01-01T10:00:00", "total_projects": 3, "filtered": False}
+            }
+            
+            response = client.get("/api/portfolio?project_ids=")
+            
+            assert response.status_code == 200
+            
+            # Empty string should be treated as None (no filtering)
+            mock_build.assert_called_once_with(project_ids=None)
+
+    def test_get_portfolio_database_error(self):
+        """Test GET /portfolio endpoint with database error."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.side_effect = Exception("Database connection failed")
+            
+            response = client.get("/api/portfolio")
+            
+            assert response.status_code == 500
+            assert "Database connection failed" in response.json()["detail"]
+
+    def test_get_portfolio_response_headers(self, mock_portfolio_data):
+        """Test GET /portfolio endpoint response headers are set correctly."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = mock_portfolio_data
+            
+            response = client.get("/api/portfolio?project_ids=proj1,proj2")
+            
+            assert response.status_code == 200
+            
+            # Check custom headers
+            assert response.headers["X-Portfolio-Projects"] == "3"
+            assert response.headers["X-Portfolio-Generated"] == "2024-01-01T10:00:00"
+            assert response.headers["X-Portfolio-Filtered"] == "True"
+            assert response.headers["Content-Type"] == "application/json"
+
+
+class TestPortfolioDashboardEndpoints:
+    """Test suite for portfolio dashboard UI endpoints."""
+    
+    def test_portfolio_dashboard_success(self):
+        """Test GET /portfolio-dashboard endpoint returns HTML when file exists."""
+        mock_html_content = "<html><head><title>Portfolio Dashboard</title></head><body>Dashboard Content</body></html>"
         
-        payload = {"project_ids": ["proj1"]}
-        response = client.post("/api/portfolio/generate", json=payload)
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_html_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/portfolio-dashboard")
+            
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "text/html; charset=utf-8"
+            assert "Portfolio Dashboard" in response.text
+            assert "Dashboard Content" in response.text
+
+    def test_portfolio_dashboard_file_not_found(self):
+        """Test GET /portfolio-dashboard endpoint when HTML file doesn't exist."""
+        with patch('os.path.exists') as mock_exists:
+            mock_exists.return_value = False
+            
+            response = client.get("/api/portfolio-dashboard")
+            
+            assert response.status_code == 404
+            assert "Portfolio Dashboard not found" in response.text
+
+    def test_portfolio_js_success(self):
+        """Test GET /static/portfolio.js endpoint returns JavaScript when file exists."""
+        mock_js_content = "// Portfolio Dashboard JavaScript\nclass PortfolioDashboard { constructor() {} }"
         
-        assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "application/javascript"
+            assert "PortfolioDashboard" in response.text
+            assert "constructor" in response.text
+
+    def test_portfolio_js_file_not_found(self):
+        """Test GET /static/portfolio.js endpoint when JS file doesn't exist."""
+        with patch('os.path.exists') as mock_exists:
+            mock_exists.return_value = False
+            
+            response = client.get("/api/static/portfolio.js")
+            
+            assert response.status_code == 404
+            assert "JavaScript file not found" in response.json()["detail"]
+
+
+class TestPortfolioDataStructure:
+    """Test suite for portfolio data structure validation."""
+    
+    def test_portfolio_data_structure_validation(self, mock_portfolio_data):
+        """Test that portfolio response contains all required data structures."""
+        with patch('app.api.routes.portfolio.build_portfolio_model') as mock_build:
+            mock_build.return_value = mock_portfolio_data
+            
+            response = client.get("/api/portfolio")
+            data = response.json()
+            
+            # Test user structure
+            user = data["user"]
+            assert "name" in user
+            assert "email" in user
+            
+            # Test overview structure
+            overview = data["overview"]
+            assert "total_projects" in overview
+            assert "avg_score" in overview
+            assert "total_skills" in overview
+            assert "total_languages" in overview
+            assert "total_lines" in overview
+            
+            # Test projects structure
+            projects = data["projects"]
+            assert len(projects) > 0
+            project = projects[0]
+            assert "id" in project
+            assert "title" in project
+            assert "rank" in project
+            assert "metrics" in project
+            assert "skills" in project
+            
+            # Test graphs structure
+            graphs = data["graphs"]
+            assert "language_distribution" in graphs
+            assert "complexity_distribution" in graphs
+            assert "score_distribution" in graphs
+            assert "monthly_activity" in graphs
+            assert "top_skills" in graphs
+            
+            # Test metadata structure
+            metadata = data["metadata"]
+            assert "generated_at" in metadata
+            assert "total_projects" in metadata
+            assert "filtered" in metadata

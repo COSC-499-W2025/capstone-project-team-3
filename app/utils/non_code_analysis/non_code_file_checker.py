@@ -206,9 +206,8 @@ def verify_user_in_files(
     """
     Verify which files the user actually contributed to vs files by others only.
     
-    README files and binary files (PDF, DOCX) are treated specially - they go to 
-    user_solo (non-collaborative) so they get full content parsing instead of 
-    git diff extraction (which doesn't work for binary files).
+    README files are treated specially - they go to user_solo (non-collaborative)
+    so they get full content parsing instead of git diff extraction.
     
     Args:
         file_metadata: Output from collect_git_non_code_files_with_metadata()
@@ -217,27 +216,22 @@ def verify_user_in_files(
     Returns:
         {
             "user_collaborative": [paths],    # Files with user + at least 1 other (extract git diffs)
-            "user_solo": [paths],             # Files with ONLY user OR README/PDF/DOCX (parse full content)
+            "user_solo": [paths],             # Files with ONLY user OR README (parse full content)
             "others_only": [paths]            # Files WITHOUT user
         }
     """
     user_collaborative = []
     user_solo = []
     others_only = []
-    
-    # Binary/special extensions that can't be parsed via git diff
-    non_diffable_extensions = {".pdf", ".docx", ".doc"}
 
     for file_path, info in file_metadata.items():
         authors = info.get("authors", [])
         usernames = info.get("usernames", [])
         path_obj = Path(info["path"])
         is_readme = path_obj.name.lower().startswith("readme")
-        is_non_diffable = path_obj.suffix.lower() in non_diffable_extensions
 
-        # README and binary files (PDF/DOCX) always go to user_solo for full content parsing
-        # since git diff extraction doesn't work for these file types
-        if is_readme or is_non_diffable:
+        # README files always go to user_solo for full content parsing
+        if is_readme:
             user_solo.append(info["path"])
             continue
 

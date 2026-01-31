@@ -7,6 +7,7 @@ from app.data.db import get_connection
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
+import os
 
 
 router = APIRouter()

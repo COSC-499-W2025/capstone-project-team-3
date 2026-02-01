@@ -334,7 +334,7 @@ def main():
                         for i, proj in enumerate(portfolio["top_projects"], 1):
                             skills_count = len(proj['skills'])
                             rank_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}️⃣"
-                            print(f"   {rank_emoji} {proj['name']} — Score: {proj['rank']} — ({proj['duration']}) — {skills_count} skills")
+                            print(f"   {rank_emoji} {proj['name']} — Score: {proj['score']} — ({proj['duration']}) — {skills_count} skills")
                             
                             # Show summry of project
                             if proj['summary']:

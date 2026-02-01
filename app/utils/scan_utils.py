@@ -200,7 +200,7 @@ def get_all_file_signatures_from_db() -> set:
             sigs.update(json.loads(row[0]))
     return sigs
 
-def calculate_project_score(current_file_signatures: List[str]) -> float:
+def calculate_project_scan_score(current_file_signatures: List[str]) -> float:
     """Calculate what % of current project files have already been analyzed."""
     db_sigs = get_all_file_signatures_from_db()
     if not current_file_signatures:
@@ -252,8 +252,8 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
             "signature": project_signature
         }
     # Project is new - calculate score and store
-    score = calculate_project_score(file_signatures)
-    print(f"{score}% of files in this project was analyzed in the past.")
+    scan_score = calculate_project_scan_score(file_signatures)
+    print(f"{scan_score}% of files in this project was analyzed in the past.")
     
     # Store new project
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
@@ -272,7 +272,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     return {
         "files": files,
         "skip_analysis": False,
-        "score": score,
+        "score": scan_score,
         "reason": "new_project",
         "signature": project_signature
     }

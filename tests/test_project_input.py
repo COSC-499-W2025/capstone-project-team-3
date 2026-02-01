@@ -8,7 +8,7 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    calculate_project_score,
+    calculate_project_scan_score,
     extract_project_timestamps
 )
 from pathlib import Path
@@ -153,8 +153,8 @@ def test_get_all_file_signatures_from_db(tmp_path):
     assert sig1 in sigs
     assert sig2 in sigs
 
-def test_calculate_project_score(tmp_path):
-    """Test calculation of project score based on file signatures in DB."""
+def test_calculate_project_scan_score(tmp_path):
+    """Test calculation of project scan score based on file signatures in DB."""
     # Add one file to DB
     file1 = tmp_path / "score1.txt"
     file2 = tmp_path / "score2.txt"
@@ -168,8 +168,8 @@ def test_calculate_project_score(tmp_path):
     size_bytes = file1.stat().st_size + file2.stat().st_size
     store_project_in_db(signature, name, path, [sig1], size_bytes)
     # Now test score calculation
-    score = calculate_project_score([sig1, sig2])
-    assert score == 50.0  # Only one of two files is already in DB
+    scan_score = calculate_project_scan_score([sig1, sig2])
+    assert scan_score == 50.0  # Only one of two files is already in DB
     
 def test_extract_file_signature_error(tmp_path):
     """Test that extract_file_signature returns ERROR_SIGNATURE for missing file."""

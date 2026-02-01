@@ -32,7 +32,7 @@ def mock_portfolio_data():
             {
                 "id": "proj1",
                 "title": "Test Project 1",
-                "rank": 0.9,
+                "score": 0.9,
                 "summary": "A test project",
                 "dates": "Jan 2024 – Mar 2024",
                 "type": "GitHub",
@@ -270,7 +270,7 @@ class TestPortfolioDataStructure:
             project = projects[0]
             assert "id" in project
             assert "title" in project
-            assert "rank" in project
+            assert "score" in project
             assert "metrics" in project
             assert "skills" in project
             

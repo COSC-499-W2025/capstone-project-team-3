@@ -13,7 +13,7 @@ def setup_test_db(tmp_path, monkeypatch):
         CREATE TABLE PROJECT (
             project_signature TEXT PRIMARY KEY,
             name TEXT,
-            rank INTEGER,
+            score REAL,
             summary TEXT,
             created_at TEXT,
             last_modified TEXT
@@ -53,7 +53,7 @@ def setup_test_db(tmp_path, monkeypatch):
     """)
 
     # Insert test data
-    cur.execute("INSERT INTO PROJECT VALUES ('sig1', 'Test Project', 1, 'A summary.', '2024-01-01 10:00:00', '2024-02-01 10:00:00')")
+    cur.execute("INSERT INTO PROJECT VALUES ('sig1', 'Test Project', 0.9, 'A summary.', '2024-01-01 10:00:00', '2024-02-01 10:00:00')")
     cur.execute("INSERT INTO SKILL_ANALYSIS VALUES ('sig1', 'Python', 'code')")
     cur.execute("INSERT INTO SKILL_ANALYSIS VALUES ('sig1', 'Testing', 'code')")
     cur.execute("INSERT INTO DASHBOARD_DATA VALUES ('sig1', 'author', 'James')")

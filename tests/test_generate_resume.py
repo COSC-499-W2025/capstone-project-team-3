@@ -14,6 +14,7 @@ from app.utils.generate_resume import (
     load_edited_skills,
     load_saved_resume
 )
+import json
 
 @pytest.fixture
 def db_connection(monkeypatch):
@@ -118,8 +119,11 @@ def db_connection(monkeypatch):
     cursor.execute("INSERT INTO RESUME (id) VALUES (1)")
     cursor.execute("""
         INSERT INTO RESUME_PROJECT
-        VALUES (1, 'p1', 'Alpha_Project', '2024-01-01', '2024-06-01', 'Python,Flask,SQL', 'Did stuff', 1)
-    """)
+        VALUES (1, 'p1', 'Alpha_Project', '2024-01-01', '2024-06-01', ?, ?, 1)
+    """, (
+        json.dumps(["Python", "Flask", "SQL"]),  # skills as JSON array
+        json.dumps(["Did stuff"]),               # bullets as JSON array
+    ))
     cursor.execute("""
         INSERT INTO RESUME_SKILLS
         VALUES (1, 'Python,Flask,SQL,Machine Learning')
@@ -237,7 +241,7 @@ def test_load_resume_projects(db_connection):
     assert len(rows) == 1
     assert rows[0][0] == 'p1'
     assert rows[0][1] == 'Alpha_Project'
-    assert rows[0][4] == 'Python,Flask,SQL'
+    assert json.loads(rows[0][4]) == ["Python", "Flask", "SQL"]
     
 def test_load_edited_skills(db_connection):
     """Test that load_edited_skills returns the edited skills string."""

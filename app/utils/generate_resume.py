@@ -3,6 +3,7 @@ from app.data.db import get_connection
 import sqlite3
 from typing import Any, DefaultDict, Dict, List, Tuple, Optional
 from datetime import datetime
+import json
 
 def format_dates(start: str, end: str) -> str:
     """Format dates shown to months and year"""
@@ -181,7 +182,7 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
     ) in rows:
         # Parse skills: override_skills if present, else fallback to skills_map
         if override_skills:
-            skills = [s.strip() for s in override_skills.split(",") if s.strip()]
+            skills = json.loads(override_skills)
         else:
             skills = skills_map.get(pid, [])
         # Limit to 5 for display

@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     display_order INTEGER,
 
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE,
+    UNIQUE (resume_id, project_id)
 );
 
 """

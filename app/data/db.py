@@ -93,6 +93,15 @@ CREATE TABLE IF NOT EXISTS RESUME (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table for edited resume skills --
+CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    skills TEXT NOT NULL, -- comma-separated list of skills
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
 --Table to edited resume details --
 CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -332,6 +341,15 @@ def seed_db():
             "Led a team of 4 developers."
         ]),  # bullets
         1  # display_order
+    ))
+    
+    # --- RESUME_SKILLS ---
+    cursor.execute("""
+    INSERT OR IGNORE INTO RESUME_SKILLS (resume_id, skills)
+    VALUES (?, ?)
+    """, (
+        1,  # resume_id (should match an existing RESUME)
+        "Python,Flask,Backend, Java,Team Collaboration,Git,Agile Methodologies"
     ))
 
     conn.commit()

@@ -132,7 +132,6 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
-    _migrate_project_rank_to_score(cursor)
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()

@@ -133,7 +133,6 @@ def init_db():
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
     _migrate_project_rank_to_score(cursor)
-    _migrate_project_score_override_fields(cursor)
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()
@@ -147,15 +146,6 @@ def _migrate_project_rank_to_score(cursor: sqlite3.Cursor) -> None:
         cursor.execute("ALTER TABLE PROJECT ADD COLUMN score REAL")
     if "rank" in columns:
         cursor.execute("UPDATE PROJECT SET score = rank WHERE score IS NULL")
-
-def _migrate_project_score_override_fields(cursor: sqlite3.Cursor) -> None:
-    """Add override fields to PROJECT if missing."""
-    cursor.execute("PRAGMA table_info(PROJECT)")
-    columns = {row[1] for row in cursor.fetchall()}
-    if "score_overridden" not in columns:
-        cursor.execute("ALTER TABLE PROJECT ADD COLUMN score_overridden INTEGER DEFAULT 0")
-    if "score_overridden_value" not in columns:
-        cursor.execute("ALTER TABLE PROJECT ADD COLUMN score_overridden_value REAL")
 
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""

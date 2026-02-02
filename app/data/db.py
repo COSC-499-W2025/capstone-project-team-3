@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
     score REAL CHECK (score >= 0.0 AND score <= 1.0),
+    score_overridden INTEGER DEFAULT 0,
+    score_overridden_value REAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     summary TEXT,
@@ -140,25 +142,17 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
-    _migrate_project_rank_to_score(cursor)
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
 
-def _migrate_project_rank_to_score(cursor: sqlite3.Cursor) -> None:
-    """Backfill PROJECT.score from legacy PROJECT.rank if needed."""
-    cursor.execute("PRAGMA table_info(PROJECT)")
-    columns = {row[1] for row in cursor.fetchall()}
-    if "score" not in columns:
-        cursor.execute("ALTER TABLE PROJECT ADD COLUMN score REAL")
-    if "rank" in columns:
-        cursor.execute("UPDATE PROJECT SET score = rank WHERE score IS NULL")
-
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""
     cursor.execute("DROP TRIGGER IF EXISTS project_score_range_insert")
     cursor.execute("DROP TRIGGER IF EXISTS project_score_range_update")
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_override_range_insert")
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_override_range_update")
     cursor.execute("""
         CREATE TRIGGER project_score_range_insert
         BEFORE INSERT ON PROJECT
@@ -175,6 +169,24 @@ def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
         WHEN NEW.score IS NOT NULL AND (NEW.score < 0.0 OR NEW.score > 1.0)
         BEGIN
             SELECT RAISE(ABORT, 'project score must be between 0 and 1');
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER project_score_override_range_insert
+        BEFORE INSERT ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score_overridden_value IS NOT NULL AND (NEW.score_overridden_value < 0.0 OR NEW.score_overridden_value > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project overridden score must be between 0 and 1');
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER project_score_override_range_update
+        BEFORE UPDATE OF score_overridden_value ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score_overridden_value IS NOT NULL AND (NEW.score_overridden_value < 0.0 OR NEW.score_overridden_value > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project overridden score must be between 0 and 1');
         END;
     """)
 

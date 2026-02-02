@@ -464,7 +464,7 @@ def test_find_and_update_similar_project_integration(tmp_path):
     assert returned_sig != old_project_sig  # Signature should have changed
 
 def test_find_and_update_similar_project_default_threshold():
-    """Test that the default threshold is 70%."""
+    """Test that the default threshold is 65%."""
     from app.utils.scan_utils import find_and_update_similar_project
     import inspect
     
@@ -472,5 +472,5 @@ def test_find_and_update_similar_project_default_threshold():
     sig = inspect.signature(find_and_update_similar_project)
     default_threshold = sig.parameters['threshold'].default
     
-    # Verify default is 70%
-    assert default_threshold == 70.0
+    # Verify default is 65%
+    assert default_threshold == 65.0

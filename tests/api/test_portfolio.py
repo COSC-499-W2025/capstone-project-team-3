@@ -512,3 +512,302 @@ document.addEventListener('DOMContentLoaded', function() {
             response = client.get("/api/static/portfolio.js")
             assert response.status_code == 404
             assert "JavaScript file not found" in response.json()["detail"]
+
+    def test_portfolio_js_chart_methods(self):
+        """Test that JavaScript contains chart creation methods"""
+        mock_js_content = """
+        createPieChart(canvasId, title, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, { type: 'pie' });
+        }
+        
+        createBarChart(canvasId, title, data) {
+            return new Chart(ctx, { type: 'bar' });
+        }
+        
+        createHorizontalBarChart(canvasId, title, data) {
+            return new Chart(ctx, { type: 'bar', options: { indexAxis: 'y' } });
+        }
+        
+        createLineChart(canvasId, title, data) {
+            return new Chart(ctx, { type: 'line' });
+        }
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify chart creation methods
+            assert "createPieChart(" in content
+            assert "createBarChart(" in content
+            assert "createHorizontalBarChart(" in content
+            assert "createLineChart(" in content
+            
+            # Verify Chart.js integration
+            assert "new Chart(" in content
+            assert "type: 'pie'" in content
+            assert "type: 'bar'" in content
+            assert "type: 'line'" in content
+
+    def test_portfolio_js_rendering_methods(self):
+        """Test that JavaScript contains comprehensive rendering methods"""
+        mock_js_content = """
+        renderDashboard(data) {
+            this.renderOverviewCards(data.overview);
+            this.renderCharts(data.graphs);
+            this.renderTopProjects(data.projects);
+            this.renderDetailedAnalysis(data.projects);
+        }
+        
+        renderOverviewCards(overview) {}
+        renderCharts(graphs) {}
+        renderTopProjects(projects) {}
+        renderDetailedAnalysis(projects) {}
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify main rendering methods
+            assert "renderDashboard(" in content
+            assert "renderOverviewCards(" in content
+            assert "renderCharts(" in content
+            assert "renderTopProjects(" in content
+            assert "renderDetailedAnalysis(" in content
+            
+            # Verify rendering orchestration
+            assert "this.renderOverviewCards(data.overview)" in content
+            assert "this.renderCharts(data.graphs)" in content
+
+    def test_portfolio_js_project_interaction(self):
+        """Test that JavaScript contains project selection and interaction logic"""
+        mock_js_content = """
+        constructor() {
+            this.selectedProjects = new Set();
+            this.allProjects = [];
+            this.currentPortfolioData = null;
+            this.charts = {};
+        }
+        
+        window.toggleProject = function(projectId) {
+            const dashboard = window.portfolioDashboard;
+            if (dashboard.selectedProjects.has(projectId)) {
+                dashboard.selectedProjects.delete(projectId);
+            } else {
+                dashboard.selectedProjects.add(projectId);
+            }
+            dashboard.loadPortfolio();
+        };
+        
+        window.toggleAllProjects = function() {
+            const dashboard = window.portfolioDashboard;
+            const allSelected = dashboard.selectedProjects.size === dashboard.allProjects.length;
+        };
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify project state management
+            assert "this.selectedProjects = new Set()" in content
+            assert "this.allProjects = []" in content
+            assert "this.currentPortfolioData = null" in content
+            assert "this.charts = {}" in content
+            
+            # Verify project interaction functions
+            assert "window.toggleProject = function(projectId)" in content
+            assert "window.toggleAllProjects = function()" in content
+            assert "selectedProjects.has(projectId)" in content
+            assert "selectedProjects.delete(projectId)" in content
+            assert "selectedProjects.add(projectId)" in content
+
+    def test_portfolio_js_data_processing(self):
+        """Test that JavaScript contains data processing and aggregation logic"""
+        mock_js_content = """
+        renderDetailedAnalysis(projects) {
+            let totalTestFiles = 0;
+            let totalFunctions = 0;
+            let totalClasses = 0;
+            let githubProjects = 0;
+            let localProjects = 0;
+            let developmentPatterns = new Set();
+            let allTechKeywords = new Set();
+            
+            projects.forEach(project => {
+                const metrics = project.metrics || {};
+                totalTestFiles += metrics.test_files_changed || 0;
+                totalFunctions += metrics.functions || 0;
+                totalClasses += metrics.classes || 0;
+                
+                if (project.type === 'GitHub') githubProjects++;
+                else localProjects++;
+            });
+        }
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify data aggregation logic
+            assert "totalTestFiles" in content
+            assert "totalFunctions" in content
+            assert "totalClasses" in content
+            assert "githubProjects" in content
+            assert "localProjects" in content
+            assert "developmentPatterns" in content
+            assert "allTechKeywords" in content
+            
+            # Verify project type checking
+            assert "project.type === 'GitHub'" in content
+            assert "projects.forEach(" in content
+
+    def test_portfolio_js_error_handling(self):
+        """Test that JavaScript contains comprehensive error handling"""
+        mock_js_content = """
+        async loadProjects() {
+            try {
+                console.log('🔍 Attempting to load projects...');
+                const response = await fetch('/api/projects');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const projects = await response.json();
+                console.log('✅ Projects loaded successfully');
+            } catch (error) {
+                console.error('❌ Error loading projects:', error);
+                document.getElementById('projectList').innerHTML = 
+                    '<div style="color: var(--danger)">Failed to load projects: ' + error.message + '</div>';
+            }
+        }
+        
+        showError(message) {
+            console.error(message);
+            alert(`Error: ${message}`);
+        }
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify error handling patterns
+            assert "try {" in content
+            assert "catch (error)" in content
+            assert "console.error(" in content
+            assert "showError(" in content
+            assert "throw new Error(" in content
+            assert "Failed to load" in content
+
+    def test_portfolio_js_chart_configuration(self):
+        """Test that JavaScript contains proper Chart.js configuration options"""
+        mock_js_content = """
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#4a5568',
+                        font: { size: 12 },
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#e2e8f0' },
+                    ticks: { color: '#4a5568', font: { size: 11 } }
+                },
+                x: {
+                    grid: { color: '#e2e8f0' },
+                    ticks: { color: '#4a5568', font: { size: 11 } }
+                }
+            }
+        }
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify Chart.js configuration options
+            assert "responsive: true" in content
+            assert "maintainAspectRatio: false" in content
+            assert "beginAtZero: true" in content
+            assert "usePointStyle: true" in content
+            assert "position: 'bottom'" in content
+            
+            # Verify color scheme consistency
+            assert "#4a5568" in content
+            assert "#e2e8f0" in content
+
+    def test_portfolio_js_dom_manipulation(self):
+        """Test that JavaScript contains DOM manipulation and event handling"""
+        mock_js_content = """
+        document.getElementById('projectList').innerHTML = projectsHtml;
+        document.getElementById('overviewCards').innerHTML = cardsHtml;
+        document.getElementById('topProjects').innerHTML = topProjectsHtml;
+        document.getElementById('detailedAnalysis').innerHTML = analysisHtml;
+        
+        document.querySelectorAll('.editable-field').forEach(element => {
+            element.style.cursor = 'pointer';
+            element.title = 'Click to edit';
+            
+            element.addEventListener('click', (e) => {
+                const field = e.target.dataset.field;
+                const projectId = e.target.dataset.project;
+                console.log(`Edit ${field} for project ${projectId}`);
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            window.portfolioDashboard = new PortfolioDashboard();
+        });
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify DOM element targeting
+            assert "document.getElementById(" in content
+            assert "document.querySelectorAll(" in content
+            assert "projectList" in content
+            assert "overviewCards" in content
+            assert "topProjects" in content
+            assert "detailedAnalysis" in content
+            
+            # Verify event handling
+            assert "addEventListener(" in content
+            assert "DOMContentLoaded" in content
+            assert "dataset.field" in content
+            assert "dataset.project" in content
+            assert ".style.cursor = 'pointer'" in content

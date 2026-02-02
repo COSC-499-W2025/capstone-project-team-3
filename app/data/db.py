@@ -138,15 +138,6 @@ def init_db():
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
 
-def _migrate_project_rank_to_score(cursor: sqlite3.Cursor) -> None:
-    """Backfill PROJECT.score from legacy PROJECT.rank if needed."""
-    cursor.execute("PRAGMA table_info(PROJECT)")
-    columns = {row[1] for row in cursor.fetchall()}
-    if "score" not in columns:
-        cursor.execute("ALTER TABLE PROJECT ADD COLUMN score REAL")
-    if "rank" in columns:
-        cursor.execute("UPDATE PROJECT SET score = rank WHERE score IS NULL")
-
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""
     cursor.execute("DROP TRIGGER IF EXISTS project_score_range_insert")

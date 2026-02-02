@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model
 from app.utils.generate_resume_tex import generate_resume_tex
+from app.data.db import get_connection
 from pydantic import BaseModel
 import subprocess
 import os
@@ -240,3 +241,44 @@ async def resume_pdf_filtered(filter: ResumeFilter):
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
+
+
+@router.delete("/resume/{resume_id}")
+def delete_saved_resume(resume_id: int):
+    """
+    Delete a saved/edited resume by resume_id.
+    
+    This deletes the resume entry from RESUME table, which will cascade delete:
+    - All projects from RESUME_PROJECT table
+    - All skills from RESUME_SKILLS table
+    
+    Does NOT delete the master resume or base project data.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if resume exists
+        cursor.execute("SELECT id, name FROM RESUME WHERE id = ?", (resume_id,))
+        resume = cursor.fetchone()
+        
+        if not resume:
+            raise HTTPException(404, f"Resume with ID {resume_id} not found")
+        
+        # Delete the resume (CASCADE will handle RESUME_PROJECT and RESUME_SKILLS)
+        cursor.execute("DELETE FROM RESUME WHERE id = ?", (resume_id,))
+        conn.commit()
+        
+        return {
+            "success": True,
+            "message": f"Resume {resume_id} ({resume[1]}) deleted successfully",
+            "deleted_resume_id": resume_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(500, f"Failed to delete resume: {str(e)}")
+    finally:
+        conn.close()

@@ -413,3 +413,102 @@ def test_edit_portfolio_batch_no_fields():
         assert response.status_code == 400
         assert "No fields provided for project" in response.json()["detail"]
         mock_db.commit.assert_not_called()
+
+
+class TestPortfolioJavaScript:
+    """Test the portfolio JavaScript serving endpoint"""
+    
+    def test_portfolio_js_content_structure(self):
+        """Test that the portfolio JavaScript contains expected class and methods"""
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data="""
+// Portfolio Dashboard JavaScript
+class PortfolioDashboard {
+    constructor() {
+        this.selectedProjects = new Set();
+        this.allProjects = [];
+        this.currentPortfolioData = null;
+        this.charts = {};
+        
+        this.init();
+    }
+    
+    async init() {}
+    
+    async loadProjects() {}
+    
+    async loadPortfolio() {}
+    
+    renderProjectList(projects) {}
+    
+    renderOverviewCards(overview) {}
+}
+
+window.toggleProject = function(projectId) {};
+window.toggleAllProjects = function() {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    window.portfolioDashboard = new PortfolioDashboard();
+});
+             """)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            assert response.status_code == 200
+            
+            content = response.content.decode()
+            
+            # Verify core class structure
+            assert "class PortfolioDashboard" in content
+            assert "constructor()" in content
+            assert "async loadProjects()" in content
+            assert "async loadPortfolio()" in content
+            assert "renderProjectList(" in content
+            assert "renderOverviewCards(" in content
+            
+            # Verify global functions
+            assert "window.toggleProject" in content
+            assert "window.toggleAllProjects" in content
+            
+            # Verify initialization
+            assert "DOMContentLoaded" in content
+            assert "new PortfolioDashboard()" in content
+
+    def test_portfolio_js_api_endpoints(self):
+        """Test that JavaScript references correct API endpoints"""
+        mock_js_content = """
+        fetch('/api/projects')
+        fetch('/api/portfolio')
+        url = `/api/portfolio?project_ids=${selectedIds.join(',')}`
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Verify API endpoint references
+            assert "'/api/projects'" in content
+            assert "'/api/portfolio'" in content
+            assert "project_ids=" in content
+
+    def test_portfolio_js_response_headers(self):
+        """Test that JavaScript is served with correct content type"""
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data="// Test JS content")):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "application/javascript"
+    
+    def test_portfolio_js_file_not_found(self):
+        """Test that 404 is returned when JavaScript file doesn't exist"""
+        with patch('os.path.exists') as mock_exists:
+            mock_exists.return_value = False
+            
+            response = client.get("/api/static/portfolio.js")
+            assert response.status_code == 404
+            assert "JavaScript file not found" in response.json()["detail"]

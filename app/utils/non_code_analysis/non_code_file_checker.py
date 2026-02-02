@@ -3,10 +3,11 @@ Non-code file checker - identifies and filters non-code files from repositories 
 Reuses functions from git_utils.py for consistency.
 """
 from pathlib import Path
-from typing import Set, List, Union, Dict, Any
+from typing import Set, List, Union, Dict, Any, Optional
 from app.utils.git_utils import (
     get_repo, 
-    detect_git
+    detect_git,
+    _extract_github_noreply_username
 )
 from app.utils.scan_utils import scan_project_files
 
@@ -244,7 +245,7 @@ def verify_user_in_files(
         # Check multiple matching strategies:
         # 1. Exact username match in usernames list (case-insensitive)
         # 2. Exact email match in authors (emails) list (case-insensitive)
-        # 3. Username contained in GitHub noreply email (e.g., "PaintedW0lf" in "97552907+PaintedW0lf@users.noreply.github.com")
+        # 3. Username matches extracted GitHub noreply username (e.g., "PaintedW0lf" from "97552907+PaintedW0lf@users.noreply.github.com")
         user_is_author = False
         
         # Strategy 1: Exact username match (case-insensitive)
@@ -255,10 +256,11 @@ def verify_user_in_files(
         if user_email_lower and user_email_lower in authors_lower:
             user_is_author = True
         
-        # Strategy 3: Username contained in any author email (GitHub noreply format)
+        # Strategy 3: Extract GitHub noreply username and compare (avoids false positives from substring matching)
         if username_lower and not user_is_author:
-            for author in authors_lower:
-                if username_lower in author:
+            for author in authors:
+                noreply_username = _extract_github_noreply_username(author)
+                if noreply_username and noreply_username.lower() == username_lower:
                     user_is_author = True
                     break
         

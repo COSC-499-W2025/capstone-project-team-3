@@ -15,10 +15,10 @@ def setup_test_db():
     
     # Insert test projects
     cursor.execute("""
-        INSERT OR REPLACE INTO PROJECT (project_signature, name, path, rank, last_modified)
+        INSERT OR REPLACE INTO PROJECT (project_signature, name, path, score, last_modified)
         VALUES 
-            ('proj1', 'Test Project 1', '/path/to/proj1', 1, '2026-01-15 10:00:00'),
-            ('proj2', 'Test Project 2', '/path/to/proj2', 2, '2026-01-18 14:00:00')
+            ('proj1', 'Test Project 1', '/path/to/proj1', 0.9, '2026-01-15 10:00:00'),
+            ('proj2', 'Test Project 2', '/path/to/proj2', 0.8, '2026-01-18 14:00:00')
     """)
     
     # Insert test skills

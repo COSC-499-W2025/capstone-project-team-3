@@ -3,6 +3,7 @@ from app.data.db import get_connection
 import sqlite3
 from typing import Any, DefaultDict, Dict, List, Tuple, Optional
 from datetime import datetime
+import json
 
 def format_dates(start: str, end: str) -> str:
     """Format dates shown to months and year"""
@@ -103,6 +104,118 @@ def limit_skills(skills: List[str], max_count: int = 5) -> List[str]:
 
     return limited
 
+def load_resume_projects(cursor: sqlite3.Cursor, resume_id:int) -> List[Tuple[int, Optional[str],Optional[str],Optional[str],Optional[str],int,str,str,str]]:
+    """Get all projects associated with the given resume_id"""
+    cursor.execute("""
+        SELECT
+            rp.project_id,
+            rp.project_name,
+            rp.start_date,
+            rp.end_date,
+            rp.skills,
+            rp.bullets,
+            rp.display_order,
+            p.name,
+            p.created_at,
+            p.last_modified
+        FROM RESUME_PROJECT rp
+        JOIN PROJECT p ON p.project_signature = rp.project_id
+        WHERE rp.resume_id = ?
+        ORDER BY rp.display_order
+    """, (resume_id,))
+    
+    return cursor.fetchall()
+
+def load_edited_skills(cursor: sqlite3.Cursor, resume_id:int) -> Optional[Tuple[str]]:
+    """ Get edited all skills if present """
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1", (resume_id,))
+    return cursor.fetchone()
+
+def load_saved_resume(resume_id:int) ->Dict[str,Any]:
+    """Loads a saved resume, merges base bullets with edited versions"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    user = load_user(cursor)
+    skills_map = load_skills(cursor)
+
+    # Get edited resume and display order
+    rows = load_resume_projects(cursor, resume_id)
+    project_ids = [r[0] for r in rows]
+
+    # Get original bullets
+    bullets_map = defaultdict(list)
+    if project_ids:
+        placeholders = ",".join(["?"] * len(project_ids))
+        cursor.execute(f"""
+            SELECT project_id, summary_text
+            FROM RESUME_SUMMARY
+            WHERE project_id IN ({placeholders})
+        """, project_ids)
+
+        for pid, text in cursor.fetchall():
+            bullets_map[pid].append(text)
+
+    row = load_edited_skills(cursor,resume_id)
+    if row and row[0]:
+        # Use edited all skills
+        all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
+    else: #Return to original skills shown
+        # Aggregate all skills from projects
+        union = set()
+        for pid in project_ids:
+            union.update(skills_map.get(pid, []))
+        all_skills = sorted(union)
+
+    projects = []
+    for (
+        pid,
+        override_name,
+        start,
+        end,
+        override_skills,
+        override_bullets,
+        _order,
+        base_name,
+        created_at,
+        last_modified
+    ) in rows:
+        # Parse skills: override_skills if present, else fallback to skills_map
+        if override_skills:
+            skills = json.loads(override_skills)
+        else:
+            skills = skills_map.get(pid, [])
+        # Limit to 5 for display
+        limited_skills = skills[:5]
+
+        projects.append({
+            "title": override_name or base_name,
+            "dates": format_dates(
+                start or created_at,
+                end or last_modified
+            ),
+            "skills": limited_skills,
+            "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+        })
+    
+    conn.close()
+
+    return {
+        "name": user["name"],
+        "email": user["email"],
+        "links": user["links"],
+        "education": {
+            "school": user["education"],
+            "degree": user["job_title"],
+            "dates": "",
+            "gpa": ""
+        },
+        "skills": {
+            "Skills": all_skills
+        },
+        "projects": projects
+    }
+    
 def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """Return assembled resume model built from the database.
     If project_ids are provided, include only those projects in the list.

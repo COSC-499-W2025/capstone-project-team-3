@@ -202,3 +202,13 @@ def test_get_or_compile_pdf_cache(tmp_path, monkeypatch):
         pdf2 = get_or_compile_pdf(tex)
         assert pdf2.startswith(b"%PDF")
         mock_compile2.assert_not_called()
+        
+@patch("app.api.routes.resume.load_saved_resume")
+def test_get_saved_resume(mock_load, client, fake_resume_model):
+    """Test GET /resume/{resume_id} returns the saved resume model."""
+    mock_load.return_value = fake_resume_model
+    response = client.get("/resume/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == fake_resume_model["name"]
+    assert data["email"] == fake_resume_model["email"]

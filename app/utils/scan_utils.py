@@ -212,7 +212,7 @@ def calculate_project_similarity(current_signatures: List[str], existing_signatu
     total = len(current_set.union(existing_set))
     return (overlap / total) * 100 if total > 0 else 0.0
 
-def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = 70.0) -> Optional[tuple]:
+def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = 65.0) -> Optional[tuple]:
     """
     Find a similar project and replace it with the new upload.
     
@@ -264,7 +264,7 @@ def find_and_update_similar_project(current_signatures: List[str], new_project_s
     return None
 
 
-def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 70.0) -> dict:
+def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 65.0) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.

@@ -2,7 +2,7 @@ from typing import Optional, List
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model
+from app.utils.generate_resume import build_resume_model, load_saved_resume
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel
@@ -70,6 +70,11 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
         </body>
     </html>
     """
+    
+@router.get("/resume/{resume_id}")
+def get_saved_resume(resume_id: int):
+    """Load saved resume"""
+    return load_saved_resume(resume_id)
     
 @router.post("/resume/preview", response_class=HTMLResponse)
 def generate_resume(filter: ResumeFilter):

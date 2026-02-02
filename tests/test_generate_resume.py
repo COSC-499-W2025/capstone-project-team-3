@@ -9,7 +9,12 @@ from app.utils.generate_resume import (
     load_projects,
     load_resume_bullets,
     load_skills,
+    build_resume_model,
+    load_resume_projects,
+    load_edited_skills,
+    load_saved_resume
 )
+import json
 
 @pytest.fixture
 def db_connection(monkeypatch):
@@ -51,6 +56,26 @@ def db_connection(monkeypatch):
             project_id TEXT,
             skill TEXT
         );
+        
+        CREATE TABLE RESUME (
+        id INTEGER PRIMARY KEY
+        );
+        
+        CREATE TABLE RESUME_PROJECT (
+            resume_id INTEGER,
+            project_id TEXT,
+            project_name TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            skills TEXT,
+            bullets TEXT,
+            display_order INTEGER
+        );
+        
+        CREATE TABLE RESUME_SKILLS (
+            resume_id INTEGER,
+            skills TEXT
+        );
     """)
 
     # --- Seed Data ---
@@ -90,6 +115,19 @@ def db_connection(monkeypatch):
         ('p2', 'Python'),
         ('p2', 'Machine Learning'),
     ])
+    
+    cursor.execute("INSERT INTO RESUME (id) VALUES (1)")
+    cursor.execute("""
+        INSERT INTO RESUME_PROJECT
+        VALUES (1, 'p1', 'Alpha_Project', '2024-01-01', '2024-06-01', ?, ?, 1)
+    """, (
+        json.dumps(["Python", "Flask", "SQL"]),  # skills as JSON array
+        json.dumps(["Did stuff"]),               # bullets as JSON array
+    ))
+    cursor.execute("""
+        INSERT INTO RESUME_SKILLS
+        VALUES (1, 'Python,Flask,SQL,Machine Learning')
+    """)
 
     conn.commit()
 
@@ -176,7 +214,7 @@ def test_load_skills(db_connection):
 def test_build_resume_model_filters_projects(db_connection):
     """Tests that build_resume_model filters projects by selected IDs and unions skills accordingly."""
     # Single project selection
-    model_single = mod.build_resume_model(project_ids=["p1"])
+    model_single = build_resume_model(project_ids=["p1"])
     assert isinstance(model_single, dict)
     assert len(model_single["projects"]) == 1
     assert model_single["projects"][0]["title"] == "Alpha_Project"
@@ -186,7 +224,7 @@ def test_build_resume_model_filters_projects(db_connection):
     }
 
     # Multiple project selection
-    model_multi = mod.build_resume_model(project_ids=["p1", "p2"])
+    model_multi = build_resume_model(project_ids=["p1", "p2"])
     assert isinstance(model_multi, dict)
     # Ordered by score DESC → p1 then p2
     titles = [p["title"] for p in model_multi["projects"]]
@@ -195,3 +233,30 @@ def test_build_resume_model_filters_projects(db_connection):
     assert set(model_multi["skills"]["Skills"]) == {
         "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill", "Machine Learning"
     }
+
+def test_load_resume_projects(db_connection):
+    """Test that load_resume_projects returns correct project data."""
+    cursor = db_connection.cursor()
+    rows = load_resume_projects(cursor, 1)
+    assert len(rows) == 1
+    assert rows[0][0] == 'p1'
+    assert rows[0][1] == 'Alpha_Project'
+    assert json.loads(rows[0][4]) == ["Python", "Flask", "SQL"]
+    
+def test_load_edited_skills(db_connection):
+    """Test that load_edited_skills returns the edited skills string."""
+    cursor = db_connection.cursor()
+    row = load_edited_skills(cursor, 1)
+    assert row is not None
+    assert row[0] == 'Python,Flask,SQL,Machine Learning'
+    
+def test_load_saved_resume(db_connection):
+    """Test that load_saved_resume returns a complete resume model."""
+    resume = load_saved_resume(1)
+    assert resume["name"] == "John Doe"
+    assert "Python" in resume["skills"]["Skills"]
+    assert "Flask" in resume["skills"]["Skills"]
+    assert "SQL" in resume["skills"]["Skills"]
+    assert "Machine Learning" in resume["skills"]["Skills"]
+    assert resume["projects"][0]["title"] == "Alpha_Project"
+    assert "Python" in resume["projects"][0]["skills"]

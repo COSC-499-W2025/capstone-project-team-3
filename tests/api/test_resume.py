@@ -276,3 +276,13 @@ def test_delete_saved_resume_database_error(mock_get_connection, client):
     # Verify rollback called on error
     mock_conn.rollback.assert_called_once()
     mock_conn.close.assert_called_once()
+        
+@patch("app.api.routes.resume.load_saved_resume")
+def test_get_saved_resume(mock_load, client, fake_resume_model):
+    """Test GET /resume/{resume_id} returns the saved resume model."""
+    mock_load.return_value = fake_resume_model
+    response = client.get("/resume/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == fake_resume_model["name"]
+    assert data["email"] == fake_resume_model["email"]

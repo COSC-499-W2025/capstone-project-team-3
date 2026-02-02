@@ -41,27 +41,27 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "job_title": row[4],
     }
 
-def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, int, str, str]]:
-    """Return projects with signature, name, rank, created_at, last_modified.
+def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:
+    """Return projects with signature, name, score, created_at, last_modified.
     If project_ids are provided, return only those projects.
     """
     if project_ids:
         # Build a dynamic IN clause safely
         placeholders = ",".join(["?"] * len(project_ids))
         query = f"""
-            SELECT project_signature, name, rank, created_at, last_modified
+            SELECT project_signature, name, score, created_at, last_modified
             FROM PROJECT
             WHERE project_signature IN ({placeholders})
-            ORDER BY rank DESC
+            ORDER BY score DESC
         """
         cursor.execute(query, project_ids)
         return cursor.fetchall()
     else:
         cursor.execute(
             """
-            SELECT project_signature, name, rank, created_at, last_modified
+            SELECT project_signature, name, score, created_at, last_modified
             FROM PROJECT
-            ORDER BY rank DESC
+            ORDER BY score DESC
             """
         )
         return cursor.fetchall()
@@ -232,7 +232,7 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
 
     selected_ids = set(pid for pid, *_ in projects_raw)
 
-    for pid, name, rank, created_at, last_modified in projects_raw:
+    for pid, name, score, created_at, last_modified in projects_raw:
         raw_skills = skills_map.get(pid, [])
         limited_skills = limit_skills(raw_skills, max_count=5)
 
@@ -330,5 +330,4 @@ def save_resume_edits(resume_id: int, payload: dict):
         raise
     finally:
         conn.close()
-
 

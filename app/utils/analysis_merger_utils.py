@@ -1,4 +1,4 @@
-# Import Project Ranker to rank projects based on analysis results
+# Import project scorer to score projects based on analysis results
 # from app.utils.project_ranker import project_ranker
 import json
 import re
@@ -100,7 +100,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     print(f"   - resume_bullets count: {len(non_code_analysis_results.get('resume_bullets', []))}")
     print(f"   - skills: {non_code_analysis_results.get('skills', {})}")
     
-    # Detect git metrics (if git present, send git metrics to project ranker)
+    # Detect git metrics (if git present, send git metrics to project scorer)
     if 'authors' in code_analysis_results.get("Metrics", {}):
         git_metrics = code_analysis_results.get("Metrics", {})
         code_metrics = None
@@ -111,8 +111,8 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     # Extract non-code metrics   
     non_code_metrics = non_code_analysis_results.get("Metrics", {})
     
-     # Send Metrics to project Ranker in order to rank results
-    project_rank = get_project_rank(code_metrics, non_code_metrics,git_metrics)
+     # Send metrics to project scorer in order to compute results
+    project_score = get_project_score(code_metrics, non_code_metrics, git_metrics)
 
     # Re-initialize metrics for merging (git vs local does not matter for storage)
     code_metrics = code_analysis_results.get("Metrics", {})
@@ -170,7 +170,7 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
     # Merged Metrics (Merge dictionaries since keys for each are unique)
     merged_metrics = {**code_metrics, **non_code_metrics} 
     
-    # Final Merged Results & project rank to be stored in DB
+    # Final merged results & project score to be stored in DB
     merged_results = {
         "summary": summary,
         "skills": merged_skills,
@@ -178,8 +178,8 @@ def merge_analysis_results(code_analysis_results, non_code_analysis_results, pro
         "metrics": merged_metrics
     }
     
-    # Store ranked Project & Results in the database
-    store_results_in_db(project_name, merged_results, project_rank, project_signature)
+    # Store scored project & results in the database
+    store_results_in_db(project_name, merged_results, project_score, project_signature)
         
     return merged_results
 
@@ -249,17 +249,17 @@ def build_summary(code_resume_bullets, non_code_summary,MAX_SENTENCES, project_n
     return result
 
 
-def get_project_rank(code_metrics, non_code_metrics, git_metrics):
+def get_project_score(code_metrics, non_code_metrics, git_metrics):
     """
-    This function calls the project_ranker, sends the code and non-code metrics/results in order to rank the overall project.
+    This function calls the project scorer, sends the code and non-code metrics/results in order to score the overall project.
 
     Args:
         code_metrics (list): List of metrics from code analysis.
         non_code_metrics (list): List of metrics from non-code analysis.
-        project_ranker (object): An instance of the project ranker.
+        project_ranker (object): An instance of the project scorer.
         
     Returns:
-        Ranked Score for the Project.
+        Score for the project.
     """
   
     project_score = compute_overall_project_contribution_score(code_metrics,git_metrics, non_code_metrics )
@@ -270,13 +270,13 @@ def get_project_rank(code_metrics, non_code_metrics, git_metrics):
     
     return project_score
 
-def store_results_in_db(project_name, merged_results, project_rank, project_signature):
+def store_results_in_db(project_name, merged_results, project_score, project_signature):
     """
-    This function stores the ranked results in the database.
+    This function stores the scored results in the database.
     To be stored in DASHBOARD_DATA & SKILL_ANALYSIS & RESUME_SUMMARY & PROJECT Tables
     
     Args:
-        ranked_results (list): List of ranked results.
+        ranked_results (list): List of scored results.
         
     Returns:
         None
@@ -290,14 +290,14 @@ def store_results_in_db(project_name, merged_results, project_rank, project_sign
     cur.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (project_signature,))
     if not cur.fetchone():
         cur.execute("""
-        INSERT INTO PROJECT (project_signature, name, summary, rank)
+        INSERT INTO PROJECT (project_signature, name, summary, score)
         VALUES (?, ?, ?, ?)
-    """, (project_signature, project_name, merged_results["summary"], project_rank))
+    """, (project_signature, project_name, merged_results["summary"], project_score))
     else:
         # Update summary if project already exists
         cur.execute("""
-        UPDATE PROJECT SET name = ? , summary = ?, rank = ? WHERE project_signature = ?
-        """, (project_name, merged_results["summary"],project_rank, project_signature))
+        UPDATE PROJECT SET name = ? , summary = ?, score = ? WHERE project_signature = ?
+        """, (project_name, merged_results["summary"], project_score, project_signature))
     
         # Delete existing records to avoid duplicates
         cur.execute("DELETE FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))

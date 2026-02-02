@@ -290,13 +290,19 @@ def store_results_in_db(project_name, merged_results, project_score, project_sig
     cur.execute("SELECT 1 FROM PROJECT WHERE project_signature = ?", (project_signature,))
     if not cur.fetchone():
         cur.execute("""
-        INSERT INTO PROJECT (project_signature, name, summary, score)
-        VALUES (?, ?, ?, ?)
-    """, (project_signature, project_name, merged_results["summary"], project_score))
+        INSERT INTO PROJECT (project_signature, name, summary, score, score_overridden, score_overridden_value)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (project_signature, project_name, merged_results["summary"], project_score, 0, None))
     else:
         # Update summary if project already exists
         cur.execute("""
-        UPDATE PROJECT SET name = ? , summary = ?, score = ? WHERE project_signature = ?
+        UPDATE PROJECT
+        SET name = ?,
+            summary = ?,
+            score = ?,
+            score_overridden = 0,
+            score_overridden_value = NULL
+        WHERE project_signature = ?
         """, (project_name, merged_results["summary"], project_score, project_signature))
     
         # Delete existing records to avoid duplicates

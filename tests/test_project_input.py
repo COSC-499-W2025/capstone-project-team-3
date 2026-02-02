@@ -8,7 +8,6 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    calculate_project_scan_score,
     extract_project_timestamps
 )
 from pathlib import Path
@@ -153,24 +152,7 @@ def test_get_all_file_signatures_from_db(tmp_path):
     assert sig1 in sigs
     assert sig2 in sigs
 
-def test_calculate_project_scan_score(tmp_path):
-    """Test calculation of project scan score based on file signatures in DB."""
-    # Add one file to DB
-    file1 = tmp_path / "score1.txt"
-    file2 = tmp_path / "score2.txt"
-    file1.write_text("score1")
-    file2.write_text("score2")
-    sig1 = extract_file_signature(file1, tmp_path)
-    sig2 = extract_file_signature(file2, tmp_path)
-    signature = get_project_signature([sig1, sig2])
-    name = "ScoreProject"
-    path = str(tmp_path.resolve())
-    size_bytes = file1.stat().st_size + file2.stat().st_size
-    store_project_in_db(signature, name, path, [sig1], size_bytes)
-    # Now test score calculation
-    scan_score = calculate_project_scan_score([sig1, sig2])
-    assert scan_score == 50.0  # Only one of two files is already in DB
-    
+
 def test_extract_file_signature_error(tmp_path):
     """Test that extract_file_signature returns ERROR_SIGNATURE for missing file."""
     missing_file = tmp_path / "does_not_exist.txt"
@@ -418,3 +400,90 @@ def test_project_db_schema_has_timestamp_columns():
     # Verify they're TIMESTAMP type (col[2] is the type)
     assert "TIMESTAMP" in created_at_col[2].upper()
     assert "TIMESTAMP" in modified_col[2].upper()
+
+def test_calculate_project_similarity():
+    """Test the similarity calculation helper function."""
+    from app.utils.scan_utils import calculate_project_similarity
+    
+    # Test identical projects
+    sigs1 = ["file1", "file2", "file3"]
+    sigs2 = ["file1", "file2", "file3"]
+    assert calculate_project_similarity(sigs1, sigs2) == 100.0
+    
+    # Test partial overlap (50%)
+    sigs1 = ["file1", "file2", "file3"]
+    sigs2 = ["file1", "file2", "file4"]
+    expected = (2 / 4) * 100  # 2 common / 4 total
+    assert calculate_project_similarity(sigs1, sigs2) == expected
+    
+    # Test no overlap
+    sigs1 = ["file1", "file2"]
+    sigs2 = ["file3", "file4"]
+    assert calculate_project_similarity(sigs1, sigs2) == 0.0
+    
+    # Test empty lists
+    assert calculate_project_similarity([], ["file1"]) == 0.0
+    assert calculate_project_similarity(["file1"], []) == 0.0
+
+def test_find_and_update_similar_project_no_projects():
+    """Test similarity function when no projects exist."""
+    from app.utils.scan_utils import find_and_update_similar_project
+    result = find_and_update_similar_project(["file1", "file2"], "test_sig_123", threshold=20.0)
+    assert result is None
+
+def test_find_and_update_similar_project_integration(tmp_path):
+    """Test that similar projects are found and updated correctly."""
+    from app.utils.scan_utils import (
+        find_and_update_similar_project,
+        extract_file_signature,
+        get_project_signature,
+        store_project_in_db
+    )
+    
+    # Create initial project with 2 files
+    file1 = tmp_path / "original1.txt"
+    file2 = tmp_path / "original2.txt"
+    file1.write_text("original content 1")
+    file2.write_text("original content 2")
+    
+    sig1 = extract_file_signature(file1, tmp_path)
+    sig2 = extract_file_signature(file2, tmp_path)
+    old_project_sig = get_project_signature([sig1, sig2])
+    
+    # Store initial project
+    store_project_in_db(old_project_sig, "TestProject", str(tmp_path), [sig1, sig2], 100)
+    
+    # Now upload similar project with 1 shared file + 1 new file
+    file3 = tmp_path / "new_file.txt"
+    file3.write_text("new content")
+    sig3 = extract_file_signature(file3, tmp_path)
+    
+    # New upload's signatures and pre-calculated project signature
+    new_upload_sigs = [sig1, sig3]
+    new_project_sig = get_project_signature(new_upload_sigs)
+    
+    # Test similarity detection (sig1 is shared, sig3 is new)
+    # Jaccard similarity = intersection / union = 1 / 3 = 33.3%
+    # But due to DB state from previous tests, similarity might vary
+    result = find_and_update_similar_project(new_upload_sigs, new_project_sig, threshold=20.0)
+    
+    assert result is not None
+    project_name, similarity, returned_sig = result
+    assert project_name == "TestProject"
+    assert similarity >= 20.0  # Should meet threshold
+    
+    # The returned signature should be the new project signature we passed in
+    assert returned_sig == new_project_sig
+    assert returned_sig != old_project_sig  # Signature should have changed
+
+def test_find_and_update_similar_project_default_threshold():
+    """Test that the default threshold is 70%."""
+    from app.utils.scan_utils import find_and_update_similar_project
+    import inspect
+    
+    # Get the function signature
+    sig = inspect.signature(find_and_update_similar_project)
+    default_threshold = sig.parameters['threshold'].default
+    
+    # Verify default is 70%
+    assert default_threshold == 70.0

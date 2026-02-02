@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 import hashlib
 import json
 import time 
@@ -16,7 +16,7 @@ EXCLUDE_PATTERNS = [
     "env",
     "venv",
     "build",
-    "lib"
+    "lib",
     "dist",
     ".pytest_cache",
     # Compiled/binary files (not analyzable)
@@ -200,16 +200,71 @@ def get_all_file_signatures_from_db() -> set:
             sigs.update(json.loads(row[0]))
     return sigs
 
-def calculate_project_scan_score(current_file_signatures: List[str]) -> float:
-    """Calculate what % of current project files have already been analyzed."""
-    db_sigs = get_all_file_signatures_from_db()
-    if not current_file_signatures:
-        return 0.0
-    already_analyzed = sum(1 for sig in current_file_signatures if sig in db_sigs)
-    return round((already_analyzed / len(current_file_signatures)) * 100, 2)
+def calculate_project_similarity(current_signatures: List[str], existing_signatures: List[str]) -> float:
+    """Calculate Jaccard similarity between two sets of file signatures.
+    
+    Returns:
+        Similarity percentage (0-100) based on file overlap.
+    """
+    current_set = set(current_signatures)
+    existing_set = set(existing_signatures)
+    overlap = len(current_set.intersection(existing_set))
+    total = len(current_set.union(existing_set))
+    return (overlap / total) * 100 if total > 0 else 0.0
+
+def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = 70.0) -> Optional[tuple]:
+    """
+    Find a similar project and replace it with the new upload.
+    
+    Args:
+        current_signatures: File signatures from the current upload
+        new_project_sig: The already-calculated project signature for the new upload
+        threshold: Minimum similarity percentage to consider a match
+    
+    Returns (project_name, similarity_percentage, new_project_signature) or None.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT project_signature, name, file_signatures, path, size_bytes, created_at FROM PROJECT")
+    projects = cursor.fetchall()
+    
+    for old_project_sig, project_name, file_sigs_json, path, size_bytes, created_at in projects:
+        existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
+        
+        # Calculate similarity
+        similarity = calculate_project_similarity(current_signatures, existing_sigs)
+        
+        # Debug: Print similarity value for each comparison
+        print(f"[DEBUG] Comparing with project '{project_name}': similarity = {similarity:.2f}% (threshold: {threshold}%)")
+        
+        if similarity >= threshold:
+            print(f"[DEBUG] Match found! Updating project '{project_name}'")
+            print(f"[DEBUG] Old signature: {old_project_sig}")
+            print(f"[DEBUG] New signature: {new_project_sig}")
+            
+            # Delete the old project entry (CASCADE will clean up related tables)
+            cursor.execute("DELETE FROM PROJECT WHERE project_signature = ?", (old_project_sig,))
+            conn.commit()
+            conn.close()
+            
+            # Use existing function to store the updated project
+            store_project_in_db(
+                signature=new_project_sig,
+                name=project_name,
+                path=path,
+                file_signatures=current_signatures,
+                size_bytes=size_bytes,
+                created_at=created_at,  # Preserve original creation date
+                last_modified=datetime.now()  # Update modification time
+            )
+            
+            return (project_name, similarity, new_project_sig)
+    
+    conn.close()
+    return None
 
 
-def run_scan_flow(root: str, exclude: list = None) -> dict:
+def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 70.0) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
@@ -236,12 +291,10 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     # Extract project timestamps
     timestamps = extract_project_timestamps(root, filtered_files=files)
     
-    # Store signatures in DB with actual timestamps
-
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
     
-    # Check if project already exists
+    # Check if exact project already exists
     if project_signature_exists(project_signature):
         print("100.0% of this Project was analyzed in the past.")
         return {
@@ -251,11 +304,22 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
             "reason": "already_analyzed",
             "signature": project_signature
         }
-    # Project is new - calculate score and store
-    scan_score = calculate_project_scan_score(file_signatures)
-    print(f"{scan_score}% of files in this project was analyzed in the past.")
     
-    # Store new project
+    # Check for similar projects and update
+    result = find_and_update_similar_project(file_signatures, project_signature, similarity_threshold)
+    if result:
+        project_name, similarity, new_sig = result
+        print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")
+        return {
+            "files": files,
+            "skip_analysis": False,
+            "score": similarity,
+            "reason": "updated_existing",
+            "signature": new_sig,
+            "updated_project": project_name
+        }
+    
+    # Project is new - store it
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
@@ -272,7 +336,7 @@ def run_scan_flow(root: str, exclude: list = None) -> dict:
     return {
         "files": files,
         "skip_analysis": False,
-        "score": scan_score,
+        "score": 0.0,
         "reason": "new_project",
         "signature": project_signature
     }

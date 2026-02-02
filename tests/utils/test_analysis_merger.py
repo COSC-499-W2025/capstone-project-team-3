@@ -96,6 +96,44 @@ def test_store_and_retrieve_results_in_db(isolated_db):
     assert retrieved_results["resume_bullets"] == merged_results["resume_bullets"]
     assert retrieved_results["metrics"] == merged_results["metrics"]
 
+def test_store_results_resets_override(isolated_db):
+    project_signature = "test_project_override"
+    project_name = "Override Reset Project"
+    merged_results = {
+        "summary": "Override reset summary.",
+        "skills": {
+            "technical_skills": ["Flask"],
+            "soft_skills": ["Communication"]
+        },
+        "resume_bullets": ["Built API endpoints"],
+        "metrics": {
+            "languages": ["Python"],
+            "completeness_score": 0.8
+        }
+    }
+
+    store_results_in_db(project_name, merged_results, project_score=0.7, project_signature=project_signature)
+
+    conn = dbmod.get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE PROJECT SET score_overridden = 1, score_overridden_value = ? WHERE project_signature = ?",
+        (0.5, project_signature)
+    )
+    conn.commit()
+
+    store_results_in_db(project_name, merged_results, project_score=0.9, project_signature=project_signature)
+
+    cursor.execute(
+        "SELECT score_overridden, score_overridden_value FROM PROJECT WHERE project_signature = ?",
+        (project_signature,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    assert row[0] == 0
+    assert row[1] is None
+
 def test_merge_with_empty_non_code_results():
     """Test merge_analysis_results handles empty non-code results gracefully."""
     code_analysis_results = {

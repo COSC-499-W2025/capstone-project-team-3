@@ -37,7 +37,7 @@ def db_connection(monkeypatch):
         CREATE TABLE PROJECT (
             project_signature TEXT PRIMARY KEY,
             name TEXT,
-            rank INTEGER,
+            score REAL,
             created_at TEXT,
             last_modified TEXT
         );
@@ -61,11 +61,11 @@ def db_connection(monkeypatch):
 
     cursor.execute("""
         INSERT INTO PROJECT
-        VALUES ('p1', 'Alpha_Project', 2, '2024-01-01', '2024-06-01')
+        VALUES ('p1', 'Alpha_Project', 0.9, '2024-01-01', '2024-06-01')
     """)
     cursor.execute("""
         INSERT INTO PROJECT
-        VALUES ('p2', 'Beta Project', 1, '2023-01-01', '2023-12-01')
+        VALUES ('p2', 'Beta Project', 0.8, '2023-01-01', '2023-12-01')
     """)
 
     cursor.executemany("""
@@ -136,14 +136,14 @@ def test_load_user(db_connection):
     assert user["links"][0]["url"] == "https://github.com/johndoe"
 
 
-def test_load_projects_ordered_by_rank(db_connection):
+def test_load_projects_ordered_by_score(db_connection):
     """
-    Tests that load_projects returns projects ordered by rank in descending order.
+    Tests that load_projects returns projects ordered by score in descending order.
     """
     cursor = db_connection.cursor()
     projects = load_projects(cursor)
 
-    # rank DESC → p1 first
+    # score DESC → p1 first
     assert projects[0][0] == "p1"
     assert projects[1][0] == "p2"
 
@@ -188,11 +188,10 @@ def test_build_resume_model_filters_projects(db_connection):
     # Multiple project selection
     model_multi = mod.build_resume_model(project_ids=["p1", "p2"])
     assert isinstance(model_multi, dict)
-    # Ordered by rank DESC → p1 then p2
+    # Ordered by score DESC → p1 then p2
     titles = [p["title"] for p in model_multi["projects"]]
     assert titles == ["Alpha_Project", "Beta Project"]
     # Union of skills from both projects
     assert set(model_multi["skills"]["Skills"]) == {
         "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill", "Machine Learning"
     }
-

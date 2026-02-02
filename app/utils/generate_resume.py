@@ -274,4 +274,60 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
         "projects": projects
     }
 
+def resume_exists(resume_id: int) -> bool:
+    """Method to check if specified resume ID exists (precaution)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT 1 FROM RESUME WHERE id = ?", (resume_id,))
+    exists = cursor.fetchone() is not None
+
+    conn.close()
+    return exists
+
+def save_resume_edits(resume_id: int, payload: dict):
+    """ Save or update edits made to the resume in the DB """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+
+        for project in payload.get("projects", []):
+            cursor.execute("""
+                INSERT INTO RESUME_PROJECT (
+                    resume_id,
+                    project_id,
+                    project_name,
+                    start_date,
+                    end_date,
+                    skills,
+                    bullets,
+                    display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(resume_id, project_id)
+                DO UPDATE SET
+                    project_name  = COALESCE(excluded.project_name, RESUME_PROJECT.project_name),
+                    start_date    = COALESCE(excluded.start_date, RESUME_PROJECT.start_date),
+                    end_date      = COALESCE(excluded.end_date, RESUME_PROJECT.end_date),
+                    skills        = COALESCE(excluded.skills, RESUME_PROJECT.skills),
+                    bullets       = COALESCE(excluded.bullets, RESUME_PROJECT.bullets),
+                    display_order = COALESCE(excluded.display_order, RESUME_PROJECT.display_order)
+            """, (
+                resume_id,
+                project["project_id"],
+                project.get("project_name"),
+                project.get("start_date"),
+                project.get("end_date"),
+                json.dumps(project["skills"]) if "skills" in project else None,
+                json.dumps(project["bullets"]) if "bullets" in project else None,
+                project.get("display_order")
+            ))
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 

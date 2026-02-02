@@ -12,8 +12,13 @@ from app.utils.generate_resume import (
     build_resume_model,
     load_resume_projects,
     load_edited_skills,
-    load_saved_resume
+    load_saved_resume,
+    save_resume_edits,
+    load_resume_projects,
+    resume_exists
 )
+import json
+
 import json
 
 @pytest.fixture
@@ -69,7 +74,8 @@ def db_connection(monkeypatch):
             end_date TEXT,
             skills TEXT,
             bullets TEXT,
-            display_order INTEGER
+            display_order INTEGER,
+            UNIQUE (resume_id, project_id)
         );
         
         CREATE TABLE RESUME_SKILLS (
@@ -260,3 +266,49 @@ def test_load_saved_resume(db_connection):
     assert "Machine Learning" in resume["skills"]["Skills"]
     assert resume["projects"][0]["title"] == "Alpha_Project"
     assert "Python" in resume["projects"][0]["skills"]
+
+def test_save_resume_edits_update(db_connection):
+    """Test that save_resume_edits updates an existing RESUME_PROJECT row."""
+    # First, insert initial data
+    payload = {
+        "projects": [
+            {
+                "project_id": "p1",
+                "project_name": "Alpha_Project_Edited",
+                "start_date": "2024-02-01",
+                "end_date": "2024-07-01",
+                "skills": ["Python", "Flask", "SQL", "FastAPI"],
+                "bullets": ["Did stuff", "Added FastAPI"],
+                "display_order": 1
+            }
+        ]
+    }
+    save_resume_edits(1, payload)
+    # Now, update
+    payload_update = {
+        "projects": [
+            {
+                "project_id": "p1",
+                "project_name": "Alpha_Project_Updated",
+                "skills": ["Python", "Flask"],
+                "display_order": 2
+            }
+        ]
+    }
+    save_resume_edits(1, payload_update)
+    cursor = db_connection.cursor()
+    rows = load_resume_projects(cursor, 1)
+    assert len(rows) == 1
+    assert rows[0][1] == "Alpha_Project_Updated"
+    assert json.loads(rows[0][4]) == ["Python", "Flask"]
+    assert rows[0][6] == 2
+
+def test_resume_exists_true_and_false(db_connection):
+    """
+    Tests that resume_exists returns True for an existing resume and False for a non-existent one.
+    """
+    from app.utils.generate_resume import resume_exists
+    # Existing resume (seeded as id=1)
+    assert resume_exists(1) is True
+    # Non-existent resume
+    assert resume_exists(99999) is False

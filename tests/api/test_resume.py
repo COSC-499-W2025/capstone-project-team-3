@@ -212,3 +212,29 @@ def test_get_saved_resume(mock_load, client, fake_resume_model):
     data = response.json()
     assert data["name"] == fake_resume_model["name"]
     assert data["email"] == fake_resume_model["email"]
+
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_success(mock_exists, mock_save, client):
+    """
+    Test POST /resume/{id}/edit saves edits when resume exists.
+    """
+    mock_exists.return_value = True
+    payload = {"projects": [{"project_id": "p1", "project_name": "Edited Project"}]}
+    response = client.post("/resume/1/edit", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+    mock_save.assert_called_once_with(1, payload)
+
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_not_found(mock_exists, mock_save, client):
+    """
+    Test POST /resume/{id}/edit returns 404 if resume does not exist.
+    """
+    mock_exists.return_value = False
+    payload = {"projects": [{"project_id": "p1", "project_name": "Edited Project"}]}
+    response = client.post("/resume/999/edit", json=payload)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Resume not found"
+    mock_save.assert_not_called()

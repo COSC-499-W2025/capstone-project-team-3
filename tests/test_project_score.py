@@ -7,6 +7,7 @@ from app.utils.project_score import (
     _compute_non_git_code_score,
     _compute_contribution_percentages_single_project,
     compute_overall_project_contribution_score,
+    compute_project_score_breakdown,
 )
 
 # -------------------------------------------------------------------
@@ -390,3 +391,67 @@ def test_overall_score_all_non_code():
 
     # With no code lines, code_percentage should be 0 and final ~ non_code_score
     assert final_score == pytest.approx(0.9, rel=1e-5)
+
+
+# -------------------------------------------------------------------
+# Tests for compute_project_score_breakdown
+# -------------------------------------------------------------------
+
+def test_breakdown_git_matches_overall_score():
+    non_code_metrics = {
+        "completeness_score": 0.8,
+        "word_count": 2100,
+    }
+
+    breakdown = compute_project_score_breakdown(
+        code_metrics={},
+        git_code_metrics=GIT_CODE_METRICS_SAMPLE,
+        non_code_metrics=non_code_metrics,
+    )
+
+    final_score = compute_overall_project_contribution_score(
+        code_metrics={},
+        git_code_metrics=GIT_CODE_METRICS_SAMPLE,
+        non_code_metrics=non_code_metrics,
+    )
+
+    assert breakdown["code"]["type"] == "git"
+    assert breakdown["final_score"] == pytest.approx(final_score, rel=1e-6)
+    assert set(breakdown["code"]["metrics"].keys()) == {
+        "total_commits",
+        "duration_days",
+        "total_lines",
+        "code_files_changed",
+        "test_files_changed",
+    }
+    assert 0.0 <= breakdown["blend"]["code_percentage"] <= 1.0
+    assert 0.0 <= breakdown["blend"]["non_code_percentage"] <= 1.0
+
+
+def test_breakdown_non_git_matches_overall_score():
+    non_code_metrics = {
+        "completeness_score": 0.9,
+        "word_count": 3000,
+    }
+
+    breakdown = compute_project_score_breakdown(
+        code_metrics=NON_GIT_CODE_METRICS_SAMPLE,
+        git_code_metrics={},
+        non_code_metrics=non_code_metrics,
+    )
+
+    final_score = compute_overall_project_contribution_score(
+        code_metrics=NON_GIT_CODE_METRICS_SAMPLE,
+        git_code_metrics={},
+        non_code_metrics=non_code_metrics,
+    )
+
+    assert breakdown["code"]["type"] == "non_git"
+    assert breakdown["final_score"] == pytest.approx(final_score, rel=1e-6)
+    assert set(breakdown["code"]["metrics"].keys()) == {
+        "total_files",
+        "total_lines",
+        "code_files_changed",
+        "test_files_changed",
+        "maintainability_score",
+    }

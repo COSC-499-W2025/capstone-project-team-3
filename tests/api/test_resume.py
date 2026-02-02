@@ -2,7 +2,9 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from app.api.routes.resume import router, compile_pdf
+from app.api.routes.resume import router, compile_pdf, get_or_compile_pdf
+from app.api.routes import resume as resume_mod
+import os
 
 @pytest.fixture
 def client():
@@ -169,5 +171,34 @@ def test_compile_pdf_failure_no_pdf(mock_exists, mock_run):
     with pytest.raises(HTTPException) as exc:
         compile_pdf("LATEX")
 
-    assert exc.value.status_code == 500
-    assert "LaTeX compilation failed" in exc.value.detail
+    assert exc.value.status_code == 422
+    assert exc.value.detail["error"] == "LaTeX compilation failed"
+    assert exc.value.detail["stdout"] == "latex error"
+    assert exc.value.detail["stderr"] == "fatal error"
+
+def test_get_or_compile_pdf_cache(tmp_path, monkeypatch):
+    """Verify that get_or_compile_pdf caches PDFs and avoids recompiling the same LaTeX content."""
+    tex = "LATEX CONTENT"
+    cache_dir = tmp_path / "cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    # Point the router's cache directory at the temp location
+    monkeypatch.setattr(resume_mod, "PDF_CACHE_DIR", str(cache_dir))
+
+    # Ensure no cached PDF exists before first call
+    h = resume_mod.tex_hash(tex)
+    cache_file = cache_dir / f"{h}.pdf"
+    if cache_file.exists():
+        cache_file.unlink()
+
+    # compile_pdf should be invoked because the PDF is not yet cached
+    with patch("app.api.routes.resume.compile_pdf") as mock_compile:
+        mock_compile.return_value = b"%PDF-1.4"
+        pdf1 = get_or_compile_pdf(tex)
+        assert pdf1.startswith(b"%PDF")
+        mock_compile.assert_called_once()
+
+    # PDF should be retrieved from the cache and compile_pdf should not be called
+    with patch("app.api.routes.resume.compile_pdf") as mock_compile2:
+        pdf2 = get_or_compile_pdf(tex)
+        assert pdf2.startswith(b"%PDF")
+        mock_compile2.assert_not_called()

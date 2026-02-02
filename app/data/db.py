@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS CONSENT (
 );
 
 CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER PRIMARY KEY,
     name TEXT,
     email TEXT,
     github_user TEXT,
@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     path TEXT,
     file_signatures JSON, -- file path signitures 
     size_bytes INTEGER,
-    rank INTEGER,
+    score REAL CHECK (score >= 0.0 AND score <= 1.0),
+    score_overridden INTEGER DEFAULT 0,
+    score_overridden_value REAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     summary TEXT,
@@ -85,6 +87,42 @@ CREATE TABLE IF NOT EXISTS RESUME_SUMMARY (
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
+
+-- Table for resume versions --
+CREATE TABLE IF NOT EXISTS RESUME (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for edited resume skills --
+CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    skills TEXT NOT NULL, -- comma-separated list of skills
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
+--Table to edited resume details --
+CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    project_id TEXT NOT NULL,
+
+    project_name TEXT,     -- optional override
+    start_date DATETIME,       -- optional override
+    end_date DATETIME,         -- optional override
+    skills JSON,
+    bullets JSON,          -- optional edited bullets for this resume
+
+    display_order INTEGER,
+
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE,
+    UNIQUE (resume_id, project_id)
+);
+
 """
 
 # --- DB Setup Functions ---
@@ -104,9 +142,53 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
+    _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
+
+def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
+    """Enforce score range [0, 1] on existing DBs via triggers."""
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_range_insert")
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_range_update")
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_override_range_insert")
+    cursor.execute("DROP TRIGGER IF EXISTS project_score_override_range_update")
+    cursor.execute("""
+        CREATE TRIGGER project_score_range_insert
+        BEFORE INSERT ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score IS NOT NULL AND (NEW.score < 0.0 OR NEW.score > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project score must be between 0 and 1');
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER project_score_range_update
+        BEFORE UPDATE OF score ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score IS NOT NULL AND (NEW.score < 0.0 OR NEW.score > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project score must be between 0 and 1');
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER project_score_override_range_insert
+        BEFORE INSERT ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score_overridden_value IS NOT NULL AND (NEW.score_overridden_value < 0.0 OR NEW.score_overridden_value > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project overridden score must be between 0 and 1');
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER project_score_override_range_update
+        BEFORE UPDATE OF score_overridden_value ON PROJECT
+        FOR EACH ROW
+        WHEN NEW.score_overridden_value IS NOT NULL AND (NEW.score_overridden_value < 0.0 OR NEW.score_overridden_value > 1.0)
+        BEGIN
+            SELECT RAISE(ABORT, 'project overridden score must be between 0 and 1');
+        END;
+    """)
 
 def seed_db():
     """Insert test/seed data aligned with new schema."""
@@ -133,7 +215,7 @@ def seed_db():
             "path": "/user/test/alpha",
             "file_signatures": ["alpha_main_hash", "alpha_utils_hash", "alpha_readme_hash"],
             "size_bytes": 2048,
-            "rank": 1,
+            "score": 0.92,
             "created_at": "2024-01-15 10:30:00",  
             "last_modified": "2024-11-20 14:45:00", 
             "summary": "Alpha Project is a web-based task management application built with Python and Flask. "
@@ -147,7 +229,7 @@ def seed_db():
             "path": "/user/test/beta",
             "file_signatures": ["beta_core_hash", "beta_helper_hash"],
             "size_bytes": 4096,
-            "rank": 2,
+            "score": 0.85,
             "created_at": "2024-03-10 09:15:00",  
             "last_modified": "2024-11-22 16:20:00",
             "summary": "Beta Project is a machine learning pipeline developed in Python that automates data preprocessing, "
@@ -160,7 +242,7 @@ def seed_db():
             "path": "/user/test/gamma",
             "file_signatures": ["gamma_app_hash", "gamma_test_hash", "gamma_docs_hash"],
             "size_bytes": 1024,
-            "rank": 3,
+            "score": 0.78,
             "created_at": "2024-06-05 11:00:00",  
             "last_modified": "2024-11-25 09:30:00",
             "summary": "Gamma Project is a mobile application developed using React Native that provides users with personalized fitness tracking. "
@@ -170,7 +252,7 @@ def seed_db():
 
     for proj in projects:
         cursor.execute("""
-            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, rank, created_at, last_modified, summary)
+            INSERT OR IGNORE INTO PROJECT (project_signature, name, path, file_signatures, size_bytes, score, created_at, last_modified, summary)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             proj["project_signature"],
@@ -178,7 +260,7 @@ def seed_db():
             proj["path"],
             json.dumps(proj["file_signatures"]),
             proj["size_bytes"],
-            proj["rank"],
+            proj["score"],
             proj["created_at"],        
             proj["last_modified"],     
             proj["summary"]
@@ -282,6 +364,40 @@ def seed_db():
                 INSERT OR IGNORE INTO RESUME_SUMMARY (project_id, summary_text)
                 VALUES (?, ?)
             """, (project_id, bullet))
+            
+    # --- RESUME ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO RESUME (id, name, created_at)
+        VALUES (?, ?, ?)
+    """, (1, "John's Resume", "2026-01-30"))
+
+    # --- RESUME_PROJECT ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        1,  # resume_id
+        "sig_alpha_project/hash",  # project_id
+        "Alpha Project (Resume)",  # project_name override
+        "2024-01-01",  # start_date
+        "2024-06-01",  # end_date
+        json.dumps(["Python", "Flask"]),  # skills
+        json.dumps([
+            "Built a Flask web app for task management.",
+            "Led a team of 4 developers."
+        ]),  # bullets
+        1  # display_order
+    ))
+    
+    # --- RESUME_SKILLS ---
+    cursor.execute("""
+    INSERT OR IGNORE INTO RESUME_SKILLS (resume_id, skills)
+    VALUES (?, ?)
+    """, (
+        1,  # resume_id (should match an existing RESUME)
+        "Python,Flask,Backend, Java,Team Collaboration,Git,Agile Methodologies"
+    ))
 
     conn.commit()
     conn.close()

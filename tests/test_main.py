@@ -7,6 +7,16 @@ from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from pathlib import Path
 from app.cli.git_code_parsing import run_git_parsing_from_files
 
+# Prevent DB writes from main() during tests by stubbing store_results_in_db
+@pytest.fixture(autouse=True)
+def _stub_store_results(monkeypatch):
+    def _noop(*args, **kwargs):
+        return None
+    monkeypatch.setattr(
+        "app.utils.analysis_merger_utils.store_results_in_db",
+        _noop,
+    )
+
 
 @pytest.fixture(autouse=True)
 def mock_os_operations():
@@ -959,8 +969,8 @@ def test_main_calls_analyze_project_clean_in_local_mode():
         
         main()
         
-        # Verify analyze_project_clean was called with parsed_non_code
-        mock_analyze_clean.assert_called_once_with(mock_parsed_data,email="test_enhanced@example.com")
+        # Verify analyze_project_clean was called with parsed_non_code (no email parameter)
+        mock_analyze_clean.assert_called_once_with(mock_parsed_data)
 
 def test_main_calls_ai_non_code_analysis_pipeline():
     """In AI mode, main() calls analyze_non_code_files with parsed_non_code."""
@@ -1065,6 +1075,7 @@ def test_main_user_preferences():
         patch("app.main.init_db"), \
         patch("app.main.seed_db"), \
         patch("app.main.UserPreferences") as MockUserPreferences, \
+        patch.dict(os.environ, {"PROMPT_ROOT": "0"}, clear=False), \
         patch("builtins.input", side_effect=[
             "testuser@example.com",  # email
             "yes",                   # update preferences

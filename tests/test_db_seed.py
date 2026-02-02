@@ -15,7 +15,10 @@ def test_all_tables_created():
         "GIT_HISTORY",
         "SKILL_ANALYSIS",
         "DASHBOARD_DATA",
-        "RESUME_SUMMARY"
+        "RESUME_SUMMARY",
+        "RESUME",
+        "RESUME_SKILLS",
+        "RESUME_PROJECT"
     ]
 
     # Get all table names in the current database
@@ -59,7 +62,19 @@ def test_all_tables_populated():
     print("All tables are populated")
 
     # Remove test data from tables
-    for table in tables:
+    delete_order = [
+    "RESUME_PROJECT",
+    "RESUME_SKILLS",
+    "RESUME_SUMMARY",
+    "SKILL_ANALYSIS",
+    "DASHBOARD_DATA",
+    "GIT_HISTORY",
+    "PROJECT",
+    "RESUME",
+    "USER_PREFERENCES",
+    "CONSENT"
+    ]
+    for table in delete_order:
         cursor.execute(f"DELETE FROM {table};")
     
     conn.commit()

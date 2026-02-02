@@ -3,6 +3,22 @@ import json
 from app.data.db import get_connection
 
 
+def _normalize_authors(value):
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(a) for a in parsed if a is not None and str(a).strip()]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return [value] if value.strip() else []
+    if isinstance(value, (list, tuple, set)):
+        return [str(a) for a in value if a is not None and str(a).strip()]
+    return [str(value)]
+
+
 def get_portfolio_resume_insights():
     
     # Connect to the database
@@ -10,10 +26,10 @@ def get_portfolio_resume_insights():
     cur = conn.cursor()
     
     # Build Portfolio: Project name, summary, duration, skills
-    cur.execute("SELECT project_signature, name, rank, summary, created_at, last_modified FROM PROJECT")
+    cur.execute("SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT")
     projects = []
     for row in cur.fetchall():
-        signature, name, rank, summary, created_at, last_modified = row
+        signature, name, score, summary, created_at, last_modified = row
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
         skills = [s[0] for s in cur.fetchall()]
@@ -28,9 +44,9 @@ def get_portfolio_resume_insights():
             metrics[metric_name] = metric_value  
         # Check for specific baseline metrics and include authors
         authors = []
-        if "author" in metrics:
+        if "authors" in metrics:
             # If author is stored as metric
-            authors = [metrics["author"]]
+            authors = _normalize_authors(metrics["authors"])
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))
@@ -48,15 +64,18 @@ def get_portfolio_resume_insights():
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "rank": rank,
+            "score": score,
             "metrics": metrics
         })
 
-    # Top ranked projects (by rank, Handle None, limit to top 5)
-        def _rank_key(proj):
-            r = proj.get("rank")
-            return r if isinstance(r, int) else 0
-    top_projects = sorted(projects, key=_rank_key, reverse=True)[:5]
+    # Top ranked projects (by score, handle None, limit to top 5)
+    def _score_key(proj):
+        r = proj.get("score")
+        try:
+            return float(r)
+        except (TypeError, ValueError):
+            return 0.0
+    top_projects = sorted(projects, key=_score_key, reverse=True)[:5]
 
     # Chronological list (by created_at limit to 10)
     chronological = sorted(projects, key=lambda x: (x["created_at"]), reverse=True)[:10]
@@ -66,25 +85,28 @@ def get_portfolio_resume_insights():
         SELECT p.name, r.summary_text 
         FROM RESUME_SUMMARY r
         JOIN PROJECT p ON r.project_id = p.project_signature
+        WHERE r.summary_text IS NOT NULL
         ORDER BY p.created_at DESC
     """)
     
-    bullets = []
+    resume_bullets = []
     for row in cur.fetchall():
         project_name, summary_text = row
-    try:
-            # Try to parse as JSON first (for arrays)
+        
+        try:
             parsed = json.loads(summary_text)
             if isinstance(parsed, list):
-                # extend with list of bullets (assume strings)
-                bullets.extend(parsed)
+                bullets = [b.strip() for b in parsed if isinstance(b, str) and b.strip()]
             else:
-                # store as plain string for single-summary entries
-                bullets.append(summary_text)
-    except (json.JSONDecodeError, TypeError):
-            bullets.append(summary_text)
+                bullets = [summary_text]
+        except (json.JSONDecodeError, TypeError, ValueError):
+            bullets = [summary_text]
 
-
+        for b in bullets:
+            resume_bullets.append({
+                "project_name": project_name or "Unknown Project",
+                "bullet": b
+            })
     conn.close()
     
     # Return structured portfolio object and resume object
@@ -93,7 +115,7 @@ def get_portfolio_resume_insights():
         "top_projects": top_projects,
         "chronological": chronological
     }, {
-        "bullets": bullets
+        "bullets": resume_bullets
     }
     
 def format_date(dt_str):
@@ -136,7 +158,7 @@ def get_projects_by_signatures(signatures: list):
         signatures (list): List of project signature strings
         
     Returns:
-        list: List of project dictionaries with name, summary, duration, skills, created_at, rank, metrics, resume_bullets
+        list: List of project dictionaries with name, summary, duration, skills, created_at, score, metrics, resume_bullets
         dict: Single project dictionary if single signature provided
     """
     if not signatures:
@@ -156,7 +178,7 @@ def get_projects_by_signatures(signatures: list):
     for signature in signatures:
         # Get project basic info
         cur.execute(
-            "SELECT project_signature, name, rank, summary, created_at, last_modified FROM PROJECT WHERE project_signature=?", 
+            "SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT WHERE project_signature=?", 
             (signature,)
         )
         
@@ -165,7 +187,7 @@ def get_projects_by_signatures(signatures: list):
             # Skip if project not found
             continue
             
-        sig, name, rank, summary, created_at, last_modified = project_row
+        sig, name, score, summary, created_at, last_modified = project_row
         
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
@@ -212,9 +234,9 @@ def get_projects_by_signatures(signatures: list):
             
         # Check for specific baseline metrics and include authors
         authors = []
-        if "author" in metrics:
+        if "authors" in metrics:
             # If author is stored as metric
-            authors = [metrics["author"]]
+            authors = _normalize_authors(metrics["authors"])
         else:
             # Alternative: Get authors from GIT_HISTORY
             cur.execute("SELECT DISTINCT author_name FROM GIT_HISTORY WHERE project_id=?", (signature,))
@@ -232,7 +254,7 @@ def get_projects_by_signatures(signatures: list):
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "rank": rank,
+            "score": score,
             "metrics": metrics,
             "resume_bullets": resume_bullets
         })

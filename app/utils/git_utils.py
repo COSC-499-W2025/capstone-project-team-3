@@ -1,9 +1,8 @@
 from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Tuple, Union, Dict
+from typing import Dict, List, Optional, Tuple, Union
 from datetime import datetime
 import os, json, re, requests
-from typing import Optional
 from urllib.parse import quote
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
@@ -70,10 +69,56 @@ def extract_commit_authors(path: Union[str, Path]) ->list:
     
     return [commit.author.name for commit in extract_all_commits(path)]
 
-def author_matches(commit, author: str) -> bool:
-    """Return True if a commit's author matches the given author string (by name or email)."""
+def _normalize_author_identifiers(author: Union[str, List[str]]) -> List[str]:
+    if isinstance(author, str):
+        identifiers = [author]
+    elif isinstance(author, (list, tuple, set)):
+        identifiers = list(author)
+    else:
+        return []
+    return [ident.strip() for ident in identifiers if isinstance(ident, str) and ident.strip()]
+
+def _extract_github_noreply_username(email: str) -> Optional[str]:
+    if not email:
+        return None
+    email = email.strip()
+    if not email.lower().endswith("@users.noreply.github.com"):
+        return None
+    local = email.split("@", 1)[0]
+    if "+" in local:
+        local = local.split("+", 1)[1]
+    return local or None
+
+def author_matches(commit, author: Union[str, List[str]]) -> bool:
+    """Return True if a commit's author matches the given author identifier(s)."""
     a = commit.author
-    return a and (a.name == author or a.email == author)
+    if not a:
+        return False
+
+    identifiers = _normalize_author_identifiers(author)
+    if not identifiers:
+        return False
+
+    author_name = (a.name or "").strip()
+    author_email = (a.email or "").strip()
+    author_name_folded = author_name.casefold()
+    author_email_folded = author_email.casefold()
+
+    for ident in identifiers:
+        ident_folded = ident.casefold()
+        if author_name_folded == ident_folded or author_email_folded == ident_folded:
+            return True
+
+    noreply_username = _extract_github_noreply_username(author_email)
+    if noreply_username:
+        noreply_folded = noreply_username.casefold()
+        for ident in identifiers:
+            if "@" in ident:
+                continue
+            if noreply_folded == ident.casefold():
+                return True
+
+    return False
 
 def extract_files_changed(path: Union[str, Path], author: str, branches=True) -> int:
     """Returns the total number of files changed by the author in all branches."""
@@ -196,14 +241,15 @@ def is_collaborative(path: Union[str, Path]) -> bool:
 
 def extract_code_commit_content_by_author(
     path: Union[str, Path],
-    author: str,
+    author: Union[str, List[str]],
     include_merges: bool = False,
     max_commits: Optional[int] = None,
     ) -> str:
     """
     Assumes that only code/text files are provided - there will be different function that checks for code files only.
-    Extract detailed, per-file commit data (metadata + diff) 
+    Extract detailed, per-file commit data (metadata + diff)
     for all commits by `author` across all branches.
+    `author` can be a string or a list of identifiers.
     Returns a JSON string.
 
     Notes:
@@ -476,7 +522,7 @@ def extract_pull_request_metrics(
 
 def extract_non_code_content_by_author(
     path: Union[str, Path],
-    author: str,
+    author: Union[str, List[str]],
     exclude_readme: bool = True,
     exclude_pdf_docx: bool = True,
     include_merges: bool = False,
@@ -488,7 +534,7 @@ def extract_non_code_content_by_author(
     
     Args:
         path: Path to git repository
-        author: Author name or email
+        author: Author name, email, or list of identifiers
         exclude_readme: Exclude README files (default: True, reuses verify_user_in_files logic)
         exclude_pdf_docx: Exclude PDF/DOCX (default: True)
         include_merges: Include merge commits (default: False)

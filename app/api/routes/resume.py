@@ -6,13 +6,34 @@ from app.utils.generate_resume import build_resume_model
 from app.utils.generate_resume_tex import generate_resume_tex
 from pydantic import BaseModel
 import subprocess
-import tempfile
 import os
+import hashlib
+from fastapi.concurrency import run_in_threadpool
+import uuid
+import shutil
+
 
 router = APIRouter()
+PDF_CACHE_DIR = "/tmp/resume_pdf_cache"
+os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 
+LATEX_BUILD_DIR = "/tmp/latex_build"
+os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
     project_ids: list[str]
+
+def tex_hash(tex: str) -> str:
+    """Creates a unique hash of the LaTex source for futurer caching """
+    return hashlib.sha256(tex.encode("utf-8")).hexdigest()
+
+def get_resume_tex(project_ids: Optional[List[str]]) -> str:
+    """Helper method that builds resume model and generates resume in tex format"""
+    resume_model = build_resume_model(project_ids=project_ids)
+    return generate_resume_tex(resume_model)
+
+def escape_tex_for_html(tex: str) -> str:
+    """Helper methods to escape tex for HTML"""
+    return tex.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 @router.get("/resume", response_class=HTMLResponse)
 def resume_page(project_ids: Optional[List[str]] = Query(None)):
@@ -22,14 +43,8 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     - project_ids provided → filtered resume
     """
 
-    resume_model = build_resume_model(project_ids=project_ids)
-    tex = generate_resume_tex(resume_model)
-
-    preview = (
-        tex.replace("&", "&amp;")
-           .replace("<", "&lt;")
-           .replace(">", "&gt;")
-    )
+    tex = get_resume_tex(project_ids)
+    preview = escape_tex_for_html(tex)
 
     # Build export links dynamically
     if project_ids:
@@ -64,16 +79,9 @@ def generate_resume(filter: ResumeFilter):
     - Allowing a user to tailor their resume for a certain job
     - Generating a resume for the top three ranked projects
     """
-    resume_model = build_resume_model(
-        project_ids=filter.project_ids
-    )
-
-    tex = generate_resume_tex(resume_model)
-    preview = (
-        tex.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+   
+    tex = get_resume_tex(filter.project_ids)
+    preview = escape_tex_for_html(tex)
 
     return f"""
     <html>
@@ -87,8 +95,7 @@ def generate_resume(filter: ResumeFilter):
 
 @router.get("/resume/export/tex")
 def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
-    resume_model = build_resume_model(project_ids=project_ids)
-    tex = generate_resume_tex(resume_model)
+    tex = get_resume_tex(project_ids)
 
     return Response(
         content=tex,
@@ -99,8 +106,7 @@ def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
 @router.post("/resume/export/tex")
 def resume_tex_filtered(filter: ResumeFilter):
     """This method downloads a resume for specified projects."""
-    resume_model = build_resume_model(filter.project_ids)
-    tex = generate_resume_tex(resume_model)
+    tex = get_resume_tex(filter.project_ids)
     return Response(
         content=tex,
         media_type="application/x-tex",
@@ -113,69 +119,107 @@ def compile_pdf(tex: str) -> bytes:
 
     Raises HTTPException with LaTeX logs on failure.
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        basename = "resume"
-        tex_path = os.path.join(tmpdir, f"{basename}.tex")
-        pdf_path = os.path.join(tmpdir, f"{basename}.pdf")
+    
+    build_id = uuid.uuid4().hex
+    build_dir = os.path.join(LATEX_BUILD_DIR, build_id)
+    os.makedirs(build_dir, exist_ok=True)
 
-        # Write LaTeX source
+    basename = "resume"
+    tex_path = os.path.join(build_dir, f"{basename}.tex")
+    pdf_path = os.path.join(build_dir, f"{basename}.pdf")
+
+    try:
         with open(tex_path, "w", encoding="utf-8") as f:
             f.write(tex)
 
-        try:
-            proc = subprocess.run(
-                ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
-                cwd=tmpdir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=30,
-            )
+        proc = subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
+            cwd=build_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+        )
 
-            # If pdflatex exited non-zero AND no PDF exists → fail
-            if proc.returncode != 0 and not os.path.exists(pdf_path):
-                raise subprocess.CalledProcessError(
-                    proc.returncode,
-                    proc.args,
-                    output=proc.stdout,
-                    stderr=proc.stderr,
-                )
-
-        except subprocess.TimeoutExpired:
-            raise HTTPException(
-                status_code=500,
-                detail="LaTeX compilation timed out.",
-            )
-
-        except FileNotFoundError:
-            raise HTTPException(
-                status_code=500,
-                detail="pdflatex not found. Is LaTeX installed in the container?",
-            )
-
-        except subprocess.CalledProcessError as e:
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    "LaTeX compilation failed.\n\n"
-                    f"STDOUT:\n{(e.output or b'').decode(errors='ignore')[-1500:]}\n\n"
-                    f"STDERR:\n{(e.stderr or b'').decode(errors='ignore')[-1500:]}"
-                ),
-            )
-
-        if not os.path.exists(pdf_path):
-            raise HTTPException(
-                status_code=500,
-                detail="PDF was not generated. LaTeX likely failed.",
+        if proc.returncode != 0 and not os.path.exists(pdf_path):
+            raise subprocess.CalledProcessError(
+                proc.returncode,
+                proc.args,
+                output=proc.stdout,
+                stderr=proc.stderr,
             )
 
         with open(pdf_path, "rb") as f:
             return f.read()
+
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "LaTeX compilation timed out.")
+
+    except FileNotFoundError:
+        raise HTTPException(
+            500,
+            "pdflatex not found. Is LaTeX installed in the container?",
+        )
+
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(
+            422,
+            {
+                "error": "LaTeX compilation failed",
+                "stdout": (e.output or b"").decode(errors="ignore")[-1500:],
+                "stderr": (e.stderr or b"").decode(errors="ignore")[-1500:],
+            },
+        )
+    finally:
+        shutil.rmtree(build_dir, ignore_errors=True)
+
+def get_or_compile_pdf(tex: str) -> bytes:
+    """Return a cached PDF for the given LaTeX source, compiling and caching it if necessary."""
+    h = tex_hash(tex)
+
+    # Validate hash: must be 64 lowercase hex chars (sha256 hexdigest)
+    if not isinstance(h, str) or len(h) != 64 or not all(c in "0123456789abcdef" for c in h):
+        raise HTTPException(400, "Invalid cache key")
+
+    # Build safe cache path and ensure it stays within the cache dir
+    pdf_path = os.path.join(PDF_CACHE_DIR, f"{h}.pdf")
+    base = os.path.abspath(PDF_CACHE_DIR)
+    target = os.path.abspath(pdf_path)
+    if os.path.commonpath([base, target]) != base:
+        raise HTTPException(400, "Invalid cache path")
+
+    # Return cached PDF if it already exists and is not a symlink
+    if os.path.exists(pdf_path) and not os.path.islink(pdf_path):
+        with open(pdf_path, "rb") as f:
+            return f.read()
+
+    # Compile the PDF since it is not cached
+    pdf_bytes = compile_pdf(tex)
+
+    # Atomic write to avoid partial files; avoid writing through symlinks
+    tmp_path = pdf_path + ".tmp"
+    with open(tmp_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    # If a symlink exists at the final path, remove it before replace
+    if os.path.islink(pdf_path):
+        try:
+            os.unlink(pdf_path)
+        except OSError:
+            pass
+
+    os.replace(tmp_path, pdf_path)
+    return pdf_bytes
         
 @router.get("/resume/export/pdf")
-def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
-    resume_model = build_resume_model(project_ids=project_ids)
-    tex = generate_resume_tex(resume_model)
-    pdf_bytes = compile_pdf(tex)
+# Make the endpoint async to allow awaiting background tasks
+async def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
+    tex = get_resume_tex(project_ids)
+
+    # Run PDF generation in a separate thread so it doesn't block the FastAPI worker
+    pdf_bytes = await run_in_threadpool(
+        get_or_compile_pdf,
+        tex,
+    )
 
     return Response(
         content=pdf_bytes,
@@ -184,11 +228,13 @@ def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
     )
     
 @router.post("/resume/export/pdf")
-def resume_pdf_filtered(filter: ResumeFilter):
+async def resume_pdf_filtered(filter: ResumeFilter):
     """This method downloads a resume for specified projects."""
-    resume_model = build_resume_model(filter.project_ids)
-    tex = generate_resume_tex(resume_model)
-    pdf_bytes = compile_pdf(tex)
+    tex = get_resume_tex(filter.project_ids)
+    pdf_bytes = await run_in_threadpool(
+        get_or_compile_pdf,
+        tex,
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

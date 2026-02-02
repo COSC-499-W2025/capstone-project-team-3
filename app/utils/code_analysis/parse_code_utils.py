@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 import json 
+import logging
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from app.utils.code_analysis.file_entity_utils import classify_node_types, extract_entities, get_parser
@@ -11,6 +12,8 @@ from tree_sitter_language_pack import get_language
 from typing import List, Set
 import importlib.resources as pkg_resources
 import re
+
+logger = logging.getLogger(__name__)
 
 _TS_IMPORT_NODES = {}
 _TS_IMPORT_REGEX={}
@@ -47,6 +50,75 @@ except Exception as e:
     print(f"Warning: Could not load language_mapping.json: {e}")
     _TS_LANGUAGE_MAPPING = {}
 
+def _read_file_with_encoding_fallback(file_path: Path, return_content: bool = True) -> str | None:
+    """
+    Helper method to read file content with encoding fallback.
+    
+    Args:
+        file_path: Path to the file to read
+        return_content: If True, returns content; if False, just tests readability
+    
+    Returns:
+        File content if successful and return_content=True, None if failed
+    """
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            content = file_path.read_text(encoding=encoding)
+            return content if return_content else "success"
+        except UnicodeDecodeError as e:
+            logger.debug(f"Failed to read {file_path} with {encoding}: {e}")
+            continue
+        except Exception as e:
+            logger.debug(f"Other error reading {file_path} with {encoding}: {e}")
+            continue
+    
+    # Final fallback with error replacement
+    try:
+        content = file_path.read_text(encoding='utf-8', errors='replace')
+        return content if return_content else "success"
+    except Exception:
+        return None
+
+def _is_comment_line(line: str, language: str) -> bool:
+    """
+    Check if a line is a comment based on the programming language.
+    
+    Args:
+        line: The line to check
+        language: The programming language
+    
+    Returns:
+        True if the line is a comment, False otherwise
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False
+    
+    # Python, Shell, Ruby, Perl, R
+    if language.lower() in ['python', 'shell', 'bash', 'ruby', 'perl', 'r']:
+        return stripped.startswith('#')
+    
+    # Java, C++, C#, JavaScript, TypeScript, Go, Swift, Kotlin, Scala
+    elif language.lower() in ['java', 'c++', 'cpp', 'c#', 'csharp', 'javascript', 'typescript', 'go', 'golang', 'swift', 'kotlin', 'scala']:
+        return stripped.startswith('//') or stripped.startswith('/*') or stripped.startswith('*')
+    
+    # SQL
+    elif language.lower() in ['sql', 'mysql', 'postgresql']:
+        return stripped.startswith('--') or stripped.startswith('#')
+    
+    # HTML, XML
+    elif language.lower() in ['html', 'xml']:
+        return stripped.startswith('<!--')
+    
+    # CSS
+    elif language.lower() in ['css']:
+        return stripped.startswith('/*') or stripped.startswith('*')
+    
+    # Default fallback - try common comment patterns
+    return stripped.startswith(('#', '//', '/*', '*', '--', '<!--'))
+
 def detect_language(file_path: Path) -> str | None:
     """
     Detect the programming language of the given file based on filename or content.
@@ -59,29 +131,105 @@ def detect_language(file_path: Path) -> str | None:
     """
     
     try:
-        lexer = guess_lexer_for_filename(file_path.name, file_path.read_text(encoding="utf-8"))
-        language= lexer.name
+        content = _read_file_with_encoding_fallback(file_path)
+        if content is None:
+            return None
+        
+        lexer = guess_lexer_for_filename(file_path.name, content)
+        language = lexer.name
         language = re.split(r'\+(?=[A-Za-z])', language)[0].strip()
         language = language.split()[0]
         return language
-    except (ClassNotFound, FileNotFoundError, UnicodeDecodeError, OSError):
+    except (ClassNotFound, FileNotFoundError, OSError):
         return None
 
 def count_lines_of_code(file_path: Path) -> int:
     """Return the number of lines of code in the given source file."""
-    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
-    count = analysis.code_count
-    return count
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            analysis = SourceAnalysis.from_file(str(file_path), "pygount", encoding=encoding)
+            return analysis.code_count
+        except Exception:
+            continue
+    
+    # If all encodings fail, try with error handling
+    try:
+        content = _read_file_with_encoding_fallback(file_path)
+        if content is None:
+            return 0
+        
+        # Detect language for better comment detection
+        language = detect_language(file_path) or 'unknown'
+        
+        # Count non-empty, non-comment lines
+        return len([line for line in content.splitlines() 
+                   if line.strip() and not _is_comment_line(line, language)])
+    except Exception:
+        return 0
 
 def count_lines_of_documentation(file_path: Path) -> int:
     """Return the number of documentation lines in the given source file."""
-    analysis= SourceAnalysis.from_file(str(file_path),"pygount")
-    count = analysis.documentation_count
-    return count
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            analysis = SourceAnalysis.from_file(str(file_path), "pygount", encoding=encoding)
+            return analysis.documentation_count
+        except Exception:
+            continue
+    
+    # Fallback to manual counting if pygount fails with all encodings
+    content = _read_file_with_encoding_fallback(file_path)
+    if content is None:
+        return 0
+    
+    # Detect language for better comment detection
+    language = detect_language(file_path) or 'unknown'
+    
+    # Count comment/documentation lines
+    lines = content.splitlines()
+    doc_lines = 0
+    
+    for line in lines:
+        if _is_comment_line(line, language):
+            doc_lines += 1
+        # Also check for docstring patterns
+        stripped = line.strip()
+        if stripped.startswith(('"""', "'''", '/**', '/*')):
+            doc_lines += 1
+    
+    return doc_lines
 
 def extract_contents(file_path: Path) -> str:
     """Extracts the contents of the given file."""
-    return file_path.read_text(encoding="utf-8")
+    encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            return file_path.read_text(encoding=encoding)
+        except UnicodeDecodeError as e:
+            logger.debug(f"Failed to read {file_path} with {encoding}: {e}")
+            if encoding == 'utf-8':  
+                try:
+                    with open(file_path, 'rb') as f:
+                        raw_bytes = f.read()
+                    logger.debug(f"Bytes around position {e.start}: {raw_bytes[max(0, e.start-10):e.start+10]}")
+                    logger.debug(f"Problematic byte at position {e.start}: 0x{raw_bytes[e.start]:02x}")
+                except Exception as debug_e:
+                    logger.debug(f"Debug read failed: {debug_e}")
+            continue
+        except Exception as e:
+            logger.debug(f"Other error reading {file_path} with {encoding}: {e}")
+            continue
+    
+    # If all encodings fail, use utf-8 with error handling
+    try:
+        return file_path.read_text(encoding='utf-8', errors='replace')
+    except Exception:
+        # Last resort: return empty string if file can't be read at all
+        return ""
 
 # ---- Helper methods for extract_imports ----
 def collect_node_types(node: Node, seen: Set[str] | None = None) -> Set[str]:

@@ -31,6 +31,9 @@ ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface/transformers
 ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
 
+# Suppress noisy warnings globally in container
+ENV PYTHONWARNINGS="ignore::DeprecationWarning,ignore::FutureWarning,ignore:Using `TRANSFORMERS_CACHE` is deprecated:FutureWarning,ignore:All support for the `google.generativeai` package has ended:FutureWarning","ignore:pkg_resources is deprecated as an API:UserWarning"
+
 WORKDIR /app
 
 # Create cache directories

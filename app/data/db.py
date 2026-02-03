@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
     project_id TEXT,
     skill TEXT,
     source TEXT, -- 'technical' or 'soft'
+    date TEXT, -- When skill was acquired/used (YYYY-MM-DD)
     FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
 );
 
@@ -208,40 +209,40 @@ def seed_db():
             # --- SKILL_ANALYSIS ---
         if proj["name"] == "Alpha Project":
             skills = [
-                {"skill": "Python", "source": "code"},
-                {"skill": "Flask", "source": "code"},
-                {"skill": "Backend Development", "source": "code"},
-                {"skill": "RESTful API Design", "source": "code"},
-                {"skill": "Team Collaboration", "source": "non-code"},
-                {"skill": "Git", "source": "code"},
-                {"skill": "Agile Methodologies", "source": "non-code"},
+                {"skill": "Python", "source": "code", "date": "2024-01-15"},
+                {"skill": "Flask", "source": "code", "date": "2024-02-01"},
+                {"skill": "Backend Development", "source": "code", "date": "2024-02-15"},
+                {"skill": "RESTful API Design", "source": "code", "date": "2024-03-01"},
+                {"skill": "Team Collaboration", "source": "non-code", "date": "2024-01-20"},
+                {"skill": "Git", "source": "code", "date": "2024-01-15"},
+                {"skill": "Agile Methodologies", "source": "non-code", "date": "2024-01-25"},
             ]
         elif proj["name"] == "Beta Project":
             skills = [
-                {"skill": "Machine Learning", "source": "code"},
-                {"skill": "Data Preprocessing", "source": "code"},
-                {"skill": "Feature Engineering", "source": "code"},
-                {"skill": "Scikit-learn", "source": "code"},
-                {"skill": "TensorFlow", "source": "code"},
-                {"skill": "Pandas", "source": "code"},
-                {"skill": "Algorithm Optimization", "source": "code"},
+                {"skill": "Machine Learning", "source": "code", "date": "2024-03-10"},
+                {"skill": "Data Preprocessing", "source": "code", "date": "2024-03-15"},
+                {"skill": "Feature Engineering", "source": "code", "date": "2024-04-01"},
+                {"skill": "Scikit-learn", "source": "code", "date": "2024-04-10"},
+                {"skill": "TensorFlow", "source": "code", "date": "2024-05-01"},
+                {"skill": "Pandas", "source": "code", "date": "2024-03-20"},
+                {"skill": "Algorithm Optimization", "source": "code", "date": "2024-06-01"},
             ]
         elif proj["name"] == "Gamma Project":
             skills = [
-                {"skill": "React Native", "source": "code"},
-                {"skill": "Mobile Development", "source": "code"},
-                {"skill": "Fitness Tracking", "source": "non-code"},
-                {"skill": "Real-time Monitoring", "source": "code"},
-                {"skill": "Goal Setting", "source": "non-code"},
-                {"skill": "Social Sharing", "source": "non-code"},
-                {"skill": "Sphinx", "source": "code"},
-                {"skill": "CI/CD Integration", "source": "code"}
+                {"skill": "React Native", "source": "code", "date": "2024-06-05"},
+                {"skill": "Mobile Development", "source": "code", "date": "2024-06-10"},
+                {"skill": "Fitness Tracking", "source": "non-code", "date": "2024-06-15"},
+                {"skill": "Real-time Monitoring", "source": "code", "date": "2024-07-01"},
+                {"skill": "Goal Setting", "source": "non-code", "date": "2024-07-10"},
+                {"skill": "Social Sharing", "source": "non-code", "date": "2024-08-01"},
+                {"skill": "Sphinx", "source": "code", "date": "2024-08-15"},
+                {"skill": "CI/CD Integration", "source": "code", "date": "2024-09-01"}
             ]
         for s in skills:
             cursor.execute("""
-                INSERT OR IGNORE INTO SKILL_ANALYSIS (project_id, skill, source)
-                VALUES (?, ?, ?)
-            """, (project_id, s["skill"], s["source"]))
+                INSERT OR IGNORE INTO SKILL_ANALYSIS (project_id, skill, source, date)
+                VALUES (?, ?, ?, ?)
+            """, (project_id, s["skill"], s["source"], s.get("date", "")))
 
             # --- DASHBOARD_DATA ---
             metrics = [

@@ -202,11 +202,33 @@ class PortfolioDashboard {
         }
     }
     
-    createPieChart(canvasId, title, data) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        const labels = Object.keys(data);
-        const values = Object.values(data);
-        
+    // Add these defensive checks to your chart methods:
+
+createPieChart(canvasId, title, data) {
+    // Guard: Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, skipping pie chart creation');
+        return null;
+    }
+    
+    // Guard: Check if canvas element exists
+    const canvasElement = document.getElementById(canvasId);
+    if (!canvasElement) {
+        console.warn(`Canvas element with ID '${canvasId}' not found, skipping pie chart creation`);
+        return null;
+    }
+    
+    // Guard: Check if canvas context is available
+    const ctx = canvasElement.getContext('2d');
+    if (!ctx) {
+        console.warn(`Cannot get 2D context for canvas '${canvasId}', skipping pie chart creation`);
+        return null;
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    try {
         return new Chart(ctx, {
             type: 'pie',
             data: {
@@ -238,13 +260,37 @@ class PortfolioDashboard {
                 }
             }
         });
+    } catch (error) {
+        console.error(`Error creating pie chart for '${canvasId}':`, error);
+        return null;
+    }
+}
+
+createBarChart(canvasId, title, data) {
+    // Guard: Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, skipping bar chart creation');
+        return null;
     }
     
-    createBarChart(canvasId, title, data) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        const labels = Object.keys(data);
-        const values = Object.values(data);
-        
+    // Guard: Check if canvas element exists
+    const canvasElement = document.getElementById(canvasId);
+    if (!canvasElement) {
+        console.warn(`Canvas element with ID '${canvasId}' not found, skipping bar chart creation`);
+        return null;
+    }
+    
+    // Guard: Check if canvas context is available
+    const ctx = canvasElement.getContext('2d');
+    if (!ctx) {
+        console.warn(`Cannot get 2D context for canvas '${canvasId}', skipping bar chart creation`);
+        return null;
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    try {
         return new Chart(ctx, {
             type: 'bar',
             data: {
@@ -276,13 +322,37 @@ class PortfolioDashboard {
                 }
             }
         });
+    } catch (error) {
+        console.error(`Error creating bar chart for '${canvasId}':`, error);
+        return null;
+    }
+}
+
+createHorizontalBarChart(canvasId, title, data) {
+    // Guard: Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, skipping horizontal bar chart creation');
+        return null;
     }
     
-    createHorizontalBarChart(canvasId, title, data) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        const labels = Object.keys(data);
-        const values = Object.values(data);
-        
+    // Guard: Check if canvas element exists
+    const canvasElement = document.getElementById(canvasId);
+    if (!canvasElement) {
+        console.warn(`Canvas element with ID '${canvasId}' not found, skipping horizontal bar chart creation`);
+        return null;
+    }
+    
+    // Guard: Check if canvas context is available
+    const ctx = canvasElement.getContext('2d');
+    if (!ctx) {
+        console.warn(`Cannot get 2D context for canvas '${canvasId}', skipping horizontal bar chart creation`);
+        return null;
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    try {
         return new Chart(ctx, {
             type: 'bar',
             data: {
@@ -315,14 +385,38 @@ class PortfolioDashboard {
                 }
             }
         });
+    } catch (error) {
+        console.error(`Error creating horizontal bar chart for '${canvasId}':`, error);
+        return null;
+    }
+}
+
+createLineChart(canvasId, title, data) {
+    // Guard: Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, skipping line chart creation');
+        return null;
     }
     
-    createLineChart(canvasId, title, data) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        const sortedData = Object.entries(data).sort();
-        const labels = sortedData.map(([month]) => month);
-        const values = sortedData.map(([, value]) => value);
-        
+    // Guard: Check if canvas element exists
+    const canvasElement = document.getElementById(canvasId);
+    if (!canvasElement) {
+        console.warn(`Canvas element with ID '${canvasId}' not found, skipping line chart creation`);
+        return null;
+    }
+    
+    // Guard: Check if canvas context is available
+    const ctx = canvasElement.getContext('2d');
+    if (!ctx) {
+        console.warn(`Cannot get 2D context for canvas '${canvasId}', skipping line chart creation`);
+        return null;
+    }
+    
+    const sortedData = Object.entries(data).sort();
+    const labels = sortedData.map(([month]) => month);
+    const values = sortedData.map(([, value]) => value);
+    
+    try {
         return new Chart(ctx, {
             type: 'line',
             data: {
@@ -360,7 +454,127 @@ class PortfolioDashboard {
                 }
             }
         });
+    } catch (error) {
+        console.error(`Error creating line chart for '${canvasId}':`, error);
+        return null;
     }
+}
+
+// Also update renderCharts to handle null chart returns gracefully:
+renderCharts(graphs) {
+    // Destroy existing charts
+    Object.values(this.charts).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+    this.charts = {};
+    
+    // Guard: Check if Chart.js is available at all
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, skipping all chart rendering');
+        return;
+    }
+    
+    // Language Distribution (Pie Chart)
+    const languageChart = this.createPieChart(
+        'languageChart',
+        'Language Distribution',
+        graphs.language_distribution || {}
+    );
+    if (languageChart) {
+        this.charts.language = languageChart;
+    }
+    
+    // Project Complexity (Bar Chart)
+    const complexityChart = this.createBarChart(
+        'complexityChart', 
+        'Project Complexity',
+        {
+            'Small (<1000)': graphs.complexity_distribution?.distribution?.small || 0,
+            'Medium (1000-3000)': graphs.complexity_distribution?.distribution?.medium || 0,
+            'Large (>3000)': graphs.complexity_distribution?.distribution?.large || 0
+        }
+    );
+    if (complexityChart) {
+        this.charts.complexity = complexityChart;
+    }
+    
+    // Score Distribution (Bar Chart)
+    const scoreChart = this.createBarChart(
+        'scoreChart',
+        'Score Distribution',
+        {
+            'Excellent (90-100%)': graphs.score_distribution?.distribution?.excellent || 0,
+            'Good (80-89%)': graphs.score_distribution?.distribution?.good || 0,
+            'Fair (70-79%)': graphs.score_distribution?.distribution?.fair || 0,
+            'Poor (<70%)': graphs.score_distribution?.distribution?.poor || 0
+        }
+    );
+    if (scoreChart) {
+        this.charts.score = scoreChart;
+    }
+    
+    // Monthly Activity (Line Chart)
+    const activityChart = this.createLineChart(
+        'activityChart',
+        'Monthly Activity',
+        graphs.monthly_activity || {}
+    );
+    if (activityChart) {
+        this.charts.activity = activityChart;
+    }
+    
+    // Top Skills (Horizontal Bar Chart)
+    const skillsChart = this.createHorizontalBarChart(
+        'skillsChart',
+        'Top Skills',
+        graphs.top_skills || {}
+    );
+    if (skillsChart) {
+        this.charts.skills = skillsChart;
+    }
+    
+    // Project Type Comparison
+    if (this.currentPortfolioData?.project_type_analysis) {
+        const typeData = this.currentPortfolioData.project_type_analysis;
+        const projectTypeChart = this.createBarChart(
+            'projectTypeChart',
+            'Project Types',
+            {
+                'GitHub Projects': typeData.github?.count || 0,
+                'Local Projects': typeData.local?.count || 0
+            }
+        );
+        if (projectTypeChart) {
+            this.charts.projectType = projectTypeChart;
+        }
+    }
+}
+
+// Also add a missing showError method:
+showError(message) {
+    console.error('Dashboard Error:', message);
+    
+    // Try to display error in UI if error container exists
+    const errorContainer = document.getElementById('errorContainer');
+    if (errorContainer) {
+        errorContainer.innerHTML = `
+            <div class="error-message" style="
+                background-color: #fed7d7;
+                color: #c53030;
+                padding: 1rem;
+                border-radius: 0.375rem;
+                border: 1px solid #fc8181;
+                margin: 1rem 0;
+            ">
+                <strong>Error:</strong> ${message}
+            </div>
+        `;
+        errorContainer.style.display = 'block';
+    } else {
+        // Fallback to alert if no error container
+        alert(`Dashboard Error: ${message}`);
+    }
+}
     
 
 }

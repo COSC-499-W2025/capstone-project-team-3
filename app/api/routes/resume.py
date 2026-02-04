@@ -281,14 +281,6 @@ def delete_saved_resume(resume_id: int):
     cursor = conn.cursor()
     
     try:
-        # Fetch resume name for response message
-        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
-        resume = cursor.fetchone()
-        
-        # Fetch resume name for response message
-        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
-        resume = cursor.fetchone()
-        
         # Delete the resume (CASCADE will handle RESUME_PROJECT and RESUME_SKILLS)
         cursor.execute("DELETE FROM RESUME WHERE id = ?", (resume_id,))
         conn.commit()

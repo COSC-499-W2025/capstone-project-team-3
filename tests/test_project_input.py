@@ -485,5 +485,141 @@ def test_find_and_update_similar_project_default_threshold():
     sig = inspect.signature(find_and_update_similar_project)
     default_threshold = sig.parameters['threshold'].default
     
-    # Verify default is 65%
-    assert default_threshold == 65.0
+    # Verify default is None (dynamic threshold)
+    assert default_threshold is None
+
+
+def test_run_scan_flow_uses_dynamic_threshold(tmp_path):
+    """Test that run_scan_flow uses dynamic threshold when not specified."""
+    # Create a small project (should use higher threshold)
+    (tmp_path / "file1.py").write_text("print('1')")
+    (tmp_path / "file2.py").write_text("print('2')")
+    
+    # Run scan flow without specifying threshold
+    result = run_scan_flow(str(tmp_path), exclude=[])
+    
+    # Should succeed (new project)
+    assert result["reason"] == "new_project"
+    assert result["skip_analysis"] is False
+
+
+def test_run_scan_flow_accepts_custom_threshold(tmp_path):
+    """Test that run_scan_flow accepts custom threshold."""
+    (tmp_path / "test.py").write_text("print('test')")
+    
+    # Run with explicit threshold
+    result = run_scan_flow(str(tmp_path), exclude=[], similarity_threshold=50.0)
+    
+    assert result["reason"] == "new_project"
+
+
+def test_run_scan_flow_accepts_base_threshold(tmp_path):
+    """Test that run_scan_flow accepts base threshold for dynamic calculation."""
+    (tmp_path / "test.py").write_text("print('test')")
+    
+    # Run with custom base threshold
+    result = run_scan_flow(str(tmp_path), exclude=[], base_threshold=70.0)
+    
+    assert result["reason"] == "new_project"
+
+
+# ============================================================================
+# Tests for calculate_dynamic_threshold()
+# ============================================================================
+
+class TestCalculateDynamicThreshold:
+    """Tests for calculate_dynamic_threshold function."""
+    
+    def test_very_small_project(self):
+        """Very small projects (<10 files) should get higher threshold."""
+        threshold = calculate_dynamic_threshold(file_count=5)
+        assert threshold == 80.0  # base(65) + 15
+    
+    def test_small_project(self):
+        """Small projects (10-30 files) should get slightly higher threshold."""
+        threshold = calculate_dynamic_threshold(file_count=20)
+        assert threshold == 73.0  # base(65) + 8
+    
+    def test_medium_project(self):
+        """Medium projects (30-100 files) should use base threshold."""
+        threshold = calculate_dynamic_threshold(file_count=50)
+        assert threshold == 65.0  # base threshold
+    
+    def test_large_project(self):
+        """Large projects (100-300 files) should get lower threshold."""
+        threshold = calculate_dynamic_threshold(file_count=150)
+        assert threshold == 57.0  # base(65) - 8
+    
+    def test_very_large_project(self):
+        """Very large projects (300+ files) should get lowest threshold."""
+        threshold = calculate_dynamic_threshold(file_count=400)
+        assert threshold == 53.0  # base(65) - 12
+    
+    def test_custom_base_threshold(self):
+        """Should respect custom base threshold."""
+        threshold = calculate_dynamic_threshold(
+            file_count=50,  # medium
+            base_threshold=70.0
+        )
+        assert threshold == 70.0
+    
+    def test_max_threshold_clamping(self):
+        """Should clamp to max_threshold."""
+        threshold = calculate_dynamic_threshold(
+            file_count=3,  # very small (+15)
+            base_threshold=75.0,
+            max_threshold=85.0
+        )
+        assert threshold == 85.0  # Clamped (75+15=90 -> 85)
+    
+    def test_min_threshold_clamping(self):
+        """Should clamp to min_threshold."""
+        threshold = calculate_dynamic_threshold(
+            file_count=400,  # very large (-12)
+            base_threshold=55.0,
+            min_threshold=50.0
+        )
+        assert threshold == 50.0  # Clamped (55-12=43 -> 50)
+    
+    def test_boundary_10_files(self):
+        """Test boundary at exactly 10 files."""
+        assert calculate_dynamic_threshold(9) == 80.0   # very small
+        assert calculate_dynamic_threshold(10) == 73.0  # small
+    
+    def test_boundary_30_files(self):
+        """Test boundary at exactly 30 files."""
+        assert calculate_dynamic_threshold(29) == 73.0  # small
+        assert calculate_dynamic_threshold(30) == 65.0  # medium
+    
+    def test_boundary_100_files(self):
+        """Test boundary at exactly 100 files."""
+        assert calculate_dynamic_threshold(99) == 65.0  # medium
+        assert calculate_dynamic_threshold(100) == 57.0 # large
+    
+    def test_boundary_300_files(self):
+        """Test boundary at exactly 300 files."""
+        assert calculate_dynamic_threshold(299) == 57.0 # large
+        assert calculate_dynamic_threshold(300) == 53.0 # very large
+    
+    def test_zero_files(self):
+        """Test edge case with zero files."""
+        threshold = calculate_dynamic_threshold(file_count=0)
+        assert threshold == 80.0  # Treated as very small
+    
+    def test_single_file(self):
+        """Test edge case with single file."""
+        threshold = calculate_dynamic_threshold(file_count=1)
+        assert threshold == 80.0  # Very small project
+    
+    def test_default_parameters(self):
+        """Test that default parameters work correctly."""
+        # Medium project with all defaults
+        threshold = calculate_dynamic_threshold(50)
+        assert threshold == 65.0
+        
+        # Verify defaults are: base=65.0, min=50.0, max=85.0
+        import inspect
+        sig = inspect.signature(calculate_dynamic_threshold)
+        assert sig.parameters['base_threshold'].default == 65.0
+        assert sig.parameters['min_threshold'].default == 50.0
+        assert sig.parameters['max_threshold'].default == 85.0

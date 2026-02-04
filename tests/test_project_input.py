@@ -8,7 +8,8 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    extract_project_timestamps
+    extract_project_timestamps,
+    calculate_dynamic_threshold
 )
 from pathlib import Path
 from unittest.mock import patch
@@ -477,7 +478,7 @@ def test_find_and_update_similar_project_integration(tmp_path):
     assert returned_sig != old_project_sig  # Signature should have changed
 
 def test_find_and_update_similar_project_default_threshold():
-    """Test that the default threshold is 65%."""
+    """Test that the default threshold is None (dynamic)."""
     from app.utils.scan_utils import find_and_update_similar_project
     import inspect
     

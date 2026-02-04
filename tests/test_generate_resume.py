@@ -91,8 +91,9 @@ def db_connection(monkeypatch):
         );
         
         CREATE TABLE RESUME_SKILLS (
-            resume_id INTEGER,
-            skills TEXT
+            resume_id INTEGER PRIMARY KEY,
+            skills JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
 
@@ -143,9 +144,11 @@ def db_connection(monkeypatch):
         json.dumps(["Did stuff"]),               # bullets as JSON array
     ))
     cursor.execute("""
-        INSERT INTO RESUME_SKILLS
-        VALUES (1, 'Python,Flask,SQL,Machine Learning')
-    """)
+        INSERT INTO RESUME_SKILLS (resume_id, skills)
+        VALUES (?, ?)
+        """,
+        (1, json.dumps(["Python","Flask","SQL","Machine Learning"]))
+    )
 
     conn.commit()
 
@@ -266,7 +269,7 @@ def test_load_edited_skills(db_connection):
     cursor = db_connection.cursor()
     row = load_edited_skills(cursor, 1)
     assert row is not None
-    assert row[0] == 'Python,Flask,SQL,Machine Learning'
+    assert json.loads(row[0]) == ["Python","Flask","SQL","Machine Learning"]
     
 def test_load_saved_resume(db_connection):
     """Test that load_saved_resume returns a complete resume model."""
@@ -314,6 +317,25 @@ def test_save_resume_edits_update(db_connection):
     assert rows[0][1] == "Alpha_Project_Updated"
     assert json.loads(rows[0][4]) == ["Python", "Flask"]
     assert rows[0][6] == 2
+
+def test_save_resume_edits_update_resume_skills(db_connection):
+    """Test that save_resume_edits updates RESUME_SKILLS and load_saved_resume reflects it."""
+    # Update resume-level skills via payload
+    payload_skills = {
+        "skills": ["Python", "Flask", "GraphQL"]
+    }
+    save_resume_edits(1, payload_skills)
+
+    # Verify RESUME_SKILLS row was updated to JSON payload
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
+    row = cursor.fetchone()
+    assert row is not None
+    assert json.loads(row[0]) == ["Python", "Flask", "GraphQL"]
+
+    # Verify load_saved_resume picks up the edited resume-level skills
+    resume = load_saved_resume(1)
+    assert resume["skills"]["Skills"] == ["Python", "Flask", "GraphQL"]
 
 def test_resume_exists_true_and_false(db_connection):
     """

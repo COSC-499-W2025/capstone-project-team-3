@@ -158,8 +158,8 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
 
     row = load_edited_skills(cursor,resume_id)
     if row and row[0]:
-        # Use edited all skills
-        all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
+       # skills stored as JSON
+        all_skills = json.loads(row[0])
     else: #Return to original skills shown
         # Aggregate all skills from projects
         union = set()
@@ -312,6 +312,16 @@ def save_resume_edits(resume_id: int, payload: dict):
     cursor = conn.cursor()
     
     try:
+        # Update resume-level skills (if provided)
+        if "skills" in payload:
+            cursor.execute("""
+                INSERT INTO RESUME_SKILLS (resume_id, skills)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    skills = excluded.skills,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (resume_id, json.dumps(payload["skills"])))
 
         for project in payload.get("projects", []):
             cursor.execute("""

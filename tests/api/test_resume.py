@@ -215,19 +215,17 @@ def test_delete_saved_resume_success(mock_resume_exists, mock_get_connection, cl
     
     # Mock that resume exists
     mock_resume_exists.return_value = True
-    mock_cursor.fetchone.return_value = ("My Custom Resume",)
     
     response = client.delete("/resume/5")
     
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert response.json()["deleted_resume_id"] == 5
-    assert "My Custom Resume" in response.json()["message"]
+    assert "Resume 5 deleted successfully" in response.json()["message"]
     
     # Verify database operations
     mock_resume_exists.assert_called_once_with(5)
-    mock_cursor.execute.assert_any_call("SELECT name FROM RESUME WHERE id = ?", (5,))
-    mock_cursor.execute.assert_any_call("DELETE FROM RESUME WHERE id = ?", (5,))
+    mock_cursor.execute.assert_called_once_with("DELETE FROM RESUME WHERE id = ?", (5,))
     mock_conn.commit.assert_called_once()
     mock_conn.close.assert_called_once()
 
@@ -260,11 +258,7 @@ def test_delete_saved_resume_database_error(mock_resume_exists, mock_get_connect
     mock_resume_exists.return_value = True
     
     # Mock database error on delete
-    mock_cursor.execute.side_effect = [
-        None,  # First call (SELECT name) succeeds
-        Exception("Database constraint violation")  # Second call (DELETE) fails
-    ]
-    mock_cursor.fetchone.return_value = ("My Custom Resume",)
+    mock_cursor.execute.side_effect = Exception("Database constraint violation")
     
     response = client.delete("/resume/5")
     

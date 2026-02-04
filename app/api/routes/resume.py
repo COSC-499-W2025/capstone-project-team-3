@@ -287,7 +287,7 @@ def delete_saved_resume(resume_id: int):
         
         return {
             "success": True,
-            "message": f"Resume {resume_id} ({resume[0] if resume else 'Unknown'}) deleted successfully",
+            "message": f"Resume {resume_id} deleted successfully",
             "deleted_resume_id": resume_id
         }
         

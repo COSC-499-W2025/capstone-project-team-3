@@ -205,7 +205,8 @@ def test_get_or_compile_pdf_cache(tmp_path, monkeypatch):
 
 
 @patch("app.api.routes.resume.get_connection")
-def test_delete_saved_resume_success(mock_get_connection, client):
+@patch("app.api.routes.resume.resume_exists")
+def test_delete_saved_resume_success(mock_resume_exists, mock_get_connection, client):
     """Verify DELETE /resume/{resume_id} successfully deletes a saved resume."""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
@@ -213,7 +214,8 @@ def test_delete_saved_resume_success(mock_get_connection, client):
     mock_conn.cursor.return_value = mock_cursor
     
     # Mock that resume exists
-    mock_cursor.fetchone.return_value = (5, "My Custom Resume")
+    mock_resume_exists.return_value = True
+    mock_cursor.fetchone.return_value = ("My Custom Resume",)
     
     response = client.delete("/resume/5")
     
@@ -223,36 +225,31 @@ def test_delete_saved_resume_success(mock_get_connection, client):
     assert "My Custom Resume" in response.json()["message"]
     
     # Verify database operations
-    mock_cursor.execute.assert_any_call("SELECT id, name FROM RESUME WHERE id = ?", (5,))
+    mock_resume_exists.assert_called_once_with(5)
+    mock_cursor.execute.assert_any_call("SELECT name FROM RESUME WHERE id = ?", (5,))
     mock_cursor.execute.assert_any_call("DELETE FROM RESUME WHERE id = ?", (5,))
     mock_conn.commit.assert_called_once()
     mock_conn.close.assert_called_once()
 
 
-@patch("app.api.routes.resume.get_connection")
-def test_delete_saved_resume_not_found(mock_get_connection, client):
+@patch("app.api.routes.resume.resume_exists")
+def test_delete_saved_resume_not_found(mock_resume_exists, client):
     """Verify DELETE /resume/{resume_id} returns 404 when resume doesn't exist."""
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_get_connection.return_value = mock_conn
-    mock_conn.cursor.return_value = mock_cursor
-    
     # Mock that resume doesn't exist
-    mock_cursor.fetchone.return_value = None
+    mock_resume_exists.return_value = False
     
     response = client.delete("/resume/999")
     
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
     
-    # Verify no deletion attempted
-    assert mock_cursor.execute.call_count == 1  # Only SELECT, no DELETE
-    mock_conn.commit.assert_not_called()
-    mock_conn.close.assert_called_once()
+    # Verify resume_exists was called but no further database operations
+    mock_resume_exists.assert_called_once_with(999)
 
 
 @patch("app.api.routes.resume.get_connection")
-def test_delete_saved_resume_database_error(mock_get_connection, client):
+@patch("app.api.routes.resume.resume_exists")
+def test_delete_saved_resume_database_error(mock_resume_exists, mock_get_connection, client):
     """Verify DELETE /resume/{resume_id} handles database errors gracefully."""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
@@ -260,13 +257,14 @@ def test_delete_saved_resume_database_error(mock_get_connection, client):
     mock_conn.cursor.return_value = mock_cursor
     
     # Mock that resume exists
-    mock_cursor.fetchone.return_value = (5, "My Custom Resume")
+    mock_resume_exists.return_value = True
     
     # Mock database error on delete
     mock_cursor.execute.side_effect = [
-        None,  # First call (SELECT) succeeds
+        None,  # First call (SELECT name) succeeds
         Exception("Database constraint violation")  # Second call (DELETE) fails
     ]
+    mock_cursor.fetchone.return_value = ("My Custom Resume",)
     
     response = client.delete("/resume/5")
     

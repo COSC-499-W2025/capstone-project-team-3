@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume
 from app.utils.generate_resume_tex import generate_resume_tex
 from pydantic import BaseModel
 import subprocess
@@ -35,6 +35,22 @@ def escape_tex_for_html(tex: str) -> str:
     """Helper methods to escape tex for HTML"""
     return tex.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+@router.post("/resume")
+def create_tailored_resume(filter: ResumeFilter):
+    """
+    Create a new resume and associate selected projects.
+    """
+    if not filter.project_ids:
+        raise HTTPException(400, "No projects selected")
+
+    resume_id = create_resume()
+    attach_projects_to_resume(resume_id, filter.project_ids)
+
+    return {
+        "resume_id": resume_id,
+        "message": "Resume created successfully"
+    }
+    
 @router.get("/resume", response_class=HTMLResponse)
 def resume_page(project_ids: Optional[List[str]] = Query(None)):
     """

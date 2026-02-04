@@ -238,3 +238,31 @@ def test_save_edited_resume_not_found(mock_exists, mock_save, client):
     assert response.status_code == 404
     assert response.json()["detail"] == "Resume not found"
     mock_save.assert_not_called()
+
+
+@patch("app.api.routes.resume.create_resume")
+@patch("app.api.routes.resume.attach_projects_to_resume")
+def test_create_tailored_resume_success(mock_attach, mock_create, client):
+    """
+    Test POST /resume creates a resume and associates selected projects.
+    """
+    mock_create.return_value = 42
+    mock_attach.return_value = None
+    payload = {"project_ids": ["p1", "p2"]}
+    response = client.post("/resume", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["resume_id"] == 42
+    assert data["message"] == "Resume created successfully"
+    mock_create.assert_called_once_with()
+    mock_attach.assert_called_once_with(42, ["p1", "p2"])
+
+
+def test_create_tailored_resume_no_projects(client):
+    """
+    Test POST /resume returns 400 if no projects are selected.
+    """
+    payload = {"project_ids": []}
+    response = client.post("/resume", json=payload)
+    assert response.status_code == 400
+    assert "No projects selected" in response.text

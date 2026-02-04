@@ -274,6 +274,27 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
         "projects": projects
     }
 
+def create_resume(name: str | None = None) -> int:
+    """Create a Resume and if no name is provided, set a default name"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO RESUME (name) VALUES (?)",
+        (name or "",)
+    )
+
+    resume_id = cursor.lastrowid
+    # If no name was provided, update the name to 'Resume-id'
+    if not name:
+        cursor.execute(
+            "UPDATE RESUME SET name = ? WHERE id = ?",
+            (f"Resume-{resume_id}", resume_id)
+        )
+    conn.commit()
+    conn.close()
+    return resume_id
+
 def resume_exists(resume_id: int) -> bool:
     """Method to check if specified resume ID exists (precaution)"""
     conn = get_connection()
@@ -331,3 +352,23 @@ def save_resume_edits(resume_id: int, payload: dict):
     finally:
         conn.close()
 
+def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    for index, project_id in enumerate(project_ids):
+        cursor.execute("""
+            INSERT INTO RESUME_PROJECT (
+                resume_id,
+                project_id,
+                display_order
+            )
+            VALUES (?, ?, ?)
+        """, (
+            resume_id,
+            project_id,
+            index + 1  # 1-based ordering
+        ))
+
+    conn.commit()
+    conn.close()

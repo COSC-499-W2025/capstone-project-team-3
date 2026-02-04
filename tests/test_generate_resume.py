@@ -15,7 +15,9 @@ from app.utils.generate_resume import (
     load_saved_resume,
     save_resume_edits,
     load_resume_projects,
-    resume_exists
+    resume_exists,
+    create_resume,
+    attach_projects_to_resume
 )
 import json
 
@@ -34,6 +36,14 @@ def db_connection(monkeypatch):
 
     # --- Schema ---
     cursor.executescript("""
+        DROP TABLE IF EXISTS USER_PREFERENCES;
+        DROP TABLE IF EXISTS PROJECT;
+        DROP TABLE IF EXISTS RESUME_SUMMARY;
+        DROP TABLE IF EXISTS SKILL_ANALYSIS;
+        DROP TABLE IF EXISTS RESUME;
+        DROP TABLE IF EXISTS RESUME_PROJECT;
+        DROP TABLE IF EXISTS RESUME_SKILLS;
+
         CREATE TABLE USER_PREFERENCES (
             user_id INTEGER PRIMARY KEY,
             name TEXT,
@@ -63,7 +73,9 @@ def db_connection(monkeypatch):
         );
         
         CREATE TABLE RESUME (
-        id INTEGER PRIMARY KEY
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
         CREATE TABLE RESUME_PROJECT (
@@ -312,3 +324,37 @@ def test_resume_exists_true_and_false(db_connection):
     assert resume_exists(1) is True
     # Non-existent resume
     assert resume_exists(99999) is False
+
+def test_create_resume_default_name(db_connection):
+    """
+    Tests that create_resume sets the default name to 'Resume-id' when no name is provided.
+    """
+    resume_id = create_resume()
+    # Check the name in the database
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == f"Resume-{resume_id}"
+
+def test_attach_projects_to_resume(db_connection):
+    """
+    Tests that attach_projects_to_resume correctly attaches projects and sets display order.
+    """
+    # Create a new resume
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id) VALUES (2)")
+
+    # Attach two projects
+    attach_projects_to_resume(2, ["p2", "p1"])
+
+    # Check RESUME_PROJECT table for correct attachment and order
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order", (2,))
+    rows = cursor.fetchall()
+    db_connection.close()
+    assert len(rows) == 2
+    assert rows[0][0] == "p2"
+    assert rows[0][1] == 1
+    assert rows[1][0] == "p1"
+    assert rows[1][1] == 2

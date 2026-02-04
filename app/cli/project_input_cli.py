@@ -20,7 +20,18 @@ def main(argv=None):
     scan_parser = subparsers.add_parser("scan", help="Scan files in a project folder")
     scan_parser.add_argument("--root", type=str, required=True, help="Root directory to scan")
     scan_parser.add_argument("--exclude", type=str, nargs="*", default=[], help="Additional file patterns to exclude (e.g., *.pdf *.docx)")
-    scan_parser.add_argument("--similarity-threshold", type=float, default=65.0, help="Similarity threshold for project matching (default: 65.0)")
+    scan_parser.add_argument(
+        "--similarity-threshold", 
+        type=float, 
+        default=None, 
+        help="Fixed similarity threshold (0-100). If not set, auto-calculates based on project size."
+    )
+    scan_parser.add_argument(
+        "--base-threshold",
+        type=float,
+        default=65.0,
+        help="Base threshold for dynamic calculation (default: 65.0)"
+    )
 
     # Add other subcommands for your teammates here...
 
@@ -32,8 +43,13 @@ def main(argv=None):
             return
         print("Consent verified. Scanning files...")
         
-        # Use the updated scan flow with similarity detection
-        result = run_scan_flow(args.root, exclude=args.exclude, similarity_threshold=args.similarity_threshold)
+        # Use the updated scan flow with dynamic similarity detection
+        result = run_scan_flow(
+            args.root, 
+            exclude=args.exclude, 
+            similarity_threshold=args.similarity_threshold,
+            base_threshold=args.base_threshold
+        )
         
         if result["skip_analysis"]:
             if result["reason"] == "no_files":

@@ -6,6 +6,57 @@ import time
 from datetime import datetime
 from app.data.db import get_connection
 
+
+def calculate_dynamic_threshold(
+    file_count: int,
+    base_threshold: float = 65.0,
+    min_threshold: float = 50.0,
+    max_threshold: float = 85.0
+) -> float:
+    """
+    Calculate a dynamic similarity threshold based on project size (file count).
+    
+    Small projects need higher similarity to match (prevents false positives).
+    Large projects use lower thresholds (allows flexibility for incremental changes).
+    
+    Args:
+        file_count: Number of files in the project
+        base_threshold: The base threshold to adjust from (default 65.0)
+        min_threshold: Minimum threshold floor (default 50.0)
+        max_threshold: Maximum threshold ceiling (default 85.0)
+    
+    Returns:
+        Adjusted threshold as a percentage (clamped to min/max bounds)
+    
+    Thresholds:
+        < 10 files   → base + 15 (very strict, e.g., 80%)
+        10-29 files  → base + 8  (strict, e.g., 73%)
+        30-99 files  → base      (normal, e.g., 65%)
+        100-299 files → base - 8 (lenient, e.g., 57%)
+        300+ files   → base - 12 (very lenient, e.g., 53%)
+    """
+    if file_count < 10:
+        # Very small projects: stricter matching to avoid false positives
+        adjustment = 15.0
+    elif file_count < 30:
+        # Small projects: slightly stricter
+        adjustment = 8.0
+    elif file_count < 100:
+        # Medium projects: use base threshold
+        adjustment = 0.0
+    elif file_count < 300:
+        # Large projects: slightly more lenient
+        adjustment = -8.0
+    else:
+        # Very large projects: more lenient to handle natural growth
+        adjustment = -12.0
+    
+    threshold = base_threshold + adjustment
+    
+    # Clamp to min/max bounds for safety
+    return max(min_threshold, min(max_threshold, threshold))
+
+
 EXCLUDE_PATTERNS = [
     # Python/system/dependency folders (not user content)
     "__pycache__",
@@ -212,17 +263,23 @@ def calculate_project_similarity(current_signatures: List[str], existing_signatu
     total = len(current_set.union(existing_set))
     return (overlap / total) * 100 if total > 0 else 0.0
 
-def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = 65.0) -> Optional[tuple]:
+def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = None, file_count: int = 0) -> Optional[tuple]:
     """
     Find a similar project and replace it with the new upload.
     
     Args:
         current_signatures: File signatures from the current upload
         new_project_sig: The already-calculated project signature for the new upload
-        threshold: Minimum similarity percentage to consider a match
+        threshold: Minimum similarity percentage to consider a match (if None, auto-calculates based on file count)
+        file_count: Number of files in the current project (used for dynamic threshold)
     
     Returns (project_name, similarity_percentage, new_project_signature) or None.
     """
+    # Calculate dynamic threshold if not provided
+    if threshold is None:
+        threshold = calculate_dynamic_threshold(file_count)
+        print(f"[INFO] Using dynamic threshold: {threshold}% (based on {file_count} files)")
+    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT project_signature, name, file_signatures, path, size_bytes, created_at FROM PROJECT")
@@ -264,10 +321,16 @@ def find_and_update_similar_project(current_signatures: List[str], new_project_s
     return None
 
 
-def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = 65.0) -> dict:
+def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = None, base_threshold: float = 65.0) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
+    
+    Args:
+        root: Root directory to scan
+        exclude: List of patterns to exclude
+        similarity_threshold: Fixed threshold (if None, auto-calculates based on project size)
+        base_threshold: Base threshold for dynamic calculation (default 65.0)
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
@@ -294,6 +357,9 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
     
+    # Count files for dynamic threshold calculation
+    file_count = len(files)
+    
     # Check if exact project already exists
     if project_signature_exists(project_signature):
         print("100.0% of this Project was analyzed in the past.")
@@ -305,8 +371,13 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
             "signature": project_signature
         }
     
-    # Check for similar projects and update
-    result = find_and_update_similar_project(file_signatures, project_signature, similarity_threshold)
+    # Check for similar projects and update (use dynamic threshold if not provided)
+    result = find_and_update_similar_project(
+        file_signatures, 
+        project_signature, 
+        threshold=similarity_threshold,
+        file_count=file_count
+    )
     if result:
         project_name, similarity, new_sig = result
         print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")

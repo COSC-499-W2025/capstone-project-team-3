@@ -202,3 +202,39 @@ def test_get_or_compile_pdf_cache(tmp_path, monkeypatch):
         pdf2 = get_or_compile_pdf(tex)
         assert pdf2.startswith(b"%PDF")
         mock_compile2.assert_not_called()
+        
+@patch("app.api.routes.resume.load_saved_resume")
+def test_get_saved_resume(mock_load, client, fake_resume_model):
+    """Test GET /resume/{resume_id} returns the saved resume model."""
+    mock_load.return_value = fake_resume_model
+    response = client.get("/resume/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == fake_resume_model["name"]
+    assert data["email"] == fake_resume_model["email"]
+
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_success(mock_exists, mock_save, client):
+    """
+    Test POST /resume/{id}/edit saves edits when resume exists.
+    """
+    mock_exists.return_value = True
+    payload = {"projects": [{"project_id": "p1", "project_name": "Edited Project"}]}
+    response = client.post("/resume/1/edit", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+    mock_save.assert_called_once_with(1, payload)
+
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_not_found(mock_exists, mock_save, client):
+    """
+    Test POST /resume/{id}/edit returns 404 if resume does not exist.
+    """
+    mock_exists.return_value = False
+    payload = {"projects": [{"project_id": "p1", "project_name": "Edited Project"}]}
+    response = client.post("/resume/999/edit", json=payload)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Resume not found"
+    mock_save.assert_not_called()

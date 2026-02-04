@@ -319,7 +319,6 @@ def test_resume_exists_true_and_false(db_connection):
     """
     Tests that resume_exists returns True for an existing resume and False for a non-existent one.
     """
-    from app.utils.generate_resume import resume_exists
     # Existing resume (seeded as id=1)
     assert resume_exists(1) is True
     # Non-existent resume
@@ -344,6 +343,7 @@ def test_attach_projects_to_resume(db_connection):
     # Create a new resume
     cursor = db_connection.cursor()
     cursor.execute("INSERT INTO RESUME (id) VALUES (2)")
+    db_connection.commit()
 
     # Attach two projects
     attach_projects_to_resume(2, ["p2", "p1"])
@@ -352,7 +352,7 @@ def test_attach_projects_to_resume(db_connection):
     cursor = db_connection.cursor()
     cursor.execute("SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order", (2,))
     rows = cursor.fetchall()
-    db_connection.close()
+
     assert len(rows) == 2
     assert rows[0][0] == "p2"
     assert rows[0][1] == 1

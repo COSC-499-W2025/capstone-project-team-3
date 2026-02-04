@@ -273,16 +273,21 @@ def delete_saved_resume(resume_id: int):
     
     Does NOT delete the master resume or base project data.
     """
+    # Check if resume exists using the utility method
+    if not resume_exists(resume_id):
+        raise HTTPException(404, f"Resume with ID {resume_id} not found")
+    
     conn = get_connection()
     cursor = conn.cursor()
     
     try:
-        # Check if resume exists
-        cursor.execute("SELECT id, name FROM RESUME WHERE id = ?", (resume_id,))
+        # Fetch resume name for response message
+        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
         resume = cursor.fetchone()
         
-        if not resume:
-            raise HTTPException(404, f"Resume with ID {resume_id} not found")
+        # Fetch resume name for response message
+        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
+        resume = cursor.fetchone()
         
         # Delete the resume (CASCADE will handle RESUME_PROJECT and RESUME_SKILLS)
         cursor.execute("DELETE FROM RESUME WHERE id = ?", (resume_id,))
@@ -290,7 +295,7 @@ def delete_saved_resume(resume_id: int):
         
         return {
             "success": True,
-            "message": f"Resume {resume_id} ({resume[1]}) deleted successfully",
+            "message": f"Resume {resume_id} ({resume[0] if resume else 'Unknown'}) deleted successfully",
             "deleted_resume_id": resume_id
         }
         

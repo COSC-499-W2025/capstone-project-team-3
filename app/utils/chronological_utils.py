@@ -101,6 +101,86 @@ class ChronologicalManager:
             'last_modified': row[4]
         }
     
+    def get_chronological_skills(self, project_id: str) -> list:
+        """
+        Get all skills for a project, ordered chronologically by date.
+        
+        Args:
+            project_id: Project signature to get skills for
+            
+        Returns:
+            List of dicts with skill, source, and date ordered by date ascending
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            SELECT skill, source, date
+            FROM SKILL_ANALYSIS
+            WHERE project_id = ?
+            ORDER BY date ASC, skill ASC
+        """, (project_id,))
+        
+        rows = cur.fetchall()
+        return [
+            {
+                'skill': row[0],
+                'source': row[1],
+                'date': row[2] or ''
+            }
+            for row in rows
+        ]
+    
+    def update_skill_date(self, project_id: str, skill: str, new_date: str):
+        """
+        Update the date for a specific skill in a project.
+        
+        Args:
+            project_id: Project signature
+            skill: Skill name to update
+            new_date: New date in YYYY-MM-DD format
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            UPDATE SKILL_ANALYSIS
+            SET date = ?
+            WHERE project_id = ? AND skill = ?
+        """, (new_date, project_id, skill))
+        
+        self.conn.commit()
+    
+    def add_skill_with_date(self, project_id: str, skill: str, source: str, date: str):
+        """
+        Add a new skill with a date to a project.
+        
+        Args:
+            project_id: Project signature
+            skill: Skill name
+            source: Source of skill ('code' or 'non-code')
+            date: Date in YYYY-MM-DD format
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            INSERT INTO SKILL_ANALYSIS (project_id, skill, source, date)
+            VALUES (?, ?, ?, ?)
+        """, (project_id, skill, source, date))
+        
+        self.conn.commit()
+    
+    def remove_skill(self, project_id: str, skill: str):
+        """
+        Remove a skill from a project.
+        
+        Args:
+            project_id: Project signature
+            skill: Skill name to remove
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            DELETE FROM SKILL_ANALYSIS
+            WHERE project_id = ? AND skill = ?
+        """, (project_id, skill))
+        
+        self.conn.commit()
+    
     def close(self):
         """Close database connection."""
         if self.conn:

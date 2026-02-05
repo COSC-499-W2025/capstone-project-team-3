@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, ResumeNotFoundError, ResumeServiceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from pydantic import BaseModel
 import subprocess
@@ -117,15 +117,19 @@ def generate_resume(filter: ResumeFilter):
 @router.post("/resume/{id}/edit")
 def save_edited_resume(id: int, payload: Dict[str, Any]):
     """Endpoint to save edited resume"""
-    
-    # --- Validate resume exists ---
-    exists= resume_exists(id)
-    if not exists:
-        raise HTTPException(status_code=404, detail="Resume not found")
+    try:
+        # --- Validate resume exists ---
+        exists= resume_exists(id)
+        if not exists:
+            raise HTTPException(status_code=404, detail="Resume not found")
 
-    # Save project overrides
-    save_resume_edits(id,payload)
-    return {"status": "ok", "message": "Resume edits saved"}
+        # Save project overrides
+        save_resume_edits(id,payload)
+        return {"status": "ok", "message": "Resume edits saved"}
+    except ResumeNotFoundError:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 
 @router.get("/resume/export/tex")

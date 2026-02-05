@@ -177,73 +177,73 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             for pid, text in cursor.fetchall():
                 bullets_map[pid].append(text)
 
-    row = load_edited_skills(cursor,resume_id)
-    if row and row[0]:
-       # skills stored as JSON
-        all_skills = json.loads(row[0])
-    else: #Return to original skills shown
-        # Aggregate all skills from projects
-        union = set()
-        for pid in project_ids:
-            union.update(skills_map.get(pid, []))
-        all_skills = sorted(union)
         row = load_edited_skills(cursor,resume_id)
         if row and row[0]:
-            # Use edited all skills
-            all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
+        # skills stored as JSON
+            all_skills = json.loads(row[0])
         else: #Return to original skills shown
             # Aggregate all skills from projects
             union = set()
             for pid in project_ids:
                 union.update(skills_map.get(pid, []))
             all_skills = sorted(union)
+            row = load_edited_skills(cursor,resume_id)
+            if row and row[0]:
+                # Use edited all skills
+                all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
+            else: #Return to original skills shown
+                # Aggregate all skills from projects
+                union = set()
+                for pid in project_ids:
+                    union.update(skills_map.get(pid, []))
+                all_skills = sorted(union)
 
-        projects = []
-        for (
-            pid,
-            override_name,
-            start,
-            end,
-            override_skills,
-            override_bullets,
-            _order,
-            base_name,
-            created_at,
-            last_modified
-        ) in rows:
-            # Parse skills: override_skills if present, else fallback to skills_map
-            if override_skills:
-                skills = json.loads(override_skills)
-            else:
-                skills = skills_map.get(pid, [])
-            # Limit to 5 for display
-            limited_skills = skills[:5]
+            projects = []
+            for (
+                pid,
+                override_name,
+                start,
+                end,
+                override_skills,
+                override_bullets,
+                _order,
+                base_name,
+                created_at,
+                last_modified
+            ) in rows:
+                # Parse skills: override_skills if present, else fallback to skills_map
+                if override_skills:
+                    skills = json.loads(override_skills)
+                else:
+                    skills = skills_map.get(pid, [])
+                # Limit to 5 for display
+                limited_skills = skills[:5]
 
-            projects.append({
-                "title": override_name or base_name,
-                "dates": format_dates(
-                    start or created_at,
-                    end or last_modified
-                ),
-                "skills": limited_skills,
-                "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
-            })
-        
-        return {
-            "name": user["name"],
-            "email": user["email"],
-            "links": user["links"],
-            "education": {
-                "school": user["education"],
-                "degree": user["job_title"],
-                "dates": "",
-                "gpa": ""
-            },
-            "skills": {
-                "Skills": all_skills
-            },
-            "projects": projects
-        }
+                projects.append({
+                    "title": override_name or base_name,
+                    "dates": format_dates(
+                        start or created_at,
+                        end or last_modified
+                    ),
+                    "skills": limited_skills,
+                    "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+                })
+            
+            return {
+                "name": user["name"],
+                "email": user["email"],
+                "links": user["links"],
+                "education": {
+                    "school": user["education"],
+                    "degree": user["job_title"],
+                    "dates": "",
+                    "gpa": ""
+                },
+                "skills": {
+                    "Skills": all_skills
+                },
+                "projects": projects
+            }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading saved resume") from e
     finally:

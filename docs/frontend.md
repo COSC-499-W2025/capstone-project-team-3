@@ -41,3 +41,46 @@ Then issue is a middleware problem. Check CORS connection in `app/main.py`.
 
 If status is not ok:
 - Ensure `docker compose up --build` is running. Then check localhost link mentioned above.
+
+
+# Future Pending (Once UI is in Full Swing)
+
+1. **E2E Testing**
+
+   * Incorporate Playwright or Spectron for full app flows once most UI is stable.
+   * Test things like “click Run → data displays → window closes.”
+
+2. **Remove temporary nav bar**
+
+   * The nav is for dev/testing only.
+   * Replace with proper routing / final UI navigation later.
+
+3. **Integrate frontend + backend startup**
+
+   * Eventually, make `npm run dev` optionally start Docker automatically.
+   * Could use scripts or Electron preload logic.
+
+4. **Dynamic page routing improvements**
+
+   * Right now paths are based on filenames.
+   * Consider mapping friendly routes and titles (e.g., `/user-list` instead of `/UserList.tsx`).
+
+5. **Styling / UI consistency**
+
+   * Set up a shared component library (buttons, cards, modals).
+   * Consider a CSS framework / Tailwind / design system.
+
+6. **Backend mocking for frontend tests**
+
+   * Use MSW to simulate backend responses for frontend dev and CI.
+   * Reduces dependency on Docker backend for testing.
+
+7. **Production packaging**
+
+   * Plan how to build a distributable Electron app (`.exe`, `.dmg`, `.AppImage`).
+   * Integrate production build with backend or remote API.
+
+8. **Code quality / linting**
+
+   * Add ESLint / Prettier for consistent code style across team.
+   * Run linting in CI.

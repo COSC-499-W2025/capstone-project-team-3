@@ -18,6 +18,8 @@ from app.api.routes.user_preferences import router as user_preferences_router
 from app.api.routes.skills import router as skills_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.portfolio import router as portfolio_router
+from app.api.routes.health import router as health_router
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
@@ -49,6 +51,15 @@ load_dotenv()
 
 # Create FastAPI app
 app = FastAPI(title="Project Insights")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(upload_page_router)
 app.include_router(upload_resolver_router, prefix="/api")
 app.include_router(privacy_consent_router, prefix="/api")
@@ -57,6 +68,7 @@ app.include_router(user_preferences_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
+app.include_router(health_router)
 
 
 def display_startup_info():

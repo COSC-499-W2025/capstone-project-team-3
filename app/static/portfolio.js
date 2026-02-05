@@ -137,71 +137,7 @@ class PortfolioDashboard {
             </div>
         `;
     }
-      renderCharts(graphs) {
-        // Destroy existing charts
-        Object.values(this.charts).forEach(chart => {
-            if (chart) chart.destroy();
-        });
-        this.charts = {};
-        
-        // Language Distribution (Pie Chart)
-        this.charts.language = this.createPieChart(
-            'languageChart',
-            'Language Distribution',
-            graphs.language_distribution
-        );
-        
-        // Project Complexity (Bar Chart)
-        this.charts.complexity = this.createBarChart(
-            'complexityChart', 
-            'Project Complexity',
-            {
-                'Small (<1000)': graphs.complexity_distribution.distribution.small,
-                'Medium (1000-3000)': graphs.complexity_distribution.distribution.medium,
-                'Large (>3000)': graphs.complexity_distribution.distribution.large
-            }
-        );
-        
-        // Score Distribution (Bar Chart)
-        this.charts.score = this.createBarChart(
-            'scoreChart',
-            'Score Distribution',
-            {
-                'Excellent (90-100%)': graphs.score_distribution.distribution.excellent,
-                'Good (80-89%)': graphs.score_distribution.distribution.good,
-                'Fair (70-79%)': graphs.score_distribution.distribution.fair,
-                'Poor (<70%)': graphs.score_distribution.distribution.poor
-            }
-        );
-        
-        // Monthly Activity (Line Chart)
-        this.charts.activity = this.createLineChart(
-            'activityChart',
-            'Monthly Activity',
-            graphs.monthly_activity
-        );
-        
-        // Top Skills (Horizontal Bar Chart)
-        this.charts.skills = this.createHorizontalBarChart(
-            'skillsChart',
-            'Top Skills',
-            graphs.top_skills
-        );
-        
-        // Project Type Comparison
-        if (this.currentPortfolioData?.project_type_analysis) {
-            const typeData = this.currentPortfolioData.project_type_analysis;
-            this.charts.projectType = this.createBarChart(
-                'projectTypeChart',
-                'Project Types',
-                {
-                    'GitHub Projects': typeData.github.count,
-                    'Local Projects': typeData.local.count
-                }
-            );
-        }
-    }
-    
+
     // Add these defensive checks to your chart methods:
 
 createPieChart(canvasId, title, data) {

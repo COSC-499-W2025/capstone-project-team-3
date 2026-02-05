@@ -132,7 +132,7 @@ def run_git_parsing_from_files(
     for repo_root in sorted(repo_map.keys()):
         # 3) Check if repository is collaborative (for logging only)
         try:
-            collaborative = is_collaborative(repo_root)
+            collaborative = is_collaborative(repo_root, author_aliases=selected_identifiers)
             if collaborative:
                 print(f"[git-analysis] COLLABORATIVE repo detected: {repo_root}")
             else:

@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, ResumeNotFoundError, ResumeServiceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from pydantic import BaseModel
 import subprocess
@@ -42,14 +42,17 @@ def create_tailored_resume(filter: ResumeFilter):
     """
     if not filter.project_ids:
         raise HTTPException(400, "No projects selected")
-
-    resume_id = create_resume()
-    attach_projects_to_resume(resume_id, filter.project_ids)
-
-    return {
-        "resume_id": resume_id,
-        "message": "Resume created successfully"
-    }
+    try:
+        resume_id = create_resume()
+        attach_projects_to_resume(resume_id, filter.project_ids)
+        return {
+            "resume_id": resume_id,
+            "message": "Resume created successfully"
+        }
+    except ResumePersistenceError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/resume", response_class=HTMLResponse)
 def resume_page(project_ids: Optional[List[str]] = Query(None)):
@@ -58,8 +61,10 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     - No project_ids → master resume
     - project_ids provided → filtered resume
     """
-
-    tex = get_resume_tex(project_ids)
+    try:
+        tex = get_resume_tex(project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     preview = escape_tex_for_html(tex)
 
     # Build export links dynamically
@@ -89,7 +94,12 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
 @router.get("/resume/{resume_id}")
 def get_saved_resume(resume_id: int):
     """Load saved resume"""
-    return load_saved_resume(resume_id)
+    try:
+        return load_saved_resume(resume_id)
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @router.post("/resume/preview", response_class=HTMLResponse)
 def generate_resume(filter: ResumeFilter):
@@ -101,7 +111,10 @@ def generate_resume(filter: ResumeFilter):
     - Generating a resume for the top three ranked projects
     """
    
-    tex = get_resume_tex(filter.project_ids)
+    try:
+        tex = get_resume_tex(filter.project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     preview = escape_tex_for_html(tex)
 
     return f"""
@@ -128,13 +141,18 @@ def save_edited_resume(id: int, payload: Dict[str, Any]):
         return {"status": "ok", "message": "Resume edits saved"}
     except ResumeNotFoundError:
         raise HTTPException(status_code=404, detail="Resume not found")
+    except ResumePersistenceError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 
 @router.get("/resume/export/tex")
 def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
-    tex = get_resume_tex(project_ids)
+    try:
+        tex = get_resume_tex(project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return Response(
         content=tex,
@@ -145,7 +163,10 @@ def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
 @router.post("/resume/export/tex")
 def resume_tex_filtered(filter: ResumeFilter):
     """This method downloads a resume for specified projects."""
-    tex = get_resume_tex(filter.project_ids)
+    try:
+        tex = get_resume_tex(filter.project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return Response(
         content=tex,
         media_type="application/x-tex",
@@ -252,7 +273,10 @@ def get_or_compile_pdf(tex: str) -> bytes:
 @router.get("/resume/export/pdf")
 # Make the endpoint async to allow awaiting background tasks
 async def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
-    tex = get_resume_tex(project_ids)
+    try:
+        tex = get_resume_tex(project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Run PDF generation in a separate thread so it doesn't block the FastAPI worker
     pdf_bytes = await run_in_threadpool(
@@ -269,7 +293,10 @@ async def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
 @router.post("/resume/export/pdf")
 async def resume_pdf_filtered(filter: ResumeFilter):
     """This method downloads a resume for specified projects."""
-    tex = get_resume_tex(filter.project_ids)
+    try:
+        tex = get_resume_tex(filter.project_ids)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     pdf_bytes = await run_in_threadpool(
         get_or_compile_pdf,
         tex,

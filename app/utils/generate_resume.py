@@ -14,7 +14,6 @@ class ResumeNotFoundError(ResumeServiceError):
 class ResumePersistenceError(ResumeServiceError):
     pass
 
-
 def format_dates(start: str, end: str) -> str:
     """Format dates shown to months and year"""
     try:
@@ -198,52 +197,52 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                     union.update(skills_map.get(pid, []))
                 all_skills = sorted(union)
 
-            projects = []
-            for (
-                pid,
-                override_name,
-                start,
-                end,
-                override_skills,
-                override_bullets,
-                _order,
-                base_name,
-                created_at,
-                last_modified
-            ) in rows:
-                # Parse skills: override_skills if present, else fallback to skills_map
-                if override_skills:
-                    skills = json.loads(override_skills)
-                else:
-                    skills = skills_map.get(pid, [])
-                # Limit to 5 for display
-                limited_skills = skills[:5]
+        projects = []
+        for (
+            pid,
+            override_name,
+            start,
+            end,
+            override_skills,
+            override_bullets,
+            _order,
+            base_name,
+            created_at,
+            last_modified
+        ) in rows:
+            # Parse skills: override_skills if present, else fallback to skills_map
+            if override_skills:
+                skills = json.loads(override_skills)
+            else:
+                skills = skills_map.get(pid, [])
+            # Limit to 5 for display
+            limited_skills = skills[:5]
 
-                projects.append({
-                    "title": override_name or base_name,
-                    "dates": format_dates(
-                        start or created_at,
-                        end or last_modified
-                    ),
-                    "skills": limited_skills,
-                    "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
-                })
-            
-            return {
-                "name": user["name"],
-                "email": user["email"],
-                "links": user["links"],
-                "education": {
-                    "school": user["education"],
-                    "degree": user["job_title"],
-                    "dates": "",
-                    "gpa": ""
-                },
-                "skills": {
-                    "Skills": all_skills
-                },
-                "projects": projects
-            }
+            projects.append({
+                "title": override_name or base_name,
+                "dates": format_dates(
+                    start or created_at,
+                    end or last_modified
+                ),
+                "skills": limited_skills,
+                "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+            })
+        
+        return {
+            "name": user["name"],
+            "email": user["email"],
+            "links": user["links"],
+            "education": {
+                "school": user["education"],
+                "degree": user["job_title"],
+                "dates": "",
+                "gpa": ""
+            },
+            "skills": {
+                "Skills": all_skills
+            },
+            "projects": projects
+        }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading saved resume") from e
     finally:

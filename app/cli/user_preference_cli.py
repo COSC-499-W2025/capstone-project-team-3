@@ -68,7 +68,8 @@ class UserPreferences:
             github_user=github,
             education=education,
             industry=industry,
-            job_title=job_title
+            job_title=job_title,
+            education_details=None
         )
         print("Preferences saved successfully.")
 

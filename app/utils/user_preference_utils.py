@@ -1,5 +1,6 @@
 from pathlib import Path
 import sqlite3
+import json
 from app.data.db import get_connection, DB_PATH, ensure_data_dir
 
 """This file contains utility functions for managing user preferences in the database."""
@@ -31,7 +32,7 @@ class UserPreferenceStore:
         cur = self.conn.cursor()
         cur.execute(
             """
-            SELECT name, email, github_user, education, industry, job_title
+            SELECT name, email, github_user, education, industry, job_title, education_details
             FROM USER_PREFERENCES
             ORDER BY updated_at DESC
             LIMIT 1
@@ -40,21 +41,21 @@ class UserPreferenceStore:
         row = cur.fetchone()
         if not row:
             return None
-        keys = [ "name", "email", "github_user", "education", "industry", "job_title"]
+        keys = [ "name", "email", "github_user", "education", "industry", "job_title", "education_details"]
         return dict(zip(keys, row))
 
     # Save/Update user preferences (Write to DB)
-    def save_preferences(self, user_id: int,  name: str, email: str, github_user: str, education: str, industry: str, job_title: str):
+    def save_preferences(self, user_id: int,  name: str, email: str, github_user: str, education: str, industry: str, job_title: str, education_details: dict=None):
         
         cur = self.conn.cursor()
 
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title)
-            VALUES (?,?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title, education_details)
+            VALUES (?,?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, email, github_user, education, industry, job_title),
-            )
+            (user_id, name, email, github_user, education, industry, job_title, json.dumps((education_details)) if education_details else None,
+            ))
         self.conn.commit()
         
     # Optimized static function to get user's latest industry,job & education preferences without email lookup

@@ -511,6 +511,260 @@ showError(message) {
         alert(`Dashboard Error: ${message}`);
     }
 }
+  renderTopProjects(projects) {
+        const topProjects = document.getElementById('topProjects');
+        
+        if (!projects || projects.length === 0) {
+            topProjects.innerHTML = '<div style="color: var(--text-muted)">No projects selected</div>';
+            return;
+        }
+        
+        // Sort by rank and take top 6
+        const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
+        
+        topProjects.innerHTML = sortedProjects.map((project, index) => {
+            const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
+            const metrics = project.metrics || {};
+            const skills = project.skills || [];
+            const complexity = metrics.complexity_analysis || {};
+            const commitPatterns = metrics.commit_patterns || {};
+            const contributionActivity = metrics.contribution_activity || {};
+            
+            // Format complex data for display
+            const maintainabilityScore = complexity.maintainability_score ? 
+                `${complexity.maintainability_score.overall_score || 0}/100` : 'N/A';
+            
+            const commitFreq = commitPatterns.commit_frequency || {};
+            const developmentIntensity = commitFreq.development_intensity || 'N/A';
+            
+            const docTypes = contributionActivity.doc_type_counts || {};
+            const docTypesDisplay = Object.entries(docTypes).map(([type, count]) => 
+                `${type}: ${count}`).join(', ') || 'N/A';
+            
+            return `
+                <div class="project-card">
+                    <div class="project-rank">${rank} Place</div>
+                    <div class="project-title">${project.title}</div>
+                    <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
+                        ${(project.rank || 0).toFixed(2)}
+                    </div>
+                    <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
+                        ${project.dates}
+                    </div>
+                    
+                    ${project.summary ? `
+                        <div class="project-summary">
+                            <h4>📝 Summary</h4>
+                            <p class="editable-field" data-field="summary" data-project="${project.id}">
+                                ${project.summary.substring(0, 300)}${project.summary.length > 300 ? '...' : ''}
+                            </p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="project-metrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Lines of Code:</span>
+                            <span class="metric-value">${(metrics.total_lines || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Commits:</span>
+                            <span class="metric-value">${metrics.total_commits || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Type:</span>
+                            <span class="metric-value">${project.type || 'Unknown'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Test Files:</span>
+                            <span class="metric-value">${metrics.test_files_changed || 0}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Functions:</span>
+                            <span class="metric-value">${metrics.functions || 0}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Classes:</span>
+                            <span class="metric-value">${metrics.classes || 0}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Maintainability:</span>
+                            <span class="metric-value">${maintainabilityScore}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Dev Intensity:</span>
+                            <span class="metric-value">${developmentIntensity}</span>
+                        </div>
+                        ${metrics.completeness_score ? `
+                            <div class="metric-item">
+                                <span class="metric-label">Completeness:</span>
+                                <span class="metric-value">${metrics.completeness_score}%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Word Count:</span>
+                                <span class="metric-value">${(metrics.word_count || 0).toLocaleString()}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${docTypesDisplay !== 'N/A' ? `
+                        <div class="contribution-details">
+                            <h4>📊 Document Types</h4>
+                            <p>${docTypesDisplay}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="project-skills-display">
+                        ${skills.slice(0, 8).map(skill => 
+                            `<span class="project-skill-tag">${skill}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click handlers for editable fields
+        document.querySelectorAll('.editable-field').forEach(element => {
+            element.style.cursor = 'pointer';
+            element.style.position = 'relative';
+            element.title = 'Click to edit';
+            
+            element.addEventListener('click', (e) => {
+                const field = e.target.dataset.field;
+                const projectId = e.target.dataset.project;
+                console.log(`Edit ${field} for project ${projectId}`);
+                // Add visual indicator that field is editable
+                e.target.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
+                e.target.style.border = '1px dashed var(--accent)';
+                
+                // TODO: Implement editing logic here
+                alert(`Editing ${field} for project ${projectId.substring(0, 8)}... - Logic to be implemented by teammate`);
+            });
+        });
+    }
+
+
+
+    renderDetailedAnalysis(projects) {
+        const analysisContainer = document.getElementById('detailedAnalysis');
+        
+        if (!projects || projects.length === 0) {
+            analysisContainer.innerHTML = '<div style="color: var(--text-muted)">No projects selected</div>';
+            return;
+        }
+        
+        // Aggregate analysis data across all projects
+        let totalTestFiles = 0;
+        let totalFunctions = 0;
+        let totalClasses = 0;
+        let totalComponents = 0;
+        let githubProjects = 0;
+        let localProjects = 0;
+        let totalCompleteness = 0;
+        let totalWords = 0;
+        let developmentPatterns = new Set();
+        let allTechKeywords = new Set();
+        let docTypes = {};
+        
+        projects.forEach(project => {
+            const metrics = project.metrics || {};
+            
+            totalTestFiles += metrics.test_files_changed || 0;
+            totalFunctions += metrics.functions || 0;
+            totalClasses += metrics.classes || 0;
+            totalComponents += metrics.components || 0;
+            
+            if (project.type === 'GitHub') githubProjects++;
+            else localProjects++;
+            
+            if (metrics.completeness_score) totalCompleteness += metrics.completeness_score;
+            if (metrics.word_count) totalWords += metrics.word_count;
+            
+            // Development patterns
+            const devPatterns = metrics.development_patterns?.project_evolution || [];
+            devPatterns.forEach(pattern => developmentPatterns.add(pattern));
+            
+            // Technical keywords
+            const keywords = metrics.technical_keywords || [];
+            keywords.forEach(keyword => allTechKeywords.add(keyword));
+            
+            // Document types
+            const contribution = metrics.contribution_activity?.doc_type_counts || {};
+            Object.entries(contribution).forEach(([type, count]) => {
+                docTypes[type] = (docTypes[type] || 0) + count;
+            });
+        });
+        
+        const avgCompleteness = projects.length > 0 ? (totalCompleteness / projects.length).toFixed(1) : 0;
+        
+        analysisContainer.innerHTML = `
+            <div class="analysis-card">
+                <h4>🧪 Testing & Quality</h4>
+                <div class="analysis-item">
+                    <span class="analysis-label">Total Test Files:</span>
+                    <span class="analysis-value">${totalTestFiles}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Functions Created:</span>
+                    <span class="analysis-value">${totalFunctions}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Classes Created:</span>
+                    <span class="analysis-value">${totalClasses}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Components Built:</span>
+                    <span class="analysis-value">${totalComponents}</span>
+                </div>
+            </div>
+            
+            <div class="analysis-card">
+                <h4>📊 Project Distribution</h4>
+                <div class="analysis-item">
+                    <span class="analysis-label">GitHub Projects:</span>
+                    <span class="analysis-value">${githubProjects}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Local Projects:</span>
+                    <span class="analysis-value">${localProjects}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Avg Completeness:</span>
+                    <span class="analysis-value">${avgCompleteness}%</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Total Words:</span>
+                    <span class="analysis-value">${totalWords.toLocaleString()}</span>
+                </div>
+            </div>
+            
+            <div class="analysis-card">
+                <h4>🚀 Development Patterns</h4>
+                <div class="analysis-item">
+                    <span class="analysis-label">Evolution Patterns:</span>
+                </div>
+                ${Array.from(developmentPatterns).map(pattern => 
+                    `<div class="keyword-tags"><span class="keyword-tag">${pattern}</span></div>`
+                ).join('')}
+            </div>
+            
+            <div class="analysis-card">
+                <h4>📝 Document Types</h4>
+                ${Object.entries(docTypes).map(([type, count]) => `
+                    <div class="analysis-item">
+                        <span class="analysis-label">${type}:</span>
+                        <span class="analysis-value">${count}</span>
+                    </div>
+                `).join('')}
+            </div>
+            
+        `;
+    }
+    
+    showError(message) {
+        console.error(message);
+        // You could add a toast notification system here
+        alert(`Error: ${message}`);
+    }
     
 
 }

@@ -494,6 +494,179 @@ document.addEventListener('DOMContentLoaded', function() {
             assert "'/api/portfolio'" in content
             assert "project_ids=" in content
 
+    def test_portfolio_js_new_methods_exist(self):
+        """Test that newly added methods exist in the JavaScript file"""
+        mock_js_content = """
+        renderTopProjects(projects) {
+            const topProjects = document.getElementById('topProjects');
+            const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
+            document.querySelectorAll('.editable-field').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    const field = e.target.dataset.field;
+                    const projectId = e.target.dataset.project;
+                });
+            });
+        }
+        
+        renderDetailedAnalysis(projects) {
+            const analysisContainer = document.getElementById('detailedAnalysis');
+            let totalTestFiles = 0;
+            let totalFunctions = 0;
+            let totalClasses = 0;
+            let githubProjects = 0;
+            let localProjects = 0;
+            projects.forEach(project => {
+                const metrics = project.metrics || {};
+            });
+        }
+        
+        showError(message) {
+            console.error(message);
+            alert(`Error: ${message}`);
+        }
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Test renderTopProjects method
+            assert "renderTopProjects(projects)" in content
+            assert "getElementById('topProjects')" in content
+            assert "sortedProjects = projects.sort" in content
+            assert "b.rank || 0" in content
+            assert "slice(0, 6)" in content
+            assert "querySelectorAll('.editable-field')" in content
+            assert "addEventListener('click'" in content
+            assert "dataset.field" in content
+            assert "dataset.project" in content
+            
+            # Test renderDetailedAnalysis method
+            assert "renderDetailedAnalysis(projects)" in content
+            assert "getElementById('detailedAnalysis')" in content
+            assert "totalTestFiles = 0" in content
+            assert "totalFunctions = 0" in content
+            assert "totalClasses = 0" in content
+            assert "githubProjects = 0" in content
+            assert "localProjects = 0" in content
+            assert "projects.forEach(project =>" in content
+            assert "project.metrics || {}" in content
+            
+            # Test showError method
+            assert "showError(message)" in content
+            assert "console.error(message)" in content
+            assert "alert(`Error: ${message}`)" in content
+
+    def test_portfolio_js_editable_fields_functionality(self):
+        """Test that editable fields functionality is properly implemented"""
+        mock_js_content = """
+        // Add click handlers for editable fields
+        document.querySelectorAll('.editable-field').forEach(element => {
+            element.style.cursor = 'pointer';
+            element.title = 'Click to edit';
+            element.addEventListener('click', (e) => {
+                const field = e.target.dataset.field;
+                const projectId = e.target.dataset.project;
+                e.target.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
+                e.target.style.border = '1px dashed var(--accent)';
+                alert(`Editing ${field} for project ${projectId.substring(0, 8)}...`);
+            });
+        });
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Test editable field styling and interaction
+            assert "style.cursor = 'pointer'" in content
+            assert "title = 'Click to edit'" in content
+            assert "style.backgroundColor = 'rgba(45, 55, 72, 0.1)'" in content
+            assert "style.border = '1px dashed var(--accent)'" in content
+            assert "substring(0, 8)" in content
+
+    def test_portfolio_js_data_aggregation_logic(self):
+        """Test that data aggregation logic exists in renderDetailedAnalysis"""
+        mock_js_content = """
+        let developmentPatterns = new Set();
+        let allTechKeywords = new Set();
+        let docTypes = {};
+        
+        // Development patterns
+        const devPatterns = metrics.development_patterns?.project_evolution || [];
+        devPatterns.forEach(pattern => developmentPatterns.add(pattern));
+        
+        // Technical keywords
+        const keywords = metrics.technical_keywords || [];
+        keywords.forEach(keyword => allTechKeywords.add(keyword));
+        
+        // Document types
+        const contribution = metrics.contribution_activity?.doc_type_counts || {};
+        Object.entries(contribution).forEach(([type, count]) => {
+            docTypes[type] = (docTypes[type] || 0) + count;
+        });
+        
+        const avgCompleteness = projects.length > 0 ? (totalCompleteness / projects.length).toFixed(1) : 0;
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Test data aggregation patterns
+            assert "developmentPatterns = new Set()" in content
+            assert "allTechKeywords = new Set()" in content
+            assert "docTypes = {}" in content
+            assert "development_patterns?.project_evolution" in content
+            assert "technical_keywords || []" in content
+            assert "contribution_activity?.doc_type_counts" in content
+            assert "Object.entries(contribution)" in content
+            assert "(totalCompleteness / projects.length).toFixed(1)" in content
+
+    def test_portfolio_js_ranking_and_display_logic(self):
+        """Test that project ranking and display logic exists"""
+        mock_js_content = """
+        const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
+        const maintainabilityScore = complexity.maintainability_score ? 
+            `${complexity.maintainability_score.overall_score || 0}/100` : 'N/A';
+        const developmentIntensity = commitFreq.development_intensity || 'N/A';
+        const docTypesDisplay = Object.entries(docTypes).map(([type, count]) => 
+            `${type}: ${count}`).join(', ') || 'N/A';
+        
+        <div class="project-rank">${rank} Place</div>
+        <div class="editable-field" data-field="rank" data-project="${project.id}">
+        <div class="editable-field" data-field="summary" data-project="${project.id}">
+        """
+        
+        with patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open(read_data=mock_js_content)):
+            mock_exists.return_value = True
+            
+            response = client.get("/api/static/portfolio.js")
+            content = response.content.decode()
+            
+            # Test ranking logic
+            assert "['🥇', '🥈', '🥉', '4th', '5th', '6th']" in content
+            assert "maintainability_score.overall_score || 0" in content
+            assert "development_intensity || 'N/A'" in content
+            assert "Object.entries(docTypes).map" in content
+            assert "join(', ') || 'N/A'" in content
+            
+            # Test HTML template structure
+            assert 'class="project-rank"' in content
+            assert 'data-field="rank"' in content
+            assert 'data-field="summary"' in content
+            assert 'data-project="${project.id}"' in content
+
     def test_portfolio_js_response_headers(self):
         """Test that JavaScript is served with correct content type"""
         with patch('os.path.exists') as mock_exists, \

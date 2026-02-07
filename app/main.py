@@ -188,7 +188,7 @@ def main():
                             latest_prefs = None
 
                         username, email=_get_preferred_author_email()
-                        non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
+                        non_code_result = classify_non_code_files_with_user_verification(project_path, email, username)
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")

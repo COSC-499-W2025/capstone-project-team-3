@@ -678,3 +678,56 @@ class TestCalculateContainmentRatio:
         """Test when current and existing are identical."""
         sigs = ["file1", "file2", "file3"]
         assert calculate_containment_ratio(sigs, sigs) == 100.0
+
+
+class TestContainmentBasedMatching:
+    """Tests for containment-based project matching."""
+    
+    def test_find_project_via_containment(self, tmp_path, isolated_db):
+        """Test that projects can be matched via containment even with low Jaccard."""
+        from app.utils.scan_utils import (
+            find_and_update_similar_project,
+            extract_file_signature,
+            get_project_signature,
+            store_project_in_db
+        )
+        
+        # Create initial project with 3 files
+        file1 = tmp_path / "original1.txt"
+        file2 = tmp_path / "original2.txt"
+        file3 = tmp_path / "original3.txt"
+        file1.write_text("content 1")
+        file2.write_text("content 2")
+        file3.write_text("content 3")
+        
+        sig1 = extract_file_signature(file1, tmp_path)
+        sig2 = extract_file_signature(file2, tmp_path)
+        sig3 = extract_file_signature(file3, tmp_path)
+        old_project_sig = get_project_signature([sig1, sig2, sig3])
+        
+        # Store initial project
+        store_project_in_db(old_project_sig, "TestProject", str(tmp_path), [sig1, sig2, sig3], 100)
+        
+        # Create new upload with all 3 original files + 5 new files
+        # This gives low Jaccard (~37.5%) but 100% containment
+        new_files = []
+        new_sigs = [sig1, sig2, sig3]  # Keep all original files
+        for i in range(5):
+            new_file = tmp_path / f"new_{i}.txt"
+            new_file.write_text(f"new content {i}")
+            new_files.append(new_file)
+            new_sigs.append(extract_file_signature(new_file, tmp_path))
+        
+        new_project_sig = get_project_signature(new_sigs)
+        
+        # With low Jaccard threshold (20%) it might not match, but containment should catch it
+        result = find_and_update_similar_project(
+            new_sigs, 
+            new_project_sig, 
+            threshold=60.0,  # High threshold that Jaccard won't meet
+            containment_threshold=90.0  # But containment will be 100%
+        )
+        
+        assert result is not None
+        project_name, similarity, returned_sig = result
+        assert project_name == "TestProject"

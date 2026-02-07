@@ -11,7 +11,7 @@ def calculate_dynamic_threshold(
     file_count: int,
     base_threshold: float = 65.0,
     min_threshold: float = 50.0,
-    max_threshold: float = 85.0
+    max_threshold: float = 75.0
 ) -> float:
     """
     Calculate a dynamic similarity threshold based on project size (file count).
@@ -19,28 +19,32 @@ def calculate_dynamic_threshold(
     Small projects need higher similarity to match (prevents false positives).
     Large projects use lower thresholds (allows flexibility for incremental changes).
     
+    The thresholds are relaxed for very small projects to prevent common growth 
+    cases like 3→4 or 4→5 files from being incorrectly blocked.
+    
     Args:
         file_count: Number of files in the project
         base_threshold: The base threshold to adjust from (default 65.0)
         min_threshold: Minimum threshold floor (default 50.0)
-        max_threshold: Maximum threshold ceiling (default 85.0)
+        max_threshold: Maximum threshold ceiling (default 75.0, relaxed from 85.0)
     
     Returns:
         Adjusted threshold as a percentage (clamped to min/max bounds)
     
     Thresholds:
-        < 10 files   → base + 15 (very strict, e.g., 80%)
-        10-29 files  → base + 8  (strict, e.g., 73%)
+        < 10 files   → base (65%, relaxed from base+15 to allow incremental growth)
+        10-29 files  → base + 5  (slightly strict, e.g., 70%)
         30-99 files  → base      (normal, e.g., 65%)
         100-299 files → base - 8 (lenient, e.g., 57%)
         300+ files   → base - 12 (very lenient, e.g., 53%)
     """
     if file_count < 10:
-        # Very small projects: stricter matching to avoid false positives
-        adjustment = 15.0
+        # Very small projects: use base threshold (relaxed to allow incremental growth)
+        # Previously was +15 which blocked common cases like 3→4 or 4→5 files
+        adjustment = 0.0
     elif file_count < 30:
-        # Small projects: slightly stricter
-        adjustment = 8.0
+        # Small projects: slightly stricter (reduced from +8)
+        adjustment = 5.0
     elif file_count < 100:
         # Medium projects: use base threshold
         adjustment = 0.0
@@ -53,7 +57,7 @@ def calculate_dynamic_threshold(
     
     threshold = base_threshold + adjustment
     
-    # Clamp to min/max bounds for safety
+    # Clamp to min/max bounds for safety (max capped at 75% to allow flexibility)
     return max(min_threshold, min(max_threshold, threshold))
 
 
@@ -263,15 +267,47 @@ def calculate_project_similarity(current_signatures: List[str], existing_signatu
     total = len(current_set.union(existing_set))
     return (overlap / total) * 100 if total > 0 else 0.0
 
-def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = None, file_count: int = 0) -> Optional[tuple]:
+
+def calculate_containment_ratio(current_signatures: List[str], existing_signatures: List[str]) -> float:
+    """Calculate containment ratio: what percentage of existing files are in the current upload.
+    
+    This helps identify incremental updates where most of the original project 
+    is preserved but new files are added.
+    
+    Args:
+        current_signatures: File signatures from the current upload
+        existing_signatures: File signatures from an existing project in DB
+    
+    Returns:
+        Containment percentage (0-100): overlap / len(existing_signatures)
+        Returns 0.0 if existing_signatures is empty.
+    """
+    if not existing_signatures:
+        return 0.0
+    
+    current_set = set(current_signatures)
+    existing_set = set(existing_signatures)
+    overlap = len(current_set.intersection(existing_set))
+    
+    return (overlap / len(existing_set)) * 100
+
+def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = None, file_count: int = 0, containment_threshold: float = 90.0) -> Optional[tuple]:
     """
     Find a similar project and replace it with the new upload.
+    
+    Uses a dual-check approach:
+    1. Jaccard similarity: Standard overlap measure
+    2. Containment ratio: Checks if most existing files are preserved (≥90% by default)
+    
+    A project matches if EITHER the Jaccard similarity meets the threshold OR
+    the containment ratio is ≥90% (most existing files are preserved).
     
     Args:
         current_signatures: File signatures from the current upload
         new_project_sig: The already-calculated project signature for the new upload
         threshold: Minimum similarity percentage to consider a match (if None, auto-calculates based on file count)
         file_count: Number of files in the current project (used for dynamic threshold)
+        containment_threshold: Minimum containment ratio to consider a match (default 90.0%)
     
     Returns (project_name, similarity_percentage, new_project_signature) or None.
     """
@@ -288,14 +324,24 @@ def find_and_update_similar_project(current_signatures: List[str], new_project_s
     for old_project_sig, project_name, file_sigs_json, path, size_bytes, created_at in projects:
         existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
         
-        # Calculate similarity
+        # Calculate Jaccard similarity
         similarity = calculate_project_similarity(current_signatures, existing_sigs)
         
-        # Debug: Print similarity value for each comparison
-        print(f"[DEBUG] Comparing with project '{project_name}': similarity = {similarity:.2f}% (threshold: {threshold}%)")
+        # Calculate containment ratio (what % of existing files are preserved)
+        containment = calculate_containment_ratio(current_signatures, existing_sigs)
         
-        if similarity >= threshold:
-            print(f"[DEBUG] Match found! Updating project '{project_name}'")
+        # Debug: Print similarity and containment values for each comparison
+        print(f"[DEBUG] Comparing with project '{project_name}':")
+        print(f"        Jaccard similarity = {similarity:.2f}% (threshold: {threshold}%)")
+        print(f"        Containment ratio = {containment:.2f}% (threshold: {containment_threshold}%)")
+        
+        # Match if EITHER Jaccard similarity meets threshold OR containment is high
+        # High containment means most existing files are preserved (incremental update)
+        is_match = similarity >= threshold or containment >= containment_threshold
+        
+        if is_match:
+            match_reason = "Jaccard similarity" if similarity >= threshold else "containment ratio"
+            print(f"[DEBUG] Match found via {match_reason}! Updating project '{project_name}'")
             print(f"[DEBUG] Old signature: {old_project_sig}")
             print(f"[DEBUG] New signature: {new_project_sig}")
             

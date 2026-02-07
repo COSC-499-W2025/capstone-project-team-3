@@ -17,6 +17,7 @@ def create_user_pref_table(conn: sqlite3.Connection):
         education TEXT,
         industry TEXT,
         job_title TEXT,
+        education_details JSON,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -43,7 +44,8 @@ def test_save_and_get_preferences(temp_store):
         github_user="alicegit",
         education="BSc Computer Science",
         industry="Technology",
-        job_title="Developer"
+        job_title="Developer",
+        education_details={"institution": "University of Example", "degree": "CS", "start_date": 2015, "end_date": 2019}
     )
     prefs = temp_store.get_latest_preferences()
     assert prefs["name"] == "Alice Example"
@@ -64,7 +66,8 @@ def test_persistence_across_sessions(tmp_path):
         github_user="persistGH",
         education="BA",
         industry="Education",
-        job_title="Instructor"
+        job_title="Instructor",
+        education_details={"institution": "Persist University", "degree": "BA", "start_date": 2010, "end_date": 2014}
     )
     store1.close()
 
@@ -86,7 +89,8 @@ def test_latest_preference_retrieval (tmp_path):
         github_user="persistGH",
         education="BA",
         industry="Education",
-        job_title="Instructor"
+        job_title="Instructor",
+        education_details={"institution": "Persist University", "degree": "BA", "start_date": 2010, "end_date": 2014}
     )
     store1.close()
     # Ensure different timestamps between records
@@ -101,7 +105,8 @@ def test_latest_preference_retrieval (tmp_path):
         github_user="latestGH",
         education="MA",
         industry="Technology",
-        job_title="Senior Developer"
+        job_title="Senior Developer",
+        education_details={"institution": "Latest University", "degree": "MA", "start_date": 2015, "end_date": 2020}
     )
     prefs = store2.get_latest_preferences()
     store2.close()
@@ -123,6 +128,7 @@ def test_latest_preferences_no_email_lookup(temp_store, monkeypatch):
         education="PhD",
         industry="Research",
         job_title="Scientist",
+        education_details={"institution": "Research University", "degree": "PhD", "start_date": 2010, "end_date": 2015}
     )
 
     # Ensure static lookup uses the temp DB, not the default app DB
@@ -144,7 +150,7 @@ class FakeStore:
     def get_latest_preferences(self):
         return self.data[-1] if self.data else None
 
-    def save_preferences(self,user_id, name, email, github_user, education, industry, job_title):
+    def save_preferences(self,user_id, name, email, github_user, education, industry, job_title, education_details=None):
         self.data.append({
             user_id: 1,
             "name": name,

@@ -26,6 +26,18 @@ def temp_db(tmp_path):
         )
     """)
     
+    # Create SKILL_ANALYSIS table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS SKILL_ANALYSIS (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id TEXT,
+            skill TEXT,
+            source TEXT,
+            date TEXT,
+            FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
+        )
+    """)
+    
     # Insert test projects
     test_projects = [
         ('proj1', 'Project One', '/path/to/proj1', '2024-01-15 10:00:00', '2024-06-20 15:30:00'),
@@ -37,6 +49,20 @@ def temp_db(tmp_path):
         INSERT INTO PROJECT (project_signature, name, path, created_at, last_modified)
         VALUES (?, ?, ?, ?, ?)
     """, test_projects)
+    
+    # Insert test skills
+    test_skills = [
+        ('proj1', 'Python', 'code', '2024-01-15'),
+        ('proj1', 'Flask', 'code', '2024-02-01'),
+        ('proj1', 'Docker', 'code', '2024-03-15'),
+        ('proj2', 'JavaScript', 'code', '2023-05-15'),
+        ('proj2', 'React', 'code', '2023-06-01'),
+    ]
+    
+    cur.executemany("""
+        INSERT INTO SKILL_ANALYSIS (project_id, skill, source, date)
+        VALUES (?, ?, ?, ?)
+    """, test_skills)
     
     conn.commit()
     conn.close()
@@ -161,6 +187,89 @@ class TestChronologicalManager:
         # After closing, attempting to use connection should fail
         with pytest.raises(sqlite3.ProgrammingError):
             manager.conn.execute("SELECT 1")
+    
+    def test_get_chronological_skills(self, temp_db):
+        """Test getting chronological skills for a project."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        skills = manager.get_chronological_skills('proj1')
+        
+        assert len(skills) == 3
+        # Verify chronological order (by date ascending)
+        assert skills[0]['skill'] == 'Python'
+        assert skills[0]['date'] == '2024-01-15'
+        assert skills[1]['skill'] == 'Flask'
+        assert skills[1]['date'] == '2024-02-01'
+        assert skills[2]['skill'] == 'Docker'
+        assert skills[2]['date'] == '2024-03-15'
+        
+        manager.close()
+    
+    def test_get_chronological_skills_empty(self, temp_db):
+        """Test getting skills for project with no skills."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        skills = manager.get_chronological_skills('proj3')
+        assert skills == []
+        
+        manager.close()
+    
+    def test_update_skill_date(self, temp_db):
+        """Test updating a skill's date."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Update Flask date
+        manager.update_skill_date('proj1', 'Flask', '2024-02-15')
+        
+        # Verify update
+        skills = manager.get_chronological_skills('proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        assert flask_skill['date'] == '2024-02-15'
+        
+        manager.close()
+    
+    def test_add_skill_with_date(self, temp_db):
+        """Test adding a new skill with date."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Add new skill
+        manager.add_skill_with_date('proj1', 'PostgreSQL', 'code', '2024-04-01')
+        
+        # Verify addition
+        skills = manager.get_chronological_skills('proj1')
+        assert len(skills) == 4
+        postgres_skill = [s for s in skills if s['skill'] == 'PostgreSQL'][0]
+        assert postgres_skill['date'] == '2024-04-01'
+        assert postgres_skill['source'] == 'code'
+        
+        manager.close()
+    def test_remove_skill(self, temp_db):
+        """Test removing a skill from a project."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Remove Flask
+        manager.remove_skill('proj1', 'Flask')
+        
+        # Verify removal
+        skills = manager.get_chronological_skills('proj1')
+        assert len(skills) == 2
+        assert all(s['skill'] != 'Flask' for s in skills)
+        
+        manager.close()
+    
+    def test_skill_chronological_order_after_update(self, temp_db):
+        """Test that skills remain chronologically ordered after date update."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Update Docker to an earlier date
+        manager.update_skill_date('proj1', 'Docker', '2024-01-20')
+        
+        # Verify chronological order
+        skills = manager.get_chronological_skills('proj1')
+        dates = [s['date'] for s in skills]
+        assert dates == sorted(dates)  # Should be in ascending order
+        
+        manager.close()
 
 
 if __name__ == "__main__":

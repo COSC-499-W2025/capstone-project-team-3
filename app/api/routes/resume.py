@@ -35,7 +35,7 @@ def escape_tex_for_html(tex: str) -> str:
     """Helper methods to escape tex for HTML"""
     return tex.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-@router.get("/resume", response_class=HTMLResponse)
+@router.get("/resume")
 def resume_page(project_ids: Optional[List[str]] = Query(None)):
     """
     GET preview endpoint.
@@ -43,32 +43,33 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     - project_ids provided → filtered resume
     """
 
-    tex = get_resume_tex(project_ids)
-    preview = escape_tex_for_html(tex)
+    # tex = get_resume_tex(project_ids)
+    # preview = escape_tex_for_html(tex)
 
-    # Build export links dynamically
-    if project_ids:
-        params = "&".join(f"project_ids={pid}" for pid in project_ids)
-        tex_link = f"/resume/export/tex?{params}"
-        pdf_link = f"/resume/export/pdf?{params}"
-        title = "Resume Export (Selected Projects)"
-    else:
-        tex_link = "/resume/export/tex"
-        pdf_link = "/resume/export/pdf"
-        title = "Resume Export (All Projects)"
+    # # Build export links dynamically
+    # if project_ids:
+    #     params = "&".join(f"project_ids={pid}" for pid in project_ids)
+    #     tex_link = f"/resume/export/tex?{params}"
+    #     pdf_link = f"/resume/export/pdf?{params}"
+    #     title = "Resume Export (Selected Projects)"
+    # else:
+    #     tex_link = "/resume/export/tex"
+    #     pdf_link = "/resume/export/pdf"
+    #     title = "Resume Export (All Projects)"
 
-    return f"""
-    <html>
-        <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-            <h2>{title}</h2>
-            <p>Download your LaTeX/PDF resume:</p>
-            <p><a href="{tex_link}">Download resume.tex</a></p>
-            <p><a href="{pdf_link}">Download resume.pdf</a></p>
-            <h3>Preview (LaTeX)</h3>
-            <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
-        </body>
-    </html>
-    """
+    # return f"""
+    # <html>
+    #     <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+    #         <h2>{title}</h2>
+    #         <p>Download your LaTeX/PDF resume:</p>
+    #         <p><a href="{tex_link}">Download resume.tex</a></p>
+    #         <p><a href="{pdf_link}">Download resume.pdf</a></p>
+    #         <h3>Preview (LaTeX)</h3>
+    #         <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
+    #     </body>
+    # </html>
+    # """
+    return build_resume_model(project_ids=project_ids)
     
 @router.get("/resume/{resume_id}")
 def get_saved_resume(resume_id: int):

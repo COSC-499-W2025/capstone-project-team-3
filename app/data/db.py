@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS RESUME (
 -- Table for edited resume skills --
 CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    resume_id INTEGER NOT NULL,
-    skills TEXT NOT NULL, -- comma-separated list of skills
+    resume_id INTEGER NOT NULL UNIQUE,
+    skills JSON NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
 );
@@ -143,6 +143,10 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
+    # Ensure ON CONFLICT(resume_id) works even on pre-existing DBs
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_skills_resume_id ON RESUME_SKILLS(resume_id)"
+    )
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()

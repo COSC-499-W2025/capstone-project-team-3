@@ -9,7 +9,8 @@ from app.utils.scan_utils import (
     project_signature_exists,
     get_all_file_signatures_from_db,
     extract_project_timestamps,
-    calculate_dynamic_threshold
+    calculate_dynamic_threshold,
+    calculate_containment_ratio
 )
 from pathlib import Path
 from unittest.mock import patch
@@ -532,14 +533,14 @@ class TestCalculateDynamicThreshold:
     """Tests for calculate_dynamic_threshold function."""
     
     def test_very_small_project(self):
-        """Very small projects (<10 files) should get higher threshold."""
+        """Very small projects (<10 files) should use base threshold (relaxed)."""
         threshold = calculate_dynamic_threshold(file_count=5)
-        assert threshold == 80.0  # base(65) + 15
+        assert threshold == 65.0  # base (relaxed from base+15 to allow incremental growth)
     
     def test_small_project(self):
         """Small projects (10-30 files) should get slightly higher threshold."""
         threshold = calculate_dynamic_threshold(file_count=20)
-        assert threshold == 73.0  # base(65) + 8
+        assert threshold == 70.0  # base(65) + 5 (reduced from +8)
     
     def test_medium_project(self):
         """Medium projects (30-100 files) should use base threshold."""
@@ -565,13 +566,13 @@ class TestCalculateDynamicThreshold:
         assert threshold == 70.0
     
     def test_max_threshold_clamping(self):
-        """Should clamp to max_threshold."""
+        """Should clamp to max_threshold (now 75% by default)."""
         threshold = calculate_dynamic_threshold(
-            file_count=3,  # very small (+15)
+            file_count=20,  # small (+5)
             base_threshold=75.0,
-            max_threshold=85.0
+            max_threshold=75.0
         )
-        assert threshold == 85.0  # Clamped (75+15=90 -> 85)
+        assert threshold == 75.0  # Clamped (75+5=80 -> 75)
     
     def test_min_threshold_clamping(self):
         """Should clamp to min_threshold."""
@@ -584,13 +585,13 @@ class TestCalculateDynamicThreshold:
     
     def test_boundary_10_files(self):
         """Test boundary at exactly 10 files."""
-        assert calculate_dynamic_threshold(9) == 80.0   # very small
-        assert calculate_dynamic_threshold(10) == 73.0  # small
+        assert calculate_dynamic_threshold(9) == 65.0   # very small (base)
+        assert calculate_dynamic_threshold(10) == 70.0  # small (base + 5)
     
     def test_boundary_30_files(self):
         """Test boundary at exactly 30 files."""
-        assert calculate_dynamic_threshold(29) == 73.0  # small
-        assert calculate_dynamic_threshold(30) == 65.0  # medium
+        assert calculate_dynamic_threshold(29) == 70.0  # small (base + 5)
+        assert calculate_dynamic_threshold(30) == 65.0  # medium (base)
     
     def test_boundary_100_files(self):
         """Test boundary at exactly 100 files."""
@@ -605,12 +606,12 @@ class TestCalculateDynamicThreshold:
     def test_zero_files(self):
         """Test edge case with zero files."""
         threshold = calculate_dynamic_threshold(file_count=0)
-        assert threshold == 80.0  # Treated as very small
+        assert threshold == 65.0  # Treated as very small (uses base)
     
     def test_single_file(self):
         """Test edge case with single file."""
         threshold = calculate_dynamic_threshold(file_count=1)
-        assert threshold == 80.0  # Very small project
+        assert threshold == 65.0  # Very small project (uses base)
     
     def test_default_parameters(self):
         """Test that default parameters work correctly."""
@@ -618,9 +619,62 @@ class TestCalculateDynamicThreshold:
         threshold = calculate_dynamic_threshold(50)
         assert threshold == 65.0
         
-        # Verify defaults are: base=65.0, min=50.0, max=85.0
+        # Verify defaults are: base=65.0, min=50.0, max=75.0 (relaxed from 85.0)
         import inspect
         sig = inspect.signature(calculate_dynamic_threshold)
         assert sig.parameters['base_threshold'].default == 65.0
         assert sig.parameters['min_threshold'].default == 50.0
-        assert sig.parameters['max_threshold'].default == 85.0
+        assert sig.parameters['max_threshold'].default == 75.0
+
+
+# ============================================================================
+# Tests for calculate_containment_ratio()
+# ============================================================================
+
+class TestCalculateContainmentRatio:
+    """Tests for calculate_containment_ratio function."""
+    
+    def test_full_containment(self):
+        """Test when all existing files are in current upload."""
+        existing = ["file1", "file2", "file3"]
+        current = ["file1", "file2", "file3", "file4"]  # Has all existing + 1 new
+        assert calculate_containment_ratio(current, existing) == 100.0
+    
+    def test_partial_containment(self):
+        """Test when some existing files are in current upload."""
+        existing = ["file1", "file2", "file3", "file4"]
+        current = ["file1", "file2", "file5"]  # Has 2 of 4 existing
+        assert calculate_containment_ratio(current, existing) == 50.0
+    
+    def test_no_containment(self):
+        """Test when no existing files are in current upload."""
+        existing = ["file1", "file2"]
+        current = ["file3", "file4"]
+        assert calculate_containment_ratio(current, existing) == 0.0
+    
+    def test_empty_existing(self):
+        """Test edge case with empty existing signatures."""
+        assert calculate_containment_ratio(["file1", "file2"], []) == 0.0
+    
+    def test_empty_current(self):
+        """Test edge case with empty current signatures."""
+        assert calculate_containment_ratio([], ["file1", "file2"]) == 0.0
+    
+    def test_incremental_growth_scenario(self):
+        """Test typical incremental upload: 3 files -> 5 files (3 preserved + 2 new)."""
+        existing = ["file1", "file2", "file3"]
+        current = ["file1", "file2", "file3", "file4", "file5"]
+        # All 3 existing files are preserved = 100% containment
+        assert calculate_containment_ratio(current, existing) == 100.0
+    
+    def test_90_percent_containment(self):
+        """Test 90% containment threshold scenario."""
+        existing = ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10"]
+        # 9 of 10 existing files preserved + some new ones
+        current = ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "new1", "new2"]
+        assert calculate_containment_ratio(current, existing) == 90.0
+    
+    def test_identical_sets(self):
+        """Test when current and existing are identical."""
+        sigs = ["file1", "file2", "file3"]
+        assert calculate_containment_ratio(sigs, sigs) == 100.0

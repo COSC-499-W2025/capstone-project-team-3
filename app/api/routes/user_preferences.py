@@ -5,6 +5,7 @@ from app.data.db import get_connection
 from typing import List, Optional
 import logging
 import json
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,12 +29,19 @@ class UserPreferenceRequest(BaseModel):
     @field_validator("start_date", "end_date", check_fields=False)
     @classmethod
     def validate_date_format(cls, value):
-        if value:
-            # Basic date format validation
-            import re
-            if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
-                raise ValueError("Date must be in YYYY-MM-DD format")
-        return value
+        """Validate date format - accepts YYYY or YYYY-MM-DD"""
+        if value is None:
+            return value
+        
+        # Check if it matches YYYY format (year only)
+        if re.match(r"^\d{4}$", value):
+            return value
+        
+        # Check if it matches YYYY-MM-DD format (full date)
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+            return value
+        
+        raise ValueError("Date must be in YYYY or YYYY-MM-DD format")
 
 @router.get("/user-preferences")
 def get_user_preferences():

@@ -64,7 +64,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
 | [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
 | [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
-| [#479, #519, #565, #566, #596, #594] | Optimization and refactoring for resume generation and download; Update DB schema (RESUME table, RESUME_SKILLS); Load/Edit Resume; Save Resume Edits; Create Tailored Resume. PRs: #558, #567, #576, #568, #595. | @dabby04 |
+| [#479, #519, #565, #566, #596, #594] | Optimization and refactoring for resume generation and download; Update DB schema (RESUME table, RESUME_SKILLS); Load/Edit Resume; Save Resume Edits; Create Tailored Resume| @dabby04 |
 
 ## In Progress Tasks
 

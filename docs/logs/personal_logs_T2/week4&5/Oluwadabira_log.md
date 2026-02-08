@@ -2,7 +2,7 @@
 
 ---
 
-## Week-2, Entry for Jan 26 → Feb 8, 2026
+## Week-4&5, Entry for Jan 26 → Feb 8, 2026
 
 ![Personal Log](../../../screenshots/Week%205%20Personal%20Log%20T2-%20Oluwadabira.png)
 

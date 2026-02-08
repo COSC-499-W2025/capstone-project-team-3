@@ -258,6 +258,29 @@ def create_collaborative_repo(tmp_path: Path) -> Repo:
 
     return repo
 
+def create_alias_author_repo(tmp_path: Path) -> Repo:
+    """
+    Helper to initialize a repo with commits from the same person using
+    a real email and a GitHub noreply email.
+    """
+    repo = Repo.init(tmp_path)
+    file_path = tmp_path / "test_file.txt"
+
+    author_real = Actor("Karim Jassani", "jassanikarim8@gmail.com")
+    author_noreply = Actor("kjassani", "99561514+kjassani@users.noreply.github.com")
+
+    file_path.write_text("First commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Commit with real email", author=author_real, committer=author_real)
+
+    time.sleep(1)
+
+    file_path.write_text("Second commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Commit with noreply email", author=author_noreply, committer=author_noreply)
+
+    return repo
+
 def test_is_collaborative_with_multiple_authors(tmp_path):
     """
     Ensures is_collaborative returns True for a repo with commits from 
@@ -290,6 +313,35 @@ def test_is_collaborative_with_non_repo(tmp_path):
     """
     # tmp_path is just an empty directory
     assert is_collaborative(tmp_path) is False
+
+def test_is_collaborative_aliases_collapse_same_person(tmp_path):
+    """
+    Ensures alias identifiers collapse real + noreply emails into one author.
+    """
+    create_alias_author_repo(tmp_path)
+    assert is_collaborative(tmp_path) is True
+    assert is_collaborative(
+        tmp_path,
+        author_aliases=["jassanikarim8@gmail.com", "kjassani"],
+    ) is False
+
+def test_is_collaborative_aliases_detects_other_authors(tmp_path):
+    """
+    Ensures alias identifiers do not hide real collaboration.
+    """
+    create_alias_author_repo(tmp_path)
+    repo = Repo(tmp_path)
+    file_path = tmp_path / "test_file.txt"
+    other = Actor("Collaborator", "collab@example.com")
+
+    file_path.write_text("Third commit content")
+    repo.index.add([str(file_path)])
+    repo.index.commit("Commit by collaborator", author=other, committer=other)
+
+    assert is_collaborative(
+        tmp_path,
+        author_aliases=["jassanikarim8@gmail.com", "kjassani"],
+    ) is True
     
 #test for extract_code_commit_content_by_author
     

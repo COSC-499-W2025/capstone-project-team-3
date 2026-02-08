@@ -1,6 +1,6 @@
 from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 from datetime import datetime
 import os, json, re, requests
 from urllib.parse import quote
@@ -214,21 +214,50 @@ def is_repo_empty(path: Union[str, Path]) -> bool:
         # if function fails, it means it's not a valid repo
         return True
     
-def is_collaborative(path: Union[str, Path]) -> bool:
+def _canonical_author_key(author_name: str, author_email: str) -> Optional[str]:
+    email = (author_email or "").strip()
+    name = (author_name or "").strip()
+    noreply_username = _extract_github_noreply_username(email)
+    if email and not noreply_username:
+        return f"email:{email.casefold()}"
+    if noreply_username:
+        return f"gh:{noreply_username.casefold()}"
+    if name:
+        return f"name:{name.casefold()}"
+    return None
+
+def is_collaborative(path: Union[str, Path], author_aliases: Optional[List[str]] = None) -> bool:
     """
     Determines if a Git repository is a collaborative project.
     A repository is considered collaborative if it has commits from
     more than one unique author.
+
+    author_aliases allows collapsing multiple identifiers that represent
+    the same person (e.g., real email + GitHub username) into one author.
     """
     try:
-        # Use the existing helper function to get all author names
-        authors = extract_commit_authors(path)
-        
-        # Convert the list of authors to a set to find unique authors
-        unique_authors = set(authors)
-        
-        # If the number of unique authors is greater than 1, it's collaborative
-        return len(unique_authors) > 1
+        repo = get_repo(path)
+        aliases = _normalize_author_identifiers(author_aliases) if author_aliases else []
+        unique_authors: Set[str] = set()
+
+        for commit in repo.iter_commits(rev="--all"):
+            a = commit.author
+            if not a:
+                continue
+
+            if aliases and author_matches(commit, aliases):
+                unique_authors.add("__primary__")
+                if len(unique_authors) > 1:
+                    return True
+                continue
+
+            key = _canonical_author_key(getattr(a, "name", ""), getattr(a, "email", ""))
+            if key:
+                unique_authors.add(key)
+                if len(unique_authors) > 1:
+                    return True
+
+        return False
     
     except (ValueError, GitCommandError, PermissionError):
         # extract_commit_authors -> get_repo will raise a ValueError

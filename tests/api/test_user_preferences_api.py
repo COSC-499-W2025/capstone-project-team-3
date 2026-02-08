@@ -86,7 +86,7 @@ def test_update_user_preferences(mock_get_conn):
         "education": "Master's",
         "industry": "Technology",
         "job_title": "Senior Developer",
-        "education_details": [{"institution": "Updated University", "degree": "Master's", "start_date": "2015", "end_date": "2020"}]
+        "education_details": [{"institution": "Updated University", "degree": "Master's","program":"Economics", "start_date": "2015", "end_date": "2020", "gpa": 2.6}]
     }
     
     response = client.post("/user-preferences", json=updated_payload)

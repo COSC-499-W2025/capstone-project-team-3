@@ -13,18 +13,11 @@ router = APIRouter()
 class EducationDetail(BaseModel):
     institution: str
     degree: str
+    program: str
     start_date: str  # Format: YYYY-MM-DD
     end_date: Optional[str] = None  # Format: YYYY-MM-DD or None if ongoing
-    details: Optional[str] = None
+    gpa: Optional[float] = None # GPA on a 4.0 scale
 
-class UserPreferenceRequest(BaseModel):
-    name: str
-    email: str
-    github_user: str
-    education: str
-    industry: str
-    job_title: str
-    education_details: Optional[List[EducationDetail]] = None
     
     @field_validator("start_date", "end_date", check_fields=False)
     @classmethod
@@ -42,6 +35,15 @@ class UserPreferenceRequest(BaseModel):
             return value
         
         raise ValueError("Date must be in YYYY or YYYY-MM-DD format")
+
+class UserPreferenceRequest(BaseModel):
+    name: str
+    email: str
+    github_user: str
+    education: str
+    industry: str
+    job_title: str
+    education_details: Optional[List[EducationDetail]] = None
 
 @router.get("/user-preferences")
 def get_user_preferences():

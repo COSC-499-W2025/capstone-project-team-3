@@ -214,8 +214,8 @@ def seed_db():
             "degree": "B.Sc. in Computer Science",
             "start_date": "2018-09-01",
             "end_date": "2022-06-01",
-            "details": "Graduated with Honors,"
-            "GPA: 3.8/4.0"
+            "details": "Graduated with Honors",
+            "GPA" : 3.8
         },
         {
             "institution": "Tech Bootcamp",

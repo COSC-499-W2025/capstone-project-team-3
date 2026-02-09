@@ -28,7 +28,16 @@
   - Setup project environment for frontend (React Native / Electron + React) - #579
   - Additional User Information Collection #582
   - Customize and save information about a portfolio showcase project #459
-
+  - Resolve project score vs rank confusion - #552
+  - Allow User to Override Project Score - #492
+  - Enhancement: Is_collaborative function - Git Code Analysis - #603
+  - Add endpoint for edited resume deletion. #578
+  - Create POST API endpoint to get the file path input to db. #551
+  - Create base chronological information managing utils file. #548
+  - Create chronological information managing for editing/updating project date #549
+  - Update database to contain chronological skills. #590
+  - Update Chronological manager to produce editable output for user. #591
+  - Update Chronological utils to accept editing of dates for skills. #592
   
 
 ---
@@ -61,26 +70,32 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
+| [#548, #549, #551, #578, #590, #591, #592] |  CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths;  DELETE endpoint for edited resumes | @6s-1 | 
 | [#525, #561, #563, #564, #587, #598, #599] | Feature 21: Incremental load feature and updated logic; Bugfix collaboration score and correct username detection; Create similarity score logic for projects; Update DB with similar projects; Dynamic threshold setting for incremental load; Automated dynamic threshold logic and testing | @PaintedW0lf | 
 | [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
-| [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
+| [#552,, #553, #571, #572, #602, #573] | Resolve project score vs rank confusion, Rename project scan score, 	Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization
+ | @kjassani |
 | [#479, #519, #565, #566, #596, #594] | Optimization and refactoring for resume generation and download; Update DB schema (RESUME table, RESUME_SKILLS); Load/Edit Resume; Save Resume Edits; Create Tailored Resume| @dabby04 |
 
 ## In Progress Tasks
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
+| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per projec-UI, working on UI for thumbnail addition and front page. | @6s-1 |
 | [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
+| [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI| @kjassani |
 | [#579](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/597) | Setup project environment for frontend (Electron + React). PR #601 in code review. | @dabby04 |
 
 ---
 
 ## Meeting Notes
 https://docs.google.com/document/d/1TbeUFZQ_sNED9KTmzhB_K_Q56pP0ygIa8fMv7lOnGmo/edit?usp=sharing
+Meeting in Week-4
+All members present.
+-Design discussion and M2 progress. 
+
 
 ---
 

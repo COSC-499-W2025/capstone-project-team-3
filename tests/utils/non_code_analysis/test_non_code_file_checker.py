@@ -809,18 +809,18 @@ def test_get_git_user_identity_invalid_repo(mock_get_repo):
 def test_verify_user_in_files_mixed():
     """Test verifying user in files with mixed authorship."""
     metadata = {
-        "collab.pdf": {
-            "path": "/path/collab.pdf",
+        "collab.md": {
+            "path": "/path/collab.md",
             "authors": ["user@example.com", "other@example.com"],
             "usernames": ["user", "other"]
         },
-        "solo.md": {
-            "path": "/path/solo.md",
+        "solo.txt": {
+            "path": "/path/solo.txt",
             "authors": ["user@example.com"],
             "usernames": ["user"]
         },
-        "others.docx": {
-            "path": "/path/others.docx",
+        "others.md": {
+            "path": "/path/others.md",
             "authors": ["other@example.com", "another@example.com"],
             "usernames": ["other", "another"]
         }
@@ -829,25 +829,25 @@ def test_verify_user_in_files_mixed():
     result = verify_user_in_files(metadata, "user@example.com", "user")
     
     assert len(result["user_collaborative"]) == 1
-    assert "/path/collab.pdf" in result["user_collaborative"]
+    assert "/path/collab.md" in result["user_collaborative"]
     
     assert len(result["user_solo"]) == 1
-    assert "/path/solo.md" in result["user_solo"]
+    assert "/path/solo.txt" in result["user_solo"]
     
     assert len(result["others_only"]) == 1
-    assert "/path/others.docx" in result["others_only"]
+    assert "/path/others.md" in result["others_only"]
 
 
 def test_verify_user_in_files_user_not_in_any():
     """Test when user hasn't contributed to any files."""
     metadata = {
-        "file1.pdf": {
-            "path": "/path/file1.pdf",
+        "file1.md": {
+            "path": "/path/file1.md",
             "authors": ["other@example.com"],
             "usernames": ["other"]
         },
-        "file2.md": {
-            "path": "/path/file2.md",
+        "file2.txt": {
+            "path": "/path/file2.txt",
             "authors": ["another@example.com"],
             "usernames": ["another"]
         }
@@ -868,7 +868,7 @@ def test_verify_user_in_files_empty_metadata():
     assert result["others_only"] == []
 
 def test_verify_user_in_files_includes_readme_for_collaborative():
-    """README files should always be included in user_solo for full content parsing, even if user is not an author."""
+    """README files should always be included in user_solo for full content parsing."""
     metadata = {
         "README.md": {
             "path": "/repo/README.md",
@@ -896,7 +896,7 @@ def test_verify_user_in_files_includes_readme_for_collaborative():
     assert "/repo/README.md" in result["user_solo"]
     assert "/repo/readme.txt" in result["user_solo"]
     assert "/repo/ReadMe.docx" in result["user_solo"]
-    # notes.pdf should be in others_only since user is not an author
+    # notes.pdf is not a README and user is not an author, so it goes to others_only
     assert "/repo/notes.pdf" in result["others_only"]
 
 # ============================================================================
@@ -914,15 +914,18 @@ def test_classify_git_repo_with_user_basic(mock_collect, mock_identity, mock_det
     mock_collect.return_value = {
         "collab.pdf": {
             "path": "/repo/collab.pdf",
-            "authors": ["alice@example.com", "bob@example.com"]
+            "authors": ["alice@example.com", "bob@example.com"],
+            "usernames": ["Alice", "bob"]
         },
         "solo.md": {
             "path": "/repo/solo.md",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["Alice"]
         },
         "others.docx": {
             "path": "/repo/others.docx",
-            "authors": ["bob@example.com"]
+            "authors": ["bob@example.com"],
+            "usernames": ["bob"]
         }
     }
     
@@ -949,11 +952,13 @@ def test_classify_git_repo_all_collaborative(mock_collect, mock_identity, mock_d
     mock_collect.return_value = {
         "doc1.pdf": {
             "path": "/repo/doc1.pdf",
-            "authors": ["alice@example.com", "bob@example.com"]
+            "authors": ["alice@example.com", "bob@example.com"],
+            "usernames": ["Alice", "bob"]
         },
         "doc2.md": {
             "path": "/repo/doc2.md",
-            "authors": ["alice@example.com", "charlie@example.com"]
+            "authors": ["alice@example.com", "charlie@example.com"],
+            "usernames": ["Alice", "charlie"]
         }
     }
     
@@ -975,11 +980,13 @@ def test_classify_git_repo_all_solo(mock_collect, mock_identity, mock_detect_git
     mock_collect.return_value = {
         "notes.txt": {
             "path": "/repo/notes.txt",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["Alice"]
         },
         "draft.md": {
             "path": "/repo/draft.md",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["Alice"]
         }
     }
     
@@ -1001,11 +1008,13 @@ def test_classify_git_repo_all_excluded(mock_collect, mock_identity, mock_detect
     mock_collect.return_value = {
         "bob_file.pdf": {
             "path": "/repo/bob_file.pdf",
-            "authors": ["bob@example.com"]
+            "authors": ["bob@example.com"],
+            "usernames": ["bob"]
         },
         "charlie_file.md": {
             "path": "/repo/charlie_file.md",
-            "authors": ["charlie@example.com"]
+            "authors": ["charlie@example.com"],
+            "usernames": ["charlie"]
         }
     }
     
@@ -1146,7 +1155,8 @@ def test_classify_multiple_authors_on_file(mock_collect, mock_identity, mock_det
     mock_collect.return_value = {
         "team_doc.pdf": {
             "path": "/repo/team_doc.pdf",
-            "authors": ["alice@example.com", "bob@example.com", "charlie@example.com"]
+            "authors": ["alice@example.com", "bob@example.com", "charlie@example.com"],
+            "usernames": ["Alice", "bob", "charlie"]
         }
     }
     
@@ -1168,29 +1178,35 @@ def test_classify_realistic_mixed_scenario(mock_collect, mock_identity, mock_det
         # Collaborative (user + others)
         "design_doc.pdf": {
             "path": "/repo/design_doc.pdf",
-            "authors": ["alice@example.com", "bob@example.com"]
+            "authors": ["alice@example.com", "bob@example.com"],
+            "usernames": ["Alice", "bob"]
         },
         "presentation.pptx": {
             "path": "/repo/presentation.pptx",
-            "authors": ["alice@example.com", "charlie@example.com", "dave@example.com"]
+            "authors": ["alice@example.com", "charlie@example.com", "dave@example.com"],
+            "usernames": ["Alice", "charlie", "dave"]
         },
         # Solo (user only)
         "alice_notes.txt": {
             "path": "/repo/alice_notes.txt",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["Alice"]
         },
         "my_draft.md": {
             "path": "/repo/my_draft.md",
-            "authors": ["alice@example.com"]
+            "authors": ["alice@example.com"],
+            "usernames": ["Alice"]
         },
         # Others only
         "bob_report.docx": {
             "path": "/repo/bob_report.docx",
-            "authors": ["bob@example.com"]
+            "authors": ["bob@example.com"],
+            "usernames": ["bob"]
         },
         "team_diagram.png": {
             "path": "/repo/team_diagram.png",
-            "authors": ["charlie@example.com", "dave@example.com"]
+            "authors": ["charlie@example.com", "dave@example.com"],
+            "usernames": ["charlie", "dave"]
         }
     }
     
@@ -1212,29 +1228,31 @@ def test_classify_realistic_mixed_scenario(mock_collect, mock_identity, mock_det
 @patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
 @patch('app.utils.non_code_analysis.non_code_file_checker.get_git_user_identity')
 @patch('app.utils.non_code_analysis.non_code_file_checker.collect_git_non_code_files_with_metadata')
-def test_classify_user_email_case_sensitive(mock_collect, mock_identity, mock_detect_git):
-    """Test that user email matching is case-sensitive (as git stores it)."""
+def test_classify_user_email_case_insensitive(mock_collect, mock_identity, mock_detect_git):
+    """Test that user email matching is case-insensitive (to handle GitHub noreply formats)."""
     mock_detect_git.return_value = True
     mock_identity.return_value = {"name": "Alice", "email": "alice@example.com"}
     
     mock_collect.return_value = {
         "file1.pdf": {
             "path": "/repo/file1.pdf",
-            "authors": ["alice@example.com"]  # Exact match
+            "authors": ["alice@example.com"],  # Exact match
+            "usernames": ["alice"]
         },
         "file2.pdf": {
             "path": "/repo/file2.pdf",
-            "authors": ["Alice@example.com"]  # Different case - won't match
+            "authors": ["Alice@example.com"],  # Different case - should still match
+            "usernames": ["Alice"]
         }
     }
     
     result = classify_non_code_files_with_user_verification('/path/to/repo')
     
-    # Only exact match should be in user's files
-    assert len(result["non_collaborative"]) == 1
+    # Both should match due to case-insensitive comparison
+    assert len(result["non_collaborative"]) == 2
     assert "/repo/file1.pdf" in result["non_collaborative"]
-    assert len(result["excluded"]) == 1
-    assert "/repo/file2.pdf" in result["excluded"]
+    assert "/repo/file2.pdf" in result["non_collaborative"]
+    assert len(result["excluded"]) == 0
 
 
 @patch('app.utils.non_code_analysis.non_code_file_checker.detect_git')
@@ -1347,11 +1365,13 @@ def test_classify_integration_example(mock_collect, mock_identity, mock_detect_g
     mock_collect.return_value = {
         "design.pdf": {
             "path": "/capstone/docs/design.pdf",
-            "authors": ["shreya@example.com", "teammate@example.com"]
+            "authors": ["shreya@example.com", "teammate@example.com"],
+            "usernames": ["Shreya", "teammate"]
         },
         "notes.txt": {
             "path": "/capstone/notes.txt",
-            "authors": ["shreya@example.com"]
+            "authors": ["shreya@example.com"],
+            "usernames": ["Shreya"]
         }
     }
     

@@ -438,7 +438,8 @@ def test_main_integrates_non_code_file_checker():
         
         main()
         
-        mock_non_code_checker.assert_called_once_with("/tmp/project1","testuser","test_enhanced@example.com")
+        # Note: function signature is (project_path, email, username)
+        mock_non_code_checker.assert_called_once_with("/tmp/project1", "test_enhanced@example.com", "testuser")
 
 
 # ============================================================================
@@ -486,7 +487,8 @@ def test_main_calls_parsing_with_classification_results():
         
         main()
         
-        mock_classify.assert_called_once_with("/tmp/project1",'testuser', 'test_enhanced@example.com')
+        # Note: function signature is (project_path, email, username)
+        mock_classify.assert_called_once_with("/tmp/project1", 'test_enhanced@example.com', 'testuser')
         mock_parse.assert_called_once()
         call_args = mock_parse.call_args
         assert call_args[1]['file_paths_dict']['collaborative'] == ['/path/file1.md']

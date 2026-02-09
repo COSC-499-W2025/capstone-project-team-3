@@ -3,10 +3,11 @@ Non-code file checker - identifies and filters non-code files from repositories 
 Reuses functions from git_utils.py for consistency.
 """
 from pathlib import Path
-from typing import Set, List, Union, Dict, Any
+from typing import Set, List, Union, Dict, Any, Optional
 from app.utils.git_utils import (
     get_repo, 
-    detect_git
+    detect_git,
+    _extract_github_noreply_username
 )
 from app.utils.scan_utils import scan_project_files
 
@@ -235,7 +236,35 @@ def verify_user_in_files(
             user_solo.append(info["path"])
             continue
 
-        if username in usernames or user_email in authors:
+        # Case-insensitive comparison for username and email matching
+        username_lower = username.lower() if username else ""
+        user_email_lower = user_email.lower() if user_email else ""
+        usernames_lower = [u.lower() for u in usernames]
+        authors_lower = [a.lower() for a in authors]
+        
+        # Check multiple matching strategies:
+        # 1. Exact username match in usernames list (case-insensitive)
+        # 2. Exact email match in authors (emails) list (case-insensitive)
+        # 3. Username matches extracted GitHub noreply username (e.g., "PaintedW0lf" from "97552907+PaintedW0lf@users.noreply.github.com")
+        user_is_author = False
+        
+        # Strategy 1: Exact username match (case-insensitive)
+        if username_lower and username_lower in usernames_lower:
+            user_is_author = True
+        
+        # Strategy 2: Exact email match (case-insensitive)
+        if user_email_lower and user_email_lower in authors_lower:
+            user_is_author = True
+        
+        # Strategy 3: Extract GitHub noreply username and compare (avoids false positives from substring matching)
+        if username_lower and not user_is_author:
+            for author in authors:
+                noreply_username = _extract_github_noreply_username(author)
+                if noreply_username and noreply_username.lower() == username_lower:
+                    user_is_author = True
+                    break
+        
+        if user_is_author:
             if len(authors) == 1:
                 user_solo.append(info["path"])
             else:

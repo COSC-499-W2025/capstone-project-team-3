@@ -20,6 +20,7 @@ from app.api.routes.projects import router as projects_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes.eduction_service import router as education_services_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
@@ -69,6 +70,7 @@ app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(health_router)
+app.include_router(education_services_router, prefix="/api")
 
 
 def display_startup_info():
@@ -200,7 +202,7 @@ def main():
                             latest_prefs = None
 
                         username, email=_get_preferred_author_email()
-                        non_code_result = classify_non_code_files_with_user_verification(project_path,username,email)
+                        non_code_result = classify_non_code_files_with_user_verification(project_path, email, username)
                         print(f"--- Non-Code File Checker Results for {project_name} ---")
                         print(f"Collaborative non-code files: {len(non_code_result['collaborative'])}")
                         print(f"Non-collaborative non-code files: {len(non_code_result['non_collaborative'])}")

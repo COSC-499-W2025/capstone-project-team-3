@@ -8,7 +8,9 @@ from app.utils.scan_utils import (
     store_project_in_db,
     project_signature_exists,
     get_all_file_signatures_from_db,
-    extract_project_timestamps
+    extract_project_timestamps,
+    calculate_dynamic_threshold,
+    calculate_containment_ratio
 )
 from pathlib import Path
 from unittest.mock import patch
@@ -477,7 +479,7 @@ def test_find_and_update_similar_project_integration(tmp_path):
     assert returned_sig != old_project_sig  # Signature should have changed
 
 def test_find_and_update_similar_project_default_threshold():
-    """Test that the default threshold is 70%."""
+    """Test that the default threshold is None (dynamic)."""
     from app.utils.scan_utils import find_and_update_similar_project
     import inspect
     
@@ -485,5 +487,247 @@ def test_find_and_update_similar_project_default_threshold():
     sig = inspect.signature(find_and_update_similar_project)
     default_threshold = sig.parameters['threshold'].default
     
-    # Verify default is 70%
-    assert default_threshold == 70.0
+    # Verify default is None (dynamic threshold)
+    assert default_threshold is None
+
+
+def test_run_scan_flow_uses_dynamic_threshold(tmp_path):
+    """Test that run_scan_flow uses dynamic threshold when not specified."""
+    # Create a small project (should use higher threshold)
+    (tmp_path / "file1.py").write_text("print('1')")
+    (tmp_path / "file2.py").write_text("print('2')")
+    
+    # Run scan flow without specifying threshold
+    result = run_scan_flow(str(tmp_path), exclude=[])
+    
+    # Should succeed (new project)
+    assert result["reason"] == "new_project"
+    assert result["skip_analysis"] is False
+
+
+def test_run_scan_flow_accepts_custom_threshold(tmp_path):
+    """Test that run_scan_flow accepts custom threshold."""
+    (tmp_path / "test.py").write_text("print('test')")
+    
+    # Run with explicit threshold
+    result = run_scan_flow(str(tmp_path), exclude=[], similarity_threshold=50.0)
+    
+    assert result["reason"] == "new_project"
+
+
+def test_run_scan_flow_accepts_base_threshold(tmp_path):
+    """Test that run_scan_flow accepts base threshold for dynamic calculation."""
+    (tmp_path / "test.py").write_text("print('test')")
+    
+    # Run with custom base threshold
+    result = run_scan_flow(str(tmp_path), exclude=[], base_threshold=70.0)
+    
+    assert result["reason"] == "new_project"
+
+
+# ============================================================================
+# Tests for calculate_dynamic_threshold()
+# ============================================================================
+
+class TestCalculateDynamicThreshold:
+    """Tests for calculate_dynamic_threshold function."""
+    
+    def test_very_small_project(self):
+        """Very small projects (<10 files) should use base threshold (relaxed)."""
+        threshold = calculate_dynamic_threshold(file_count=5)
+        assert threshold == 65.0  # base (relaxed from base+15 to allow incremental growth)
+    
+    def test_small_project(self):
+        """Small projects (10-30 files) should get slightly higher threshold."""
+        threshold = calculate_dynamic_threshold(file_count=20)
+        assert threshold == 70.0  # base(65) + 5 (reduced from +8)
+    
+    def test_medium_project(self):
+        """Medium projects (30-100 files) should use base threshold."""
+        threshold = calculate_dynamic_threshold(file_count=50)
+        assert threshold == 65.0  # base threshold
+    
+    def test_large_project(self):
+        """Large projects (100-300 files) should get lower threshold."""
+        threshold = calculate_dynamic_threshold(file_count=150)
+        assert threshold == 57.0  # base(65) - 8
+    
+    def test_very_large_project(self):
+        """Very large projects (300+ files) should get lowest threshold."""
+        threshold = calculate_dynamic_threshold(file_count=400)
+        assert threshold == 53.0  # base(65) - 12
+    
+    def test_custom_base_threshold(self):
+        """Should respect custom base threshold."""
+        threshold = calculate_dynamic_threshold(
+            file_count=50,  # medium
+            base_threshold=70.0
+        )
+        assert threshold == 70.0
+    
+    def test_max_threshold_clamping(self):
+        """Should clamp to max_threshold (now 75% by default)."""
+        threshold = calculate_dynamic_threshold(
+            file_count=20,  # small (+5)
+            base_threshold=75.0,
+            max_threshold=75.0
+        )
+        assert threshold == 75.0  # Clamped (75+5=80 -> 75)
+    
+    def test_min_threshold_clamping(self):
+        """Should clamp to min_threshold."""
+        threshold = calculate_dynamic_threshold(
+            file_count=400,  # very large (-12)
+            base_threshold=55.0,
+            min_threshold=50.0
+        )
+        assert threshold == 50.0  # Clamped (55-12=43 -> 50)
+    
+    def test_boundary_10_files(self):
+        """Test boundary at exactly 10 files."""
+        assert calculate_dynamic_threshold(9) == 65.0   # very small (base)
+        assert calculate_dynamic_threshold(10) == 70.0  # small (base + 5)
+    
+    def test_boundary_30_files(self):
+        """Test boundary at exactly 30 files."""
+        assert calculate_dynamic_threshold(29) == 70.0  # small (base + 5)
+        assert calculate_dynamic_threshold(30) == 65.0  # medium (base)
+    
+    def test_boundary_100_files(self):
+        """Test boundary at exactly 100 files."""
+        assert calculate_dynamic_threshold(99) == 65.0  # medium
+        assert calculate_dynamic_threshold(100) == 57.0 # large
+    
+    def test_boundary_300_files(self):
+        """Test boundary at exactly 300 files."""
+        assert calculate_dynamic_threshold(299) == 57.0 # large
+        assert calculate_dynamic_threshold(300) == 53.0 # very large
+    
+    def test_zero_files(self):
+        """Test edge case with zero files."""
+        threshold = calculate_dynamic_threshold(file_count=0)
+        assert threshold == 65.0  # Treated as very small (uses base)
+    
+    def test_single_file(self):
+        """Test edge case with single file."""
+        threshold = calculate_dynamic_threshold(file_count=1)
+        assert threshold == 65.0  # Very small project (uses base)
+    
+    def test_default_parameters(self):
+        """Test that default parameters work correctly."""
+        # Medium project with all defaults
+        threshold = calculate_dynamic_threshold(50)
+        assert threshold == 65.0
+        
+        # Verify defaults are: base=65.0, min=50.0, max=75.0 (relaxed from 85.0)
+        import inspect
+        sig = inspect.signature(calculate_dynamic_threshold)
+        assert sig.parameters['base_threshold'].default == 65.0
+        assert sig.parameters['min_threshold'].default == 50.0
+        assert sig.parameters['max_threshold'].default == 75.0
+
+
+# ============================================================================
+# Tests for calculate_containment_ratio()
+# ============================================================================
+
+class TestCalculateContainmentRatio:
+    """Tests for calculate_containment_ratio function."""
+    
+    def test_full_containment(self):
+        """Test when all existing files are in current upload."""
+        existing = ["file1", "file2", "file3"]
+        current = ["file1", "file2", "file3", "file4"]  # Has all existing + 1 new
+        assert calculate_containment_ratio(current, existing) == 100.0
+    
+    def test_partial_containment(self):
+        """Test when some existing files are in current upload."""
+        existing = ["file1", "file2", "file3", "file4"]
+        current = ["file1", "file2", "file5"]  # Has 2 of 4 existing
+        assert calculate_containment_ratio(current, existing) == 50.0
+    
+    def test_no_containment(self):
+        """Test when no existing files are in current upload."""
+        existing = ["file1", "file2"]
+        current = ["file3", "file4"]
+        assert calculate_containment_ratio(current, existing) == 0.0
+    
+    def test_empty_existing(self):
+        """Test edge case with empty existing signatures."""
+        assert calculate_containment_ratio(["file1", "file2"], []) == 0.0
+    
+    def test_empty_current(self):
+        """Test edge case with empty current signatures."""
+        assert calculate_containment_ratio([], ["file1", "file2"]) == 0.0
+    
+    def test_incremental_growth_scenario(self):
+        """Test typical incremental upload: 3 files -> 5 files (3 preserved + 2 new)."""
+        existing = ["file1", "file2", "file3"]
+        current = ["file1", "file2", "file3", "file4", "file5"]
+        # All 3 existing files are preserved = 100% containment
+        assert calculate_containment_ratio(current, existing) == 100.0
+    
+    def test_90_percent_containment(self):
+        """Test 90% containment threshold scenario."""
+        existing = ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10"]
+        # 9 of 10 existing files preserved + some new ones
+        current = ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "new1", "new2"]
+        assert calculate_containment_ratio(current, existing) == 90.0
+    
+    def test_identical_sets(self):
+        """Test when current and existing are identical."""
+        sigs = ["file1", "file2", "file3"]
+        assert calculate_containment_ratio(sigs, sigs) == 100.0
+
+
+class TestContainmentBasedMatching:
+    """Tests for containment-based project matching."""
+    
+    def test_find_project_via_containment(self, tmp_path, isolated_db):
+        """Test that projects can be matched via containment even with low Jaccard."""
+        from app.utils.scan_utils import (
+            find_and_update_similar_project,
+            extract_file_signature,
+            get_project_signature,
+            store_project_in_db
+        )
+        
+        # Create initial project with 3 files
+        file1 = tmp_path / "original1.txt"
+        file2 = tmp_path / "original2.txt"
+        file3 = tmp_path / "original3.txt"
+        file1.write_text("content 1")
+        file2.write_text("content 2")
+        file3.write_text("content 3")
+        
+        sig1 = extract_file_signature(file1, tmp_path)
+        sig2 = extract_file_signature(file2, tmp_path)
+        sig3 = extract_file_signature(file3, tmp_path)
+        old_project_sig = get_project_signature([sig1, sig2, sig3])
+        
+        # Store initial project
+        store_project_in_db(old_project_sig, "TestProject", str(tmp_path), [sig1, sig2, sig3], 100)
+        
+        # Create new upload with all 3 original files + 5 new files
+        # This gives low Jaccard (~37.5%) but 100% containment
+        new_files = []
+        new_sigs = [sig1, sig2, sig3]  # Keep all original files
+        for i in range(5):
+            new_file = tmp_path / f"new_{i}.txt"
+            new_file.write_text(f"new content {i}")
+            new_files.append(new_file)
+            new_sigs.append(extract_file_signature(new_file, tmp_path))
+        
+        new_project_sig = get_project_signature(new_sigs)
+        
+        # With low Jaccard threshold (20%) it might not match, but containment should catch it
+        result = find_and_update_similar_project(
+            new_sigs, 
+            new_project_sig, 
+            threshold=60.0,  # High threshold that Jaccard won't meet
+            containment_threshold=90.0  # But containment will be 100%
+        )
+        
+        assert result is not None
+        project_name, similarity, returned_sig = result
+        assert project_name == "TestProject"

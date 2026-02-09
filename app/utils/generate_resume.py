@@ -5,6 +5,15 @@ from typing import Any, DefaultDict, Dict, List, Tuple, Optional
 from datetime import datetime
 import json
 
+class ResumeServiceError(Exception):
+    pass
+
+class ResumeNotFoundError(ResumeServiceError):
+    pass
+
+class ResumePersistenceError(ResumeServiceError):
+    pass
+
 def format_dates(start: str, end: str) -> str:
     """Format dates shown to months and year"""
     try:
@@ -16,13 +25,18 @@ def format_dates(start: str, end: str) -> str:
     
 def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
-    cursor.execute("""
-        SELECT name, email, github_user, education, job_title
-        FROM USER_PREFERENCES
-        ORDER BY updated_at
-        DESC LIMIT 1
-    """)
-    row = cursor.fetchone()
+    try:
+        cursor.execute(
+            """
+            SELECT name, email, github_user, education, job_title
+            FROM USER_PREFERENCES
+            ORDER BY updated_at
+            DESC LIMIT 1
+            """
+        )
+        row = cursor.fetchone()
+    except sqlite3.Error as e:
+        raise ResumeServiceError("Failed loading user") from e
 
     links = [] #Placeholder for if we want to incorporate more links like LinkedIn, Portfolio,...
 
@@ -136,154 +150,200 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
     conn = get_connection()
     cursor = conn.cursor()
     
-    user = load_user(cursor)
-    skills_map = load_skills(cursor)
+    try:
+        user = load_user(cursor)
+        skills_map = load_skills(cursor)
 
-    # Get edited resume and display order
-    rows = load_resume_projects(cursor, resume_id)
-    project_ids = [r[0] for r in rows]
+        # Get edited resume and display order
+        rows = load_resume_projects(cursor, resume_id)
+        
+        if not rows:
+            raise ResumeNotFoundError(f"Resume {resume_id} not found")
+        
+        project_ids = [r[0] for r in rows]
+        
 
-    # Get original bullets
-    bullets_map = defaultdict(list)
-    if project_ids:
-        placeholders = ",".join(["?"] * len(project_ids))
-        cursor.execute(f"""
-            SELECT project_id, summary_text
-            FROM RESUME_SUMMARY
-            WHERE project_id IN ({placeholders})
-        """, project_ids)
+        # Get original bullets
+        bullets_map = defaultdict(list)
+        if project_ids:
+            placeholders = ",".join(["?"] * len(project_ids))
+            cursor.execute(f"""
+                SELECT project_id, summary_text
+                FROM RESUME_SUMMARY
+                WHERE project_id IN ({placeholders})
+            """, project_ids)
 
-        for pid, text in cursor.fetchall():
-            bullets_map[pid].append(text)
+            for pid, text in cursor.fetchall():
+                bullets_map[pid].append(text)
 
-    row = load_edited_skills(cursor,resume_id)
-    if row and row[0]:
-        # Use edited all skills
-        all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
-    else: #Return to original skills shown
-        # Aggregate all skills from projects
-        union = set()
-        for pid in project_ids:
-            union.update(skills_map.get(pid, []))
-        all_skills = sorted(union)
+        row = load_edited_skills(cursor,resume_id)
+        if row and row[0]:
+        # skills stored as JSON
+            all_skills = json.loads(row[0])
+        else: #Return to original skills shown
+            # Aggregate all skills from projects
+            union = set()
+            for pid in project_ids:
+                union.update(skills_map.get(pid, []))
+            all_skills = sorted(union)
+            row = load_edited_skills(cursor,resume_id)
+            if row and row[0]:
+                # Use edited all skills
+                all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
+            else: #Return to original skills shown
+                # Aggregate all skills from projects
+                union = set()
+                for pid in project_ids:
+                    union.update(skills_map.get(pid, []))
+                all_skills = sorted(union)
 
-    projects = []
-    for (
-        pid,
-        override_name,
-        start,
-        end,
-        override_skills,
-        override_bullets,
-        _order,
-        base_name,
-        created_at,
-        last_modified
-    ) in rows:
-        # Parse skills: override_skills if present, else fallback to skills_map
-        if override_skills:
-            skills = json.loads(override_skills)
-        else:
-            skills = skills_map.get(pid, [])
-        # Limit to 5 for display
-        limited_skills = skills[:5]
+        projects = []
+        for (
+            pid,
+            override_name,
+            start,
+            end,
+            override_skills,
+            override_bullets,
+            _order,
+            base_name,
+            created_at,
+            last_modified
+        ) in rows:
+            # Parse skills: override_skills if present, else fallback to skills_map
+            if override_skills:
+                skills = json.loads(override_skills)
+            else:
+                skills = skills_map.get(pid, [])
+            # Limit to 5 for display
+            limited_skills = skills[:5]
 
-        projects.append({
-            "title": override_name or base_name,
-            "dates": format_dates(
-                start or created_at,
-                end or last_modified
-            ),
-            "skills": limited_skills,
-            "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
-        })
-    
-    conn.close()
+            projects.append({
+                "title": override_name or base_name,
+                "dates": format_dates(
+                    start or created_at,
+                    end or last_modified
+                ),
+                "skills": limited_skills,
+                "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+            })
+        
+        return {
+            "name": user["name"],
+            "email": user["email"],
+            "links": user["links"],
+            "education": {
+                "school": user["education"],
+                "degree": user["job_title"],
+                "dates": "",
+                "gpa": ""
+            },
+            "skills": {
+                "Skills": all_skills
+            },
+            "projects": projects
+        }
+    except sqlite3.Error as e:
+        raise ResumeServiceError("Failed loading saved resume") from e
+    finally:
+        conn.close()
 
-    return {
-        "name": user["name"],
-        "email": user["email"],
-        "links": user["links"],
-        "education": {
-            "school": user["education"],
-            "degree": user["job_title"],
-            "dates": "",
-            "gpa": ""
-        },
-        "skills": {
-            "Skills": all_skills
-        },
-        "projects": projects
-    }
     
 def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """Return assembled resume model built from the database.
     If project_ids are provided, include only those projects in the list.
     """
     conn = get_connection()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    user = load_user(cursor)
-    projects_raw = load_projects(cursor, project_ids=project_ids)
-    bullets_map = load_resume_bullets(cursor)
-    skills_map = load_skills(cursor)
+        user = load_user(cursor)
+        projects_raw = load_projects(cursor, project_ids=project_ids)
+        bullets_map = load_resume_bullets(cursor)
+        skills_map = load_skills(cursor)
 
-    projects = []
+        projects = []
 
-    selected_ids = set(pid for pid, *_ in projects_raw)
+        selected_ids = set(pid for pid, *_ in projects_raw)
 
-    for pid, name, score, created_at, last_modified in projects_raw:
-        raw_skills = skills_map.get(pid, [])
-        limited_skills = limit_skills(raw_skills, max_count=5)
+        for pid, name, score, created_at, last_modified in projects_raw:
+            raw_skills = skills_map.get(pid, [])
+            limited_skills = limit_skills(raw_skills, max_count=5)
 
-        projects.append({
-            "title": name,
-            "dates": format_dates(created_at, last_modified),
-            "skills": ", ".join(limited_skills),
-            "bullets": bullets_map.get(pid, [])
-        })
+            projects.append({
+                "title": name,
+                "dates": format_dates(created_at, last_modified),
+                "skills": ", ".join(limited_skills),
+                "bullets": bullets_map.get(pid, [])
+            })
 
-    if selected_ids:
-        # Union of skills for selected projects
-        union = set()
-        for sid in selected_ids:
-            union.update(skills_map.get(sid, []))
-        all_skills = sorted(union)
-    else:
-        all_skills = sorted({
-            skill
-            for skills in skills_map.values()
-            for skill in skills
-        })
+        if selected_ids:
+            # Union of skills for selected projects
+            union = set()
+            for sid in selected_ids:
+                union.update(skills_map.get(sid, []))
+            all_skills = sorted(union)
+        else:
+            all_skills = sorted({
+                skill
+                for skills in skills_map.values()
+                for skill in skills
+            })
 
-    conn.close()
+        return {
+            "name": user["name"],
+            "email": user["email"],
+            "links": user["links"],
+            "education": {
+                "school": user["education"],
+                "degree": user["job_title"],
+                "dates": "", #placeholder for now (could improve user pref to include grad dates)
+                "gpa": "" #only if user wishes to include
+            },
+            "skills": {
+                "Skills": all_skills
+            },
+            "projects": projects
+        }
+    except sqlite3.Error as e:
+        raise ResumeServiceError("Failed building resume model") from e
+    finally:
+        conn.close()
 
-    return {
-        "name": user["name"],
-        "email": user["email"],
-        "links": user["links"],
-        "education": {
-            "school": user["education"],
-            "degree": user["job_title"],
-            "dates": "", #placeholder for now (could improve user pref to include grad dates)
-            "gpa": "" #only if user wishes to include
-        },
-        "skills": {
-            "Skills": all_skills
-        },
-        "projects": projects
-    }
-
-def resume_exists(resume_id: int) -> bool:
-    """Method to check if specified resume ID exists (precaution)"""
+def create_resume(name: str | None = None) -> int:
+    """Create a Resume and if no name is provided, set a default name"""
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT 1 FROM RESUME WHERE id = ?", (resume_id,))
-    exists = cursor.fetchone() is not None
+    cursor.execute(
+        "INSERT INTO RESUME (name) VALUES (?)",
+        (name or "",)
+    )
 
+    resume_id = cursor.lastrowid
+    # If no name was provided, update the name to 'Resume-id'
+    if not name:
+        cursor.execute(
+            "UPDATE RESUME SET name = ? WHERE id = ?",
+            (f"Resume-{resume_id}", resume_id)
+        )
+    conn.commit()
     conn.close()
-    return exists
+    return resume_id
+
+def resume_exists(resume_id: int) -> bool:
+    """Method to check if specified resume ID exists (precaution)"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT 1 FROM RESUME WHERE id = ?", (resume_id,))
+        exists = cursor.fetchone() is not None
+        return exists
+    except sqlite3.Error as e:
+        raise ResumeServiceError("Failed checking resume existence") from e
+    finally:
+        conn.close()
 
 def save_resume_edits(resume_id: int, payload: dict):
     """ Save or update edits made to the resume in the DB """
@@ -291,6 +351,16 @@ def save_resume_edits(resume_id: int, payload: dict):
     cursor = conn.cursor()
     
     try:
+        # Update resume-level skills (if provided)
+        if "skills" in payload:
+            cursor.execute("""
+                INSERT INTO RESUME_SKILLS (resume_id, skills)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    skills = excluded.skills,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (resume_id, json.dumps(payload["skills"])))
 
         for project in payload.get("projects", []):
             cursor.execute("""
@@ -325,9 +395,32 @@ def save_resume_edits(resume_id: int, payload: dict):
             ))
 
         conn.commit()
-    except Exception:
+    except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise
+        raise ResumePersistenceError("Invalid resume edit data") from e
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to save resume edits") from e
     finally:
         conn.close()
 
+def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    for index, project_id in enumerate(project_ids):
+        cursor.execute("""
+            INSERT INTO RESUME_PROJECT (
+                resume_id,
+                project_id,
+                display_order
+            )
+            VALUES (?, ?, ?)
+        """, (
+            resume_id,
+            project_id,
+            index + 1  # 1-based ordering
+        ))
+
+    conn.commit()
+    conn.close()

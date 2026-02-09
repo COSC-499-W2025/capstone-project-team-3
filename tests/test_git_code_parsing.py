@@ -98,8 +98,11 @@ def test_run_git_parsing_uses_email_and_calls_extraction(tmp_path, monkeypatch):
         # We return a JSON list aggregated from repos
         assert json.loads(result) == [{"hash": "abc"}]
 
-        # is_collaborative called with the repo root path
-        mock_collab.assert_called_once_with(repo_root)
+        # is_collaborative called with the repo root path + aliases
+        mock_collab.assert_called_once_with(
+            repo_root,
+            author_aliases=["testuser@example.com", "testuser"],
+        )
 
         # extract_code_commit_content_by_author called with the correct args
         mock_extract.assert_called_once_with(
@@ -154,7 +157,10 @@ def test_run_git_parsing_uses_email_when_username_missing(tmp_path, monkeypatch,
         )
 
         assert json.loads(result) == [{"hash": "abc"}]
-        mock_collab.assert_called_once_with(repo_root)
+        mock_collab.assert_called_once_with(
+            repo_root,
+            author_aliases=["testuser@example.com"],
+        )
         mock_extract.assert_called_once_with(
             path=repo_root,
             author=["testuser@example.com"],
@@ -163,7 +169,7 @@ def test_run_git_parsing_uses_email_when_username_missing(tmp_path, monkeypatch,
         )
 
         out = capsys.readouterr().out
-        assert "Using author identifier (author_email): 'testuser@example.com'" in out
+        assert "Using author identifiers: testuser@example.com" in out
 
 
 def test_run_git_parsing_uses_username_when_email_missing(tmp_path, monkeypatch, capsys):
@@ -191,7 +197,10 @@ def test_run_git_parsing_uses_username_when_email_missing(tmp_path, monkeypatch,
         )
 
         assert json.loads(result) == [{"hash": "abc"}]
-        mock_collab.assert_called_once_with(repo_root)
+        mock_collab.assert_called_once_with(
+            repo_root,
+            author_aliases=["testuser"],
+        )
         mock_extract.assert_called_once_with(
             path=repo_root,
             author=["testuser"],
@@ -200,7 +209,7 @@ def test_run_git_parsing_uses_username_when_email_missing(tmp_path, monkeypatch,
         )
 
         out = capsys.readouterr().out
-        assert "Using author identifier (github_user): 'testuser'" in out
+        assert "Using author identifiers: testuser" in out
 
 
 def test_run_git_parsing_handles_nested_repos(tmp_path, monkeypatch):

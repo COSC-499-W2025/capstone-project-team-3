@@ -56,7 +56,8 @@ def test_get_user_preferences_success(mock_get_conn):
         "janesmith",
         "Master's",
         "Finance",
-        "Data Scientist"
+        "Data Scientist",
+        "{}"  # education_details as JSON string, can be empty for this test
     )
     mock_get_conn.return_value.cursor.return_value = mock_cursor
     
@@ -69,6 +70,7 @@ def test_get_user_preferences_success(mock_get_conn):
     assert data["education"] == "Master's"
     assert data["industry"] == "Finance"
     assert data["job_title"] == "Data Scientist"
+    assert data["education_details"] == "{}"
     mock_get_conn.return_value.close.assert_called_once()
 
 @patch("app.api.routes.user_preferences.get_connection")
@@ -83,7 +85,8 @@ def test_update_user_preferences(mock_get_conn):
         "github_user": "alice",
         "education": "Master's",
         "industry": "Technology",
-        "job_title": "Senior Developer"
+        "job_title": "Senior Developer",
+        "education_details": [{"institution": "Updated University", "degree": "Master's","program":"Economics", "start_date": "2015", "end_date": "2020", "gpa": 2.6}]
     }
     
     response = client.post("/user-preferences", json=updated_payload)

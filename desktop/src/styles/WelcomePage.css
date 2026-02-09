@@ -3,9 +3,10 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
   width: 100%;
   background: var(--color-bg-lighter);
-  padding: 0;
+  padding: var(--spacing-sm);
   overflow: hidden;
   cursor: pointer;
 }
@@ -107,8 +108,151 @@
   }
 }
 
+/* Tablet Portrait (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .welcome-frame-1 {
+    width: 85%;
+    max-width: 800px;
+    height: 300px;
+  }
+  
+  .welcome-frame-2 {
+    height: 210px;
+  }
+  
+  .welcome-frame-3 {
+    height: 135px;
+  }
+  
+  .welcome-frame-4 {
+    height: 85px;
+  }
+  
+  .welcome-title {
+    font-size: 1.6rem;
+  }
+}
+
+/* Large Mobile / Small Tablet (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .welcome-frame-1 {
+    width: 92%;
+    height: 260px;
+  }
+  
+  .welcome-frame-2 {
+    height: 190px;
+  }
+  
+  .welcome-frame-3 {
+    height: 125px;
+  }
+  
+  .welcome-frame-4 {
+    height: 75px;
+  }
+  
+  .welcome-title {
+    font-size: 1.4rem;
+    letter-spacing: 0.3px;
+  }
+}
+
+/* Small Mobile (375px - 480px) */
 @media (max-width: 480px) {
+  .welcome-frame-1 {
+    width: 95%;
+    height: 240px;
+  }
+  
+  .welcome-frame-2 {
+    height: 180px;
+  }
+  
+  .welcome-frame-3 {
+    height: 115px;
+  }
+  
+  .welcome-frame-4 {
+    height: 70px;
+  }
+  
   .welcome-title {
     font-size: 1.1rem;
+    letter-spacing: 0.2px;
+    padding: 0 var(--spacing-xs);
+  }
+}
+
+/* Extra Small Mobile (320px - 374px) */
+@media (max-width: 374px) {
+  .welcome-frame-1 {
+    width: 96%;
+    height: 200px;
+  }
+  
+  .welcome-frame-2 {
+    height: 150px;
+  }
+  
+  .welcome-frame-3 {
+    height: 100px;
+  }
+  
+  .welcome-frame-4 {
+    height: 60px;
+  }
+  
+  .welcome-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.1px;
+    padding: 0 var(--spacing-xs);
+  }
+}
+
+/* Landscape Orientation - Mobile/Tablet */
+@media (max-height: 600px) and (orientation: landscape) {
+  .welcome-frame-1 {
+    height: 220px;
+  }
+  
+  .welcome-frame-2 {
+    height: 160px;
+  }
+  
+  .welcome-frame-3 {
+    height: 105px;
+  }
+  
+  .welcome-frame-4 {
+    height: 65px;
+  }
+  
+  .welcome-title {
+    font-size: 1.2rem;
+  }
+}
+
+/* Large Desktop (1440px+) */
+@media (min-width: 1440px) {
+  .welcome-frame-1 {
+    max-width: 1200px;
+    height: 350px;
+  }
+  
+  .welcome-frame-2 {
+    height: 240px;
+  }
+  
+  .welcome-frame-3 {
+    height: 155px;
+  }
+  
+  .welcome-frame-4 {
+    height: 100px;
+  }
+  
+  .welcome-title {
+    font-size: 2rem;
   }
 }

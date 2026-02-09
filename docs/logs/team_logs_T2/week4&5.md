@@ -59,7 +59,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
-| [#505, #506, #522, #488] | API endpoint for user preferences, Testing of user preference API endpoint , Logic for Feature 21 and 22 for M2 ,  Investigate and fix Docker pipeline failures   | @PaintedW0lf | 
+| [#525, #561, #563, #564, #587, #598, #599] | Feature 21: Incremental load feature and updated logic; Bugfix collaboration score and correct username detection; Create similarity score logic for projects; Update DB with similar projects; Dynamic threshold setting for incremental load; Automated dynamic threshold logic and testing | @PaintedW0lf | 
 | [#460, #534] | Fix Failing tests, Troubleshoot user preference return | @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
 | [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
@@ -69,11 +69,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434)           | Implement end-to-end functionality to add thumbnails per project. | @6s-1      |
-| #523 | Feature 21 - M2 - Incremental information | @PaintedW0lf |
-| #524 | Feature 22 - Duplicate file requirement | @PaintedW0lf |
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
-|[#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
+| [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
+| [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
 | [#579](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/597) | Setup project environment for frontend (Electron + React). PR #601 in code review. | @dabby04 |
 

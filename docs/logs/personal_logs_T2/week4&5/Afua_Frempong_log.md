@@ -67,13 +67,13 @@ Last week I completed the implementation of edit portfolio API endpoints. This w
 - All changes made were withing the scope of the two aforementioned PR's.
 
 ### Collaboration & Review Tasks
+- Responded & fixed code review feedback from @PaintedW0lf on PR #559 regarding DB syntax error
+- Reviewed and commented on PR to determine our front-end framework PR #601
+- Collaborated with team on Resume & Portfolio models
+- Reviewed @ least 1 PR from every member on the Team 
+- Primary Reviewer on PR #603 by @kjassani
+- Received approvals on 2 PRs from team
 
-- Responded to code review feedback from @PaintedW0lf on PR #474 regarding improved assertion
-- Responded and address comments from @KarimKhalil33 and @kjassani on PR #480
-- Collaborated with team on understanding of endpoints
-- Documented changes and updated tests for clarity
-- Received approvals from multiple team members
-- Reviewed and commented on teammates PRs
 
 ### Issues & Blockers
 

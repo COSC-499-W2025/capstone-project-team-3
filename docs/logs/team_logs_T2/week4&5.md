@@ -29,8 +29,13 @@
   - Resolve project score vs rank confusion - #552
   - Allow User to Override Project Score - #492
   - Enhancement: Is_collaborative function - Git Code Analysis - #603
-
-
+  - Add endpoint for edited resume deletion. #578
+  - Create POST API endpoint to get the file path input to db. #551
+  - Create base chronological information managing utils file. #548
+  - Create chronological information managing for editing/updating project date #549
+  - Update database to contain chronological skills. #590
+  - Update Chronological manager to produce editable output for user. #591
+  - Update Chronological utils to accept editing of dates for skills. #592
   
 
 ---
@@ -63,7 +68,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
+| [#548, #549, #551, #578, #590, #591, #592] |  CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths;  DELETE endpoint for edited resumes | @6s-1 | 
 | [#525, #561, #563, #564, #587, #598, #599] | Feature 21: Incremental load feature and updated logic; Bugfix collaboration score and correct username detection; Create similarity score logic for projects; Update DB with similar projects; Dynamic threshold setting for incremental load; Automated dynamic threshold logic and testing | @PaintedW0lf | 
 | [#460, #534] | Fix Failing tests, Troubleshoot user preference return | @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
@@ -75,7 +80,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
+| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per projec-UI, working on UI for thumbnail addition and front page. | @6s-1 |
 | [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI| @kjassani |
 | [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
@@ -84,7 +89,9 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 ---
 
 ## Meeting Notes
-
+Meeting in Week-4
+All members present.
+-Design discussion and M2 progress. 
 
 
 ---

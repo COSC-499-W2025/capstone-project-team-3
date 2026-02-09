@@ -61,8 +61,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
 | [#505, #506, #522, #488] | API endpoint for user preferences, Testing of user preference API endpoint , Logic for Feature 21 and 22 for M2 ,  Investigate and fix Docker pipeline failures   | @PaintedW0lf | 
 | [#460, #534] | Fix Failing tests, Troubleshoot user preference return | @abstractafua | 
-| [#467, #468] | Fix failing tests in test_non_code_file_checker.py | @KarimKhalil33 |
-| [#470, #469] | Refactor code analysis part 2 - Extract user preferences and text processing utilities | @KarimKhalil33 |
+| [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
 | [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
 | [#479, #519, #565, #566, #596, #594] | Optimization and refactoring for resume generation and download; Update DB schema (RESUME table, RESUME_SKILLS); Load/Edit Resume; Save Resume Edits; Create Tailored Resume| @dabby04 |
 
@@ -93,9 +92,12 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 - **Summary:**  
   - Updated test classes for Resume endpoints
   - Tested and verified Electron + React desktop frontend integration with Python backend (PR #601)
+  - Added comprehensive tests for Portfolio Dashboard JavaScript functionality including Chart.js methods, data processing, and DOM manipulation
+  - Validated Portfolio API endpoints with project filtering and error handling scenarios
 - **Regression Testing:**  
   - All existing tests passing after resume DB schema and endpoint changes
   - New and existing resume behavior validated together across resume PRs
+  - Portfolio API endpoints tested with comprehensive parameter handling and database error scenarios
 
 ---
 

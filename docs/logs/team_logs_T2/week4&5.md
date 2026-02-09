@@ -26,6 +26,9 @@
   - Update save_resume_edits to include RESUME_SKILLS - #596
   - Create Tailored Resume - #594 
   - Setup project environment for frontend (React Native / Electron + React) - #579
+  - Additional User Information Collection #582
+  - Customize and save information about a portfolio showcase project #459
+
   
 
 ---
@@ -60,7 +63,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 |---------------|------------------------|-----------------|
 | [#512, #528, #511, #498, #499] | Implement GET API calls for calling skills, chronologically and by frequency, implemented fixes for non code analysis summary, implemeted fixes for user preferences | @6s-1 | 
 | [#525, #561, #563, #564, #587, #598, #599] | Feature 21: Incremental load feature and updated logic; Bugfix collaboration score and correct username detection; Create similarity score logic for projects; Update DB with similar projects; Dynamic threshold setting for incremental load; Automated dynamic threshold logic and testing | @PaintedW0lf | 
-| [#460, #534] | Fix Failing tests, Troubleshoot user preference return | @abstractafua | 
+| [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
 | [#515, 516] | Improve Git author matching, Multi-repo Git parsing + nested repo aggregationg | @kjassani |
 | [#479, #519, #565, #566, #596, #594] | Optimization and refactoring for resume generation and download; Update DB schema (RESUME table, RESUME_SKILLS); Load/Edit Resume; Save Resume Edits; Create Tailored Resume| @dabby04 |
@@ -72,14 +75,12 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project. | @6s-1 |
 | [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
-| [#459](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/459) | FR 27: Customize and save information about a portfolio showcase project | @abstractafua |
 | [#579](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/597) | Setup project environment for frontend (Electron + React). PR #601 in code review. | @dabby04 |
 
 ---
 
 ## Meeting Notes
-
-
+https://docs.google.com/document/d/1TbeUFZQ_sNED9KTmzhB_K_Q56pP0ygIa8fMv7lOnGmo/edit?usp=sharing
 
 ---
 

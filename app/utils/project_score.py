@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 def _norm_with_cap(value: float, cap: float) -> float:
     """Simple 0–1 normalization with an upper cap."""
@@ -334,3 +334,65 @@ def compute_project_score_breakdown(
         },
         "final_score": final_score,
     }
+
+def compute_project_score_override(
+    code_metrics: Dict[str, Any],
+    git_code_metrics: Dict[str, Any],
+    non_code_metrics: Dict[str, Any],
+    exclude_metrics: List[str],
+) -> Dict[str, Any]:
+    """
+    Recalculate project score with excluded code metrics and renormalized weights.
+    """
+    breakdown = compute_project_score_breakdown(
+        code_metrics=code_metrics,
+        git_code_metrics=git_code_metrics,
+        non_code_metrics=non_code_metrics,
+    )
+
+    code_metrics_breakdown = breakdown["code"]["metrics"]
+    if not code_metrics_breakdown:
+        raise ValueError("No code metrics available for override")
+
+    excluded = set(exclude_metrics or [])
+    remaining = {
+        name: data
+        for name, data in code_metrics_breakdown.items()
+        if name not in excluded
+    }
+
+    if not remaining:
+        raise ValueError("At least one code metric must remain after exclusions")
+
+    total_weight = sum(item["weight"] for item in remaining.values())
+    if total_weight <= 0:
+        raise ValueError("Invalid weight configuration for override")
+
+    updated_metrics = {}
+    for name, data in remaining.items():
+        new_weight = data["weight"] / total_weight
+        normalized = data["normalized"]
+        contribution = new_weight * normalized
+        updated_metrics[name] = {
+            "raw": data["raw"],
+            "cap": data["cap"],
+            "normalized": normalized,
+            "weight": new_weight,
+            "contribution": contribution,
+        }
+
+    new_code_subtotal = sum(item["contribution"] for item in updated_metrics.values())
+    non_code_subtotal = breakdown["non_code"]["subtotal"]
+    code_percentage = breakdown["blend"]["code_percentage"]
+    non_code_percentage = breakdown["blend"]["non_code_percentage"]
+
+    final_score = (
+        new_code_subtotal * code_percentage +
+        non_code_subtotal * non_code_percentage
+    )
+
+    breakdown["code"]["metrics"] = updated_metrics
+    breakdown["code"]["subtotal"] = new_code_subtotal
+    breakdown["final_score"] = final_score
+
+    return breakdown

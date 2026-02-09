@@ -7,6 +7,15 @@ from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from pathlib import Path
 from app.cli.git_code_parsing import run_git_parsing_from_files
 
+# Isolate DB for all tests in this module
+@pytest.fixture(autouse=True)
+def isolated_db(tmp_path, monkeypatch):
+    from app.data import db as dbmod
+    test_db = tmp_path / "test_main.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    yield
+
 # Prevent DB writes from main() during tests by stubbing store_results_in_db
 @pytest.fixture(autouse=True)
 def _stub_store_results(monkeypatch):

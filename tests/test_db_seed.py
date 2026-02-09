@@ -1,6 +1,17 @@
+import pytest
 from app.data.db import get_connection, seed_db
 
-def test_all_tables_created():
+# Isolate DB for tests in this file to avoid touching app.sqlite3
+from app.data import db as dbmod
+
+@pytest.fixture(scope="function")
+def isolated_db(tmp_path, monkeypatch):
+    test_db = tmp_path / "test_db_seed.sqlite3"
+    monkeypatch.setattr(dbmod, "DB_PATH", test_db)
+    dbmod.init_db()
+    yield
+
+def test_all_tables_created(isolated_db):
     """
     Test that all expected tables are created in the database.
     """
@@ -32,7 +43,7 @@ def test_all_tables_created():
     conn.close()
     print("All expected tables are created.")
 
-def test_all_tables_populated():
+def test_all_tables_populated(isolated_db):
     """
     Test that all tables in the database now contain at least one row.
     Raises an AssertionError if any table is empty.
@@ -80,7 +91,7 @@ def test_all_tables_populated():
     conn.commit()
     conn.close()
 
-def test_skill_analysis_has_date_column():
+def test_skill_analysis_has_date_column(isolated_db):
     """
     Test that SKILL_ANALYSIS table has the date column for chronological tracking.
     """
@@ -100,7 +111,7 @@ def test_skill_analysis_has_date_column():
     conn.close()
     print("SKILL_ANALYSIS table has date column")
 
-def test_seeded_skills_have_dates():
+def test_seeded_skills_have_dates(isolated_db):
     """
     Test that seeded skills have date values populated.
     """

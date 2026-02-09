@@ -1,12 +1,43 @@
 :root {
-  font-family: 'Arial', 'Helvetica Neue', sans-serif;
+  /* Color Palette */
+  --color-bg-light: #d9e8f0;
+  --color-bg-lighter: #cce5f2;
+  --color-blue-light: #5fa3bc;
+  --color-blue-medium: #1b9fc8;
+  --color-blue-dark: #2171a3;
+  --color-blue-darker: #1a4d7a;
+  --color-navy: #0a1e3d;
+  --color-text-dark: #2d3436;
+  --color-text-light: #ffffff;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+
+  /* Typography */
+  --font-serif: 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Arial', 'Helvetica Neue', sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 40px;
+  --spacing-xl: 50px;
+  
+  /* Border Radius */
+  --radius-sm: 15px;
+  --radius-md: 20px;
+  --radius-lg: 30px;
+  
+  /* Transitions */
+  --transition-fast: 0.25s ease;
+  --transition-normal: 0.5s ease;
+  --transition-slow: 0.8s ease-in-out;
+
+  /* Base Settings */
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light;
-  color: #2c2420;
-  background-color: #E2C99E;
-
+  color: var(--color-text-dark);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,60 +46,180 @@
 
 * {
   box-sizing: border-box;
-}
-
-body {
-  cursor: default;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  cursor: default;
+  overflow-x: hidden;
+}
+
+/* Global Animations */
+@keyframes bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Common Container Pattern */
+.page-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: var(--spacing-lg) var(--spacing-md);
+  overflow: hidden;
+}
+
+/* Common Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  margin: 0;
+  color: var(--color-text-dark);
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2rem;
+  letter-spacing: 0.3px;
 }
 
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+/* Common Frame/Card Pattern */
+.frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 10px var(--color-shadow);
+}
+
+/* Utility Classes */
+.text-center {
+  text-align: center;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+/* Links */
+a {
+  font-weight: 500;
+  color: var(--color-blue-medium);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-blue-dark);
+}
+
+/* Buttons */
 button {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all var(--transition-fast);
+  background-color: var(--color-blue-medium);
+  color: var(--color-text-light);
 }
 
-@media (prefers-color-scheme: light) {
+button:hover {
+  background-color: var(--color-blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--color-shadow);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid var(--color-blue-light);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    --spacing-lg: 30px;
+    --spacing-xl: 40px;
   }
-  a:hover {
-    color: #747bff;
+  
+  h1 {
+    font-size: 1.5rem;
   }
-  button {
-    background-color: #f9f9f9;
+  
+  h2 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --spacing-lg: 20px;
+    --spacing-xl: 30px;
+  }
+  
+  h1 {
+    font-size: 1.2rem;
+  }
+  
+  h2 {
+    font-size: 1.1rem;
   }
 }

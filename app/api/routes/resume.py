@@ -62,10 +62,10 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     - No project_ids → master resume
     - project_ids provided → filtered resume
     """
-    try:
+    # try:
         # tex = get_resume_tex(project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # except ResumeServiceError as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
     # preview = escape_tex_for_html(tex)
 
     # # Build export links dynamically

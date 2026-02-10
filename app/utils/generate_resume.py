@@ -88,7 +88,12 @@ def load_resume_bullets(cursor: sqlite3.Cursor) -> DefaultDict[int, List[str]]:
     """)
     bullets = defaultdict(list)
     for pid, text in cursor.fetchall():
-        bullets[pid].append(text)
+        # Parse JSON if summary_text is stored as JSON array
+        try:
+            parsed = json.loads(text) if isinstance(text, str) and text.startswith('[') else [text]
+            bullets[pid].extend(parsed)
+        except json.JSONDecodeError:
+            bullets[pid].append(text)
     return bullets
 
 def load_skills(cursor: sqlite3.Cursor) -> DefaultDict[int, List[str]]:
@@ -174,7 +179,12 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             """, project_ids)
 
             for pid, text in cursor.fetchall():
-                bullets_map[pid].append(text)
+                # Parse JSON if summary_text is stored as JSON array
+                try:
+                    parsed = json.loads(text) if isinstance(text, str) and text.startswith('[') else [text]
+                    bullets_map[pid].extend(parsed)
+                except json.JSONDecodeError:
+                    bullets_map[pid].append(text)
 
         row = load_edited_skills(cursor,resume_id)
         if row and row[0]:

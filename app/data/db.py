@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     industry TEXT,
     education TEXT,
     job_title TEXT,
+    personal_summary TEXT,
+    education_details JSON,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -99,8 +101,8 @@ CREATE TABLE IF NOT EXISTS RESUME (
 -- Table for edited resume skills --
 CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    resume_id INTEGER NOT NULL,
-    skills TEXT NOT NULL, -- comma-separated list of skills
+    resume_id INTEGER NOT NULL UNIQUE,
+    skills JSON NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
 );
@@ -143,6 +145,10 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
+    # Ensure ON CONFLICT(resume_id) works even on pre-existing DBs
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_skills_resume_id ON RESUME_SKILLS(resume_id)"
+    )
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()
@@ -204,9 +210,25 @@ def seed_db():
 
     # --- USER_PREFERENCES ---
     cursor.execute("""
-        INSERT OR IGNORE INTO USER_PREFERENCES (user_id, name, email, github_user, industry, education, job_title)
-        VALUES (1,?, ?, ?, ?, ?, ?)
-    """, ("John User","johnU@gmail.com", "testuser", "Technology", "Bachelor's", "Developer"))
+        INSERT OR IGNORE INTO USER_PREFERENCES (user_id, name, email, github_user, industry, education, job_title, education_details)
+        VALUES (1,?, ?, ?, ?, ?, ?, ?)
+    """, ("John User","johnU@gmail.com", "testuser", "Technology", "Bachelor's", "Developer", json.dumps([
+        {
+            "institution": "State University",
+            "degree": "B.Sc. in Computer Science",
+            "start_date": "2018-09-01",
+            "end_date": "2022-06-01",
+            "details": "Graduated with Honors",
+            "GPA" : 3.8
+        },
+        {
+            "institution": "Tech Bootcamp",
+            "degree": "Full Stack Web Development Certificate",
+            "start_date": "2023-01-15",
+            "end_date": "2023-06-15",
+            "details": "Intensive 6-month program covering MERN stack development."
+        }
+    ])))
 
     # --- Simulate multiple projects from a ZIP upload ---
     projects = [

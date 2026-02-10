@@ -134,7 +134,7 @@ def test_store_results_resets_override(isolated_db):
     assert row[0] == 0
     assert row[1] is None
 
-def test_merge_with_empty_non_code_results():
+def test_merge_with_empty_non_code_results(isolated_db):
     """Test merge_analysis_results handles empty non-code results gracefully."""
     code_analysis_results = {
         "resume_bullets": ["Built REST API"],
@@ -169,7 +169,7 @@ def test_merge_with_empty_non_code_results():
     # Should have code resume bullets
     assert len(merged["resume_bullets"]) > 0
 
-def test_merge_with_none_inputs():
+def test_merge_with_none_inputs(isolated_db):
     """Test merge_analysis_results handles None inputs gracefully."""
     # None code results
     code_analysis_results = None
@@ -202,7 +202,7 @@ def test_merge_with_none_inputs():
     # Should have non-code bullets
     assert "Documented project." in merged["resume_bullets"]
 
-def test_merge_with_missing_project_summary_key():
+def test_merge_with_missing_project_summary_key(isolated_db):
     """Test that merger handles missing project_summary key in non-code results."""
     code_analysis_results = {
         "resume_bullets": ["Built API"],

@@ -111,16 +111,12 @@ def run_git_parsing_from_files(
             author_identifiers.append(ident)
 
     selected_identifiers = author_identifiers
-    if len(author_identifiers) > 1:
+    
+    if author_identifiers:
         print(
             "[git-analysis] Using author identifiers: "
             f"{', '.join(author_identifiers)}"
         )
-
-    if len(selected_identifiers) == 1:
-        source = "author_email" if selected_identifiers[0] == author_email else "github_user"
-        print(f"[git-analysis] Using author identifier ({source}): '{selected_identifiers[0]}'")
-
 
     # 2) Group files by repo root to support nested repositories
     repo_map = _group_paths_by_repo(file_paths)
@@ -132,7 +128,7 @@ def run_git_parsing_from_files(
     for repo_root in sorted(repo_map.keys()):
         # 3) Check if repository is collaborative (for logging only)
         try:
-            collaborative = is_collaborative(repo_root)
+            collaborative = is_collaborative(repo_root, author_aliases=selected_identifiers)
             if collaborative:
                 print(f"[git-analysis] COLLABORATIVE repo detected: {repo_root}")
             else:

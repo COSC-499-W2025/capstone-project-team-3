@@ -8,6 +8,7 @@ from app.utils.project_score import (
     _compute_contribution_percentages_single_project,
     compute_overall_project_contribution_score,
     compute_project_score_breakdown,
+    compute_project_score_override,
 )
 
 # -------------------------------------------------------------------
@@ -455,3 +456,105 @@ def test_breakdown_non_git_matches_overall_score():
         "test_files_changed",
         "maintainability_score",
     }
+
+
+def test_override_git_renormalizes_weights():
+    non_code_metrics = {
+        "completeness_score": 0.8,
+        "word_count": 2100,
+    }
+
+    breakdown = compute_project_score_override(
+        code_metrics={},
+        git_code_metrics=GIT_CODE_METRICS_SAMPLE,
+        non_code_metrics=non_code_metrics,
+        exclude_metrics=["test_files_changed"],
+    )
+
+    weights_sum = sum(
+        item["weight"] for item in breakdown["code"]["metrics"].values()
+    )
+    assert breakdown["code"]["type"] == "git"
+    assert "test_files_changed" not in breakdown["code"]["metrics"]
+    assert weights_sum == pytest.approx(1.0, rel=1e-6)
+
+
+def test_override_non_git_removes_metric():
+    non_code_metrics = {
+        "completeness_score": 0.9,
+        "word_count": 3000,
+    }
+
+    breakdown = compute_project_score_override(
+        code_metrics=NON_GIT_CODE_METRICS_SAMPLE,
+        git_code_metrics={},
+        non_code_metrics=non_code_metrics,
+        exclude_metrics=["total_lines"],
+    )
+
+    assert breakdown["code"]["type"] == "non_git"
+    assert "total_lines" not in breakdown["code"]["metrics"]
+    weights_sum = sum(
+        item["weight"] for item in breakdown["code"]["metrics"].values()
+    )
+    assert weights_sum == pytest.approx(1.0, rel=1e-6)
+
+
+def test_override_raises_when_all_metrics_excluded():
+    non_code_metrics = {
+        "completeness_score": 0.8,
+        "word_count": 2100,
+    }
+
+    with pytest.raises(ValueError):
+        compute_project_score_override(
+            code_metrics={},
+            git_code_metrics=GIT_CODE_METRICS_SAMPLE,
+            non_code_metrics=non_code_metrics,
+            exclude_metrics=[
+                "total_commits",
+                "duration_days",
+                "total_lines",
+                "code_files_changed",
+                "test_files_changed",
+            ],
+        )
+
+
+def test_override_ignores_unknown_metric():
+    non_code_metrics = {
+        "completeness_score": 0.8,
+        "word_count": 2100,
+    }
+
+    breakdown = compute_project_score_override(
+        code_metrics={},
+        git_code_metrics=GIT_CODE_METRICS_SAMPLE,
+        non_code_metrics=non_code_metrics,
+        exclude_metrics=["unknown_metric", "total_lines"],
+    )
+
+    assert "total_lines" not in breakdown["code"]["metrics"]
+
+
+def test_override_respects_caps():
+    huge_metrics = {
+        "total_commits": 10_000,
+        "duration_days": 365,
+        "total_lines": 999_999,
+        "code_files_changed": 1_000,
+        "test_files_changed": 1_000,
+    }
+    non_code_metrics = {
+        "completeness_score": 0.5,
+        "word_count": 0,
+    }
+
+    breakdown = compute_project_score_override(
+        code_metrics={},
+        git_code_metrics=huge_metrics,
+        non_code_metrics=non_code_metrics,
+        exclude_metrics=["test_files_changed"],
+    )
+
+    assert breakdown["code"]["metrics"]["total_commits"]["normalized"] == pytest.approx(1.0)

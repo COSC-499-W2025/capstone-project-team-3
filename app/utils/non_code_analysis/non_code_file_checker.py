@@ -7,7 +7,9 @@ from typing import Set, List, Union, Dict, Any, Optional
 from app.utils.git_utils import (
     get_repo, 
     detect_git,
-    _extract_github_noreply_username
+    _extract_github_noreply_username,
+    _canonical_author_key,  # REUSE from git_utils.py for alias collapsing
+    author_matches
 )
 from app.utils.scan_utils import scan_project_files
 
@@ -69,14 +71,21 @@ def filter_non_code_files(file_paths: List[Union[str, Path]]) -> List[str]:
 
 
 def collect_git_non_code_files_with_metadata(
-    repo_path: Union[str, Path]
+    repo_path: Union[str, Path],
+    user_email: str = None,
+    username: str = None
 ) -> Dict[str, Dict[str, Any]]:
     """
     Collect non-code files from a git repository with author and commit metadata.
-    REUSES: get_repo() from git_utils.py
+    REUSES: get_repo(), author_matches() from git_utils.py
+    
+    Author aliases (e.g., real email + GitHub noreply email) are collapsed into
+    a single logical author using author_matches() to avoid inflating author counts.
     
     Args:
         repo_path: Path to git repository
+        user_email: User's email for alias collapsing (optional)
+        username: User's username/name for alias collapsing (optional)
     
     Returns:
         Dictionary mapping file paths to metadata:
@@ -84,8 +93,10 @@ def collect_git_non_code_files_with_metadata(
             file_path: {
                 "path": str,              # Absolute path to file
                 "authors": [emails],      # List of author emails who committed
+                "usernames": [names],     # List of author names who committed
+                "unique_authors": int,    # Count of unique logical authors (aliases collapsed)
                 "commit_count": int,      # Total number of commits
-                "is_collaborative": bool  # True if >1 author
+                "is_collaborative": bool  # True if >1 unique logical author
             }
         }
     """
@@ -94,12 +105,18 @@ def collect_git_non_code_files_with_metadata(
     except Exception:
         return {}
     
+    # Build author identifiers list for matching (same pattern as git_code_parsing.py)
+    author_identifiers = []
+    for ident in (user_email, username):
+        if ident and ident not in author_identifiers:
+            author_identifiers.append(ident)
+    
     file_info: Dict[str, Dict[str, Any]] = {}
     
     # Iterate through all commits in all branches (same pattern as git_utils.py)
     for commit in repo.iter_commits(rev="--all"):
-        author_email = getattr(commit.author, "email", None) or "unknown"
-        author_username = getattr(commit.author, "name", None) or "unknown"
+        author_email_commit = getattr(commit.author, "email", None) or "unknown"
+        author_name_commit = getattr(commit.author, "name", None) or "unknown"
         
         try:
             files = commit.stats.files or {}
@@ -115,25 +132,41 @@ def collect_git_non_code_files_with_metadata(
             if file_path not in file_info:
                 file_info[file_path] = {
                     "path": str((Path(repo_path) / file_path).resolve()),
-                    "author_email": set(),
-                    "author_username":set(),
+                    "author_emails": set(),
+                    "author_names": set(),
+                    "canonical_authors": set(),  # For proper deduplication
                     "commit_count": 0
                 }
             
-            # Add author and increment commit count
-            file_info[file_path]["author_email"].add(author_email)
-            file_info[file_path]["author_username"].add(author_username)
+            # Add raw author info (for reference/logging)
+            file_info[file_path]["author_emails"].add(author_email_commit)
+            file_info[file_path]["author_names"].add(author_name_commit)
+            
+            # Determine canonical author key (collapses aliases)
+            # REUSE: author_matches() from git_utils.py for user matching
+            if author_identifiers and author_matches(commit, author_identifiers):
+                # This commit is by the primary user - use consistent key
+                file_info[file_path]["canonical_authors"].add("primary")
+            else:
+                # Other author - REUSE _canonical_author_key from git_utils.py
+                # Note: git_utils signature is (name, email)
+                canonical_key = _canonical_author_key(author_name_commit, author_email_commit)
+                if canonical_key:
+                    file_info[file_path]["canonical_authors"].add(canonical_key)
+            
             file_info[file_path]["commit_count"] += 1
     
-    # Convert sets to lists and add is_collaborative flag
+    # Convert sets to lists and compute is_collaborative based on unique authors
     result = {}
     for file_path, info in file_info.items():
+        unique_author_count = len(info["canonical_authors"])
         result[file_path] = {
             "path": info["path"],
-            "authors": sorted(list(info["author_email"])),
-            "usernames": sorted(list(info["author_username"])),
+            "authors": sorted(list(info["author_emails"])),
+            "usernames": sorted(list(info["author_names"])),
+            "unique_authors": unique_author_count,
             "commit_count": info["commit_count"],
-            "is_collaborative": len(info["author_username"]) > 1
+            "is_collaborative": unique_author_count > 1
         }
     
     return result
@@ -162,7 +195,8 @@ def filter_non_code_files_by_collaboration(
     non_collaborative = []
     
     for file_path, info in file_metadata.items():
-        author_count = len(info.get("authors", []))
+        # Use unique_authors (alias-collapsed) if available, fallback to raw authors count
+        author_count = info.get("unique_authors") or len(info.get("authors", []))
         
         if author_count > author_threshold:
             collaborative.append(info["path"])
@@ -210,9 +244,13 @@ def verify_user_in_files(
     README files are treated specially - they go to user_solo (non-collaborative)
     so they get full content parsing instead of git diff extraction.
     
+    Uses unique_authors count (with aliases collapsed) from collect_git_non_code_files_with_metadata()
+    to determine if a file is truly collaborative.
+    
     Args:
         file_metadata: Output from collect_git_non_code_files_with_metadata()
         user_email: Email of the user to verify
+        username: Username of the user to verify
     
     Returns:
         {
@@ -228,6 +266,7 @@ def verify_user_in_files(
     for file_path, info in file_metadata.items():
         authors = info.get("authors", [])
         usernames = info.get("usernames", [])
+        unique_authors = info.get("unique_authors")  # Use alias-collapsed count
         path_obj = Path(info["path"])
         is_readme = path_obj.name.lower().startswith("readme")
 
@@ -265,7 +304,9 @@ def verify_user_in_files(
                     break
         
         if user_is_author:
-            if len(authors) == 1:
+            # Use unique_authors (alias-collapsed) if available, fallback to raw authors count
+            author_count = unique_authors if unique_authors is not None else len(authors)
+            if author_count == 1:
                 user_solo.append(info["path"])
             else:
                 user_collaborative.append(info["path"])
@@ -366,8 +407,8 @@ def classify_non_code_files_with_user_verification(
                 "error": "Could not determine git user identity"
             }
         
-        # Collect git metadata (uses get_repo internally)
-        metadata = collect_git_non_code_files_with_metadata(directory)
+        # Collect git metadata with alias collapsing (pass user identity)
+        metadata = collect_git_non_code_files_with_metadata(directory, user_email, username)
         
         # Verify user in files
         verified = verify_user_in_files(metadata, user_email, username)

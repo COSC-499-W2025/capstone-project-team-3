@@ -341,6 +341,22 @@ def create_resume(name: str | None = None) -> int:
     conn.close()
     return resume_id
 
+def list_resumes() -> List[Dict[str, Any]]:
+    """Return list of resumes for sidebar: id, name, is_master. Master is id=1."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM RESUME ORDER BY id")
+        rows = cursor.fetchall()
+        return [
+            {"id": r[0], "name": (r[1] or f"Resume-{r[0]}").strip() or f"Resume-{r[0]}", "is_master": r[0] == 1}
+            for r in rows
+        ]
+    except sqlite3.Error as e:
+        raise ResumeServiceError("Failed listing resumes") from e
+    finally:
+        conn.close()
+
 def resume_exists(resume_id: int) -> bool:
     """Method to check if specified resume ID exists (precaution)"""
     try:

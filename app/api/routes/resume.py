@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel
@@ -91,7 +91,11 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     #     </body>
     # </html>
     # """
-    return build_resume_model(project_ids=project_ids)
+    try:
+        resume_model = build_resume_model(project_ids=project_ids)
+        return resume_model
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/resume/{resume_id}")
 def get_saved_resume(resume_id: int):
@@ -100,6 +104,14 @@ def get_saved_resume(resume_id: int):
         return load_saved_resume(resume_id)
     except ResumeNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/resume_names")
+def list_resumes_endpoint():
+    """Return all resumes for the sidebar: id, name, is_master."""
+    try:
+        return {"resumes": list_resumes()}
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -321,6 +333,8 @@ def delete_saved_resume(resume_id: int):
     
     Does NOT delete the master resume or base project data.
     """
+    if resume_id == 1:
+        raise HTTPException(status_code=400, detail="Cannot delete Master Resume")
     # Check if resume exists using the utility method
     if not resume_exists(resume_id):
         raise HTTPException(404, f"Resume with ID {resume_id} not found")

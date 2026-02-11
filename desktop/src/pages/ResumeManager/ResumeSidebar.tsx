@@ -6,25 +6,33 @@ export const ResumeSidebar = ({
   activeIndex,
   onSelect,
   onTailorNew,
-  dataBadgeIndices = [0, 2],
+  sidebarOpen = true,
+  onToggleSidebar
 }: {
   resumes: Resume[];
   activeIndex: number;
   onSelect: (index: number) => void;
   onTailorNew?: () => void;
-  dataBadgeIndices?: number[];
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }) => {
-  const showDataBadge = (index: number) => dataBadgeIndices.includes(index);
-
   return (
-    <aside className="resume-sidebar">
+    <aside className={`resume-sidebar ${sidebarOpen ? "resume-sidebar--open" : "resume-sidebar--closed"}`}>
       <div className="resume-sidebar__header">
-        <h2 className="resume-sidebar__title">Your Resumés</h2>
-        <img src="/thumbnail_icon.svg" alt="" className="resume-sidebar__header-icon" width={20} height={20} />
+        <h2 className="resume-sidebar__title">Your Résumés</h2>
+        <button
+          type="button"
+          className="resume-sidebar__header-icon-btn"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+        >
+          <img src="/thumbnail_icon.svg" alt="" className="resume-sidebar__header-icon" width={30} height={30} />
+        </button>
       </div>
       <hr className="resume-sidebar__divider" />
 
-      <ul className="resume-sidebar__list">
+      <div className="resume-sidebar__content">
+        <ul className="resume-sidebar__list">
         {resumes.map((r, i) => (
           <li key={i}>
             <button
@@ -33,10 +41,9 @@ export const ResumeSidebar = ({
               className={`resume-sidebar__item ${i === activeIndex ? "resume-sidebar__item--active" : ""}`}
             >
               <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
-              {showDataBadge(i) && <span className="resume-sidebar__badge" aria-label="Has data">D</span>}
               <span className="resume-sidebar__actions">
                 <button type="button" className="resume-sidebar__icon-btn" aria-label="Edit resume" onClick={(e) => { e.stopPropagation(); }}>
-                  <img src="/edit_icon.svg" alt="" width={18} height={18} />
+                  <img src="/edit_icon.svg" alt="" width={20} height={20} />
                 </button>
                 <button type="button" className="resume-sidebar__icon-btn" aria-label="More options" onClick={(e) => { e.stopPropagation(); }}>
                   <img src="/more_icon.svg" alt="" width={18} height={18} />
@@ -47,9 +54,10 @@ export const ResumeSidebar = ({
         ))}
       </ul>
 
-      <button type="button" className="resume-sidebar__tailor-btn" onClick={onTailorNew}>
-        Tailor New Resume
-      </button>
+        <button type="button" className="resume-sidebar__tailor-btn" onClick={onTailorNew}>
+          Tailor New Resume
+        </button>
+      </div>
     </aside>
   );
 };

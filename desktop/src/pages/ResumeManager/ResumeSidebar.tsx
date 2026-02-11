@@ -1,15 +1,15 @@
-import { Resume } from "../../api/resume_types";
+import { ResumeListItem } from "../../api/resume";
 import "./ResumeSidebar.css";
 
 export const ResumeSidebar = ({
-  resumes,
+  resumeList,
   activeIndex,
   onSelect,
   onTailorNew,
   sidebarOpen = true,
   onToggleSidebar
 }: {
-  resumes: Resume[];
+  resumeList: ResumeListItem[];
   activeIndex: number;
   onSelect: (index: number) => void;
   onTailorNew?: () => void;
@@ -33,7 +33,7 @@ export const ResumeSidebar = ({
 
       <div className="resume-sidebar__content">
         <ul className="resume-sidebar__list">
-        {resumes.map((r, i) => (
+        {resumeList.map((r, i) => (
           <li key={i}>
             <button
               type="button"

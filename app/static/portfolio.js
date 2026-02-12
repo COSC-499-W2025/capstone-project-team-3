@@ -554,9 +554,9 @@ showError(message) {
                     
                     ${project.summary ? `
                         <div class="project-summary">
-                            <h4>📝 Summary</h4>
+                            <h4>📝 Project Summary</h4>
                             <p class="editable-field" data-field="summary" data-project="${project.id}">
-                                ${project.summary.substring(0, 300)}${project.summary.length > 300 ? '...' : ''}
+                                ${project.summary}
                             </p>
                         </div>
                     ` : ''}

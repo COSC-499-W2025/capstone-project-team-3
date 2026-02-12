@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from app.api.routes.resume import router, compile_pdf, get_or_compile_pdf
+from app.utils.generate_resume import ResumeServiceError
 from app.api.routes import resume as resume_mod
 import os
 
@@ -32,17 +33,18 @@ def fake_resume_model():
     }
 
 @patch("app.api.routes.resume.build_resume_model")
-@patch("app.api.routes.resume.generate_resume_tex")
-def test_resume_page(mock_tex, mock_model, client, fake_resume_model):
-    """Verify the resume HTML preview page renders successfully."""
+def test_resume_page(mock_model, client, fake_resume_model):
+    """Verify the resume endpoint returns the resume model as JSON."""
     mock_model.return_value = fake_resume_model
-    mock_tex.return_value = r"\documentclass{article}"
 
     response = client.get("/resume")
 
     assert response.status_code == 200
-    assert "Resume Export" in response.text
-    assert "\\documentclass" in response.text
+    data = response.json()
+    assert data["name"] == "John User"
+    assert data["email"] == "john@example.com"
+    assert "education" in data
+    assert "skills" in data
 
 
 @patch("app.api.routes.resume.build_resume_model")
@@ -332,3 +334,37 @@ def test_create_tailored_resume_no_projects(client):
     response = client.post("/resume", json=payload)
     assert response.status_code == 400
     assert "No projects selected" in response.text
+
+
+@patch("app.api.routes.resume.list_resumes")
+def test_list_resumes_endpoint_success(mock_list_resumes, client):
+    """Test GET /resume_names returns list of resumes."""
+    mock_data = [
+        {"id": 1, "name": "Master Resume", "is_master": True},
+        {"id": 2, "name": "Software Engineer Resume", "is_master": False},
+        {"id": 3, "name": "Data Analyst Resume", "is_master": False},
+    ]
+    mock_list_resumes.return_value = mock_data
+    
+    response = client.get("/resume_names")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "resumes" in data
+    assert len(data["resumes"]) == 3
+    assert data["resumes"][0]["name"] == "Master Resume"
+    assert data["resumes"][0]["is_master"] is True
+    mock_list_resumes.assert_called_once()
+
+
+@patch("app.api.routes.resume.list_resumes")
+def test_list_resumes_endpoint_service_error(mock_list_resumes, client):
+    """Test GET /resume_names handles ResumeServiceError."""
+    
+    mock_list_resumes.side_effect = ResumeServiceError("Database connection failed")
+    
+    response = client.get("/resume_names")
+    
+    assert response.status_code == 500
+    assert "Database connection failed" in response.json()["detail"]
+    mock_list_resumes.assert_called_once()

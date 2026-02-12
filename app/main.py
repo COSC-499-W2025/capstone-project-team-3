@@ -26,10 +26,9 @@ from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
 from app.utils.env_utils import check_gemini_api_key
-from app.utils.scan_utils import run_scan_flow 
+from app.utils.scan_utils import run_scan_flow
 from app.utils.delete_insights_utils import get_projects
 from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
-from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
 from app.utils.non_code_parsing.document_parser import parsed_input_text
@@ -182,7 +181,6 @@ def main():
                     files = scan_result['files']
                 
                     print(f"✅ Found {len(files)} files")
-                   
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:

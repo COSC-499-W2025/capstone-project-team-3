@@ -70,19 +70,18 @@ export function ResumePreview({ resume }: { resume: Resume }) {
       >
         <div className="resume-preview__content">
           <div ref={setSectionRef(0)}>
-            <HeaderSection resume={resume} variant="latex" />
+            <HeaderSection resume={resume} />
           </div>
           <div ref={setSectionRef(1)}>
-            <EducationSection education={resume.education} variant="latex" />
+            <EducationSection education={resume.education} />
           </div>
           <div ref={setSectionRef(2)}>
-            <SkillsSection skills={resume.skills} variant="latex" />
+            <SkillsSection skills={resume.skills} />
           </div>
           {projects.map((_, i) => (
             <div key={i} ref={setSectionRef(3 + i)}>
               <ProjectsSection
                 projects={[projects[i]]}
-                variant="latex"
                 showHeading={i === 0}
               />
             </div>
@@ -127,15 +126,14 @@ export function ResumePreview({ resume }: { resume: Resume }) {
                 }}
               >
                 <div className="resume-preview__content">
-                  {hasHeader && <HeaderSection resume={resume} variant="latex" />}
+                  {hasHeader && <HeaderSection resume={resume} />}
                   {hasEducation && (
-                    <EducationSection education={resume.education} variant="latex" />
+                    <EducationSection education={resume.education} />
                   )}
-                  {hasSkills && <SkillsSection skills={resume.skills} variant="latex" />}
+                  {hasSkills && <SkillsSection skills={resume.skills} />}
                   {pageProjects.length > 0 && (
                     <ProjectsSection
                       projects={pageProjects}
-                      variant="latex"
                       showHeading={sectionIndices.includes(3)}
                     />
                   )}

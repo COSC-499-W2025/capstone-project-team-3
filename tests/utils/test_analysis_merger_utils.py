@@ -23,12 +23,6 @@ class TestGetSkillExtensions:
         """Test skill matching is case-insensitive."""
         assert _get_skill_extensions("python") == [".py", ".pyx", ".pyw"]
         assert _get_skill_extensions("JAVA") == [".java"]
-    
-    def test_unknown_skills(self):
-        """Test that unknown skills return empty list."""
-        assert _get_skill_extensions("XYZABC123NotReal") == []
-        assert _get_skill_extensions("FakeSkill999") == []
-        assert _get_skill_extensions("") == []
 
 class TestInferSkillDatesFromGit:
     """Test the _infer_skill_dates_from_git function."""

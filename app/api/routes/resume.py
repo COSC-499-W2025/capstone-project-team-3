@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel
@@ -55,42 +55,47 @@ def create_tailored_resume(filter: ResumeFilter):
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.get("/resume", response_class=HTMLResponse)
+@router.get("/resume")
 def resume_page(project_ids: Optional[List[str]] = Query(None)):
     """
     GET preview endpoint.
     - No project_ids → master resume
     - project_ids provided → filtered resume
     """
+    # try:
+        # tex = get_resume_tex(project_ids)
+    # except ResumeServiceError as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
+    # preview = escape_tex_for_html(tex)
+
+    # # Build export links dynamically
+    # if project_ids:
+    #     params = "&".join(f"project_ids={pid}" for pid in project_ids)
+    #     tex_link = f"/resume/export/tex?{params}"
+    #     pdf_link = f"/resume/export/pdf?{params}"
+    #     title = "Resume Export (Selected Projects)"
+    # else:
+    #     tex_link = "/resume/export/tex"
+    #     pdf_link = "/resume/export/pdf"
+    #     title = "Resume Export (All Projects)"
+
+    # return f"""
+    # <html>
+    #     <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+    #         <h2>{title}</h2>
+    #         <p>Download your LaTeX/PDF resume:</p>
+    #         <p><a href="{tex_link}">Download resume.tex</a></p>
+    #         <p><a href="{pdf_link}">Download resume.pdf</a></p>
+    #         <h3>Preview (LaTeX)</h3>
+    #         <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
+    #     </body>
+    # </html>
+    # """
     try:
-        tex = get_resume_tex(project_ids)
+        resume_model = build_resume_model(project_ids=project_ids)
+        return resume_model
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    preview = escape_tex_for_html(tex)
-
-    # Build export links dynamically
-    if project_ids:
-        params = "&".join(f"project_ids={pid}" for pid in project_ids)
-        tex_link = f"/resume/export/tex?{params}"
-        pdf_link = f"/resume/export/pdf?{params}"
-        title = "Resume Export (Selected Projects)"
-    else:
-        tex_link = "/resume/export/tex"
-        pdf_link = "/resume/export/pdf"
-        title = "Resume Export (All Projects)"
-
-    return f"""
-    <html>
-        <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-            <h2>{title}</h2>
-            <p>Download your LaTeX/PDF resume:</p>
-            <p><a href="{tex_link}">Download resume.tex</a></p>
-            <p><a href="{pdf_link}">Download resume.pdf</a></p>
-            <h3>Preview (LaTeX)</h3>
-            <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
-        </body>
-    </html>
-    """
     
 @router.get("/resume/{resume_id}")
 def get_saved_resume(resume_id: int):
@@ -99,6 +104,14 @@ def get_saved_resume(resume_id: int):
         return load_saved_resume(resume_id)
     except ResumeNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/resume_names")
+def list_resumes_endpoint():
+    """Return all resumes for the sidebar: id, name, is_master."""
+    try:
+        return {"resumes": list_resumes()}
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -320,6 +333,8 @@ def delete_saved_resume(resume_id: int):
     
     Does NOT delete the master resume or base project data.
     """
+    if resume_id == 1:
+        raise HTTPException(status_code=400, detail="Cannot delete Master Resume")
     # Check if resume exists using the utility method
     if not resume_exists(resume_id):
         raise HTTPException(404, f"Resume with ID {resume_id} not found")

@@ -1,3 +1,17 @@
+# Prerequisites
+
+## Node.js Version
+This project requires **Node.js 21+** due to dependencies that are only compatible with newer Node.js versions:
+- `vite@^7.3.1` requires Node.js 21+
+- `electron@^40.2.1` requires Node.js 21+
+
+To check your Node.js version:
+```bash
+node --version
+```
+
+If you need to upgrade, download the latest version from [nodejs.org](https://nodejs.org/) or use a version manager like [nvm](https://github.com/nvm-sh/nvm).
+
 # How to Run FrontEnd with Current Env
 
 1. In your terminal, run `docker compose up --build`.

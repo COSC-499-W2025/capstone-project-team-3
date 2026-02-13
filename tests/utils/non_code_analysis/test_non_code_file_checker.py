@@ -11,6 +11,7 @@ from app.utils.non_code_analysis.non_code_file_checker import (
     classify_non_code_files_with_user_verification,
     get_classified_non_code_file_paths
 )
+from app.utils.git_utils import _canonical_author_key  # REUSE from git_utils
 
 # ============================================================================
 # Tests for is_non_code_file() 
@@ -1466,3 +1467,193 @@ def test_get_classified_file_paths_empty_directory(tmp_path):
     result = get_classified_non_code_file_paths(tmp_path)
     
     assert result == {"collaborative": [], "non_collaborative": []}
+
+
+# ============================================================================
+# Tests for author alias collapsing (bugfix for noreply + real email)
+# ============================================================================
+
+def test_collect_git_non_code_files_collapses_user_aliases():
+    """
+    Test that same user with real email and noreply email is counted as 1 author.
+    
+    This is the main bugfix: jassanikarim8@gmail.com and 
+    99561514+kjassani@users.noreply.github.com should be counted as ONE author.
+    """
+    # Same user commits with real email, then noreply email
+    commit1 = _make_mock_commit("jassanikarim8@gmail.com", {"doc.pdf": {}}, author_name="Karim Jassani")
+    commit2 = _make_mock_commit("99561514+kjassani@users.noreply.github.com", {"doc.pdf": {}}, author_name="kjassani")
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo, \
+         patch("app.utils.non_code_analysis.non_code_file_checker.author_matches") as mock_author_matches:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2]
+        mock_get_repo.return_value = mock_repo
+        
+        # author_matches should return True for both commits when matching the user
+        mock_author_matches.return_value = True
+        
+        result = collect_git_non_code_files_with_metadata(
+            "/fake/repo",
+            user_email="jassanikarim8@gmail.com",
+            username="kjassani"
+        )
+        
+        # Should have 2 raw author emails but only 1 unique author
+        assert len(result["doc.pdf"]["authors"]) == 2  # Raw emails are preserved
+        assert result["doc.pdf"]["unique_authors"] == 1  # But counted as 1 logical author
+        assert result["doc.pdf"]["is_collaborative"] is False
+
+
+def test_collect_git_non_code_files_counts_different_users_correctly():
+    """
+    Test that two genuinely different users are counted as 2 authors.
+    """
+    commit1 = _make_mock_commit("alice@example.com", {"doc.pdf": {}}, author_name="Alice")
+    commit2 = _make_mock_commit("bob@example.com", {"doc.pdf": {}}, author_name="Bob")
+    
+    with patch("app.utils.non_code_analysis.non_code_file_checker.get_repo") as mock_get_repo, \
+         patch("app.utils.non_code_analysis.non_code_file_checker.author_matches") as mock_author_matches:
+        mock_repo = MagicMock()
+        mock_repo.iter_commits.return_value = [commit1, commit2]
+        mock_get_repo.return_value = mock_repo
+        
+        # Only the first commit matches the user
+        mock_author_matches.side_effect = lambda commit, ids: commit.author.email == "alice@example.com"
+        
+        result = collect_git_non_code_files_with_metadata(
+            "/fake/repo",
+            user_email="alice@example.com",
+            username="alice"
+        )
+        
+        assert result["doc.pdf"]["unique_authors"] == 2
+        assert result["doc.pdf"]["is_collaborative"] is True
+
+
+def test_verify_user_in_files_uses_unique_authors_count():
+    """
+    Test that verify_user_in_files uses unique_authors (alias-collapsed) count.
+    """
+    # File with 2 raw emails but unique_authors=1 (same person)
+    file_metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["jassanikarim8@gmail.com", "99561514+kjassani@users.noreply.github.com"],
+            "usernames": ["Karim Jassani", "kjassani"],
+            "unique_authors": 1,  # Same person, aliases collapsed
+            "commit_count": 5
+        }
+    }
+    
+    result = verify_user_in_files(
+        file_metadata,
+        user_email="jassanikarim8@gmail.com",
+        username="kjassani"
+    )
+    
+    # Should be user_solo (not collaborative) because unique_authors=1
+    assert "/repo/doc.pdf" in result["user_solo"]
+    assert "/repo/doc.pdf" not in result["user_collaborative"]
+
+
+def test_verify_user_in_files_collaborative_with_unique_authors():
+    """
+    Test that file with unique_authors > 1 is correctly marked collaborative.
+    """
+    file_metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "usernames": ["Alice", "Bob"],
+            "unique_authors": 2,  # Two different people
+            "commit_count": 3
+        }
+    }
+    
+    result = verify_user_in_files(
+        file_metadata,
+        user_email="alice@example.com",
+        username="Alice"
+    )
+    
+    # Should be collaborative because unique_authors=2
+    assert "/repo/doc.pdf" in result["user_collaborative"]
+    assert "/repo/doc.pdf" not in result["user_solo"]
+
+
+def test_filter_by_collaboration_uses_unique_authors():
+    """
+    Test that filter_non_code_files_by_collaboration uses unique_authors count.
+    """
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["jassanikarim8@gmail.com", "99561514+kjassani@users.noreply.github.com"],
+            "unique_authors": 1  # Same person
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    # Should be non-collaborative because unique_authors=1
+    assert "/repo/doc.pdf" in result["non_collaborative"]
+    assert "/repo/doc.pdf" not in result["collaborative"]
+
+
+def test_filter_by_collaboration_with_two_unique_authors():
+    """
+    Test that file with 2 unique authors is collaborative.
+    """
+    metadata = {
+        "doc.pdf": {
+            "path": "/repo/doc.pdf",
+            "authors": ["alice@example.com", "bob@example.com"],
+            "unique_authors": 2
+        }
+    }
+    
+    result = filter_non_code_files_by_collaboration(metadata)
+    
+    assert "/repo/doc.pdf" in result["collaborative"]
+    assert "/repo/doc.pdf" not in result["non_collaborative"]
+
+
+# ============================================================================
+# Tests for _canonical_author_key() from git_utils.py (reused for alias collapsing)
+# ============================================================================
+
+def test_canonical_key_regular_email():
+    """Test that regular email returns email-based key."""
+    # Note: git_utils signature is (name, email)
+    key = _canonical_author_key("Alice Smith", "alice@example.com")
+    assert key == "email:alice@example.com"
+
+
+def test_canonical_key_github_noreply_email():
+    """Test that GitHub noreply email returns github username key."""
+    # Note: git_utils signature is (name, email)
+    key = _canonical_author_key("Karim", "99561514+kjassani@users.noreply.github.com")
+    assert key == "gh:kjassani"
+
+
+def test_canonical_key_unknown_email_fallback_to_name():
+    """Test that unknown email falls back to name."""
+    # Note: git_utils signature is (name, email)
+    key = _canonical_author_key("Some Person", "")
+    assert key == "name:some person"
+
+
+def test_canonical_key_empty_email_fallback_to_name():
+    """Test that empty email falls back to name."""
+    # Note: git_utils signature is (name, email)
+    key = _canonical_author_key("Some Person", "")
+    assert key == "name:some person"
+
+
+def test_canonical_key_case_insensitive():
+    """Test that canonical keys are case-insensitive."""
+    # Note: git_utils signature is (name, email)
+    key1 = _canonical_author_key("Alice", "Alice@Example.COM")
+    key2 = _canonical_author_key("alice", "alice@example.com")
+    assert key1 == key2

@@ -7,6 +7,10 @@ export default {
         '^.+\\.(ts|tsx)$': 'ts-jest',
     },
     moduleNameMapper: {
-        '\\.(css|less|scss)$': 'identity-obj-proxy',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+        '^@/(.*)$': '<rootDir>/src/$1',
     },
+    testMatch: [
+        '<rootDir>/tests/**/*.test.(ts|tsx)',
+    ],
 };

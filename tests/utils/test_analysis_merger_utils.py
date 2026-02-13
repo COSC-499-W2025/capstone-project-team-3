@@ -26,8 +26,8 @@ class TestGetSkillExtensions:
     
     def test_unknown_skills(self):
         """Test that unknown skills return empty list."""
-        assert _get_skill_extensions("ZZZNotARealLanguage") == []
-        assert _get_skill_extensions("QQQQ") == []
+        assert _get_skill_extensions("XYZABC123NotReal") == []
+        assert _get_skill_extensions("FakeSkill999") == []
         assert _get_skill_extensions("") == []
 
 class TestInferSkillDatesFromGit:

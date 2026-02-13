@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
-import "./ResumeManager/ResumeManager.css";
+import "../styles/ResumeManager.css";
 import { getResumes, buildResume, getResumeById, type ResumeListItem } from "../api/resume";
 
 export function ResumeBuilderPage() {

@@ -1,5 +1,5 @@
 import { ResumeListItem } from "../../api/resume";
-import "./ResumeSidebar.css";
+import "../../styles/ResumeSidebar.css";
 
 export const ResumeSidebar = ({
   resumeList,

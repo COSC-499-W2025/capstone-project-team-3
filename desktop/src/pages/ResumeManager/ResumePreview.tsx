@@ -4,7 +4,7 @@ import { EducationSection } from "./ResumeSections/EducationSection";
 import { HeaderSection } from "./ResumeSections/HeaderSection";
 import { ProjectsSection } from "./ResumeSections/ProjectSections";
 import { SkillsSection } from "./ResumeSections/SkillsSection";
-import "./ResumePreview.css";
+import "../../styles/ResumePreview.css";
 
 const PAGE_HEIGHT_PX = 1056; // A4-like proportion at 96dpi
 const PAGE_GAP_PX = 32; // Space between pages

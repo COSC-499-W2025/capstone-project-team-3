@@ -145,6 +145,8 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.executescript(SCHEMA)
+    # Ensure Master Resume is created
+    cursor.execute("""INSERT OR IGNORE INTO RESUME (id, name) VALUES (1, 'Master Resume')""")
     # Ensure ON CONFLICT(resume_id) works even on pre-existing DBs
     cursor.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_skills_resume_id ON RESUME_SKILLS(resume_id)"

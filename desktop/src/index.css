@@ -309,7 +309,7 @@ button:disabled {
   /* Touch device users get tap feedback instead */
   button:active {
     transform: scale(0.98)
-  
+  }
   h1 {
     font-size: 1.2rem;
   }

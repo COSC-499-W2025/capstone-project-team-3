@@ -32,4 +32,3 @@ export interface Resume {
 
   projects: Project[];
 }
-

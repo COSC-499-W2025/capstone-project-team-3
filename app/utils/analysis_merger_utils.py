@@ -2,12 +2,73 @@
 # from app.utils.project_ranker import project_ranker
 import json
 import re
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional
 from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
 from app.data.db import get_connection
 from app.utils.project_score import compute_overall_project_contribution_score
+from app.utils.git_utils import detect_git, get_repo, is_repo_empty
 MAX_SKILLS = 10 #Maximum number of skills to be stored per project (TDB: adjust based on some condition)
 MAX_BULLETS = 5 #Maximum number of resume bullets to be stored per project (TBD: adjust based on some condition)
 MAX_SENTENCES = 5 #Maximum number of sentences in summary (TBD: adjust based on some condition)
+
+# Skill to file extension mapping for date inference
+SKILL_TO_EXTENSIONS = {
+    # Programming Languages
+    "Python": [".py", ".pyx", ".pyw"],
+    "Java": [".java"],
+    "JavaScript": [".js", ".mjs", ".cjs"],
+    "TypeScript": [".ts"],
+    "C#": [".cs"],
+    "C++": [".cpp", ".cc", ".cxx", ".h", ".hpp"],
+    "C": [".c", ".h"],
+    "Ruby": [".rb"],
+    "PHP": [".php"],
+    "Swift": [".swift"],
+    "Kotlin": [".kt", ".kts"],
+    "Go": [".go"],
+    "Rust": [".rs"],
+    "Scala": [".scala"],
+    "Perl": [".pl", ".pm"],
+    "R": [".r", ".R"],
+    "Dart": [".dart"],
+    "Objective-C": [".m", ".mm"],
+    "Lua": [".lua"],
+    "Haskell": [".hs"],
+    "Elixir": [".ex", ".exs"],
+    "Clojure": [".clj", ".cljs"],
+    "Groovy": [".groovy"],
+    "Shell": [".sh", ".bash"],
+    "PowerShell": [".ps1"],
+    # Web Technologies
+    "HTML": [".html", ".htm"],
+    "CSS": [".css"],
+    "SCSS": [".scss"],
+    "SASS": [".sass"],
+    "Vue": [".vue"],
+    "React": [".jsx", ".tsx"],
+    "Angular": [".ts"],
+    "Svelte": [".svelte"],
+    # Frameworks/Libraries (may share extensions)
+    "Django": [".py"],
+    "Flask": [".py"],
+    "Spring": [".java"],
+    "Express": [".js", ".ts"],
+    "Node.js": [".js", ".ts"],
+    "ASP.NET": [".cs", ".aspx"],
+    "Rails": [".rb"],
+    # Data & Config
+    "SQL": [".sql"],
+    "JSON": [".json"],
+    "YAML": [".yaml", ".yml"],
+    "XML": [".xml"],
+    "Markdown": [".md"],
+    # Others
+    "Jupyter": [".ipynb"],
+    "LaTeX": [".tex"],
+    "Dockerfile": ["Dockerfile"],
+}
 
 # Merge results from code and non-code analysis
 def merge_analysis_results(code_analysis_results, non_code_analysis_results, project_name, project_signature):
@@ -270,6 +331,124 @@ def get_project_score(code_metrics, non_code_metrics, git_metrics):
     
     return project_score
 
+def _get_skill_extensions(skill: str) -> List[str]:
+    """
+    Get file extensions associated with a skill.
+    Case-insensitive matching.
+    
+    Args:
+        skill: The skill name (e.g., "Python", "javascript", "C++")
+    
+    Returns:
+        List of file extensions (e.g., [".py", ".pyx"])
+    """
+    # Try exact match first (case-insensitive)
+    for skill_name, extensions in SKILL_TO_EXTENSIONS.items():
+        if skill.lower() == skill_name.lower():
+            return extensions
+    
+    # Try partial match (skill contains or is contained in)
+    skill_lower = skill.lower()
+    for skill_name, extensions in SKILL_TO_EXTENSIONS.items():
+        if skill_lower in skill_name.lower() or skill_name.lower() in skill_lower:
+            return extensions
+    
+    return []
+
+def _infer_skill_dates_from_git(project_path: str, skills: List[str]) -> Dict[str, Optional[str]]:
+    """
+    Infer skill dates from Git history by finding when files with related
+    extensions were first committed.
+    
+    Args:
+        project_path: Path to the project directory
+        skills: List of skill names
+    
+    Returns:
+        Dictionary mapping skill -> date string (YYYY-MM-DD) or None
+    """
+    skill_dates = {}
+    
+    # Check if it's a Git repository
+    if not detect_git(project_path):
+        return {skill: None for skill in skills}
+    
+    try:
+        repo = get_repo(project_path)
+        
+        # Check if repo is empty
+        if is_repo_empty(project_path):
+            return {skill: None for skill in skills}
+        
+        # For each skill, find the earliest commit with matching file extensions
+        for skill in skills:
+            extensions = _get_skill_extensions(skill)
+            if not extensions:
+                skill_dates[skill] = None
+                continue
+            
+            earliest_date = None
+            
+            # Iterate through all commits (oldest first)
+            try:
+                for commit in repo.iter_commits(rev="--all", reverse=True):
+                    # Check if this commit touched files with relevant extensions
+                    parent = commit.parents[0] if commit.parents else None
+                    
+                    if parent is None:
+                        # Initial commit - check all files
+                        for item in commit.tree.traverse():
+                            if hasattr(item, 'path'):
+                                file_path = item.path
+                                # Check if any extension matches
+                                for ext in extensions:
+                                    if ext == "Dockerfile":
+                                        # Special case for Dockerfile
+                                        if "dockerfile" in file_path.lower():
+                                            earliest_date = datetime.fromtimestamp(
+                                                commit.committed_date
+                                            ).strftime('%Y-%m-%d')
+                                            break
+                                    elif file_path.endswith(ext):
+                                        earliest_date = datetime.fromtimestamp(
+                                            commit.committed_date
+                                        ).strftime('%Y-%m-%d')
+                                        break
+                                if earliest_date:
+                                    break
+                    else:
+                        # Check diff for files with matching extensions
+                        diffs = commit.diff(parent)
+                        for diff_item in diffs:
+                            file_path = diff_item.b_path or diff_item.a_path
+                            if file_path:
+                                for ext in extensions:
+                                    if ext == "Dockerfile":
+                                        if "dockerfile" in file_path.lower():
+                                            earliest_date = datetime.fromtimestamp(
+                                                commit.committed_date
+                                            ).strftime('%Y-%m-%d')
+                                            break
+                                    elif file_path.endswith(ext):
+                                        earliest_date = datetime.fromtimestamp(
+                                            commit.committed_date
+                                        ).strftime('%Y-%m-%d')
+                                        break
+                            if earliest_date:
+                                break
+                    
+                    if earliest_date:
+                        break  # Found the first commit with this skill
+                
+                skill_dates[skill] = earliest_date
+            except Exception:
+                skill_dates[skill] = None
+    
+    except Exception:
+        return {skill: None for skill in skills}
+    
+    return skill_dates
+
 def store_results_in_db(project_name, merged_results, project_score, project_signature):
     """
     This function stores the scored results in the database.
@@ -310,18 +489,46 @@ def store_results_in_db(project_name, merged_results, project_score, project_sig
         cur.execute("DELETE FROM RESUME_SUMMARY WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM DASHBOARD_DATA WHERE project_id = ?", (project_signature,))
 
-    # Store skills in SKILL_ANALYSIS table
+    # Store skills in SKILL_ANALYSIS table with smart date inference
+    # Get project path for Git history analysis
+    cur.execute("SELECT path, created_at FROM PROJECT WHERE project_signature = ?", (project_signature,))
+    project_info = cur.fetchone()
+    project_path = project_info[0] if project_info else None
+    project_created_at = project_info[1] if project_info else None
+    
+    # Extract date portion (YYYY-MM-DD) from project_created_at
+    fallback_date = None
+    if project_created_at:
+        try:
+            # Handle both "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DD" formats
+            fallback_date = project_created_at.split()[0] if ' ' in project_created_at else project_created_at.split('T')[0]
+        except:
+            fallback_date = None
+    
+    # Collect all skills for batch date inference
+    all_skills = (
+        merged_results["skills"]["soft_skills"] + 
+        merged_results["skills"]["technical_skills"]
+    )
+    
+    # Infer dates from Git history if project path is available
+    skill_dates = {}
+    if project_path and Path(project_path).exists():
+        skill_dates = _infer_skill_dates_from_git(project_path, all_skills)
+    
     # Store soft skills
     for skill in merged_results["skills"]["soft_skills"]:
+        skill_date = skill_dates.get(skill) or fallback_date
         cur.execute("""
-        INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
-        """, (project_signature, skill, "soft_skill"))
+        INSERT INTO SKILL_ANALYSIS (project_id, skill, source, date) VALUES (?, ?, ?, ?)
+        """, (project_signature, skill, "soft_skill", skill_date))
 
     # Store technical skills
     for skill in merged_results["skills"]["technical_skills"]:
+        skill_date = skill_dates.get(skill) or fallback_date
         cur.execute("""
-        INSERT INTO SKILL_ANALYSIS (project_id, skill, source) VALUES (?, ?, ?)
-        """, (project_signature, skill, "technical_skill"))
+        INSERT INTO SKILL_ANALYSIS (project_id, skill, source, date) VALUES (?, ?, ?, ?)
+        """, (project_signature, skill, "technical_skill", skill_date))
 
     # Store resume bullets in RESUME_SUMMARY table
     cur.execute("""

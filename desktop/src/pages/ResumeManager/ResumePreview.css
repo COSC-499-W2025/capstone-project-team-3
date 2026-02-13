@@ -1,0 +1,207 @@
+/* PDF/LaTeX-style resume and page proportions – serif font to match LaTeX */
+
+.resume-preview {
+  flex: 1;
+  background: #e0e0e0;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.resume-preview__scroll {
+  position: relative;
+  width: 816px;
+}
+
+/* Off-screen container used only to measure section heights for pagination */
+.resume-preview__measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 816px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.resume-preview__measure .resume-preview__content {
+  min-height: 0;
+}
+
+.resume-preview__page-content {
+  position: absolute;
+  left: 0;
+  width: 816px;
+  overflow: hidden;
+}
+
+.resume-preview__page-content .resume-preview__content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.resume-preview__page {
+  position: absolute;
+  left: 0;
+  width: 816px;
+  height: 1056px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+/* Serif stack to match exported PDF (tight spacing so content fits like PDF) */
+.resume-preview__content {
+  position: relative;
+  width: 816px;
+  min-height: 1056px;
+  padding: 40px 48px 40px;
+  font-family: "Latin Modern Roman", "CMU Serif", "Times New Roman", Times, Georgia, serif;
+  font-size: 11pt;
+  line-height: 1.32;
+  color: #000;
+  background: transparent;
+}
+
+/* Section headings: bold, uppercase, with line (tight like PDF) */
+.resume-preview__heading {
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 5px 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #000;
+}
+
+/* PROJECTS / EXPERIENCE special heading (line under first word only in design; we use full line) */
+.resume-preview__heading--projects {
+  border-bottom: 1px solid #000;
+}
+
+.resume-preview__header {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.resume-preview__name {
+  font-size: 17pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 2px 0;
+  font-family: inherit;
+}
+
+.resume-preview__contact {
+  font-size: 11pt;
+  font-weight: 400;
+  margin: 0 0 2px 0;
+}
+
+.resume-preview__links {
+  font-size: 11pt;
+  font-weight: 400;
+  margin: 0;
+}
+
+.resume-preview__links a {
+  color: #000;
+  text-decoration: underline;
+}
+
+.resume-preview__links a:not(:last-child)::after {
+  content: " | ";
+  font-weight: 400;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+.resume-preview__section {
+  margin-bottom: 10px;
+}
+
+.resume-preview__education-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin: 0 0 2px 0;
+}
+
+.resume-preview__education-school {
+  font-weight: 700;
+  margin: 0;
+}
+
+.resume-preview__education-dates {
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.resume-preview__education-degree {
+  margin: 0 0 2px 0;
+  font-weight: 400;
+}
+
+.resume-preview__education-gpa {
+  margin: 0;
+  font-style: italic;
+  font-size: 10.5pt;
+}
+
+.resume-preview__skills-label {
+  font-weight: 700;
+  margin: 0 0 2px 0;
+}
+
+.resume-preview__skills-list {
+  margin: 0;
+  font-weight: 400;
+}
+
+.resume-preview__project {
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.resume-preview__project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 1px;
+}
+
+.resume-preview__project-title {
+  font-weight: 700;
+  font-size: 11pt;
+  margin: 0;
+}
+
+.resume-preview__project-dates {
+  font-weight: 400;
+  font-size: 11pt;
+  flex-shrink: 0;
+}
+
+.resume-preview__project-skills {
+  margin: 0 0 4px 0;
+  font-size: 11pt;
+  font-style: italic;
+}
+
+.resume-preview__project-skills .resume-preview__skill-inline {
+  font-weight: 400;
+}
+
+.resume-preview__project-bullets {
+  list-style: disc;
+  margin: 0 0 0 1.5em;
+  padding: 0;
+}
+
+.resume-preview__project-bullets li {
+  margin-bottom: 2px;
+}
+

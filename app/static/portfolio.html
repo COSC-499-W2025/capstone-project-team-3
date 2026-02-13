@@ -404,6 +404,34 @@
             line-height: 1.5;
         }
 
+        .summary-content {
+            position: relative;
+        }
+
+        .summary-text.truncated {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .show-more-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 0;
+            margin-top: 8px;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .show-more-btn:hover {
+            color: var(--accent-secondary);
+        }
+
         .contribution-details {
             margin: 12px 0;
         }

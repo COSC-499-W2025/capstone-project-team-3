@@ -565,9 +565,16 @@ showError(message) {
                     ${project.summary ? `
                         <div class="project-summary">
                             <h4>📝 Project Summary</h4>
-                            <p class="editable-field" data-field="summary" data-project="${project.id}">
-                                ${project.summary}
-                            </p>
+                            <div class="summary-content">
+                                <div class="summary-text ${this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
+                                    <span class="editable-field" data-field="summary" data-project="${project.id}">
+                                        ${project.summary}
+                                    </span>
+                                </div>
+                                ${this.shouldTruncateSummary(project.summary) ? `
+                                    <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
+                                ` : ''}
+                            </div>
                         </div>
                     ` : ''}
                     
@@ -775,8 +782,14 @@ showError(message) {
         // You could add a toast notification system here
         alert(`Error: ${message}`);
     }
-    
 
+    shouldTruncateSummary(summary) {
+        // Truncate if summary is longer than 25 words or 150 characters  
+        // This ensures consistent card heights with uniform truncation
+        const wordCount = summary.split(/\s+/).length;
+        const charCount = summary.length;
+        return wordCount > 25 || charCount > 150;
+    }
 }
 
 // Global functions for HTML event handlers
@@ -815,6 +828,23 @@ window.toggleAllProjects = function() {
     
     dashboard.renderProjectList(dashboard.allProjects);
     dashboard.loadPortfolio();
+};
+
+// Global function to toggle summary visibility
+window.toggleSummary = function(button) {
+    const summaryContent = button.closest('.summary-content');
+    const summaryText = summaryContent.querySelector('.summary-text');
+    const isExpanded = !summaryText.classList.contains('truncated');
+    
+    if (isExpanded) {
+        // Collapse
+        summaryText.classList.add('truncated');
+        button.textContent = 'Show More';
+    } else {
+        // Expand
+        summaryText.classList.remove('truncated');
+        button.textContent = 'Show Less';
+    }
 };
 
 // Initialize dashboard when page loads

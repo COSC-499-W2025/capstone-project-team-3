@@ -381,7 +381,17 @@ createLineChart(canvasId, title, data) {
                     y: {
                         beginAtZero: true,
                         grid: { color: '#e2e8f0' },
-                        ticks: { color: '#4a5568', font: { size: 11 } }
+                        ticks: { 
+                            color: '#4a5568', 
+                            font: { size: 11 },
+                            stepSize: 0.5
+                        },
+                        title: {
+                            display: title === 'Monthly Activity',
+                            text: 'Activity Level',
+                            color: '#4a5568',
+                            font: { size: 12, weight: 'bold' }
+                        }
                     },
                     x: {
                         grid: { color: '#e2e8f0' },

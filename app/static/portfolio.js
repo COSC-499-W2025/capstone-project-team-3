@@ -639,7 +639,7 @@ showError(message) {
             `;
         }).join('');
         
-        // Add click handlers for editable fields
+        // TODO Add click handlers for editable fields
         document.querySelectorAll('.editable-field').forEach(element => {
             element.style.cursor = 'pointer';
             element.style.position = 'relative';
@@ -654,6 +654,7 @@ showError(message) {
                 e.target.style.border = '1px dashed var(--accent)';
                 
                 // TODO: Implement editing logic here
+
                 alert(`Editing ${field} for project ${projectId.substring(0, 8)}... - Logic to be implemented by teammate`);
             });
         });

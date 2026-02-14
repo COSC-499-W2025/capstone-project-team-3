@@ -17,7 +17,9 @@ from app.utils.generate_resume import (
     load_resume_projects,
     resume_exists,
     create_resume,
-    attach_projects_to_resume
+    attach_projects_to_resume,
+    list_resumes,
+    ResumeServiceError
 )
 import json
 
@@ -380,3 +382,46 @@ def test_attach_projects_to_resume(db_connection):
     assert rows[0][1] == 1
     assert rows[1][0] == "p1"
     assert rows[1][1] == 2
+
+
+def test_list_resumes_returns_all_resumes(db_connection):
+    """
+    Tests that list_resumes returns all resumes ordered by id with correct structure.
+    """
+    # Seed has id=1, add more resumes
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Software Engineer Resume')")
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (3, 'Data Analyst Resume')")
+    db_connection.commit()
+
+    resumes = list_resumes()
+
+    assert len(resumes) == 3
+    assert resumes[0]["id"] == 1
+    assert resumes[0]["is_master"] is True
+    assert resumes[1]["id"] == 2
+    assert resumes[1]["name"] == "Software Engineer Resume"
+    assert resumes[1]["is_master"] is False
+    assert resumes[2]["id"] == 3
+    assert resumes[2]["name"] == "Data Analyst Resume"
+    assert resumes[2]["is_master"] is False
+
+def test_list_resumes_database_error(db_connection, monkeypatch):
+    """
+    Tests that list_resumes raises ResumeServiceError on database errors.
+    """
+    def mock_get_connection_error():
+        # Return a connection that will raise an error
+        conn = sqlite3.connect(":memory:")
+        cursor = conn.cursor()
+        # Drop the table to cause an error
+        cursor.execute("DROP TABLE IF EXISTS RESUME")
+        conn.commit()
+        return conn
+
+    monkeypatch.setattr(mod, "get_connection", mock_get_connection_error)
+
+    with pytest.raises(ResumeServiceError) as exc_info:
+        list_resumes()
+
+    assert "Failed listing resumes" in str(exc_info.value)

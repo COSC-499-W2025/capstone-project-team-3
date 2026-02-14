@@ -49,21 +49,21 @@ def load_project_metrics(cursor: sqlite3.Cursor) -> DefaultDict[str, Dict[str, A
     return metrics
 
 def load_project_summaries(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> Dict[str, str]:
-    """Load project summaries from RESUME_SUMMARY table."""
+    """Load project narrative summaries from PROJECT.summary field."""
     summaries = {}
     
     if project_ids:
         placeholders = ",".join(["?"] * len(project_ids))
         cursor.execute(f"""
-            SELECT project_id, summary_text
-            FROM RESUME_SUMMARY 
-            WHERE project_id IN ({placeholders})
+            SELECT project_signature, summary
+            FROM PROJECT 
+            WHERE project_signature IN ({placeholders})
         """, project_ids)
     else:
-        cursor.execute("SELECT project_id, summary_text FROM RESUME_SUMMARY")
+        cursor.execute("SELECT project_signature, summary FROM PROJECT")
     
-    for project_id, summary_text in cursor.fetchall():
-        summaries[project_id] = summary_text or ""
+    for project_id, summary in cursor.fetchall():
+        summaries[project_id] = summary or ""
     
     return summaries
 

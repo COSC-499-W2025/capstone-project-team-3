@@ -29,7 +29,8 @@ def get_projects():
             "id": pid,
             "name": name,
             "score": float(score) if score else 0.0,
-            "skills": top_skills
+            "skills": top_skills,
+            "date_added": created_at
         })
 
     conn.close()

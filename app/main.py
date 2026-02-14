@@ -136,11 +136,7 @@ def main():
         
         # Main analysis loop - keeps asking for projects until user exits
         while True:
-            print("\n" + "="*60)
-            print("🔍 PROJECT ANALYSIS SESSION")
-            print("="*60)
-            
-            # If user has existing projects, ask if they want to make corrections first
+             # If user has existing projects, ask if they want to make corrections first
             if existing_projects:
                 print("\n💡 You have previously generated insights for your projects.")
                 while True:
@@ -160,6 +156,10 @@ def main():
                         break
                     else:
                         print("❌ Please enter 'yes' or 'no'")
+                        
+            print("\n" + "="*60)
+            print("🔍 PROJECT ANALYSIS SESSION")
+            print("="*60)
             
             print("\n--- Project Root Input ---")
             rc = file_input_main()

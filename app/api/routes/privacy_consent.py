@@ -49,5 +49,8 @@ def get_consent_text():
     """Get privacy consent text for display."""
     return {
         "consent_message": ConsentText.CONSENT_MESSAGE,
-        "detailed_info": ConsentText.DETAILED_PRIVACY_INFO
+        "detailed_info": ConsentText.DETAILED_PRIVACY_INFO,
+        "granted_message": ConsentText.CONSENT_GRANTED_MESSAGE,
+        "declined_message": ConsentText.CONSENT_DECLINED_MESSAGE,
+        "already_provided_message": ConsentText.CONSENT_ALREADY_PROVIDED_MESSAGE
     }

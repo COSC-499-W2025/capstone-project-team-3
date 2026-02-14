@@ -56,3 +56,15 @@ def test_revoke_consent(setup_test_db):
     response = client.delete("/api/privacy-consent")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+def test_get_consent_text():
+    """Test retrieving consent text."""
+    response = client.get("/api/privacy-consent/text")
+    assert response.status_code == 200
+    data = response.json()
+    assert "consent_message" in data
+    assert "detailed_info" in data
+    assert len(data["consent_message"]) > 0
+    assert len(data["detailed_info"]) > 0
+    assert "PROJECT INSIGHTS" in data["consent_message"]
+    assert "PRIVACY DETAILS" in data["detailed_info"]

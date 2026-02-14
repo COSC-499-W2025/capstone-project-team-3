@@ -64,6 +64,9 @@ def test_get_consent_text():
     data = response.json()
     assert "consent_message" in data
     assert "detailed_info" in data
+    assert "granted_message" in data
+    assert "declined_message" in data
+    assert "already_provided_message" in data
     assert len(data["consent_message"]) > 0
     assert len(data["detailed_info"]) > 0
     assert "PROJECT INSIGHTS" in data["consent_message"]

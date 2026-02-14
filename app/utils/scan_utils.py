@@ -187,18 +187,18 @@ def get_project_signature(file_signatures: List[str]) -> str:
 
 def extract_file_signature(file_path: Union[str, Path], project_root: Union[str, Path], retries: int = 2, delay: float = 0.1) -> str:
     """
-    Generate a signature based on relative path + file size only.
+    Generate a signature based on relative path + file content hash.
     Ignores timestamps and absolute paths to be consistent across extractions.
     """
     for attempt in range(1, retries + 1):
         try:
             p = Path(file_path)
             root = Path(project_root)
-            stat = p.stat()
-            
-            # Just use relative path + size (no timestamp)
             rel_path = str(p.relative_to(root))
-            sig_str = f"{rel_path}:{stat.st_size}"
+            
+            # Hash file content to detect modifications
+            content_hash = hashlib.sha256(p.read_bytes()).hexdigest()
+            sig_str = f"{rel_path}:{content_hash}"
             return hashlib.sha256(sig_str.encode()).hexdigest()
             
         except (FileNotFoundError, PermissionError, ValueError) as e:
@@ -330,9 +330,7 @@ def find_similar_project(
         # Calculate containment ratio
         containment = calculate_containment_ratio(current_signatures, existing_sigs)
         
-        print(f"[DEBUG] Comparing with project '{project_name}':")
-        print(f"        Jaccard similarity = {similarity:.2f}% (threshold: {threshold}%)")
-        print(f"        Containment ratio = {containment:.2f}% (threshold: {containment_threshold}%)")
+
         
         # Check if match criteria met
         is_jaccard_match = similarity >= threshold
@@ -340,7 +338,6 @@ def find_similar_project(
         
         if is_jaccard_match or is_containment_match:
             match_reason = "Jaccard similarity" if is_jaccard_match else "Containment ratio"
-            print(f"[DEBUG] Similar project found via {match_reason}!")
             
             return {
                 "project_name": project_name,
@@ -377,8 +374,6 @@ def update_existing_project(
     old_sig = match_info["old_project_signature"]
     
     print(f"[INFO] Updating project '{match_info['project_name']}'...")
-    print(f"[DEBUG] Old signature: {old_sig}")
-    print(f"[DEBUG] New signature: {new_project_sig}")
     
     # Delete old project
     conn = get_connection()

@@ -22,7 +22,13 @@ def prompt_update_confirmation(match_info: Dict, new_project_name: str) -> bool:
     print(f"\n📁 Uploading: {new_project_name}")
     print(f"📊 Similar to existing project: '{match_info['project_name']}'")
     print(f"   📈 Similarity: {match_info['similarity_percentage']}%")
-    print(f"   🎯 Match type: {match_info['match_reason']}")
+    # Format match reason with explanation
+    if match_info['match_reason'] == "Jaccard similarity":
+        match_type_display = "Jaccard similarity (measures how much the two projects overlap out of everything they contain)"
+    else:
+        match_type_display = "Containment ratio (measures how much of the original project is preserved in the new upload)"
+    
+    print(f"   🎯 Match type: {match_type_display}")
     print("\n" + "-" * 60)
     print("Would you like to UPDATE the existing project?")
     print("  • Yes → Replace existing project with new files")

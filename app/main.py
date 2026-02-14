@@ -117,7 +117,7 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
-# Check if existing local Project Insights data is present
+    # Check if existing local Project Insights data is present
     try:
         existing_projects = get_projects()
     except Exception:
@@ -139,6 +139,27 @@ def main():
             print("\n" + "="*60)
             print("🔍 PROJECT ANALYSIS SESSION")
             print("="*60)
+            
+            # If user has existing projects, ask if they want to make corrections first
+            if existing_projects:
+                print("\n💡 You have previously generated insights for your projects.")
+                while True:
+                    correction_choice = input("\nWould you like to make corrections to project/skill dates before uploading?\n  📅 'yes' - Update project dates/skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
+                    
+                    if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
+                        print("\n📅 Opening Chronological Manager...")
+                        try:
+                            chrono_cli = ChronologicalCLI()
+                            chrono_cli.run()
+                            print("\n✅ Corrections complete! Continuing to file upload...")
+                        except Exception as e:
+                            print(f"❌ Error in chronology manager: {e}")
+                        break
+                    elif correction_choice in ['no', 'n', 'skip', 'continue']:
+                        print("\n⏭️  Skipping corrections...")
+                        break
+                    else:
+                        print("❌ Please enter 'yes' or 'no'")
             
             print("\n--- Project Root Input ---")
             rc = file_input_main()

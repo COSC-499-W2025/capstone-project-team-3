@@ -136,6 +136,12 @@ def main():
         
         # Main analysis loop - keeps asking for projects until user exits
         while True:
+            # Refresh existing projects at the start of each iteration
+            try:
+                existing_projects = get_projects()
+            except Exception:
+                existing_projects = None
+            
             # If user has existing projects, ask if they want to make corrections first
             if existing_projects:
                 print("\n💡 You have previously generated insights for your projects.")

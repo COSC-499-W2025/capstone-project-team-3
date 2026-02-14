@@ -94,4 +94,12 @@ async def get_project_thumbnail(project_id: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Thumbnail file not found")
     
-    return FileResponse(file_path)
+    # Return file with no-cache headers to prevent browser caching
+    return FileResponse(
+        file_path,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )

@@ -1,7 +1,14 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 from app.data.db import get_connection
+from pathlib import Path
+import os
 
 router = APIRouter()
+
+# Define thumbnails directory
+THUMBNAIL_DIR = Path(__file__).parent.parent.parent / "data" / "thumbnails"
+THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def update_project_thumbnail(project_signature: str, thumbnail_path: str) -> None:
@@ -27,12 +34,64 @@ async def set_project_thumbnail(
     if not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image.")
     
-    # Save image to disk or cloud (example: local storage)
-    image_path = f"static/thumbnails/{project_id}_{image.filename}"
+    # Get file extension
+    file_ext = os.path.splitext(image.filename)[1]
+    if not file_ext:
+        file_ext = ".jpg"  # Default to jpg if no extension
+    
+    # Save image to thumbnails directory
+    filename = f"{project_id}{file_ext}"
+    image_path = THUMBNAIL_DIR / filename
+    
+    # Remove old thumbnail if exists
+    for old_file in THUMBNAIL_DIR.glob(f"{project_id}.*"):
+        try:
+            old_file.unlink()
+        except Exception:
+            pass
+    
+    # Write new thumbnail
     with open(image_path, "wb") as f:
         f.write(await image.read())
     
-    # Update project thumbnail in DB (base utils assumed to exist)
-    update_project_thumbnail(project_id, image_path)
+    # Update project thumbnail in DB with relative path
+    relative_path = f"data/thumbnails/{filename}"
+    update_project_thumbnail(project_id, relative_path)
     
-    return {"success": True, "thumbnail_path": image_path}
+    return {
+        "success": True, 
+        "thumbnail_path": relative_path,
+        "thumbnail_url": f"/api/portfolio/project/thumbnail/{project_id}"
+    }
+
+
+@router.get("/portfolio/project/thumbnail/{project_id}")
+async def get_project_thumbnail(project_id: str):
+    """
+    Retrieve the thumbnail image for a given project.
+    """
+    # Check database for thumbnail path
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT thumbnail_path FROM PROJECT WHERE project_signature = ?",
+        (project_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row or not row[0]:
+        raise HTTPException(status_code=404, detail="Thumbnail not found for this project")
+    
+    # Extract filename from path
+    thumbnail_path = row[0]
+    if thumbnail_path.startswith("data/thumbnails/"):
+        filename = thumbnail_path.replace("data/thumbnails/", "")
+        file_path = THUMBNAIL_DIR / filename
+    else:
+        file_path = Path(thumbnail_path)
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Thumbnail file not found")
+    
+    return FileResponse(file_path)

@@ -105,10 +105,21 @@ class PortfolioDashboard {
     }
     
     renderDashboard(data) {
+        console.log('📊 Rendering dashboard with data:', data);
+        console.log('📊 Projects count:', data.projects?.length);
+        console.log('📊 Graphs data:', data.graphs);
+        
         this.renderOverviewCards(data.overview);
+        console.log('✅ Overview cards rendered');
+        
         this.renderCharts(data.graphs);
+        console.log('✅ Charts rendered');
+        
         this.renderTopProjects(data.projects);
+        console.log('✅ Top projects rendered');
+        
         this.renderDetailedAnalysis(data.projects);
+        console.log('✅ Detailed analysis rendered');
     }
     
     renderOverviewCards(overview) {
@@ -408,6 +419,8 @@ createLineChart(canvasId, title, data) {
 
 // Also update renderCharts to handle null chart returns gracefully:
 renderCharts(graphs) {
+    console.log('📈 renderCharts called with:', graphs);
+    
     // Destroy existing charts
     Object.values(this.charts).forEach(chart => {
         if (chart) chart.destroy();
@@ -416,9 +429,10 @@ renderCharts(graphs) {
     
     // Guard: Check if Chart.js is available at all
     if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded, skipping all chart rendering');
+        console.error('❌ Chart.js not loaded! Charts will not render.');
         return;
     }
+    console.log('✅ Chart.js is available');
     
     // Language Distribution (Pie Chart)
     const languageChart = this.createPieChart(
@@ -555,6 +569,30 @@ showError(message) {
                 <div class="project-card">
                     <div class="project-rank">${rank} Place</div>
                     <div class="project-title">${project.title}</div>
+                    
+                    <!-- Thumbnail Section -->
+                    <div class="thumbnail-section" style="margin: 16px 0; text-align: center;">
+                        ${project.thumbnail_url ? `
+                            <div class="thumbnail-container" style="position: relative; display: inline-block;">
+                                <img src="${project.thumbnail_url}" 
+                                     alt="${project.title} thumbnail" 
+                                     class="project-thumbnail"
+                                     style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border);" />
+                                <button class="change-thumbnail-btn" 
+                                        onclick="dashboard.uploadThumbnail('${project.id}')"
+                                        style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 11px;">
+                                    Change
+                                </button>
+                            </div>
+                        ` : `
+                            <button class="upload-thumbnail-btn" 
+                                    onclick="dashboard.uploadThumbnail('${project.id}')"
+                                    style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                                📷 Add Thumbnail
+                            </button>
+                        `}
+                    </div>
+                    
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
                         ${(project.rank || 0).toFixed(2)}
                     </div>
@@ -775,6 +813,65 @@ showError(message) {
             </div>
             
         `;
+    }
+    
+    async uploadThumbnail(projectId) {
+        // Create a hidden file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image file is too large. Please select an image smaller than 5MB.');
+                return;
+            }
+            
+            try {
+                // Create FormData to send the file
+                const formData = new FormData();
+                formData.append('project_id', projectId);
+                formData.append('image', file);
+                
+                // Show loading state
+                console.log('📤 Uploading thumbnail for project:', projectId);
+                
+                // Upload thumbnail
+                const response = await fetch('/api/portfolio/project/thumbnail', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Thumbnail uploaded successfully:', result);
+                
+                // Reload portfolio to show new thumbnail
+                await this.loadPortfolio();
+                
+                alert('Thumbnail uploaded successfully!');
+            } catch (error) {
+                console.error('❌ Error uploading thumbnail:', error);
+                alert('Failed to upload thumbnail: ' + error.message);
+            }
+        };
+        
+        // Trigger file selection dialog
+        input.click();
     }
     
     showError(message) {

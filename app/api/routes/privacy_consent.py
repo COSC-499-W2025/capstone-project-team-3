@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.utils.consent_utils import record_consent, has_consent, revoke_consent
 from app.data.db import get_connection, DB_PATH
+from app.shared.text.consent_text import ConsentText
 
 router = APIRouter()
 
@@ -42,3 +43,11 @@ def revoke_user_consent():
         return {"status": "ok", "message": "Consent revoked successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to revoke consent: {str(e)}")
+
+@router.get("/privacy-consent/text")
+def get_consent_text():
+    """Get privacy consent text for display."""
+    return {
+        "consent_message": ConsentText.CONSENT_MESSAGE,
+        "detailed_info": ConsentText.DETAILED_PRIVACY_INFO
+    }

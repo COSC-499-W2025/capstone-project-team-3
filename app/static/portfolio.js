@@ -543,6 +543,9 @@ showError(message) {
             return;
         }
         
+        // Generate unique cache buster for this render
+        const cacheBuster = Date.now() + Math.random().toString(36).substring(7);
+        
         // Sort by rank and take top 6
         const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
         
@@ -566,32 +569,18 @@ showError(message) {
                 `${type}: ${count}`).join(', ') || 'N/A';
             
             return `
-                <div class="project-card">
-                    <div class="project-rank">${rank} Place</div>
-                    <div class="project-title">${project.title}</div>
-                    
-                    <!-- Thumbnail Section -->
-                    <div class="thumbnail-section" style="margin: 16px 0; text-align: center;">
-                        ${project.thumbnail_url ? `
-                            <div class="thumbnail-container" style="position: relative; display: inline-block;">
-                                <img src="${project.thumbnail_url}" 
-                                     alt="${project.title} thumbnail" 
-                                     class="project-thumbnail"
-                                     style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border);" />
-                                <button class="change-thumbnail-btn" 
-                                        onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
-                                        style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 11px;">
-                                    Change
-                                </button>
-                            </div>
-                        ` : `
-                            <button class="upload-thumbnail-btn" 
-                                    onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
-                                    style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 13px; font-weight: 500;">
-                                📷 Add Thumbnail
-                            </button>
-                        `}
+                <div class="project-card" style="position: relative;">
+                    <!-- Thumbnail Button - Top Right -->
+                    <div class="thumbnail-button-section" style="position: absolute; top: 16px; right: 16px; z-index: 10;">
+                        <button class="upload-thumbnail-btn" 
+                                onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
+                                style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 500; box-shadow: var(--shadow);">
+                            ${project.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                        </button>
                     </div>
+                    
+                    <div class="project-rank">${rank} Place</div>
+                    <div class="project-title" style="padding-right: 140px;">${project.title}</div>
                     
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
                         ${(project.rank || 0).toFixed(2)}
@@ -599,6 +588,17 @@ showError(message) {
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
                         ${project.dates}
                     </div>
+                    
+                    <!-- Thumbnail Image Display - Center -->
+                    ${project.thumbnail_url ? `
+                        <div class="thumbnail-display" style="margin: 16px 0; text-align: center;">
+                            <img src="${project.thumbnail_url}?cb=${cacheBuster}" 
+                                 alt="${project.title} thumbnail" 
+                                 class="project-thumbnail"
+                                 style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border); box-shadow: var(--shadow);" 
+                                 crossorigin="anonymous" />
+                        </div>
+                    ` : ''}
                     
                     ${project.summary ? `
                         <div class="project-summary">
@@ -847,22 +847,38 @@ showError(message) {
                 // Show loading state
                 console.log('📤 Uploading thumbnail for project:', projectId);
                 
-                // Upload thumbnail
+                // Upload thumbnail with cache-busting headers
                 const response = await fetch('/api/portfolio/project/thumbnail', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
                 }
                 
                 const result = await response.json();
                 console.log('✅ Thumbnail uploaded successfully:', result);
                 
-                // Reload portfolio to show new thumbnail
+                // Force clear any cached images for this project
+                const imageElements = document.querySelectorAll(`img[alt*="${projectId}"]`);
+                imageElements.forEach(img => {
+                    const src = img.src.split('?')[0];
+                    img.src = src + '?cb=' + Date.now() + Math.random();
+                });
+                
+                // Wait a moment for the file to be fully written
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Reload portfolio to show new thumbnail with fresh cache
                 await this.loadPortfolio();
                 
+                console.log('✅ Portfolio reloaded with new thumbnail');
                 alert('Thumbnail uploaded successfully!');
             } catch (error) {
                 console.error('❌ Error uploading thumbnail:', error);

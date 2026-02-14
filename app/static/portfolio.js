@@ -579,14 +579,14 @@ showError(message) {
                                      class="project-thumbnail"
                                      style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border);" />
                                 <button class="change-thumbnail-btn" 
-                                        onclick="dashboard.uploadThumbnail('${project.id}')"
+                                        onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
                                         style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 11px;">
                                     Change
                                 </button>
                             </div>
                         ` : `
                             <button class="upload-thumbnail-btn" 
-                                    onclick="dashboard.uploadThumbnail('${project.id}')"
+                                    onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
                                     style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 13px; font-weight: 500;">
                                 📷 Add Thumbnail
                             </button>

@@ -120,8 +120,8 @@ def test_extract_file_signature(tmp_path):
     sig2 = extract_file_signature(file, tmp_path)
     assert isinstance(sig1, str)
     assert sig1 == sig2
-    # Changing file content should change signature
-    file.write_text("modified")
+    # Changing file should change signature
+    file.write_text("new data")
     sig3 = extract_file_signature(file, tmp_path)
     assert sig1 != sig3
 

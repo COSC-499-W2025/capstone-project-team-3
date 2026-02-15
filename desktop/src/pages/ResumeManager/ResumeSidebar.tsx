@@ -35,9 +35,16 @@ export const ResumeSidebar = ({
         <ul className="resume-sidebar__list">
         {resumeList.map((r, i) => (
           <li key={i}>
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(i)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(i);
+                }
+              }}
               className={`resume-sidebar__item ${i === activeIndex ? "resume-sidebar__item--active" : ""}`}
             >
               <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
@@ -49,7 +56,7 @@ export const ResumeSidebar = ({
                   <img src="/more_icon.svg" alt="" width={18} height={18} />
                 </button>
               </span>
-            </button>
+            </div>
           </li>
         ))}
       </ul>

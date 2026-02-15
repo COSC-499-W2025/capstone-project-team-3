@@ -368,6 +368,13 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         # Determine project type based on if we have commit data
         is_github = metrics.get("total_commits", 0) > 0
         
+        # Check for thumbnail
+        thumbnail_url = None
+        cursor.execute("SELECT thumbnail_path FROM PROJECT WHERE project_signature = ?", (pid,))
+        thumbnail_row = cursor.fetchone()
+        if thumbnail_row and thumbnail_row[0]:
+            thumbnail_url = f"/api/portfolio/project/thumbnail/{pid}"
+        
         # Extract detailed analysis data
         complexity_analysis = metrics.get("complexity_analysis", {})
         commit_patterns = metrics.get("commit_patterns", {})
@@ -385,6 +392,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "last_modified": last_modified,
             "type": "GitHub" if is_github else "Local",
             "summary": project_summary,
+            "thumbnail_url": thumbnail_url,
             "metrics": {
                 # Basic metrics
                 "total_lines": metrics.get("total_lines", 0),

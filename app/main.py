@@ -9,6 +9,7 @@ from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main
+from app.cli.chronological_manager import ChronologicalCLI
 from app.api.routes.upload_page import router as upload_page_router
 
 from app.api.routes.privacy_consent import router as privacy_consent_router 
@@ -21,15 +22,15 @@ from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.eduction_service import router as education_services_router
+from app.api.routes.post_thumbnail import router as thumbnail_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
 from app.utils.env_utils import check_gemini_api_key
-from app.utils.scan_utils import run_scan_flow 
+from app.utils.scan_utils import run_scan_flow
 from app.utils.delete_insights_utils import get_projects
 from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
-from app.utils.scan_utils import run_scan_flow
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
 from app.utils.non_code_parsing.document_parser import parsed_input_text
@@ -71,6 +72,7 @@ app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(health_router)
 app.include_router(education_services_router, prefix="/api")
+app.include_router(thumbnail_router, prefix="/api")
 
 
 def display_startup_info():
@@ -102,7 +104,7 @@ def main():
     # Check for the consent
     consent_manager = ConsentManager()
     if not consent_manager.enforce_consent():
-        print("\n Cannot start application without consent. Please provide consent to proceed.")
+        print("\nCannot start application without consent. Please provide consent to proceed.")
         sys.exit(1)
 
     # Manage user preferences
@@ -116,7 +118,7 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
-# Check if existing local Project Insights data is present
+    # Check if existing local Project Insights data is present
     try:
         existing_projects = get_projects()
     except Exception:
@@ -135,6 +137,33 @@ def main():
         
         # Main analysis loop - keeps asking for projects until user exits
         while True:
+            # Refresh existing projects at the start of each iteration
+            try:
+                existing_projects = get_projects()
+            except Exception:
+                existing_projects = None
+            
+            # If user has existing projects, ask if they want to make corrections first
+            if existing_projects:
+                print("\n💡 You have previously generated insights for your projects.")
+                while True:
+                    correction_choice = input("\nWould you like to make corrections to project/skill dates before uploading?\n  📅 'yes' - Update project dates/skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
+                    
+                    if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
+                        print("\n📅 Opening Chronological Manager...")
+                        try:
+                            chrono_cli = ChronologicalCLI()
+                            chrono_cli.run()
+                            print("\n✅ Corrections complete! Continuing to file upload...")
+                        except Exception as e:
+                            print(f"❌ Error in chronology manager: {e}")
+                        break
+                    elif correction_choice in ['no', 'n', 'skip', 'continue']:
+                        print("\n⏭️  Skipping corrections...")
+                        break
+                    else:
+                        print("❌ Please enter 'yes' or 'no'")
+            
             print("\n" + "="*60)
             print("🔍 PROJECT ANALYSIS SESSION")
             print("="*60)
@@ -182,7 +211,6 @@ def main():
                     files = scan_result['files']
                 
                     print(f"✅ Found {len(files)} files")
-                   
                     
                     # Check if we should skip analysis
                     if scan_result["skip_analysis"]:
@@ -485,22 +513,32 @@ def main():
                 if cu_res.get("status") != "ok":
                      print(f"⚠️ Cleanup failed: {cu_res.get('reason')}")
           
-            # ADD THE MISSING SECTION HERE!
+            # POST-ANALYSIS OPTIONS
             print(f"\n{'='*60}")
-            print("🔄 CONTINUE OR EXIT?")
+            print("🔄 WHAT'S NEXT?")
             print(f"{'='*60}")
             
             while True:
-                choice = input("\nWould you like to:\n  🔄 'continue' - Analyze another project\n  🚪 'exit'     - Exit the application\n\nChoice (continue/exit): ").lower().strip()
+                choice = input("\nWould you like to:\n  📅 'corrections' - Update project/skill dates\n  🔄 'continue'    - Analyze another project\n  🚪 'exit'        - Exit the application\n\nChoice (corrections/continue/exit): ").lower().strip()
                 
                 if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                     print("👋 Exiting Project Insights. Thank you for using our service!")
                     break
+                elif choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
+                    print("\n📅 Opening Chronological Manager...")
+                    try:
+                        chrono_cli = ChronologicalCLI()
+                        chrono_cli.run()
+                        print("\n✅ Chronology corrections complete!")
+                    except Exception as e:
+                        print(f"❌ Error in chronology manager: {e}")
+                    # After editing dates, show the menu again
+                    continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
                     print("🔄 Starting new analysis session...")
                     break
                 else:
-                    print("❌ Please enter 'continue' or 'exit'")
+                    print("❌ Please enter 'corrections', 'continue', or 'exit'")
             
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
@@ -512,6 +550,10 @@ def read_root():
     return {"message": "Welcome to the Project Insights!!"}
 
 if __name__ == "__main__":
+    # Check if we should run in API-only mode or interactive mode
+    prompt_root = os.environ.get("PROMPT_ROOT", "0")
+    interactive_mode = prompt_root in ("1", "true", "True", "yes")
+    
     def start_server():
         uvicorn.run(
             app,
@@ -521,14 +563,21 @@ if __name__ == "__main__":
             access_log= False
         )
 
-    # Start API server in background
-    server_thread = threading.Thread(target=start_server, daemon=True)
-    server_thread.start()
+    if not interactive_mode:
+        # API-only mode: initialize DB and run server in main thread
+        init_db()
+        print("\n🌐 Starting API server in portfolio mode...")
+        print("📊 Portfolio available at: http://localhost:8000/api/portfolio-dashboard")
+        start_server()
+    else:
+        # Interactive mode: start API server in background, then run CLI
+        server_thread = threading.Thread(target=start_server, daemon=True)
+        server_thread.start()
 
-    # Give server a moment to start
-    time.sleep(1)
+        # Give server a moment to start
+        time.sleep(1)
 
-    # Now run the CLI flow
-    main()
+        # Now run the CLI flow
+        main()
 
     

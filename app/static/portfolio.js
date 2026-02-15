@@ -105,10 +105,21 @@ class PortfolioDashboard {
     }
     
     renderDashboard(data) {
+        console.log('📊 Rendering dashboard with data:', data);
+        console.log('📊 Projects count:', data.projects?.length);
+        console.log('📊 Graphs data:', data.graphs);
+        
         this.renderOverviewCards(data.overview);
+        console.log('✅ Overview cards rendered');
+        
         this.renderCharts(data.graphs);
+        console.log('✅ Charts rendered');
+        
         this.renderTopProjects(data.projects);
+        console.log('✅ Top projects rendered');
+        
         this.renderDetailedAnalysis(data.projects);
+        console.log('✅ Detailed analysis rendered');
     }
     
     renderOverviewCards(overview) {
@@ -408,6 +419,8 @@ createLineChart(canvasId, title, data) {
 
 // Also update renderCharts to handle null chart returns gracefully:
 renderCharts(graphs) {
+    console.log('📈 renderCharts called with:', graphs);
+    
     // Destroy existing charts
     Object.values(this.charts).forEach(chart => {
         if (chart) chart.destroy();
@@ -416,9 +429,10 @@ renderCharts(graphs) {
     
     // Guard: Check if Chart.js is available at all
     if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded, skipping all chart rendering');
+        console.error('❌ Chart.js not loaded! Charts will not render.');
         return;
     }
+    console.log('✅ Chart.js is available');
     
     // Language Distribution (Pie Chart)
     const languageChart = this.createPieChart(
@@ -529,6 +543,9 @@ showError(message) {
             return;
         }
         
+        // Generate unique cache buster for this render
+        const cacheBuster = Date.now() + Math.random().toString(36).substring(7);
+        
         // Sort by rank and take top 6
         const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
         
@@ -552,15 +569,36 @@ showError(message) {
                 `${type}: ${count}`).join(', ') || 'N/A';
             
             return `
-                <div class="project-card">
+                <div class="project-card" style="position: relative;">
+                    <!-- Thumbnail Button - Top Right -->
+                    <div class="thumbnail-button-section" style="position: absolute; top: 16px; right: 16px; z-index: 10;">
+                        <button class="upload-thumbnail-btn" 
+                                onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
+                                style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 500; box-shadow: var(--shadow);">
+                            ${project.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                        </button>
+                    </div>
+                    
                     <div class="project-rank">${rank} Place</div>
-                    <div class="project-title editable-field" data-field="project_name" data-project="${project.id}">${project.title}</div>
+
+                    <div class="project-title editable-field" data-field="project_name" data-project="${project.id}"style="padding-right: 140px;">${project.title}</div>
                     <div class="project-score-display">
                         ${(project.rank || 0).toFixed(2)}
                     </div>
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
                         ${project.dates}
                     </div>
+                    
+                    <!-- Thumbnail Image Display - Center -->
+                    ${project.thumbnail_url ? `
+                        <div class="thumbnail-display" style="margin: 16px 0; text-align: center;">
+                            <img src="${project.thumbnail_url}?cb=${cacheBuster}" 
+                                 alt="${project.title} thumbnail" 
+                                 class="project-thumbnail"
+                                 style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border); box-shadow: var(--shadow);" 
+                                 crossorigin="anonymous" />
+                        </div>
+                    ` : ''}
                     
                     ${project.summary ? `
                         <div class="project-summary">
@@ -768,6 +806,81 @@ showError(message) {
             </div>
             
         `;
+    }
+    
+    async uploadThumbnail(projectId) {
+        // Create a hidden file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image file is too large. Please select an image smaller than 5MB.');
+                return;
+            }
+            
+            try {
+                // Create FormData to send the file
+                const formData = new FormData();
+                formData.append('project_id', projectId);
+                formData.append('image', file);
+                
+                // Show loading state
+                console.log('📤 Uploading thumbnail for project:', projectId);
+                
+                // Upload thumbnail with cache-busting headers
+                const response = await fetch('/api/portfolio/project/thumbnail', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Thumbnail uploaded successfully:', result);
+                
+                // Force clear any cached images for this project
+                const imageElements = document.querySelectorAll(`img[alt*="${projectId}"]`);
+                imageElements.forEach(img => {
+                    const src = img.src.split('?')[0];
+                    img.src = src + '?cb=' + Date.now() + Math.random();
+                });
+                
+                // Wait a moment for the file to be fully written
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Reload portfolio to show new thumbnail with fresh cache
+                await this.loadPortfolio();
+                
+                console.log('✅ Portfolio reloaded with new thumbnail');
+                alert('Thumbnail uploaded successfully!');
+            } catch (error) {
+                console.error('❌ Error uploading thumbnail:', error);
+                alert('Failed to upload thumbnail: ' + error.message);
+            }
+        };
+        
+        // Trigger file selection dialog
+        input.click();
     }
     
     showError(message) {

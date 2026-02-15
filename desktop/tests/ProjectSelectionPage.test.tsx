@@ -74,7 +74,7 @@ describe('ProjectSelectionPage', () => {
     );
 
     // Wait for page to load by finding the title
-    const title = await screen.findByText(/Selects Projects for Resume/i);
+    const title = await screen.findByText(/Select Projects for Resume/i);
     expect(title).toBeInTheDocument();
 
     // Page shell

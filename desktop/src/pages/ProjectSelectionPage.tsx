@@ -55,7 +55,7 @@ function ProjectSelectionPage() {
   return (
     <div className="project-selection-container">
       <h1 className="page-title">
-        Selects Projects for Resume
+        Select Projects for Resume
       </h1>
       <p className="page-subtitle">
         Choose which projects should contribute to your resume.

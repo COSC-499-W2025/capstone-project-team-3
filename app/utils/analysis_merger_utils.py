@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from app.utils.non_code_analysis.non_code_analysis_utils import _sumy_lsa_summarize
 from app.data.db import get_connection
 from app.utils.project_score import compute_overall_project_contribution_score
-from app.utils.git_utils import detect_git, get_repo, is_repo_empty
+from app.utils.git_utils import detect_git, get_repo, is_repo_empty, author_matches
 from app.cli.git_code_parsing import _get_preferred_author_email
 MAX_SKILLS = 10 #Maximum number of skills to be stored per project (TDB: adjust based on some condition)
 MAX_BULLETS = 5 #Maximum number of resume bullets to be stored per project (TBD: adjust based on some condition)
@@ -381,8 +381,9 @@ def _infer_skill_dates_from_git(project_path: str, skills: List[str]) -> Dict[st
         if is_repo_empty(project_path):
             return {skill: None for skill in skills}
         
-        # Get the user's preferred author email for filtering
-        _, user_email = _get_preferred_author_email()
+        # Get the user's preferred author identifiers for filtering
+        github_user, user_email = _get_preferred_author_email()
+        author_identifiers = [ident for ident in [github_user, user_email] if ident]
         
         # For each skill, find the earliest commit with matching file extensions
         for skill in skills:
@@ -396,11 +397,8 @@ def _infer_skill_dates_from_git(project_path: str, skills: List[str]) -> Dict[st
             # Iterate through all commits (oldest first)
             try:
                 for commit in repo.iter_commits(rev="--all", reverse=True):
-                    # Filter commits by user email if available
-                    if user_email and commit.author.email != user_email:
-                        continue
-                    # Filter commits by user email if available
-                    if user_email and commit.author.email != user_email:
+                    # Filter commits by author identifiers if available
+                    if author_identifiers and not author_matches(commit, author_identifiers):
                         continue
                     
                     # Check if this commit touched files with relevant extensions

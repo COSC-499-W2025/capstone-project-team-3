@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
@@ -6,6 +7,7 @@ import "../styles/ResumeManager.css";
 import { getResumes, buildResume, getResumeById, type ResumeListItem } from "../api/resume";
 
 export function ResumeBuilderPage() {
+  const navigate = useNavigate();
   // const [resumes, setResumes] = useState<Resume[]>([]);
   const [resumeList, setResumeList] = useState<ResumeListItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -36,6 +38,7 @@ export function ResumeBuilderPage() {
         <ResumeSidebar
           resumeList={resumeList}
           activeIndex={activeIndex}
+          onTailorNew={() => navigate('/projectselectionpage')}
           onSelect={setActiveIndex}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}

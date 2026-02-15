@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from app.data.db import get_connection
+from app.utils.score_override_utils import resolve_effective_score
 
 
 def _normalize_authors(value):
@@ -26,10 +27,37 @@ def get_portfolio_resume_insights():
     cur = conn.cursor()
     
     # Build Portfolio: Project name, summary, duration, skills
-    cur.execute("SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT")
+    cur.execute(
+        """
+        SELECT
+            project_signature,
+            name,
+            score,
+            score_overridden,
+            score_overridden_value,
+            summary,
+            created_at,
+            last_modified
+        FROM PROJECT
+        """
+    )
     projects = []
     for row in cur.fetchall():
-        signature, name, score, summary, created_at, last_modified = row
+        (
+            signature,
+            name,
+            score,
+            score_overridden,
+            score_overridden_value,
+            summary,
+            created_at,
+            last_modified,
+        ) = row
+        score_fields = resolve_effective_score(
+            score=score,
+            score_overridden=score_overridden,
+            score_overridden_value=score_overridden_value,
+        )
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
         skills = [s[0] for s in cur.fetchall()]
@@ -59,12 +87,17 @@ def get_portfolio_resume_insights():
         duration = f"{format_date(created_at)} - {format_date(last_modified)}"
         
         projects.append({
+            "project_signature": signature,
             "name": name,
             "summary": summary,
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "score": score,
+            "score": score_fields["score"],
+            "score_original": score_fields["score_original"],
+            "score_overridden": score_fields["score_overridden"],
+            "score_overridden_value": score_fields["score_overridden_value"],
+            "display_score": score_fields["display_score"],
             "metrics": metrics
         })
 
@@ -178,7 +211,19 @@ def get_projects_by_signatures(signatures: list):
     for signature in signatures:
         # Get project basic info
         cur.execute(
-            "SELECT project_signature, name, score, summary, created_at, last_modified FROM PROJECT WHERE project_signature=?", 
+            """
+            SELECT
+                project_signature,
+                name,
+                score,
+                score_overridden,
+                score_overridden_value,
+                summary,
+                created_at,
+                last_modified
+            FROM PROJECT
+            WHERE project_signature=?
+            """,
             (signature,)
         )
         
@@ -187,7 +232,21 @@ def get_projects_by_signatures(signatures: list):
             # Skip if project not found
             continue
             
-        sig, name, score, summary, created_at, last_modified = project_row
+        (
+            sig,
+            name,
+            score,
+            score_overridden,
+            score_overridden_value,
+            summary,
+            created_at,
+            last_modified,
+        ) = project_row
+        score_fields = resolve_effective_score(
+            score=score,
+            score_overridden=score_overridden,
+            score_overridden_value=score_overridden_value,
+        )
         
         # Get skills for this project
         cur.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id=?", (signature,))
@@ -249,12 +308,17 @@ def get_projects_by_signatures(signatures: list):
         duration = f"{format_date(created_at)} - {format_date(last_modified)}"
         
         projects.append({
+            "project_signature": sig,
             "name": name,
             "summary": summary,
             "duration": duration,
             "skills": skills,
             "created_at": format_date(created_at),
-            "score": score,
+            "score": score_fields["score"],
+            "score_original": score_fields["score_original"],
+            "score_overridden": score_fields["score_overridden"],
+            "score_overridden_value": score_fields["score_overridden_value"],
+            "display_score": score_fields["display_score"],
             "metrics": metrics,
             "resume_bullets": resume_bullets
         })

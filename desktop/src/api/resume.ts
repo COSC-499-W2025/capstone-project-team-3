@@ -21,6 +21,13 @@ export async function buildResume(): Promise<Resume> {
   return res.json() as Promise<Resume>;
 }
 
+export async function previewResume(projectIds: string[]): Promise<Resume> {
+  const params = projectIds.map(id => `project_ids=${id}`).join('&');
+  const res = await fetch(`${API_BASE}/resume?${params}`, { method: "GET" });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json() as Promise<Resume>;
+}
+
 export async function getResumeById(id: number): Promise<Resume> {
   const res = await fetch(`${API_BASE}/resume/${id}`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);

@@ -1,10 +1,18 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { ResumeBuilderPage } from '../src/pages/ResumeBuilderPage';
 import * as resumeApi from '../src/api/resume';
 import type { ResumeListItem } from '../src/api/resume';
 import type { Resume } from '../src/api/resume_types';
-import { jest, test, expect, describe, beforeEach } from '@jest/globals';
+import { jest, test, describe, beforeEach } from '@jest/globals';
+
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
 
 jest.mock('../src/api/resume', () => ({
   getResumes: jest.fn(),
@@ -13,10 +21,11 @@ jest.mock('../src/api/resume', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
-  ResumeSidebar: ({ resumeList, activeIndex, onSelect, sidebarOpen, onToggleSidebar }: {
+  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, sidebarOpen, onToggleSidebar }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];
     activeIndex: number;
     onSelect: (i: number) => void;
+    onTailorNew?: () => void;
     sidebarOpen: boolean;
     onToggleSidebar: () => void;
   }) => (
@@ -28,7 +37,7 @@ jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
         </button>
       ))}
       <button type="button" aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} onClick={onToggleSidebar} />
-      <button type="button">Tailor New Resume</button>
+      <button type="button" onClick={onTailorNew}>Tailor New Resume</button>
     </aside>
   ),
 }));
@@ -95,6 +104,7 @@ const mockSavedResume: Resume = {
 describe('ResumeBuilderPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNavigate.mockClear();
     mockGetResumes.mockResolvedValue(mockResumeList);
     mockBuildResume.mockResolvedValue(mockMasterResume);
     mockGetResumeById.mockResolvedValue(mockSavedResume);
@@ -223,5 +233,17 @@ describe('ResumeBuilderPage', () => {
       // Should call buildResume even though is_master is false, because id=1
       expect(mockBuildResume).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test('clicking Tailor New Resume navigates to project selection page', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const tailorButton = screen.getByText('Tailor New Resume');
+    fireEvent.click(tailorButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/projectselectionpage');
   });
 });

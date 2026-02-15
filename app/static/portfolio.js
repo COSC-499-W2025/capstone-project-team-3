@@ -554,8 +554,8 @@ showError(message) {
             return `
                 <div class="project-card">
                     <div class="project-rank">${rank} Place</div>
-                    <div class="project-title">${project.title}</div>
-                    <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
+                    <div class="project-title editable-field" data-field="project_name" data-project="${project.id}">${project.title}</div>
+                    <div class="project-score-display">
                         ${(project.rank || 0).toFixed(2)}
                     </div>
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
@@ -639,23 +639,15 @@ showError(message) {
             `;
         }).join('');
         
-        // TODO Add click handlers for editable fields
+        // Add click handlers for editable fields
         document.querySelectorAll('.editable-field').forEach(element => {
             element.style.cursor = 'pointer';
             element.style.position = 'relative';
             element.title = 'Click to edit';
             
             element.addEventListener('click', (e) => {
-                const field = e.target.dataset.field;
-                const projectId = e.target.dataset.project;
-                console.log(`Edit ${field} for project ${projectId}`);
-                // Add visual indicator that field is editable
-                e.target.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
-                e.target.style.border = '1px dashed var(--accent)';
-                
-                // TODO: Implement editing logic here
-
-                alert(`Editing ${field} for project ${projectId.substring(0, 8)}... - Logic to be implemented by teammate`);
+                e.stopPropagation();
+                this.handleFieldEdit(e.target);
             });
         });
     }
@@ -790,6 +782,194 @@ showError(message) {
         const wordCount = summary.split(/\s+/).length;
         const charCount = summary.length;
         return wordCount > 25 || charCount > 150;
+    }
+
+    handleFieldEdit(element) {
+        const field = element.dataset.field;
+        const projectId = element.dataset.project;
+        const currentValue = element.textContent.trim();
+        
+        // Prevent multiple edits at once
+        if (element.querySelector('input, textarea')) {
+            return;
+        }
+        
+        // Add visual indicator
+        element.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
+        element.style.border = '1px dashed var(--accent)';
+        
+        // Create appropriate input based on field type
+        let inputElement;
+        
+        if (field === 'summary') {
+            inputElement = document.createElement('textarea');
+            inputElement.style.width = '100%';
+            inputElement.style.minHeight = '100px';
+            inputElement.style.padding = '8px';
+            inputElement.style.border = '2px solid var(--accent)';
+            inputElement.style.borderRadius = '4px';
+            inputElement.style.fontFamily = 'inherit';
+            inputElement.style.fontSize = 'inherit';
+            inputElement.value = currentValue;
+        } else if (field === 'dates') {
+            // For dates, we need to parse and edit created_at and last_modified
+            inputElement = document.createElement('div');
+            inputElement.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-size: 12px; color: var(--text-secondary);">Created:</label>
+                    <input type="date" id="created_at_input" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <label style="font-size: 12px; color: var(--text-secondary);">Last Modified:</label>
+                    <input type="date" id="last_modified_input" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button class="save-edit-btn" style="flex: 1; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
+                        <button class="cancel-edit-btn" style="flex: 1; padding: 8px; background: var(--text-muted); color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.style.width = '100%';
+            inputElement.style.padding = '6px';
+            inputElement.style.border = '2px solid var(--accent)';
+            inputElement.style.borderRadius = '4px';
+            inputElement.style.fontFamily = 'inherit';
+            inputElement.style.fontSize = 'inherit';
+            inputElement.value = currentValue;
+        }
+        
+        const originalContent = element.innerHTML;
+        element.innerHTML = '';
+        element.appendChild(inputElement);
+        
+        if (field !== 'dates') {
+            // Add save/cancel buttons for non-date fields
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.gap = '8px';
+            buttonContainer.style.marginTop = '8px';
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Save';
+            saveBtn.className = 'save-edit-btn';
+            saveBtn.style.flex = '1';
+            saveBtn.style.padding = '6px';
+            saveBtn.style.background = 'var(--accent)';
+            saveBtn.style.color = 'white';
+            saveBtn.style.border = 'none';
+            saveBtn.style.borderRadius = '4px';
+            saveBtn.style.cursor = 'pointer';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'cancel-edit-btn';
+            cancelBtn.style.flex = '1';
+            cancelBtn.style.padding = '6px';
+            cancelBtn.style.background = 'var(--text-muted)';
+            cancelBtn.style.color = 'white';
+            cancelBtn.style.border = 'none';
+            cancelBtn.style.borderRadius = '4px';
+            cancelBtn.style.cursor = 'pointer';
+            
+            buttonContainer.appendChild(saveBtn);
+            buttonContainer.appendChild(cancelBtn);
+            element.appendChild(buttonContainer);
+        }
+        
+        // Focus input
+        if (field !== 'dates') {
+            inputElement.focus();
+            if (inputElement.tagName === 'INPUT') {
+                inputElement.select();
+            }
+        }
+        
+        // Handle save
+        const saveHandler = async () => {
+            let editData = { project_signature: projectId };
+            
+            if (field === 'summary') {
+                editData.project_summary = inputElement.value;
+            } else if (field === 'rank') {
+                // rank is read-only, but could update project_name
+                editData.project_name = inputElement.value;
+            } else if (field === 'dates') {
+                const createdAt = document.getElementById('created_at_input').value;
+                const lastModified = document.getElementById('last_modified_input').value;
+                if (createdAt) editData.created_at = createdAt;
+                if (lastModified) editData.last_modified = lastModified;
+            }
+            
+            await this.saveFieldEdit(editData, element, originalContent);
+        };
+        
+        // Handle cancel
+        const cancelHandler = () => {
+            element.innerHTML = originalContent;
+            element.style.backgroundColor = '';
+            element.style.border = '';
+        };
+        
+        // Attach event listeners
+        const saveBtn = element.querySelector('.save-edit-btn');
+        const cancelBtn = element.querySelector('.cancel-edit-btn');
+        
+        if (saveBtn) saveBtn.addEventListener('click', saveHandler);
+        if (cancelBtn) cancelBtn.addEventListener('click', cancelHandler);
+        
+        // Enter to save (except for textarea), Escape to cancel
+        if (field !== 'summary' && field !== 'dates') {
+            inputElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveHandler();
+                } else if (e.key === 'Escape') {
+                    cancelHandler();
+                }
+            });
+        }
+    }
+
+    async saveFieldEdit(editData, element, originalContent) {
+        try {
+            // Show loading state
+            element.innerHTML = '<span style="color: var(--text-muted);">Saving...</span>';
+            
+            const response = await fetch('/api/portfolio/edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    edits: [editData]
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to save edit');
+            }
+            
+            const result = await response.json();
+            console.log('Edit saved:', result);
+            
+            // Show success feedback
+            element.innerHTML = '<span style="color: var(--success);">✓ Saved!</span>';
+            element.style.backgroundColor = '';
+            element.style.border = '';
+            
+            // Reload portfolio data to show updated values
+            setTimeout(() => {
+                this.loadPortfolio(this.selectedProjects);
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error saving edit:', error);
+            element.innerHTML = originalContent;
+            element.style.backgroundColor = '';
+            element.style.border = '';
+            this.showError(`Failed to save: ${error.message}`);
+        }
     }
 }
 

@@ -9,6 +9,7 @@ from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main
+from app.cli.chronological_manager import ChronologicalCLI
 from app.api.routes.upload_page import router as upload_page_router
 
 from app.api.routes.privacy_consent import router as privacy_consent_router 
@@ -116,7 +117,7 @@ def main():
     # Display startup info including API status
     display_startup_info()
     
-# Check if existing local Project Insights data is present
+    # Check if existing local Project Insights data is present
     try:
         existing_projects = get_projects()
     except Exception:
@@ -135,6 +136,33 @@ def main():
         
         # Main analysis loop - keeps asking for projects until user exits
         while True:
+            # Refresh existing projects at the start of each iteration
+            try:
+                existing_projects = get_projects()
+            except Exception:
+                existing_projects = None
+            
+            # If user has existing projects, ask if they want to make corrections first
+            if existing_projects:
+                print("\n💡 You have previously generated insights for your projects.")
+                while True:
+                    correction_choice = input("\nWould you like to make corrections to project/skill dates before uploading?\n  📅 'yes' - Update project dates/skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
+                    
+                    if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
+                        print("\n📅 Opening Chronological Manager...")
+                        try:
+                            chrono_cli = ChronologicalCLI()
+                            chrono_cli.run()
+                            print("\n✅ Corrections complete! Continuing to file upload...")
+                        except Exception as e:
+                            print(f"❌ Error in chronology manager: {e}")
+                        break
+                    elif correction_choice in ['no', 'n', 'skip', 'continue']:
+                        print("\n⏭️  Skipping corrections...")
+                        break
+                    else:
+                        print("❌ Please enter 'yes' or 'no'")
+            
             print("\n" + "="*60)
             print("🔍 PROJECT ANALYSIS SESSION")
             print("="*60)
@@ -485,22 +513,32 @@ def main():
                 if cu_res.get("status") != "ok":
                      print(f"⚠️ Cleanup failed: {cu_res.get('reason')}")
           
-            # ADD THE MISSING SECTION HERE!
+            # POST-ANALYSIS OPTIONS
             print(f"\n{'='*60}")
-            print("🔄 CONTINUE OR EXIT?")
+            print("🔄 WHAT'S NEXT?")
             print(f"{'='*60}")
             
             while True:
-                choice = input("\nWould you like to:\n  🔄 'continue' - Analyze another project\n  🚪 'exit'     - Exit the application\n\nChoice (continue/exit): ").lower().strip()
+                choice = input("\nWould you like to:\n  📅 'corrections' - Update project/skill dates\n  🔄 'continue'    - Analyze another project\n  🚪 'exit'        - Exit the application\n\nChoice (corrections/continue/exit): ").lower().strip()
                 
                 if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                     print("👋 Exiting Project Insights. Thank you for using our service!")
                     break
+                elif choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
+                    print("\n📅 Opening Chronological Manager...")
+                    try:
+                        chrono_cli = ChronologicalCLI()
+                        chrono_cli.run()
+                        print("\n✅ Chronology corrections complete!")
+                    except Exception as e:
+                        print(f"❌ Error in chronology manager: {e}")
+                    # After editing dates, show the menu again
+                    continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
                     print("🔄 Starting new analysis session...")
                     break
                 else:
-                    print("❌ Please enter 'continue' or 'exit'")
+                    print("❌ Please enter 'corrections', 'continue', or 'exit'")
             
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:

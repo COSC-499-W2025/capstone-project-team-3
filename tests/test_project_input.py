@@ -427,16 +427,17 @@ def test_calculate_project_similarity():
     assert calculate_project_similarity([], ["file1"]) == 0.0
     assert calculate_project_similarity(["file1"], []) == 0.0
 
-def test_find_and_update_similar_project_no_projects():
+def test_find_similar_project_no_projects():
     """Test similarity function when no projects exist."""
-    from app.utils.scan_utils import find_and_update_similar_project
-    result = find_and_update_similar_project(["file1", "file2"], "test_sig_123", threshold=20.0)
+    from app.utils.scan_utils import find_similar_project
+    result = find_similar_project(["file1", "file2"], "test_sig_123", threshold=20.0)
     assert result is None
 
-def test_find_and_update_similar_project_integration(tmp_path):
-    """Test that similar projects are found and updated correctly."""
+def test_find_similar_project_integration(tmp_path):
+    """Test that similar projects are found correctly."""
     from app.utils.scan_utils import (
-        find_and_update_similar_project,
+        find_similar_project,
+        update_existing_project,
         extract_file_signature,
         get_project_signature,
         store_project_in_db
@@ -466,25 +467,30 @@ def test_find_and_update_similar_project_integration(tmp_path):
     
     # Test similarity detection (sig1 is shared, sig3 is new)
     # Jaccard similarity = intersection / union = 1 / 3 = 33.3%
-    # But due to DB state from previous tests, similarity might vary
-    result = find_and_update_similar_project(new_upload_sigs, new_project_sig, threshold=20.0)
+    result = find_similar_project(new_upload_sigs, new_project_sig, threshold=20.0)
     
     assert result is not None
-    project_name, similarity, returned_sig = result
-    assert project_name == "TestProject"
-    assert similarity >= 20.0  # Should meet threshold
+    assert result["project_name"] == "TestProject"
+    assert result["similarity_percentage"] >= 20.0  # Should meet threshold
     
-    # The returned signature should be the new project signature we passed in
-    assert returned_sig == new_project_sig
-    assert returned_sig != old_project_sig  # Signature should have changed
+    # Now test update_existing_project
+    new_sig = update_existing_project(
+        match_info=result,
+        new_project_sig=new_project_sig,
+        new_file_signatures=new_upload_sigs,
+        new_path=str(tmp_path),
+        new_size_bytes=200
+    )
+    assert new_sig == new_project_sig
+    assert new_sig != old_project_sig  # Signature should have changed
 
-def test_find_and_update_similar_project_default_threshold():
+def test_find_similar_project_default_threshold():
     """Test that the default threshold is None (dynamic)."""
-    from app.utils.scan_utils import find_and_update_similar_project
+    from app.utils.scan_utils import find_similar_project
     import inspect
     
     # Get the function signature
-    sig = inspect.signature(find_and_update_similar_project)
+    sig = inspect.signature(find_similar_project)
     default_threshold = sig.parameters['threshold'].default
     
     # Verify default is None (dynamic threshold)
@@ -686,7 +692,7 @@ class TestContainmentBasedMatching:
     def test_find_project_via_containment(self, tmp_path, isolated_db):
         """Test that projects can be matched via containment even with low Jaccard."""
         from app.utils.scan_utils import (
-            find_and_update_similar_project,
+            find_similar_project,
             extract_file_signature,
             get_project_signature,
             store_project_in_db
@@ -720,8 +726,8 @@ class TestContainmentBasedMatching:
         
         new_project_sig = get_project_signature(new_sigs)
         
-        # With low Jaccard threshold (20%) it might not match, but containment should catch it
-        result = find_and_update_similar_project(
+        # With low Jaccard threshold (60%) it won't match, but containment should catch it
+        result = find_similar_project(
             new_sigs, 
             new_project_sig, 
             threshold=60.0,  # High threshold that Jaccard won't meet
@@ -729,5 +735,4 @@ class TestContainmentBasedMatching:
         )
         
         assert result is not None
-        project_name, similarity, returned_sig = result
-        assert project_name == "TestProject"
+        assert result["project_name"] == "TestProject"

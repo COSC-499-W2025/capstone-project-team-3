@@ -5,6 +5,7 @@ import json
 import time 
 from datetime import datetime
 from app.data.db import get_connection
+from app.cli.similarity_manager import prompt_update_confirmation
 
 
 def calculate_dynamic_threshold(
@@ -291,25 +292,23 @@ def calculate_containment_ratio(current_signatures: List[str], existing_signatur
     
     return (overlap / len(existing_set)) * 100
 
-def find_and_update_similar_project(current_signatures: List[str], new_project_sig: str, threshold: float = None, file_count: int = 0, containment_threshold: float = 90.0) -> Optional[tuple]:
+
+def find_similar_project(
+    current_signatures: List[str], 
+    new_project_sig: str, 
+    threshold: float = None, 
+    file_count: int = 0, 
+    containment_threshold: float = 90.0
+) -> Optional[dict]:
     """
-    Find a similar project and replace it with the new upload.
+    Find a similar project WITHOUT updating the database.
     
-    Uses a dual-check approach:
-    1. Jaccard similarity: Standard overlap measure
-    2. Containment ratio: Checks if most existing files are preserved (≥90% by default)
+    This is the FIND-only version - it checks for similar projects but
+    does not modify anything. Use this when you want to ask the user
+    before making changes.
     
-    A project matches if EITHER the Jaccard similarity meets the threshold OR
-    the containment ratio is ≥90% (most existing files are preserved).
-    
-    Args:
-        current_signatures: File signatures from the current upload
-        new_project_sig: The already-calculated project signature for the new upload
-        threshold: Minimum similarity percentage to consider a match (if None, auto-calculates based on file count)
-        file_count: Number of files in the current project (used for dynamic threshold)
-        containment_threshold: Minimum containment ratio to consider a match (default 90.0%)
-    
-    Returns (project_name, similarity_percentage, new_project_signature) or None.
+    Returns:
+        dict with match info if similar project found, None otherwise.
     """
     # Calculate dynamic threshold if not provided
     if threshold is None:
@@ -320,6 +319,7 @@ def find_and_update_similar_project(current_signatures: List[str], new_project_s
     cursor = conn.cursor()
     cursor.execute("SELECT project_signature, name, file_signatures, path, size_bytes, created_at FROM PROJECT")
     projects = cursor.fetchall()
+    conn.close()
     
     for old_project_sig, project_name, file_sigs_json, path, size_bytes, created_at in projects:
         existing_sigs = json.loads(file_sigs_json) if file_sigs_json else []
@@ -327,44 +327,79 @@ def find_and_update_similar_project(current_signatures: List[str], new_project_s
         # Calculate Jaccard similarity
         similarity = calculate_project_similarity(current_signatures, existing_sigs)
         
-        # Calculate containment ratio (what % of existing files are preserved)
+        # Calculate containment ratio
         containment = calculate_containment_ratio(current_signatures, existing_sigs)
         
-        # Debug: Print similarity and containment values for each comparison
         print(f"[DEBUG] Comparing with project '{project_name}':")
         print(f"        Jaccard similarity = {similarity:.2f}% (threshold: {threshold}%)")
         print(f"        Containment ratio = {containment:.2f}% (threshold: {containment_threshold}%)")
         
-        # Match if EITHER Jaccard similarity meets threshold OR containment is high
-        # High containment means most existing files are preserved (incremental update)
-        is_match = similarity >= threshold or containment >= containment_threshold
+        # Check if match criteria met
+        is_jaccard_match = similarity >= threshold
+        is_containment_match = containment >= containment_threshold
         
-        if is_match:
-            match_reason = "Jaccard similarity" if similarity >= threshold else "containment ratio"
-            print(f"[DEBUG] Match found via {match_reason}! Updating project '{project_name}'")
-            print(f"[DEBUG] Old signature: {old_project_sig}")
-            print(f"[DEBUG] New signature: {new_project_sig}")
+        if is_jaccard_match or is_containment_match:
+            match_reason = "Jaccard similarity" if is_jaccard_match else "Containment ratio"
+            print(f"[DEBUG] Similar project found via {match_reason}!")
             
-            # Delete the old project entry (CASCADE will clean up related tables)
-            cursor.execute("DELETE FROM PROJECT WHERE project_signature = ?", (old_project_sig,))
-            conn.commit()
-            conn.close()
-            
-            # Use existing function to store the updated project
-            store_project_in_db(
-                signature=new_project_sig,
-                name=project_name,
-                path=path,
-                file_signatures=current_signatures,
-                size_bytes=size_bytes,
-                created_at=created_at,  # Preserve original creation date
-                last_modified=datetime.now()  # Update modification time
-            )
-            
-            return (project_name, similarity, new_project_sig)
+            return {
+                "project_name": project_name,
+                "old_project_signature": old_project_sig,
+                "old_path": path,
+                "old_size_bytes": size_bytes,
+                "old_created_at": created_at,
+                "similarity_percentage": round(similarity, 1),
+                "containment_percentage": round(containment, 1),
+                "match_reason": match_reason
+            }
     
-    conn.close()
     return None
+
+
+
+
+
+def update_existing_project(
+    match_info: dict,
+    new_project_sig: str,
+    new_file_signatures: List[str],
+    new_path: str,
+    new_size_bytes: int
+) -> str:
+    """
+    Update an existing project by deleting old entry and creating new one.
+    
+    Preserves the original project name and creation date.
+    
+    Returns:
+        The new project signature
+    """
+    old_sig = match_info["old_project_signature"]
+    
+    print(f"[INFO] Updating project '{match_info['project_name']}'...")
+    print(f"[DEBUG] Old signature: {old_sig}")
+    print(f"[DEBUG] New signature: {new_project_sig}")
+    
+    # Delete old project
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM PROJECT WHERE project_signature = ?", (old_sig,))
+    conn.commit()
+    conn.close()
+    
+    # Store updated project (preserve original name and creation date)
+    store_project_in_db(
+        signature=new_project_sig,
+        name=match_info["project_name"],
+        path=new_path,
+        file_signatures=new_file_signatures,
+        size_bytes=new_size_bytes,
+        created_at=match_info["old_created_at"],
+        last_modified=datetime.now()
+    )
+    
+    print(f"✅ Successfully updated project '{match_info['project_name']}'")
+    return new_project_sig
 
 
 def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = None, base_threshold: float = 65.0) -> dict:
@@ -417,29 +452,60 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
             "signature": project_signature
         }
     
-    # Check for similar projects and update (use dynamic threshold if not provided)
-    result = find_and_update_similar_project(
+    # Check for similar projects (find only, don't auto-update)
+    match_info = find_similar_project(
         file_signatures, 
         project_signature, 
         threshold=similarity_threshold,
         file_count=file_count
     )
-    if result:
-        project_name, similarity, new_sig = result
-        print(f"Updated existing project '{project_name}' with new files ({similarity:.1f}% similarity).")
-        return {
-            "files": files,
-            "skip_analysis": False,
-            "score": similarity,
-            "reason": "updated_existing",
-            "signature": new_sig,
-            "updated_project": project_name
-        }
     
-    # Project is new - store it
     size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in files)
     name = Path(root).name
     path = str(Path(root).resolve())
+    
+    if match_info:
+        # Similar project found - ASK THE USER what to do
+        user_wants_update = prompt_update_confirmation(match_info, name)
+        
+        if user_wants_update:
+            # Update existing project
+            new_sig = update_existing_project(
+                match_info=match_info,
+                new_project_sig=project_signature,
+                new_file_signatures=file_signatures,
+                new_path=path,
+                new_size_bytes=size_bytes
+            )
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": match_info["similarity_percentage"],
+                "reason": "updated_existing",
+                "signature": new_sig,
+                "updated_project": match_info["project_name"]
+            }
+        else:
+            # Create as new project
+            store_project_in_db(
+                project_signature, 
+                name, 
+                path, 
+                file_signatures, 
+                size_bytes,
+                timestamps["created_at"],
+                timestamps["last_modified"]
+            )
+            print(f"Stored new project '{name}' in DB.")
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": 0.0,
+                "reason": "new_project",
+                "signature": project_signature
+            }
+    
+    # No similar project - store as new
     store_project_in_db(
             project_signature, 
             name, 

@@ -1,6 +1,7 @@
 import type { Resume } from "./resume_types";
+import { API_BASE_URL } from "../config/api";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 export interface ResumeListItem {
   id: number | null;

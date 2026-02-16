@@ -60,7 +60,8 @@ def get_projects():
             "score_overridden": score_fields["score_overridden"],
             "score_overridden_value": score_fields["score_overridden_value"],
             "display_score": score_fields["display_score"],
-            "skills": top_skills
+            "skills": top_skills,
+            "date_added": created_at
         })
 
     conn.close()

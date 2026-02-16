@@ -1110,3 +1110,218 @@ def test_main_user_preferences():
 
         # Assert that preferences were retrieved and saved
         mock_user_pref.manage_preferences.assert_called()
+
+
+def test_main_chronology_corrections_option():
+    """Test chronology corrections option appears in post-analysis menu."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.ChronologicalCLI') as mock_chrono_cli, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['corrections', 'q', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        # Mock ChronologicalCLI instance
+        mock_chrono_instance = mock_chrono_cli.return_value
+        mock_chrono_instance.run.return_value = None
+        
+        main()
+        
+        # Assert ChronologicalCLI was instantiated and run was called
+        mock_chrono_cli.assert_called_once()
+        mock_chrono_instance.run.assert_called_once()
+
+
+def test_main_chronology_corrections_handles_errors():
+    """Test chronology corrections handles errors gracefully."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.ChronologicalCLI') as mock_chrono_cli, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['corrections', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        # Mock ChronologicalCLI to raise an exception
+        mock_chrono_instance = mock_chrono_cli.return_value
+        mock_chrono_instance.run.side_effect = Exception("Test error")
+        
+        main()
+        
+        # Assert ChronologicalCLI was called even though it raised an error
+        mock_chrono_cli.assert_called_once()
+        mock_chrono_instance.run.assert_called_once()
+
+
+def test_main_post_analysis_menu_continue_option():
+    """Test continue option in post-analysis menu starts new session."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['continue', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.side_effect = [
+            {"status": "ok", "projects": ["/tmp/project1"], "count": 1},
+            {"status": "error"}  # Second call returns error which triggers exit flow
+        ]
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        main()
+        
+        # Assert file_input was called at least twice (initial + continue)
+        assert mock_file_input.call_count >= 2
+
+
+def test_main_post_analysis_menu_exit_option():
+    """Test exit option in post-analysis menu exits application."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', return_value='exit'), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        main()
+        
+        # Assert file_input was called only once since user exited immediately
+        mock_file_input.assert_called_once()
+
+
+def test_main_chronology_corrections_returns_to_menu():
+    """Test chronology corrections returns to menu after completion."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.ChronologicalCLI') as mock_chrono_cli, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['corrections', 'continue', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.side_effect = [
+            {"status": "ok", "projects": ["/tmp/project1"], "count": 1},
+            {"status": "error"}  # Second call returns error
+        ]
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        # Mock ChronologicalCLI instance
+        mock_chrono_instance = mock_chrono_cli.return_value
+        mock_chrono_instance.run.return_value = None
+        
+        main()
+        
+        # Assert ChronologicalCLI was called
+        mock_chrono_cli.assert_called_once()
+        # Assert file_input was called twice (once after corrections, once after continue)
+        assert mock_file_input.call_count >= 2
+
+
+def test_main_chronology_update_alias():
+    """Test 'update' alias triggers chronology corrections."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager') as mock_llm_manager, \
+         patch('app.main.ChronologicalCLI') as mock_chrono_cli, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['update', 'q', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+        
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+        
+        # Mock ChronologicalCLI instance
+        mock_chrono_instance = mock_chrono_cli.return_value
+        mock_chrono_instance.run.return_value = None
+        
+        main()
+        
+        # Assert ChronologicalCLI was instantiated and run was called
+        mock_chrono_cli.assert_called_once()
+        mock_chrono_instance.run.assert_called_once()

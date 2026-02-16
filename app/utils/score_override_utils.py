@@ -43,7 +43,7 @@ def resolve_effective_score(
     Resolve base/override/effective values for consistent API/retrieve display.
     """
     score_original = _to_float(score, 0.0)
-    is_overridden = bool(score_overridden)
+    is_overridden = _to_int(score_overridden, 0) == 1
     overridden_value = (
         _to_float(score_overridden_value)
         if score_overridden_value is not None
@@ -87,7 +87,7 @@ def get_project_score_state_map(
     states: Dict[str, Dict[str, Any]] = {}
     for project_signature, score_overridden, score_overridden_value in cursor.fetchall():
         states[project_signature] = {
-            "score_overridden": bool(score_overridden),
+            "score_overridden": _to_int(score_overridden, 0) == 1,
             "score_overridden_value": (
                 _to_float(score_overridden_value)
                 if score_overridden_value is not None
@@ -306,6 +306,9 @@ def apply_project_score_override(
         if cursor.rowcount <= 0:
             raise ProjectNotFoundError("Project not found")
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

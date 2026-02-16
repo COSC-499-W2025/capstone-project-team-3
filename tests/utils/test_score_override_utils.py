@@ -83,6 +83,16 @@ def test_resolve_effective_score_overridden():
     assert resolved["display_score"] == pytest.approx(0.95)
 
 
+def test_resolve_effective_score_string_override_flags():
+    not_overridden = resolve_effective_score(0.7, "0", 0.95)
+    assert not_overridden["score_overridden"] is False
+    assert not_overridden["display_score"] == pytest.approx(0.7)
+
+    overridden = resolve_effective_score(0.7, "1", 0.95)
+    assert overridden["score_overridden"] is True
+    assert overridden["display_score"] == pytest.approx(0.95)
+
+
 def test_compute_project_breakdown_non_git(isolated_db):
     signature = _insert_non_git_project()
     payload = compute_project_breakdown(signature)

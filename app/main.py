@@ -22,6 +22,7 @@ from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.eduction_service import router as education_services_router
+from app.api.routes.post_thumbnail import router as thumbnail_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
@@ -71,6 +72,7 @@ app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(health_router)
 app.include_router(education_services_router, prefix="/api")
+app.include_router(thumbnail_router, prefix="/api")
 
 
 def display_startup_info():
@@ -102,7 +104,7 @@ def main():
     # Check for the consent
     consent_manager = ConsentManager()
     if not consent_manager.enforce_consent():
-        print("\n Cannot start application without consent. Please provide consent to proceed.")
+        print("\nCannot start application without consent. Please provide consent to proceed.")
         sys.exit(1)
 
     # Manage user preferences
@@ -548,6 +550,10 @@ def read_root():
     return {"message": "Welcome to the Project Insights!!"}
 
 if __name__ == "__main__":
+    # Check if we should run in API-only mode or interactive mode
+    prompt_root = os.environ.get("PROMPT_ROOT", "0")
+    interactive_mode = prompt_root in ("1", "true", "True", "yes")
+    
     def start_server():
         uvicorn.run(
             app,
@@ -557,14 +563,21 @@ if __name__ == "__main__":
             access_log= False
         )
 
-    # Start API server in background
-    server_thread = threading.Thread(target=start_server, daemon=True)
-    server_thread.start()
+    if not interactive_mode:
+        # API-only mode: initialize DB and run server in main thread
+        init_db()
+        print("\n🌐 Starting API server in portfolio mode...")
+        print("📊 Portfolio available at: http://localhost:8000/api/portfolio-dashboard")
+        start_server()
+    else:
+        # Interactive mode: start API server in background, then run CLI
+        server_thread = threading.Thread(target=start_server, daemon=True)
+        server_thread.start()
 
-    # Give server a moment to start
-    time.sleep(1)
+        # Give server a moment to start
+        time.sleep(1)
 
-    # Now run the CLI flow
-    main()
+        # Now run the CLI flow
+        main()
 
     

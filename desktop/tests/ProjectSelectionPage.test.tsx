@@ -96,9 +96,9 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByText('Project Beta')).toBeInTheDocument();
     expect(screen.getByText('Project Gamma')).toBeInTheDocument();
 
-    // Skills
+    // Skills (Project Beta has 4 skills, should show only first 3 + ellipsis)
     expect(screen.getByText(/React, TypeScript, Node.js/i)).toBeInTheDocument();
-    expect(screen.getByText(/Python, Django, PostgreSQL/i)).toBeInTheDocument();
+    expect(screen.getByText(/Python, Django, PostgreSQL, \.\.\./i)).toBeInTheDocument();
     expect(screen.getByText(/Java, Spring Boot/i)).toBeInTheDocument();
 
     // Dates
@@ -299,9 +299,37 @@ describe('ProjectSelectionPage', () => {
     // Wait for project name to appear
     await screen.findByText('Multi-skill Project');
 
-    // Should show ellipsis for more than 3 skills
-    expect(screen.getByText(/React, TypeScript, Node.js/i)).toBeInTheDocument();
-    expect(screen.getByText(/, .../i)).toBeInTheDocument();
+    // Should show only first 3 skills + ellipsis (not Express or MongoDB)
+    expect(screen.getByText(/React, TypeScript, Node\.js, \.\.\./i)).toBeInTheDocument();
+    expect(screen.queryByText(/Express/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/MongoDB/i)).not.toBeInTheDocument();
+  });
+
+  test('project with exactly 3 skills shows no ellipsis', async () => {
+    const projectWithThreeSkills: projectsApi.Project[] = [{
+      id: '1',
+      name: 'Three Skill Project',
+      score: 85,
+      skills: ['React', 'TypeScript', 'Node.js'],
+      date_added: '2026-01-01T00:00:00Z',
+    }];
+
+    mockGetProjects.mockResolvedValue(projectWithThreeSkills);
+
+    render(
+      <BrowserRouter>
+        <ProjectSelectionPage />
+      </BrowserRouter>
+    );
+
+    // Wait for project name to appear
+    await screen.findByText('Three Skill Project');
+
+    // Should show all 3 skills without ellipsis
+    const skillsCell = screen.getByText(/React, TypeScript, Node\.js/i);
+    expect(skillsCell).toBeInTheDocument();
+    expect(skillsCell.textContent).toBe('React, TypeScript, Node.js');
+    expect(skillsCell.textContent).not.toContain('...');
   });
 
 

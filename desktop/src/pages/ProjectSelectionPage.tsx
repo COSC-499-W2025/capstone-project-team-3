@@ -99,7 +99,7 @@ function ProjectSelectionPage() {
                   </label>
                 </td>
                 <td>
-                  {project.skills.join(", ")}
+                  {project.skills.slice(0, 3).join(", ")}
                   {project.skills.length > 3 && ", ..."}
                 </td>
                 <td>

@@ -22,6 +22,22 @@ class PortfolioDashboard {
         }
     }
     
+    // Helper function to get the display score based on override flag
+    getDisplayScore(project) {
+        if (project.score_overridden && project.score_overridden_value !== null && project.score_overridden_value !== undefined) {
+            return project.score_overridden_value;
+        }
+        return project.score || 0;
+    }
+    
+    // Helper function to get the display rank based on override flag
+    getDisplayRank(project) {
+        if (project.score_overridden && project.score_overridden_value !== null && project.score_overridden_value !== undefined) {
+            return project.score_overridden_value;
+        }
+        return project.rank || 0;
+    }
+    
     async loadProjects() {
         try {
             console.log('🔍 Attempting to load projects from /api/projects...');
@@ -71,7 +87,7 @@ class PortfolioDashboard {
                            ${isSelected ? 'checked' : ''} 
                            onclick="event.stopPropagation()">
                     <div class="project-name">${project.name}</div>
-                    <div class="project-score">Score: ${(project.score || 0).toFixed(2)}</div>
+                    <div class="project-score">Score: ${this.getDisplayScore(project).toFixed(2)}</div>
                     <div class="project-skills">${skillsHtml}</div>
                 </div>
             `;
@@ -535,6 +551,7 @@ showError(message) {
         alert(`Dashboard Error: ${message}`);
     }
 }
+
   renderTopProjects(projects) {
         const topProjects = document.getElementById('topProjects');
         
@@ -547,7 +564,7 @@ showError(message) {
         const cacheBuster = Date.now() + Math.random().toString(36).substring(7);
         
         // Sort by rank and take top 6
-        const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
+        const sortedProjects = projects.sort((a, b) => this.getDisplayRank(b) - this.getDisplayRank(a)).slice(0, 6);
         
         topProjects.innerHTML = sortedProjects.map((project, index) => {
             const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
@@ -583,7 +600,7 @@ showError(message) {
                     <div class="project-title" style="padding-right: 140px;">${project.title}</div>
                     
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
-                        ${(project.rank || 0).toFixed(2)}
+                        ${this.getDisplayRank(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
                     </div>
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
                         ${project.dates}

@@ -1,6 +1,5 @@
-# Project Insights API Documentation
+# API Documentation
 
-**Version:** 1.0  
 **Server:** `http://localhost:8000` (development)
 
 ---
@@ -204,37 +203,6 @@ This document explains the core data retrieval endpoints in Project Insights. Th
 
 ---
 
-## Quick Reference
-
-**Key Endpoints:**
-- Projects: `/api/projects`
-- Skills: `/api/skills`
-- Top Skills: `/api/skills/frequent`
-- Health: `/health`
-
----
-
-## Testing Examples
-
-### Using curl
-
-```bash
-# Get all projects
-curl http://localhost:8000/api/projects
-
-# Get specific project
-curl http://localhost:8000/api/projects/abc123
-
-# Get all skills
-curl http://localhost:8000/api/skills
-
-# Get top skills
-curl http://localhost:8000/api/skills/frequent?limit=10
-
-# Search schools
-curl "http://localhost:8000/api/institutions/search?query=stanford"
-```
-
 ### Using JavaScript
 
 ```javascript
@@ -250,10 +218,6 @@ fetch(`${API_BASE}/api/skills/frequent?limit=10`)
   .then(res => res.json())
   .then(data => console.log(data));
 
-// Search schools
-fetch(`${API_BASE}/api/institutions/search?query=stanford`)
-  .then(res => res.json())
-  .then(data => console.log(data));
 ```
 
 ---
@@ -277,41 +241,6 @@ fetch(`${API_BASE}/api/institutions/search?query=stanford`)
 
 ---
 
-## Common Questions
-
-**Q: How do I get my project ID?**  
-A: Call `/api/projects` and use the `id` field.
-
-**Q: Can I filter projects by skill?**  
-A: Not currently. Retrieve all and filter client-side.
-
-**Q: What's the difference between "analyzed" and "manual" skills?**  
-A: `analyzed` = auto-detected from code, `manual` = user-added.
-
-**Q: How often is data updated?**  
-A: When you upload and analyze new projects.
-
----
-
-## Best Practices
-
-**Projects:**
-- Check health endpoint first
-- Get all projects to see availability
-- Use specific endpoint for details
-
-**Skills:**
-- Use `/api/skills/frequent` for top skills
-- Use `/api/skills/chronological` for recent
-- Use `/api/skills` for complete list
-
-**Schools:**
-- Use 3+ characters in search
-- Limit results to 5-10
-- Use dropdown/autocomplete UI
-
----
-
 ## Additional Resources
 
 - Code: `app/api/routes/`
@@ -320,5 +249,5 @@ A: When you upload and analyze new projects.
 
 ---
 
-**Last Updated:** February 14, 2026  
+**Last Updated:** February 16, 2026  
 **Questions?** Contact development team

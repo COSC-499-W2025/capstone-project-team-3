@@ -34,3 +34,38 @@ export async function getResumeById(id: number): Promise<Resume> {
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<Resume>;
 }
+export async function downloadResumePDF(projectIds?: string[]): Promise<void> {
+  const params = projectIds ? projectIds.map(id => `project_ids=${id}`).join('&') : '';
+  const url = params ? `${API_BASE}/resume/export/pdf?${params}` : `${API_BASE}/resume/export/pdf`;
+  
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = 'resume.pdf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function downloadResumeTeX(projectIds?: string[]): Promise<void> {
+  const params = projectIds ? projectIds.map(id => `project_ids=${id}`).join('&') : '';
+  const url = params ? `${API_BASE}/resume/export/tex?${params}` : `${API_BASE}/resume/export/tex`;
+  
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = 'resume.tex';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(downloadUrl);
+}

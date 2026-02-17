@@ -60,6 +60,36 @@ def test_resume_download_tex(mock_tex, mock_model, client, fake_resume_model):
     assert response.text == "LATEX CONTENT"
 
 
+@patch("app.api.routes.resume.load_saved_resume")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_resume_id(mock_tex, mock_load, client, fake_resume_model):
+    """Ensure GET /resume/export/tex with resume_id loads saved resume edits."""
+    mock_load.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX EDITED CONTENT"
+
+    response = client.get("/resume/export/tex?resume_id=5")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
+    assert response.text == "LATEX EDITED CONTENT"
+    mock_load.assert_called_once_with(5)
+
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_project_ids(mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/tex with project_ids uses build_resume_model."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX PREVIEW CONTENT"
+
+    response = client.get("/resume/export/tex?project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
+    assert response.text == "LATEX PREVIEW CONTENT"
+    mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
+
+
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")
 @patch("app.api.routes.resume.compile_pdf")
@@ -74,6 +104,40 @@ def test_resume_pdf_download(mock_compile, mock_tex, mock_model, client, fake_re
     assert response.status_code == 200
     assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
     assert response.content.startswith(b"%PDF")
+
+
+@patch("app.api.routes.resume.load_saved_resume")
+@patch("app.api.routes.resume.generate_resume_tex")
+@patch("app.api.routes.resume.compile_pdf")
+def test_resume_pdf_download_with_resume_id(mock_compile, mock_tex, mock_load, client, fake_resume_model):
+    """Confirm GET /resume/export/pdf with resume_id loads saved resume edits."""
+    mock_load.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX EDITED CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 edited pdf"
+
+    response = client.get("/resume/export/pdf?resume_id=5")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
+    assert response.content.startswith(b"%PDF")
+    mock_load.assert_called_once_with(5)
+
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+@patch("app.api.routes.resume.compile_pdf")
+def test_resume_pdf_download_with_project_ids(mock_compile, mock_tex, mock_model, client, fake_resume_model):
+    """Confirm GET /resume/export/pdf with project_ids uses build_resume_model."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX PREVIEW CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 preview pdf"
+
+    response = client.get("/resume/export/pdf?project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
+    assert response.content.startswith(b"%PDF")
+    mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
 
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")

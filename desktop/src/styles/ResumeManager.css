@@ -116,7 +116,7 @@ body {
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: var(--button-blue);
+  background-color: var(--color-blue-darker);
 }
 
 .btn--primary:disabled {

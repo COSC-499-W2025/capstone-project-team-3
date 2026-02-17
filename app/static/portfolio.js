@@ -30,14 +30,6 @@ class PortfolioDashboard {
         return project.score || 0;
     }
     
-    // Helper function to get the display rank based on override flag
-    getDisplayRank(project) {
-        if (project.score_overridden && project.score_overridden_value !== null && project.score_overridden_value !== undefined) {
-            return project.score_overridden_value;
-        }
-        return project.rank || 0;
-    }
-    
     async loadProjects() {
         try {
             console.log('🔍 Attempting to load projects from /api/projects...');
@@ -563,8 +555,8 @@ showError(message) {
         // Generate unique cache buster for this render
         const cacheBuster = Date.now() + Math.random().toString(36).substring(7);
         
-        // Sort by rank and take top 6
-        const sortedProjects = projects.sort((a, b) => this.getDisplayRank(b) - this.getDisplayRank(a)).slice(0, 6);
+        // Sort by score and take top 6
+        const sortedProjects = projects.sort((a, b) => this.getDisplayScore(b) - this.getDisplayScore(a)).slice(0, 6);
         
         topProjects.innerHTML = sortedProjects.map((project, index) => {
             const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
@@ -600,7 +592,7 @@ showError(message) {
                     <div class="project-title" style="padding-right: 140px;">${project.title}</div>
                     
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
-                        ${this.getDisplayRank(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
+                        ${this.getDisplayScore(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
                     </div>
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
                         ${project.dates}

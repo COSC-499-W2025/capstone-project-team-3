@@ -40,14 +40,14 @@ export async function getResumeById(id: number): Promise<Resume> {
 }
 
 // Save new resume with selected projects
-export async function saveNewResume(name: string, projectIds: string[]): Promise<{ id: number }> {
+export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, project_ids: projectIds })
   });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
-  return res.json() as Promise<{ id: number }>;
+  return res.json() as Promise<{ resume_id: number }>;
 }
 
 // Update existing saved resume

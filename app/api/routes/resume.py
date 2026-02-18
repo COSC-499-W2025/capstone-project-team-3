@@ -21,7 +21,7 @@ os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 LATEX_BUILD_DIR = "/tmp/latex_build"
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
-    name: str
+    name: str | None = None
     project_ids: list[str]
 
 def tex_hash(tex: str) -> str:
@@ -54,11 +54,13 @@ def create_tailored_resume(filter: ResumeFilter):
     """
     if not filter.project_ids:
         raise HTTPException(400, "No projects selected")
+    if not filter.name:
+        raise HTTPException(400, "Resume name is required")
     try:
         resume_id = create_resume(name=filter.name)
         attach_projects_to_resume(resume_id, filter.project_ids)
         return {
-            "id": resume_id,
+            "resume_id": resume_id,
             "message": "Resume created successfully"
         }
     except ResumePersistenceError as e:

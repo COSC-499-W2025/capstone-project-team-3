@@ -4,7 +4,7 @@ import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
-import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem } from "../api/resume";
+import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX } from "../api/resume";
 
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
@@ -109,11 +109,25 @@ export function ResumeBuilderPage() {
       const currentResume = resumeList[activeIndex];
       const filename = currentResume?.name || 'resume';
       
-      // TODO: Connect to backend download functionality
-      console.log(`Download ${format.toUpperCase()} requested for: ${filename}`);
+      // Build params based on current mode
+      let params: { projectIds?: string[], resumeId?: number, filename: string } | undefined;
       
-      // Simulate download delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isPreviewMode) {
+        // Preview mode: use project IDs
+        params = { projectIds: previewProjectIds, filename };
+      } else if (currentResume?.id && !currentResume.is_master) {
+        // Saved resume: use resume ID
+        params = { resumeId: currentResume.id, filename };
+      } else {
+        // Master resume: no special params, just filename
+        params = { filename };
+      }
+      
+      if (format === 'pdf') {
+        await downloadResumePDF(params);
+      } else {
+        await downloadResumeTeX(params);
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert('Failed to download resume. Please try again.');
@@ -124,12 +138,22 @@ export function ResumeBuilderPage() {
 
   return (
     <div className="page page--resume-builder">
-      {/* Header with download button */}
+      {/* Header with navigation and actions */}
       <div className="resume-builder__header">
         <div className="resume-builder__nav">
-          {/* Placeholder for future navigation */}
+          <button 
+            className="nav-link" 
+            onClick={() => navigate('/')}
+          >
+            Home
+          </button>
+          <span className="nav-separator">&gt;</span>
+          <span className="nav-current">Resumé</span>
         </div>
         <div className="resume-builder__actions">
+          <button className="btn btn--secondary">
+            Save
+          </button>
           <div className="dropdown">
             <button 
               className="btn btn--primary"

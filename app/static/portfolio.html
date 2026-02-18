@@ -281,6 +281,150 @@
             height: 200px;
         }
 
+        /* Score Breakdown Section */
+        .score-breakdown-section {
+            margin-bottom: 40px;
+        }
+
+        .score-breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+        }
+
+        .score-breakdown-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .score-breakdown-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .score-breakdown-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .score-breakdown-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .score-breakdown-title {
+            color: var(--accent);
+            font-size: 1.2em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .score-breakdown-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            background: linear-gradient(90deg, rgba(45, 55, 72, 0.05) 0%, rgba(45, 55, 72, 0.02) 100%);
+            margin: 12px -12px -12px -12px;
+            padding: 16px 12px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .metric-details {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .score-breakdown-card .metric-value {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+        }
+
+        .metric-weight {
+            background: var(--accent);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .metric-contribution {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .formula-section {
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .formula-title {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .formula-text {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--secondary-bg);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .caps-info {
+            margin-top: 12px;
+        }
+
+        .caps-title {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .caps-list {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
         /* Project Cards */
         .projects-section {
             margin-bottom: 40px;
@@ -485,6 +629,85 @@
             border: 1px dashed var(--accent-secondary) !important;
         }
 
+        /* Scoring Formula Section */
+        .scoring-formula-section {
+            margin-bottom: 40px;
+        }
+
+        .formula-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 24px;
+        }
+
+        .formula-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .formula-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .formula-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .formula-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .formula-title {
+            color: var(--accent);
+            font-size: 1.2em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .formula-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .formula-content {
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .formula-label {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .formula-text {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--secondary-bg);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre-line;
+        }
+
         /* Analysis Section */
         .analysis-section {
             margin-bottom: 40px;
@@ -633,6 +856,54 @@
                     <div class="loading">
                         <div class="spinner"></div>
                         Loading analysis...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scoring Formula Section -->
+            <div class="scoring-formula-section">
+                <h2 class="section-title">📐 Project Scoring Methodology</h2>
+                <div class="formula-grid">
+                    <div class="formula-card">
+                        <div class="formula-header">
+                            <span class="formula-icon">🔗</span>
+                            <div>
+                                <div class="formula-title">GitHub Project Scoring</div>
+                                <div class="formula-subtitle">For projects with Git history and collaboration metrics</div>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-content">
+                            <div class="formula-label">
+                                📐 Calculation Formula
+                            </div>
+                            <div class="formula-text">Score = 0.30 × min(commits/50, 1)
+      + 0.30 × min(days/30, 1)
+      + 0.20 × min(lines/5000, 1)
+      + 0.15 × min(code_files/20, 1)
+      + 0.05 × min(test_files/8, 1)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="formula-card">
+                        <div class="formula-header">
+                            <span class="formula-icon">💻</span>
+                            <div>
+                                <div class="formula-title">Local Project Scoring</div>
+                                <div class="formula-subtitle">For projects without Git history, focusing on structure and quality</div>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-content">
+                            <div class="formula-label">
+                                📐 Calculation Formula
+                            </div>
+                            <div class="formula-text">Score = 0.20 × min(files/40, 1)
+      + 0.15 × min(lines/5000, 1)
+      + 0.20 × min(code_files/30, 1)
+      + 0.15 × min(test_files/10, 1)
+      + 0.30 × min(maintainability/100, 1)</div>
+                        </div>
                     </div>
                 </div>
             </div>

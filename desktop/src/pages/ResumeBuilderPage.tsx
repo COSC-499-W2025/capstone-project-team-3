@@ -148,7 +148,7 @@ export function ResumeBuilderPage() {
             Home
           </button>
           <span className="nav-separator">&gt;</span>
-          <span className="nav-current">Resumé</span>
+          <span className="nav-current">Résumé</span>
         </div>
         <div className="resume-builder__actions">
           <button className="btn btn--secondary">

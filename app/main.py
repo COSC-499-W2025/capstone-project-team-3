@@ -4,6 +4,7 @@ Minimal Python entry point.
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.client.llm_client import GeminiLLMClient
 from app.data.db import init_db, seed_db
 from app.cli.consent_manager import ConsentManager
@@ -61,6 +62,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files
+static_dir = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 app.include_router(upload_page_router)
 app.include_router(upload_resolver_router, prefix="/api")

@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, mock_open
 from app.api.routes.portfolio import router
+from app.utils.generate_portfolio import build_portfolio_model
+from app.data import db as dbmod
 
 # Create a test FastAPI app with the portfolio router
 app = FastAPI()
@@ -1050,3 +1052,56 @@ def test_portfolio_js_includes_thumbnail_functionality():
         # Verify thumbnail functionality exists
         assert "uploadThumbnail" in content
         assert "image/*" in content or "thumbnail" in content.lower()
+
+
+def test_portfolio_with_score_override():
+    """Test that portfolio correctly displays overridden scores."""
+    mock_data = {
+        "user": {"name": "Test User", "email": "test@example.com"},
+        "overview": {"total_projects": 2, "avg_score": 0.85, "total_skills": 5, "total_languages": 2, "total_lines": 3000},
+        "projects": [
+            {
+                "id": "proj1",
+                "title": "Overridden Project",
+                "score": 0.6,  # Original
+                "rank": 0.6,
+                "score_overridden": True,
+                "score_overridden_value": 0.9,  # Override
+                "dates": "Jan 2024",
+                "type": "GitHub",
+                "metrics": {"total_lines": 1000}
+            },
+            {
+                "id": "proj2", 
+                "title": "Normal Project",
+                "score": 0.8,
+                "rank": 0.8,
+                "score_overridden": False,
+                "score_overridden_value": None,
+                "dates": "Feb 2024",
+                "type": "Local",
+                "metrics": {"total_lines": 2000}
+            }
+        ],
+        "skills_timeline": [],
+        "project_type_analysis": {"github": {"count": 1}, "local": {"count": 1}},
+        "graphs": {"language_distribution": {}},
+        "metadata": {"generated_at": "2024-01-01T00:00:00", "total_projects": 2, "filtered": False}
+    }
+
+    with patch('app.api.routes.portfolio.build_portfolio_model', return_value=mock_data):
+        response = client.get("/api/portfolio")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check override fields are present
+        override_project = next(p for p in data["projects"] if p["id"] == "proj1")
+        normal_project = next(p for p in data["projects"] if p["id"] == "proj2")
+        
+        assert override_project["score_overridden"] == True
+        assert override_project["score_overridden_value"] == 0.9
+        assert override_project["score"] == 0.6  # Original preserved
+        
+        assert normal_project["score_overridden"] == False
+        assert normal_project["score_overridden_value"] is None

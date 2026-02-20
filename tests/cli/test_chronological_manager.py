@@ -130,8 +130,8 @@ class TestChronologicalCLI:
         
         manager.close()
     
-    def test_manage_project_skills_get_skills(self, temp_db):
-        """Test that _manage_project_skills can retrieve chronological skills."""
+    def test_manage_skill_dates_get_skills(self, temp_db):
+        """Test that _manage_skill_dates can retrieve chronological skills."""
         manager = ChronologicalManager(db_path=temp_db)
         cli = ChronologicalCLI(manager=manager)
         
@@ -143,6 +143,20 @@ class TestChronologicalCLI:
         assert skills[0]['date'] == '2024-01-15'
         assert skills[1]['skill'] == 'Flask'
         assert skills[1]['date'] == '2024-02-01'
+        
+        manager.close()
+    
+    def test_manage_skills_get_skills(self, temp_db):
+        """Test that _manage_skills can retrieve skills."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Get skills for test_proj1
+        skills = manager.get_chronological_skills('test_proj1')
+        
+        assert len(skills) == 2
+        assert skills[0]['skill'] == 'Python'
+        assert skills[1]['skill'] == 'Flask'
         
         manager.close()
     
@@ -260,6 +274,102 @@ class TestChronologicalCLI:
         # Verify error message
         captured = capsys.readouterr()
         assert 'Invalid source type' in captured.out
+        
+        manager.close()
+    
+    def test_edit_skill_name(self, temp_db, monkeypatch):
+        """Test renaming a skill through CLI."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Get skills list
+        skills = manager.get_chronological_skills('test_proj1')
+        
+        # Simulate user input: select skill 1 (Python), new name, confirm
+        inputs = iter(['1', 'Python3', 'yes'])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        # Edit skill
+        cli._edit_skill_name('test_proj1', skills)
+        
+        # Verify rename
+        updated_skills = manager.get_chronological_skills('test_proj1')
+        skill_names = [s['skill'] for s in updated_skills]
+        assert 'Python3' in skill_names
+        assert 'Python' not in skill_names
+        
+        manager.close()
+    
+    def test_edit_skill_name_preserves_properties(self, temp_db, monkeypatch):
+        """Test that renaming preserves date and source."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Get original Flask skill properties
+        skills = manager.get_chronological_skills('test_proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        original_date = flask_skill['date']
+        original_source = flask_skill['source']
+        
+        # Simulate renaming Flask to Flask-RESTful
+        inputs = iter(['2', 'Flask-RESTful', 'yes'])  # Skill 2 is Flask
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        cli._edit_skill_name('test_proj1', skills)
+        
+        # Verify properties preserved
+        updated_skills = manager.get_chronological_skills('test_proj1')
+        flask_restful = [s for s in updated_skills if s['skill'] == 'Flask-RESTful'][0]
+        assert flask_restful['date'] == original_date
+        assert flask_restful['source'] == original_source
+        
+        manager.close()
+    
+    def test_edit_skill_name_validates_empty(self, temp_db, monkeypatch, capsys):
+        """Test that empty new name is rejected."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        skills = manager.get_chronological_skills('test_proj1')
+        
+        # Simulate empty new name
+        inputs = iter(['1', ''])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        cli._edit_skill_name('test_proj1', skills)
+        
+        # Verify no change
+        updated_skills = manager.get_chronological_skills('test_proj1')
+        assert updated_skills == skills
+        
+        # Verify error message
+        captured = capsys.readouterr()
+        assert 'cannot be empty' in captured.out
+        
+        manager.close()
+    
+    def test_edit_skill_name_cancelled(self, temp_db, monkeypatch, capsys):
+        """Test cancelling skill rename."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        skills = manager.get_chronological_skills('test_proj1')
+        original_names = [s['skill'] for s in skills]
+        
+        # Simulate cancelling rename
+        inputs = iter(['1', 'NewName', 'no'])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        cli._edit_skill_name('test_proj1', skills)
+        
+        # Verify no change
+        updated_skills = manager.get_chronological_skills('test_proj1')
+        updated_names = [s['skill'] for s in updated_skills]
+        assert updated_names == original_names
+        
+        # Verify cancelled message
+        captured = capsys.readouterr()
+        assert 'Cancelled' in captured.out
         
         manager.close()
 

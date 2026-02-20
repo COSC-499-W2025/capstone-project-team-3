@@ -11,15 +11,16 @@ export function SkillsSection({
   onChange?: (skills: Skills) => void;
 }) {
   const contentRef = useRef<HTMLParagraphElement>(null);
-  
-  // Convert skills array to comma-separated string
+  const skipSyncRef = useRef(false);
+
   const skillsText = skills.Skills.join(", ");
 
   useEffect(() => {
-    // Always update the contenteditable element when skills prop changes
-    // This ensures proper sync when switching resumes
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
     if (contentRef.current && isEditing) {
-      // Only update if the current text is different to avoid cursor issues
       if (contentRef.current.textContent !== skillsText) {
         contentRef.current.textContent = skillsText;
       }
@@ -28,8 +29,8 @@ export function SkillsSection({
 
   const handleBlur = () => {
     if (onChange && contentRef.current) {
+      skipSyncRef.current = true;
       const text = contentRef.current.textContent || "";
-      // Parse comma-separated text back into array
       const newSkills = text
         .split(",")
         .map(s => s.trim())
@@ -39,8 +40,8 @@ export function SkillsSection({
   };
 
   const handleInput = () => {
-    // Optional: update state on every keystroke for live updates
     if (onChange && contentRef.current) {
+      skipSyncRef.current = true;
       const text = contentRef.current.textContent || "";
       const newSkills = text
         .split(",")

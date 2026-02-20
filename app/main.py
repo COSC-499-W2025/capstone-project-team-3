@@ -155,13 +155,13 @@ def main():
                     correction_choice = input("\nWould you like to make corrections to chronology (dates/skills) before uploading?\n  📅 'yes' - Update project dates, add/edit skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
                     
                     if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
-                        print("\n📅 Opening Chronological Manager...")
+                        print("\n📝 Opening Corrections Menu...")
                         try:
                             chrono_cli = ChronologicalCLI()
                             chrono_cli.run()
                             print("\n✅ Corrections complete! Continuing to file upload...")
                         except Exception as e:
-                            print(f"❌ Error in chronology manager: {e}")
+                            print(f"❌ Error in corrections menu: {e}")
                         break
                     elif correction_choice in ['no', 'n', 'skip', 'continue']:
                         print("\n⏭️  Skipping corrections...")
@@ -530,13 +530,13 @@ def main():
                     print("👋 Exiting Project Insights. Thank you for using our service!")
                     break
                 elif choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
-                    print("\n📅 Opening Chronological Manager...")
+                    print("\n📝 Opening Corrections Menu...")
                     try:
                         chrono_cli = ChronologicalCLI()
                         chrono_cli.run()
-                        print("\n✅ Chronology corrections complete!")
+                        print("\n✅ Corrections complete!")
                     except Exception as e:
-                        print(f"❌ Error in chronology manager: {e}")
+                        print(f"❌ Error in corrections menu: {e}")
                     # After editing dates, show the menu again
                     continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:

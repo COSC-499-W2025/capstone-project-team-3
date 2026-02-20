@@ -8,6 +8,7 @@
  - [Data Flow Diagram and Explanation](docs/plan/DFD.md)
  - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
  - [System Architecture](docs/plan/System_Architecture_Diagram.md)
+ - [API Documentation](docs/API_DOCUMENTATION.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 

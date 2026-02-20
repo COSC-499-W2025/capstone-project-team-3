@@ -1,6 +1,7 @@
 import type { Resume } from "./resume_types";
+import { API_BASE_URL } from "../config/api";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = API_BASE_URL;
 
 export interface ResumeListItem {
   id: number | null;
@@ -17,6 +18,13 @@ export async function getResumes(): Promise<ResumeListItem[]> {
 
 export async function buildResume(): Promise<Resume> {
   const res = await fetch(`${API_BASE}/resume`, { method: "GET" });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json() as Promise<Resume>;
+}
+
+export async function previewResume(projectIds: string[]): Promise<Resume> {
+  const params = projectIds.map(id => `project_ids=${id}`).join('&');
+  const res = await fetch(`${API_BASE}/resume?${params}`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<Resume>;
 }

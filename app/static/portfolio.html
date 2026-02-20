@@ -242,6 +242,524 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+           /* Graph Grid */
+        .graph-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .graph-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .graph-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .graph-card h3 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-container.small {
+            height: 200px;
+        }
+
+        /* Score Breakdown Section */
+        .score-breakdown-section {
+            margin-bottom: 40px;
+        }
+
+        .score-breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+        }
+
+        .score-breakdown-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .score-breakdown-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .score-breakdown-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .score-breakdown-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .score-breakdown-title {
+            color: var(--accent);
+            font-size: 1.2em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .score-breakdown-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            background: linear-gradient(90deg, rgba(45, 55, 72, 0.05) 0%, rgba(45, 55, 72, 0.02) 100%);
+            margin: 12px -12px -12px -12px;
+            padding: 16px 12px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .metric-details {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .score-breakdown-card .metric-value {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+        }
+
+        .metric-weight {
+            background: var(--accent);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .metric-contribution {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .formula-section {
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .formula-title {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .formula-text {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--secondary-bg);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .caps-info {
+            margin-top: 12px;
+        }
+
+        .caps-title {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .caps-list {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Project Cards */
+        .projects-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: var(--accent);
+            margin-bottom: 24px;
+            font-size: 1.5em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .top-projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 24px;
+        }
+
+        .project-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .project-rank {
+            color: var(--warning);
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .project-title {
+            font-size: 1.25em;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .project-score-display {
+            font-size: 2.25em;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .project-dates {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        .project-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .metric-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .project-skills-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .project-skill-tag {
+            background: var(--border-light);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+        }
+
+        /* New detailed project styles */
+        .project-summary {
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--border-light);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .project-summary h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .project-summary p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .summary-content {
+            position: relative;
+        }
+
+        .summary-text.truncated {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .show-more-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 0;
+            margin-top: 8px;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .show-more-btn:hover {
+            color: var(--accent-secondary);
+        }
+
+        .contribution-details {
+            margin: 12px 0;
+        }
+
+        .contribution-details h4 {
+            color: var(--accent);
+            margin-bottom: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .contribution-details p {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .technical-keywords {
+            margin: 12px 0;
+        }
+
+        .technical-keywords h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .keyword-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .keyword-tag {
+            background: var(--border-light);
+            color: var(--text-secondary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .editable-field {
+            border-radius: 4px;
+            padding: 2px 4px;
+            transition: all 0.2s ease;
+        }
+
+        .editable-field:hover {
+            background: rgba(45, 55, 72, 0.05) !important;
+            border: 1px dashed var(--accent-secondary) !important;
+        }
+
+        /* Scoring Formula Section */
+        .scoring-formula-section {
+            margin-bottom: 40px;
+        }
+
+        .formula-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 24px;
+        }
+
+        .formula-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .formula-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .formula-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .formula-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .formula-title {
+            color: var(--accent);
+            font-size: 1.2em;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .formula-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .formula-content {
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .formula-label {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .formula-text {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--secondary-bg);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre-line;
+        }
+
+        /* Analysis Section */
+        .analysis-section {
+            margin-bottom: 40px;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .analysis-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .analysis-card h4 {
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .analysis-item {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .analysis-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .analysis-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Additional Responsive */
+        @media (max-width: 768px) {
+            .graph-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .top-projects {
+                grid-template-columns: 1fr;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -275,23 +793,123 @@
                 </div>
             </div>
 
-            <!-- Placeholder sections for Part 2 -->
-            <div style="display: none;">
-                <!-- Hidden chart canvases to prevent JS errors -->
-                <canvas id="languageChart"></canvas>
-                <canvas id="complexityChart"></canvas>
-                <canvas id="scoreChart"></canvas>
-                <canvas id="activityChart"></canvas>
-                <canvas id="skillsChart"></canvas>
-                <canvas id="projectTypeChart"></canvas>
-                
-                <!-- Hidden containers to prevent innerHTML errors -->
-                <div id="topProjects"></div>
-                <div id="detailedAnalysis"></div>
+                        <!-- Graph Grid -->
+            <div class="graph-grid">
+                <div class="graph-card">
+                    <h3>📊 Language Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="languageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-card">
+                    <h3>📈 Project Complexity</h3>
+                    <div class="chart-container">
+                        <canvas id="complexityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-card">
+                    <h3>🏆 Score Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-card">
+                    <h3>📅 Monthly Activity</h3>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-card">
+                    <h3>🛠️ Top Skills</h3>
+                    <div class="chart-container small">
+                        <canvas id="skillsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-card">
+                    <h3>⚖️ GitHub vs Local</h3>
+                    <div class="chart-container small">
+                        <canvas id="projectTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Projects Section -->
+            <div class="projects-section">
+                <h2 class="section-title">🏆 Top Ranked Projects</h2>
+                <div class="top-projects" id="topProjects">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading projects...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Analysis Section -->
+            <div class="analysis-section">
+                <h2 class="section-title">🔍 Detailed Analysis Insights</h2>
+                <div class="analysis-grid" id="detailedAnalysis">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading analysis...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scoring Formula Section -->
+            <div class="scoring-formula-section">
+                <h2 class="section-title">📐 Project Scoring Methodology</h2>
+                <div class="formula-grid">
+                    <div class="formula-card">
+                        <div class="formula-header">
+                            <span class="formula-icon">🔗</span>
+                            <div>
+                                <div class="formula-title">GitHub Project Scoring</div>
+                                <div class="formula-subtitle">For projects with Git history and collaboration metrics</div>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-content">
+                            <div class="formula-label">
+                                📐 Calculation Formula
+                            </div>
+                            <div class="formula-text">Score = 0.30 × min(commits/50, 1)
+      + 0.30 × min(days/30, 1)
+      + 0.20 × min(lines/5000, 1)
+      + 0.15 × min(code_files/20, 1)
+      + 0.05 × min(test_files/8, 1)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="formula-card">
+                        <div class="formula-header">
+                            <span class="formula-icon">💻</span>
+                            <div>
+                                <div class="formula-title">Local Project Scoring</div>
+                                <div class="formula-subtitle">For projects without Git history, focusing on structure and quality</div>
+                            </div>
+                        </div>
+                        
+                        <div class="formula-content">
+                            <div class="formula-label">
+                                📐 Calculation Formula
+                            </div>
+                            <div class="formula-text">Score = 0.20 × min(files/40, 1)
+      + 0.15 × min(lines/5000, 1)
+      + 0.20 × min(code_files/30, 1)
+      + 0.15 × min(test_files/10, 1)
+      + 0.30 × min(maintainability/100, 1)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="/api/static/portfolio.js"></script>
+    <script src="/api/static/portfolio.js?v=20260214c"></script>
 </body>
 </html>

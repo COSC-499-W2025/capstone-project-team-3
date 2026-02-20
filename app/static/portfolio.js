@@ -22,6 +22,14 @@ class PortfolioDashboard {
         }
     }
     
+    // Helper function to get the display score based on override flag
+    getDisplayScore(project) {
+        if (project.score_overridden && project.score_overridden_value !== null && project.score_overridden_value !== undefined) {
+            return project.score_overridden_value;
+        }
+        return project.score || 0;
+    }
+    
     async loadProjects() {
         try {
             console.log('🔍 Attempting to load projects from /api/projects...');
@@ -71,7 +79,7 @@ class PortfolioDashboard {
                            ${isSelected ? 'checked' : ''} 
                            onclick="event.stopPropagation()">
                     <div class="project-name">${project.name}</div>
-                    <div class="project-score">Score: ${(project.score || 0).toFixed(2)}</div>
+                    <div class="project-score">Score: ${this.getDisplayScore(project).toFixed(2)}</div>
                     <div class="project-skills">${skillsHtml}</div>
                 </div>
             `;
@@ -105,10 +113,21 @@ class PortfolioDashboard {
     }
     
     renderDashboard(data) {
+        console.log('📊 Rendering dashboard with data:', data);
+        console.log('📊 Projects count:', data.projects?.length);
+        console.log('📊 Graphs data:', data.graphs);
+        
         this.renderOverviewCards(data.overview);
+        console.log('✅ Overview cards rendered');
+        
         this.renderCharts(data.graphs);
+        console.log('✅ Charts rendered');
+        
         this.renderTopProjects(data.projects);
+        console.log('✅ Top projects rendered');
+        
         this.renderDetailedAnalysis(data.projects);
+        console.log('✅ Detailed analysis rendered');
     }
     
     renderOverviewCards(overview) {
@@ -381,7 +400,17 @@ createLineChart(canvasId, title, data) {
                     y: {
                         beginAtZero: true,
                         grid: { color: '#e2e8f0' },
-                        ticks: { color: '#4a5568', font: { size: 11 } }
+                        ticks: { 
+                            color: '#4a5568', 
+                            font: { size: 11 },
+                            stepSize: 0.5
+                        },
+                        title: {
+                            display: title === 'Monthly Activity',
+                            text: 'Activity Level',
+                            color: '#4a5568',
+                            font: { size: 12, weight: 'bold' }
+                        }
                     },
                     x: {
                         grid: { color: '#e2e8f0' },
@@ -398,6 +427,8 @@ createLineChart(canvasId, title, data) {
 
 // Also update renderCharts to handle null chart returns gracefully:
 renderCharts(graphs) {
+    console.log('📈 renderCharts called with:', graphs);
+    
     // Destroy existing charts
     Object.values(this.charts).forEach(chart => {
         if (chart) chart.destroy();
@@ -406,9 +437,10 @@ renderCharts(graphs) {
     
     // Guard: Check if Chart.js is available at all
     if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded, skipping all chart rendering');
+        console.error('❌ Chart.js not loaded! Charts will not render.');
         return;
     }
+    console.log('✅ Chart.js is available');
     
     // Language Distribution (Pie Chart)
     const languageChart = this.createPieChart(
@@ -511,6 +543,7 @@ showError(message) {
         alert(`Dashboard Error: ${message}`);
     }
 }
+
   renderTopProjects(projects) {
         const topProjects = document.getElementById('topProjects');
         
@@ -519,8 +552,11 @@ showError(message) {
             return;
         }
         
-        // Sort by rank and take top 6
-        const sortedProjects = projects.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 6);
+        // Generate unique cache buster for this render
+        const cacheBuster = Date.now() + Math.random().toString(36).substring(7);
+        
+        // Sort by score and take top 6
+        const sortedProjects = projects.sort((a, b) => this.getDisplayScore(b) - this.getDisplayScore(a)).slice(0, 6);
         
         topProjects.innerHTML = sortedProjects.map((project, index) => {
             const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
@@ -542,22 +578,50 @@ showError(message) {
                 `${type}: ${count}`).join(', ') || 'N/A';
             
             return `
-                <div class="project-card">
+                <div class="project-card" style="position: relative;">
+                    <!-- Thumbnail Button - Top Right -->
+                    <div class="thumbnail-button-section" style="position: absolute; top: 16px; right: 16px; z-index: 10;">
+                        <button class="upload-thumbnail-btn" 
+                                onclick="window.portfolioDashboard.uploadThumbnail('${project.id}')"
+                                style="background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 11px; font-weight: 500; box-shadow: var(--shadow);">
+                            ${project.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                        </button>
+                    </div>
+                    
                     <div class="project-rank">${rank} Place</div>
-                    <div class="project-title">${project.title}</div>
+                    <div class="project-title" style="padding-right: 140px;">${project.title}</div>
+                    
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
-                        ${(project.rank || 0).toFixed(2)}
+                        ${this.getDisplayScore(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
                     </div>
                     <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
                         ${project.dates}
                     </div>
                     
+                    <!-- Thumbnail Image Display - Center -->
+                    ${project.thumbnail_url ? `
+                        <div class="thumbnail-display" style="margin: 16px 0; text-align: center;">
+                            <img src="${project.thumbnail_url}?cb=${cacheBuster}" 
+                                 alt="${project.title} thumbnail" 
+                                 class="project-thumbnail"
+                                 style="max-width: 100%; height: auto; max-height: 200px; border-radius: 8px; border: 2px solid var(--border); box-shadow: var(--shadow);" 
+                                 crossorigin="anonymous" />
+                        </div>
+                    ` : ''}
+                    
                     ${project.summary ? `
                         <div class="project-summary">
-                            <h4>📝 Summary</h4>
-                            <p class="editable-field" data-field="summary" data-project="${project.id}">
-                                ${project.summary.substring(0, 300)}${project.summary.length > 300 ? '...' : ''}
-                            </p>
+                            <h4>📝 Project Summary</h4>
+                            <div class="summary-content">
+                                <div class="summary-text ${this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
+                                    <span class="editable-field" data-field="summary" data-project="${project.id}">
+                                        ${project.summary}
+                                    </span>
+                                </div>
+                                ${this.shouldTruncateSummary(project.summary) ? `
+                                    <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
+                                ` : ''}
+                            </div>
                         </div>
                     ` : ''}
                     
@@ -760,13 +824,94 @@ showError(message) {
         `;
     }
     
+    async uploadThumbnail(projectId) {
+        // Create a hidden file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/gif,image/svg+xml,image/webp';
+        input.style.display = 'none';
+        
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image file is too large. Please select an image smaller than 5MB.');
+                return;
+            }
+            
+            try {
+                // Create FormData to send the file
+                const formData = new FormData();
+                formData.append('project_id', projectId);
+                formData.append('image', file);
+                
+                // Show loading state
+                console.log('📤 Uploading thumbnail for project:', projectId);
+                
+                // Upload thumbnail with cache-busting headers
+                const response = await fetch('/api/portfolio/project/thumbnail', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Thumbnail uploaded successfully:', result);
+                
+                // Force clear any cached images for this project
+                const imageElements = document.querySelectorAll(`img[alt*="${projectId}"]`);
+                imageElements.forEach(img => {
+                    const src = img.src.split('?')[0];
+                    img.src = src + '?cb=' + Date.now() + Math.random();
+                });
+                
+                // Wait a moment for the file to be fully written
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Reload portfolio to show new thumbnail with fresh cache
+                await this.loadPortfolio();
+                
+                console.log('✅ Portfolio reloaded with new thumbnail');
+                alert('Thumbnail uploaded successfully!');
+            } catch (error) {
+                console.error('❌ Error uploading thumbnail:', error);
+                alert('Failed to upload thumbnail: ' + error.message);
+            }
+        };
+        
+        // Trigger file selection dialog
+        input.click();
+    }
+    
     showError(message) {
         console.error(message);
         // You could add a toast notification system here
         alert(`Error: ${message}`);
     }
-    
 
+    shouldTruncateSummary(summary) {
+        // Truncate if summary is longer than 25 words or 150 characters  
+        // This ensures consistent card heights with uniform truncation
+        const wordCount = summary.split(/\s+/).length;
+        const charCount = summary.length;
+        return wordCount > 25 || charCount > 150;
+    }
 }
 
 // Global functions for HTML event handlers
@@ -805,6 +950,23 @@ window.toggleAllProjects = function() {
     
     dashboard.renderProjectList(dashboard.allProjects);
     dashboard.loadPortfolio();
+};
+
+// Global function to toggle summary visibility
+window.toggleSummary = function(button) {
+    const summaryContent = button.closest('.summary-content');
+    const summaryText = summaryContent.querySelector('.summary-text');
+    const isExpanded = !summaryText.classList.contains('truncated');
+    
+    if (isExpanded) {
+        // Collapse
+        summaryText.classList.add('truncated');
+        button.textContent = 'Show More';
+    } else {
+        // Expand
+        summaryText.classList.remove('truncated');
+        button.textContent = 'Show Less';
+    }
 };
 
 // Initialize dashboard when page loads

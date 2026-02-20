@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Resume } from "../api/resume_types";
+import { Resume, Skills, Project } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
@@ -88,11 +88,9 @@ export function ResumeBuilderPage() {
     setEditedSections(new Set()); // Clear edited sections when entering edit mode
   };
 
-  const handleResumeChange = (updatedResume: Resume, section?: string) => {
-    setActiveContent(updatedResume);
-    if (section) {
-      setEditedSections(prev => new Set(prev).add(section));
-    }
+  const handleSectionChange = (section: "skills" | "projects", data: Skills | Project[]) => {
+    setActiveContent(prev => (prev ? { ...prev, [section]: data } : prev));
+    setEditedSections(prev => new Set(prev).add(section));
   };
 
   const handleSelectResume = (index: number) => {
@@ -196,7 +194,7 @@ export function ResumeBuilderPage() {
           project_name: project.title,
           start_date: project.dates?.split(' – ')[0],
           end_date: project.dates?.split(' – ')[1],
-          skills: typeof project.skills === 'string' ? project.skills.split(', ') : project.skills,
+          skills: project.skills,
           bullets: project.bullets,
           display_order: index + 1
         }));
@@ -348,7 +346,7 @@ export function ResumeBuilderPage() {
                 <ResumePreview 
                   resume={activeContent}
                   isEditing={isEditing}
-                  onResumeChange={(updatedResume, section) => handleResumeChange(updatedResume, section)}
+                  onSectionChange={handleSectionChange}
                 />
               )}
             </div>

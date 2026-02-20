@@ -270,6 +270,63 @@ class TestChronologicalManager:
         assert dates == sorted(dates)  # Should be in ascending order
         
         manager.close()
+    
+    def test_update_skill_name(self, temp_db):
+        """Test renaming a skill."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Rename Python to Python3
+        manager.update_skill_name('proj1', 'Python', 'Python3')
+        
+        # Verify rename
+        skills = manager.get_chronological_skills('proj1')
+        skill_names = [s['skill'] for s in skills]
+        assert 'Python3' in skill_names
+        assert 'Python' not in skill_names
+        
+        # Verify the renamed skill kept its other properties
+        python3_skill = [s for s in skills if s['skill'] == 'Python3'][0]
+        assert python3_skill['date'] == '2024-01-15'
+        assert python3_skill['source'] == 'code'
+        
+        manager.close()
+    
+    def test_update_skill_name_preserves_date(self, temp_db):
+        """Test that renaming a skill preserves its date."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Get original date
+        skills = manager.get_chronological_skills('proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        original_date = flask_skill['date']
+        
+        # Rename Flask to Flask-RESTful
+        manager.update_skill_name('proj1', 'Flask', 'Flask-RESTful')
+        
+        # Verify date is preserved
+        skills = manager.get_chronological_skills('proj1')
+        flask_restful_skill = [s for s in skills if s['skill'] == 'Flask-RESTful'][0]
+        assert flask_restful_skill['date'] == original_date
+        
+        manager.close()
+    
+    def test_update_skill_name_case_correction(self, temp_db):
+        """Test correcting capitalization of skill names."""
+        manager = ChronologicalManager(db_path=temp_db)
+        
+        # Rename javascript to JavaScript (case correction)
+        skills_before = manager.get_chronological_skills('proj2')
+        assert any(s['skill'] == 'JavaScript' for s in skills_before)
+        
+        # Simulate case correction
+        manager.update_skill_name('proj2', 'JavaScript', 'javascript')
+        manager.update_skill_name('proj2', 'javascript', 'JavaScript')
+        
+        # Verify final name
+        skills = manager.get_chronological_skills('proj2')
+        assert any(s['skill'] == 'JavaScript' for s in skills)
+        
+        manager.close()
 
 
 if __name__ == "__main__":

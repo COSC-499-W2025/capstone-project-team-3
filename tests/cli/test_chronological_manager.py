@@ -175,6 +175,93 @@ class TestChronologicalCLI:
         assert skills[0]['skill'] == 'Python'
         
         manager.close()
+    
+    def test_add_skill_with_cli(self, temp_db, monkeypatch):
+        """Test adding a new skill with date through CLI."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Simulate user input: skill name, source type, date
+        inputs = iter(['Docker', '1', '2024-04-01'])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        # Add skill
+        cli._add_skill('test_proj1')
+        
+        # Verify addition
+        skills = manager.get_chronological_skills('test_proj1')
+        assert len(skills) == 3
+        docker_skill = [s for s in skills if s['skill'] == 'Docker'][0]
+        assert docker_skill['skill'] == 'Docker'
+        assert docker_skill['source'] == 'code'
+        assert docker_skill['date'] == '2024-04-01'
+        
+        manager.close()
+    
+    def test_add_skill_non_code_source(self, temp_db, monkeypatch):
+        """Test adding a skill with non-code source."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Simulate user input: skill name, non-code source, date
+        inputs = iter(['Leadership', '2', '2024-05-15'])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        # Add skill
+        cli._add_skill('test_proj1')
+        
+        # Verify addition
+        skills = manager.get_chronological_skills('test_proj1')
+        leadership_skill = [s for s in skills if s['skill'] == 'Leadership'][0]
+        assert leadership_skill['skill'] == 'Leadership'
+        assert leadership_skill['source'] == 'non-code'
+        assert leadership_skill['date'] == '2024-05-15'
+        
+        manager.close()
+    
+    def test_add_skill_validates_empty_name(self, temp_db, monkeypatch, capsys):
+        """Test that adding skill with empty name is rejected."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Simulate empty skill name
+        inputs = iter([''])
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        # Try to add skill
+        cli._add_skill('test_proj1')
+        
+        # Verify no skill was added
+        skills = manager.get_chronological_skills('test_proj1')
+        assert len(skills) == 2  # Still only original 2 skills
+        
+        # Verify error message
+        captured = capsys.readouterr()
+        assert 'cannot be empty' in captured.out
+        
+        manager.close()
+    
+    def test_add_skill_validates_invalid_source(self, temp_db, monkeypatch, capsys):
+        """Test that invalid source type is rejected."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Simulate invalid source type
+        inputs = iter(['NewSkill', '3'])  # 3 is invalid
+        monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+        
+        # Try to add skill
+        cli._add_skill('test_proj1')
+        
+        # Verify no skill was added
+        skills = manager.get_chronological_skills('test_proj1')
+        assert len(skills) == 2
+        
+        # Verify error message
+        captured = capsys.readouterr()
+        assert 'Invalid source type' in captured.out
+        
+        manager.close()
 
 
 if __name__ == "__main__":

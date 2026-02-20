@@ -1,6 +1,33 @@
-import type { UserPreferences, InstitutionSearchResponse } from "./userPreferences_types";
-
 const API_BASE = "http://localhost:8000";
+
+export interface EducationDetail {
+  institution: string;
+  degree: string;
+  start_date: string; // Format: YYYY-MM-DD or YYYY
+  end_date?: string | null; // Format: YYYY-MM-DD or YYYY, null if ongoing
+  gpa?: number | null; // GPA on a 4.0 scale
+}
+
+export interface UserPreferences {
+  name: string;
+  email: string;
+  github_user: string;
+  education: string; // e.g., "Bachelor's", "Master's", "PhD"
+  industry: string;
+  job_title: string;
+  education_details?: EducationDetail[] | null;
+}
+
+export interface Institution {
+  name: string;
+}
+
+export interface InstitutionSearchResponse {
+  status: string;
+  count: number;
+  institutions: Institution[];
+}
+
 
 /**
  * Fetch the latest user preferences from the backend
@@ -49,7 +76,15 @@ export async function saveUserPreferences(preferences: UserPreferences): Promise
   });
   
   if (!res.ok) {
-    throw new Error("Failed to save user preferences: " + res.statusText);
+    // Try to get detailed error message from response
+    let errorDetail = res.statusText;
+    try {
+      const errorData = await res.json();
+      errorDetail = errorData.detail || JSON.stringify(errorData);
+    } catch (e) {
+      // If response is not JSON, use statusText
+    }
+    throw new Error(`Failed to save user preferences (${res.status}): ${errorDetail}`);
   }
   
   return res.json();

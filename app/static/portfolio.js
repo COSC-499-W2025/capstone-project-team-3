@@ -585,7 +585,11 @@ showError(message) {
                     <div class="project-score-display">
                         ${(project.rank || 0).toFixed(2)}
                     </div>
-                    <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
+                    <div class="project-dates editable-field" 
+                         data-field="dates" 
+                         data-project="${project.id}"
+                         data-created-at="${project.created_at || ''}"
+                         data-last-modified="${project.last_modified || ''}">
                         ${project.dates}
                     </div>
                     
@@ -600,21 +604,19 @@ showError(message) {
                         </div>
                     ` : ''}
                     
-                    ${project.summary ? `
-                        <div class="project-summary">
-                            <h4>📝 Project Summary</h4>
-                            <div class="summary-content">
-                                <div class="summary-text ${this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
-                                    <span class="editable-field" data-field="summary" data-project="${project.id}">
-                                        ${project.summary}
-                                    </span>
-                                </div>
-                                ${this.shouldTruncateSummary(project.summary) ? `
-                                    <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
-                                ` : ''}
+                    <div class="project-summary">
+                        <h4>📝 Project Summary</h4>
+                        <div class="summary-content">
+                            <div class="summary-text ${project.summary && this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
+                                <span class="editable-field" data-field="summary" data-project="${project.id}">
+                                    ${project.summary || '<em style="color: var(--text-muted);">Click to add a project summary...</em>'}
+                                </span>
                             </div>
+                            ${project.summary && this.shouldTruncateSummary(project.summary) ? `
+                                <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
+                            ` : ''}
                         </div>
-                    ` : ''}
+                    </div>
                     
                     <div class="project-metrics">
                         <div class="metric-item">
@@ -685,7 +687,8 @@ showError(message) {
             
             element.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.handleFieldEdit(e.target);
+                // Use currentTarget to get the .editable-field element, not the clicked child element
+                this.handleFieldEdit(e.currentTarget);
             });
         });
     }
@@ -900,7 +903,14 @@ showError(message) {
     handleFieldEdit(element) {
         const field = element.dataset.field;
         const projectId = element.dataset.project;
-        const currentValue = element.textContent.trim();
+        
+        // Get current value - check if it's a placeholder (em tag)
+        let currentValue = element.textContent.trim();
+        const emElement = element.querySelector('em');
+        if (emElement) {
+            // If there's an em tag, it's placeholder text, so the actual value is empty
+            currentValue = '';
+        }
         
         // Prevent multiple edits at once
         if (element.querySelector('input, textarea')) {
@@ -925,14 +935,18 @@ showError(message) {
             inputElement.style.fontSize = 'inherit';
             inputElement.value = currentValue;
         } else if (field === 'dates') {
+            // Get the raw dates from the data attributes
+            const createdAt = element.dataset.createdAt || '';
+            const lastModified = element.dataset.lastModified || '';
+            
             // For dates, we need to parse and edit created_at and last_modified
             inputElement = document.createElement('div');
             inputElement.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="font-size: 12px; color: var(--text-secondary);">Created:</label>
-                    <input type="date" id="created_at_input" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <input type="date" id="created_at_input" value="${createdAt}" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
                     <label style="font-size: 12px; color: var(--text-secondary);">Last Modified:</label>
-                    <input type="date" id="last_modified_input" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <input type="date" id="last_modified_input" value="${lastModified}" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
                     <div style="display: flex; gap: 8px; margin-top: 8px;">
                         <button class="save-edit-btn" style="flex: 1; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
                         <button class="cancel-edit-btn" style="flex: 1; padding: 8px; background: var(--text-muted); color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
@@ -1003,9 +1017,15 @@ showError(message) {
             
             if (field === 'summary') {
                 editData.project_summary = inputElement.value;
-            } else if (field === 'rank') {
-                // rank is read-only, but could update project_name
-                editData.project_name = inputElement.value;
+            } else if (field === 'project_name') {
+                const newName = inputElement.value.trim();
+                // Validate that project name is not empty
+                if (!newName) {
+                    alert('Project name cannot be empty!');
+                    inputElement.focus();
+                    return;
+                }
+                editData.project_name = newName;
             } else if (field === 'dates') {
                 const createdAt = document.getElementById('created_at_input').value;
                 const lastModified = document.getElementById('last_modified_input').value;
@@ -1017,7 +1037,8 @@ showError(message) {
         };
         
         // Handle cancel
-        const cancelHandler = () => {
+        const cancelHandler = (e) => {
+            if (e) e.stopPropagation(); // Prevent click from bubbling to parent
             element.innerHTML = originalContent;
             element.style.backgroundColor = '';
             element.style.border = '';
@@ -1027,8 +1048,14 @@ showError(message) {
         const saveBtn = element.querySelector('.save-edit-btn');
         const cancelBtn = element.querySelector('.cancel-edit-btn');
         
-        if (saveBtn) saveBtn.addEventListener('click', saveHandler);
-        if (cancelBtn) cancelBtn.addEventListener('click', cancelHandler);
+        if (saveBtn) saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from bubbling to parent
+            saveHandler();
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from bubbling to parent
+            cancelHandler(e);
+        });
         
         // Enter to save (except for textarea), Escape to cancel
         if (field !== 'summary' && field !== 'dates') {
@@ -1075,6 +1102,9 @@ showError(message) {
             setTimeout(() => {
                 this.loadPortfolio(this.selectedProjects);
             }, 500);
+        
+            await this.loadProjects(); // Re-fetch all projects
+           await this.loadPortfolio(); // Re-render portfolio with updated data    
             
         } catch (error) {
             console.error('Error saving edit:', error);

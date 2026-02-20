@@ -128,24 +128,18 @@ def resume_tex_export(
     Use project_ids for preview mode (builds from base PROJECT table).
     Use neither for master resume.
     """
+    # Validate that only one parameter is provided
+    if project_ids and resume_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot specify both project_ids and resume_id. Use resume_id for saved resumes or project_ids for preview."
+        )
+        
     try:
         tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return Response(
-        content=tex,
-        media_type="application/x-tex",
-        headers={"Content-Disposition": "attachment; filename=resume.tex"},
-    )
-
-@router.post("/resume/export/tex")
-def resume_tex_filtered(filter: ResumeFilter):
-    """This method downloads a resume for specified projects."""
-    try:
-        tex = get_resume_tex(filter.project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     return Response(
         content=tex,
         media_type="application/x-tex",
@@ -261,6 +255,12 @@ async def resume_pdf_export(
     Use project_ids for preview mode (builds from base PROJECT table).
     Use neither for master resume.
     """
+    if project_ids and resume_id is not None:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot specify both project_ids and resume_id. Use resume_id for saved resumes or project_ids for preview."
+        )
+        
     try:
         tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
     except ResumeServiceError as e:
@@ -277,24 +277,6 @@ async def resume_pdf_export(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
-    
-@router.post("/resume/export/pdf")
-async def resume_pdf_filtered(filter: ResumeFilter):
-    """This method downloads a resume for specified projects."""
-    try:
-        tex = get_resume_tex(filter.project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    pdf_bytes = await run_in_threadpool(
-        get_or_compile_pdf,
-        tex,
-    )
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=resume.pdf"},
-    )
-
 
 @router.delete("/resume/{resume_id}")
 def delete_saved_resume(resume_id: int):

@@ -10,7 +10,6 @@ def setup_test_db(tmp_path, monkeypatch):
     """Create temporary test database and override DB_PATH."""
     db_path = tmp_path / "test_consent.sqlite3"
     
-    # Create test database with schema
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("""
@@ -24,8 +23,12 @@ def setup_test_db(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     
-    # Override DB_PATH
-    monkeypatch.setattr("app.data.db.DB_PATH", db_path)
+    monkeypatch.setattr("app.data.db.DB_PATH", str(db_path))
+    
+    # Clear any cached connections
+    from app.data import db
+    if hasattr(db, '_connection'):
+        monkeypatch.delattr(db, '_connection', raising=False)
     
     yield db_path
 
@@ -56,3 +59,19 @@ def test_revoke_consent(setup_test_db):
     response = client.delete("/api/privacy-consent")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+def test_get_consent_text():
+    """Test retrieving consent text."""
+    response = client.get("/api/privacy-consent/text")
+    assert response.status_code == 200
+    data = response.json()
+    assert "consent_message" in data
+    assert "detailed_info" in data
+    assert "granted_message" in data
+    assert "declined_message" in data
+    assert "already_provided_message" in data
+    assert len(data["consent_message"]) > 0
+    assert len(data["detailed_info"]) > 0
+    assert len(data["granted_message"]) > 0
+    assert len(data["declined_message"]) > 0
+    assert len(data["already_provided_message"]) > 0

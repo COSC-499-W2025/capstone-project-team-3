@@ -7,10 +7,34 @@ import json
 from app.utils.generate_resume import (
     format_dates,
     load_user, 
-    load_projects,
     load_skills,
     limit_skills
 )
+
+def load_projects_with_override(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str, int, Optional[float]]]:
+    """Return projects with signature, name, score, created_at, last_modified, score_overridden, score_overridden_value.
+    If project_ids are provided, return only those projects.
+    """
+    if project_ids:
+        # Build a dynamic IN clause safely
+        placeholders = ",".join(["?"] * len(project_ids))
+        query = f"""
+            SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
+            FROM PROJECT
+            WHERE project_signature IN ({placeholders})
+            ORDER BY score DESC
+        """
+        cursor.execute(query, project_ids)
+        return cursor.fetchall()
+    else:
+        cursor.execute(
+            """
+            SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
+            FROM PROJECT
+            ORDER BY score DESC
+            """
+        )
+        return cursor.fetchall()
 
 def load_project_metrics(cursor: sqlite3.Cursor) -> DefaultDict[str, Dict[str, Any]]:
     """Return mapping of project_id to metrics (lines of code, commits, etc)."""
@@ -104,18 +128,30 @@ def get_overview_stats(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] 
     cursor.execute(f"SELECT COUNT(*) FROM PROJECT {project_filter}", params)
     total_projects = cursor.fetchone()[0]
     
-    # Average score
+    # Average score (considering overrides)
     if project_filter:
         cursor.execute(f"""
-            SELECT AVG(CAST(score AS FLOAT)) 
+            SELECT AVG(
+                CASE 
+                    WHEN score_overridden = 1 AND score_overridden_value IS NOT NULL 
+                    THEN CAST(score_overridden_value AS FLOAT)
+                    ELSE CAST(score AS FLOAT)
+                END
+            )
             FROM PROJECT 
-            {project_filter} AND score IS NOT NULL
+            {project_filter} AND (score IS NOT NULL OR (score_overridden = 1 AND score_overridden_value IS NOT NULL))
         """, params)
     else:
         cursor.execute("""
-            SELECT AVG(CAST(score AS FLOAT)) 
+            SELECT AVG(
+                CASE 
+                    WHEN score_overridden = 1 AND score_overridden_value IS NOT NULL 
+                    THEN CAST(score_overridden_value AS FLOAT)
+                    ELSE CAST(score AS FLOAT)
+                END
+            )
             FROM PROJECT 
-            WHERE score IS NOT NULL
+            WHERE (score IS NOT NULL OR (score_overridden = 1 AND score_overridden_value IS NOT NULL))
         """)
     avg_score = cursor.fetchone()[0] or 0
     
@@ -271,12 +307,27 @@ def get_score_distribution(cursor: sqlite3.Cursor, project_ids: Optional[List[st
     if project_ids:
         placeholders = ",".join(["?"] * len(project_ids))
         cursor.execute(f"""
-            SELECT project_signature, score 
+            SELECT project_signature, 
+                   CASE 
+                       WHEN score_overridden = 1 AND score_overridden_value IS NOT NULL 
+                       THEN score_overridden_value
+                       ELSE score
+                   END as effective_score
             FROM PROJECT 
-            WHERE project_signature IN ({placeholders}) AND score IS NOT NULL
+            WHERE project_signature IN ({placeholders}) AND 
+                  (score IS NOT NULL OR (score_overridden = 1 AND score_overridden_value IS NOT NULL))
         """, project_ids)
     else:
-        cursor.execute("SELECT project_signature, score FROM PROJECT WHERE score IS NOT NULL")
+        cursor.execute("""
+            SELECT project_signature, 
+                   CASE 
+                       WHEN score_overridden = 1 AND score_overridden_value IS NOT NULL 
+                       THEN score_overridden_value
+                       ELSE score
+                   END as effective_score
+            FROM PROJECT 
+            WHERE (score IS NOT NULL OR (score_overridden = 1 AND score_overridden_value IS NOT NULL))
+        """)
     
     score_ranges = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
     project_scores = []
@@ -341,7 +392,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     cursor = conn.cursor()
 
     user = load_user(cursor)
-    projects_raw = load_projects(cursor, project_ids=project_ids)
+    projects_raw = load_projects_with_override(cursor, project_ids=project_ids)
     skills_map = load_skills(cursor)
     overview_stats = get_overview_stats(cursor, project_ids)
     skills_timeline = get_skills_timeline(cursor, project_ids)
@@ -357,7 +408,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     projects = []
     selected_ids = [pid for pid, *_ in projects_raw]
 
-    for pid, name, score, created_at, last_modified in projects_raw:
+    for pid, name, score, created_at, last_modified, score_overridden, score_overridden_value in projects_raw:
         metrics = project_metrics.get(pid, {})
         project_skills = skills_map.get(pid, [])
         project_summary = project_summaries.get(pid, "")
@@ -387,6 +438,8 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "title": name,
             "score": float(score) if score else 0,
             "rank": float(score) if score else 0,
+            "score_overridden": bool(score_overridden),
+            "score_overridden_value": float(score_overridden_value) if score_overridden_value is not None else None,
             "dates": format_dates(created_at, last_modified),
             "created_at": created_at,
             "last_modified": last_modified,

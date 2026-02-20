@@ -38,10 +38,14 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     assert data[0]["id"] == "p1"
     assert data[0]["name"] == "Project One"
     assert data[0]["skills"] == ["Python", "FastAPI", "Docker"]
+    assert data[0]["date_added"] == "2020-01-01"
+    assert data[0]["score"] == 1.0
 
     assert data[1]["id"] == "p2"
     assert data[1]["name"] == "Project Two"
     assert data[1]["skills"] == ["JavaScript", "React", "Node"]
+    assert data[1]["date_added"] == "2021-01-01"
+    assert data[1]["score"] == 2.0
 
     # Ensure DB connection is closed
     mock_get_conn.return_value.close.assert_called_once()
@@ -74,6 +78,8 @@ def test_get_projects_skills_limited_to_five(mock_load_skills, mock_load_project
     response = client.get("/projects")
     data = response.json()
     assert data[0]["skills"] == ["s1", "s2", "s3", "s4", "s5"]
+    assert data[0]["date_added"] == "2020-01-01"
+    assert data[0]["score"] == 1.0
     mock_get_conn.return_value.close.assert_called_once()
 
 

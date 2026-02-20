@@ -200,7 +200,8 @@ class ChronologicalCLI:
             print("Options:")
             print("  [1] View skills")
             print("  [2] Update skill date")
-            print("  [3] Remove skill")
+            print("  [3] Add new skill")
+            print("  [4] Remove skill")
             print("  [b] Back")
             print("-" * 60)
             
@@ -213,6 +214,8 @@ class ChronologicalCLI:
             elif action == '2':
                 self._update_skill_date(project_id, skills)
             elif action == '3':
+                self._add_skill(project_id)
+            elif action == '4':
                 self._remove_skill(project_id, skills)
             else:
                 print("Invalid option. Try again.")

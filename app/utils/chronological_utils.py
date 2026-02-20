@@ -181,6 +181,24 @@ class ChronologicalManager:
         
         self.conn.commit()
     
+    def update_skill_name(self, project_id: str, old_skill: str, new_skill: str):
+        """
+        Rename a skill in a project.
+        
+        Args:
+            project_id: Project signature
+            old_skill: Current skill name
+            new_skill: New skill name
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            UPDATE SKILL_ANALYSIS
+            SET skill = ?
+            WHERE project_id = ? AND skill = ?
+        """, (new_skill, project_id, old_skill))
+        
+        self.conn.commit()
+    
     def close(self):
         """Close database connection."""
         if self.conn:

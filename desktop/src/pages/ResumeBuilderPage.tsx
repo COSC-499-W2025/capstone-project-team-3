@@ -20,6 +20,8 @@ export function ResumeBuilderPage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveResumeName, setSaveResumeName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSections, setEditedSections] = useState<Set<string>>(new Set());
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -81,7 +83,23 @@ export function ResumeBuilderPage() {
     }
   }, [baseResumeList, activeIndex, isPreviewMode]);
 
+  const handleEditResume = () => {
+    setIsEditing(true);
+    setEditedSections(new Set()); // Clear edited sections when entering edit mode
+  };
+
+  const handleResumeChange = (updatedResume: Resume, section?: string) => {
+    setActiveContent(updatedResume);
+    if (section) {
+      setEditedSections(prev => new Set(prev).add(section));
+    }
+  };
+
   const handleSelectResume = (index: number) => {
+    // Exit edit mode when switching resumes
+    setIsEditing(false);
+    setEditedSections(new Set()); // Clear edited sections when switching
+    
     // If selecting the preview resume (index 0 in preview mode), do nothing
     if (isPreviewMode && index === 0) {
       return;
@@ -161,9 +179,32 @@ export function ResumeBuilderPage() {
     
     try {
       setSaving(true);
-      await updateResume(currentResume.id, activeContent);
-      // Could show a success message here
-      // console.log('Resume updated successfully');
+      
+      // Build payload with only edited sections
+      const payload: { skills?: string[], projects?: any[] } = {};
+      
+      if (editedSections.has('skills')) {
+        // Transform { Skills: [...] } to [...]
+        payload.skills = activeContent.skills.Skills;
+      }
+      
+      // If projects were edited, include them
+      // (For now, only skills are editable, but this is future-ready)
+      if (editedSections.has('projects')) {
+        payload.projects = activeContent.projects.map((project, index) => ({
+          project_id: project.title, // TODO: Need actual project_id from backend
+          project_name: project.title,
+          start_date: project.dates?.split(' – ')[0],
+          end_date: project.dates?.split(' – ')[1],
+          skills: typeof project.skills === 'string' ? project.skills.split(', ') : project.skills,
+          bullets: project.bullets,
+          display_order: index + 1
+        }));
+      }
+      
+      await updateResume(currentResume.id, payload);
+      setIsEditing(false); // Exit edit mode after save
+      setEditedSections(new Set()); // Clear edited sections
     } catch (error) {
       console.error('Failed to update resume:', error);
       alert('Failed to update resume. Please try again.');
@@ -297,12 +338,19 @@ export function ResumeBuilderPage() {
             onSelect={handleSelectResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            onEdit={handleEditResume}
           />
         </div>
         <div className="resume-builder__main">
           <div className="container">
             <div className="card">
-              {activeContent && <ResumePreview resume={activeContent} />}
+              {activeContent && (
+                <ResumePreview 
+                  resume={activeContent}
+                  isEditing={isEditing}
+                  onResumeChange={(updatedResume, section) => handleResumeChange(updatedResume, section)}
+                />
+              )}
             </div>
           </div>
         </div>

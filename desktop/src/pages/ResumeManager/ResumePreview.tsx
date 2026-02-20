@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { Resume } from "../../api/resume_types";
+import { Resume, Skills } from "../../api/resume_types";
 import { EducationSection } from "./ResumeSections/EducationSection";
 import { HeaderSection } from "./ResumeSections/HeaderSection";
 import { ProjectsSection } from "./ResumeSections/ProjectSections";
@@ -29,13 +29,28 @@ function assignSectionsToPages(sectionHeights: number[]): number[] {
   return out;
 }
 
-export function ResumePreview({ resume }: { resume: Resume }) {
+export function ResumePreview({ 
+  resume, 
+  isEditing = false, 
+  onResumeChange 
+}: { 
+  resume: Resume;
+  isEditing?: boolean;
+  onResumeChange?: (resume: Resume, section?: string) => void;
+}) {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [sectionHeights, setSectionHeights] = useState<number[]>([]);
   const [sectionToPage, setSectionToPage] = useState<number[]>([]);
 
   const projects = resume.projects ?? [];
   const sectionCount = 3 + projects.length; // header, education, skills, then one per project
+
+  // Handler for skills section changes
+  const handleSkillsChange = (skills: Skills) => {
+    if (onResumeChange) {
+      onResumeChange({ ...resume, skills }, 'skills');
+    }
+  };
 
   useLayoutEffect(() => {
     const refs = sectionRefs.current;
@@ -76,7 +91,11 @@ export function ResumePreview({ resume }: { resume: Resume }) {
             <EducationSection education={resume.education} />
           </div>
           <div ref={setSectionRef(2)}>
-            <SkillsSection skills={resume.skills} />
+            <SkillsSection 
+              skills={resume.skills}
+              isEditing={isEditing}
+              onChange={handleSkillsChange}
+            />
           </div>
           {projects.map((_, i) => (
             <div key={i} ref={setSectionRef(3 + i)}>
@@ -133,7 +152,13 @@ export function ResumePreview({ resume }: { resume: Resume }) {
                   {hasEducation && (
                     <EducationSection education={resume.education} />
                   )}
-                  {hasSkills && <SkillsSection skills={resume.skills} />}
+                  {hasSkills && (
+                    <SkillsSection 
+                      skills={resume.skills}
+                      isEditing={isEditing}
+                      onChange={handleSkillsChange}
+                    />
+                  )}
                   {pageProjects.length > 0 && (
                     <ProjectsSection
                       projects={pageProjects}

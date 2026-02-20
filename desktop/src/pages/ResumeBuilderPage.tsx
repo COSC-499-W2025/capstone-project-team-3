@@ -121,6 +121,10 @@ export function ResumeBuilderPage() {
       }
     } else {
       // Normal selection when not in preview mode
+      if (index !== activeIndex) {
+        setActiveContent(null); // Don’t show previous resume while new one loads
+      }
+      // Normal selection when not in preview mode
       setActiveIndex(index);
     }
   };

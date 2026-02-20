@@ -57,7 +57,6 @@ export function SkillsSection({
         <span className="resume-preview__skills-label">Skills:</span>
         {isEditing ? (
           <p 
-            key={skillsText} // Force remount when skills change to prevent duplication
             ref={contentRef}
             className="resume-preview__skills-list"
             contentEditable={true}

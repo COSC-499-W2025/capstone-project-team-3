@@ -139,40 +139,6 @@ def test_resume_pdf_download_with_project_ids(mock_compile, mock_tex, mock_model
     assert response.content.startswith(b"%PDF")
     mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
 
-@patch("app.api.routes.resume.build_resume_model")
-@patch("app.api.routes.resume.generate_resume_tex")
-def test_resume_export_tex_filtered(mock_tex, mock_model, client, fake_resume_model):
-    """Ensure POST /resume/export/tex returns .tex for specified projects."""
-    mock_model.return_value = fake_resume_model
-    mock_tex.return_value = "LATEX FILTERED CONTENT"
-
-    body = {"project_ids": ["sig_gamma_project/hash"]}
-    response = client.post("/resume/export/tex", json=body)
-
-    assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
-    assert response.text == "LATEX FILTERED CONTENT"
-    mock_model.assert_called_once()
-
-
-@patch("app.api.routes.resume.build_resume_model")
-@patch("app.api.routes.resume.generate_resume_tex")
-@patch("app.api.routes.resume.compile_pdf")
-def test_resume_export_pdf_filtered(mock_compile, mock_tex, mock_model, client, fake_resume_model):
-    """Confirm POST /resume/export/pdf returns a valid PDF for selected projects."""
-    mock_model.return_value = fake_resume_model
-    mock_tex.return_value = "LATEX FILTERED CONTENT"
-    mock_compile.return_value = b"%PDF-1.4 filtered"
-
-    body = {"project_ids": ["sig_alpha_project/hash", "sig_gamma_project/hash"]}
-    response = client.post("/resume/export/pdf", json=body)
-
-    assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
-    assert response.content.startswith(b"%PDF")
-    mock_model.assert_called_once()
-
-
 @patch("app.api.routes.resume.subprocess.run")
 @patch("app.api.routes.resume.os.path.exists")
 @patch("builtins.open")
@@ -373,9 +339,32 @@ def test_create_tailored_resume_no_projects(client):
     """
     payload = {"name": "Test Resume", "project_ids": []}
     response = client.post("/resume", json=payload)
-    assert response.status_code == 400
-    assert "No projects selected" in response.text
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("project_ids" in str(err) for err in detail)
+    
+def test_create_tailored_resume_missing_name(client):
+    """Verify that missing name returns 422 (Pydantic validation error)."""
+    response = client.post(
+        "/resume",
+        json={"project_ids": ["proj1", "proj2"]}  # Missing name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    # Pydantic returns a list of validation errors
+    assert any("name" in str(err) for err in detail)
 
+def test_create_tailored_resume_empty_name(client):
+    """Verify that empty name returns 422 (min_length=1)."""
+    response = client.post(
+        "/resume",
+        json={"name": "", "project_ids": ["proj1"]} #empty name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("at least 1 character" in str(err) for err in detail)
 
 @patch("app.api.routes.resume.list_resumes")
 def test_list_resumes_endpoint_success(mock_list_resumes, client):

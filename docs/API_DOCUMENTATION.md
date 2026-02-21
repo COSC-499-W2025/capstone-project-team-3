@@ -450,6 +450,169 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
+### 22. Create Tailored Resume
+
+**What it does:** Creates a new resume with selected projects.
+
+**URL:** `POST /resume`
+
+**Request:**
+```json
+{
+  "project_ids": ["proj1", "proj2", "proj3"]
+}
+```
+
+**Response:**
+```json
+{
+  "resume_id": "resume_456",
+  "message": "Resume created successfully"
+}
+```
+
+**Error:** `400` if no projects selected.
+
+---
+
+### 23. Get Saved Resume
+
+**What it does:** Loads a previously saved resume by ID.
+
+**URL:** `GET /resume/{resume_id}`
+
+**Response:**
+```json
+{
+  "resume_id": 123,
+  "projects": [...],
+  "user_info": {...}
+}
+```
+
+**Error:** `404` if resume not found.
+
+---
+
+### 24. List All Resumes
+
+**What it does:** Returns all saved resumes for sidebar display.
+
+**URL:** `GET /resume_names`
+
+**Response:**
+```json
+{
+  "resumes": [
+    {"id": 1, "name": "Master Resume", "is_master": true},
+    {"id": 2, "name": "Software Engineer Resume", "is_master": false}
+  ]
+}
+```
+
+---
+
+### 25. Save Edited Resume
+
+**What it does:** Saves edits to an existing resume.
+
+**URL:** `POST /resume/{id}/edit`
+
+**Request:**
+```json
+{
+  "project_overrides": {...},
+  "custom_sections": {...}
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Resume edits saved"
+}
+```
+
+**Errors:**
+- `404` - Resume not found
+- `409` - Persistence error
+
+---
+
+### 26. Get Frequent Skills
+
+**What it does:** Returns most frequently used skills across all projects.
+
+**URL:** `GET /api/skills/frequent?limit=10`
+
+**Parameters:**
+- `limit` - Number of skills to return (default: 10, max: 50)
+
+**Response:**
+```json
+[
+  {
+    "skill": "Python",
+    "frequency": 8,
+    "source": "code_analysis"
+  },
+  {
+    "skill": "JavaScript",
+    "frequency": 5,
+    "source": "code_analysis"
+  }
+]
+```
+
+---
+
+### 27. Get Chronological Skills
+
+**What it does:** Returns skills ordered by most recent usage.
+
+**URL:** `GET /api/skills/chronological?limit=10`
+
+**Parameters:**
+- `limit` - Number of skills to return (default: 10, max: 50)
+
+**Response:**
+```json
+[
+  {
+    "skill": "React",
+    "latest_use": "2024-02-15",
+    "source": "code_analysis",
+    "frequency": 3
+  }
+]
+```
+
+---
+
+### 28. Get Project by Signature
+
+**What it does:** Returns detailed information for a specific project.
+
+**URL:** `GET /api/projects/{signature}`
+
+**Response:**
+```json
+{
+  "project_signature": "abc123",
+  "name": "My Project",
+  "summary": "Project description",
+  "skills": [...],
+  "languages": [...],
+  "created_at": "2024-01-01",
+  "score": 0.85
+}
+```
+
+**Error:** `404` if project not found.
+
+---
+
 ### 29. Record Privacy Consent
 
 **What it does:** Records user consent decision for privacy.
@@ -652,5 +815,5 @@ fetch(`${API_BASE}/api/resume/123`, {
 
 ---
 **Last Updated:** February 16, 2026  
-**Total Endpoints Documented:** 21  
+**Total Endpoints Documented:** 28  
 **Questions?** Contact development team

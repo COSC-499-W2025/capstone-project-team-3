@@ -51,19 +51,21 @@ export const ResumeSidebar = ({
             >
               <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
               <span className="resume-sidebar__actions">
-                <button 
-                  type="button" 
-                  className="resume-sidebar__icon-btn" 
-                  aria-label="Edit resume" 
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    if (i === activeIndex && onEdit) {
-                      onEdit();
-                    }
-                  }}
-                >
-                  <img src="/edit_icon.svg" alt="" width={20} height={20} />
-                </button>
+                {!r.is_master && (
+                  <button 
+                    type="button" 
+                    className="resume-sidebar__icon-btn" 
+                    aria-label="Edit resume" 
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      if (i === activeIndex && onEdit) {
+                        onEdit();
+                      }
+                    }}
+                  >
+                    <img src="/edit_icon.svg" alt="" width={20} height={20} />
+                  </button>
+                )}
                 <button type="button" className="resume-sidebar__icon-btn" aria-label="More options" onClick={(e) => { e.stopPropagation(); }}>
                   <img src="/more_icon.svg" alt="" width={18} height={18} />
                 </button>

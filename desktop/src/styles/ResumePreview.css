@@ -201,24 +201,28 @@
 
 /* Project edit: month/year date pickers */
 .resume-preview__project-dates-edit {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
 }
-.resume-preview__project-dates-placeholder {
+.resume-preview__project-date-wrap {
+  position: relative;
+  display: inline-block;
+}
+.resume-preview__project-date-placeholder {
   position: absolute;
   left: 0;
   top: 0;
-  right: 0;
   bottom: 0;
   display: flex;
   align-items: center;
+  padding-left: 8px;
   color: #999;
   font-style: italic;
-  pointer-events: none;
   font-size: 11pt;
+  pointer-events: none;
+  z-index: 1;
 }
 .resume-preview__project-date-input {
   font-family: inherit;
@@ -226,11 +230,17 @@
   padding: 2px 6px;
   border: 1px solid #ccc;
   border-radius: 2px;
-  background: #fafafa;
+  background: transparent;
   min-width: 0;
+  position: relative;
+  z-index: 0;
 }
 .resume-preview__project-date-input:focus {
   outline: 2px solid #007bff;
+  background: #fff;
+}
+.resume-preview__project-date-input:not(:placeholder-shown),
+.resume-preview__project-date-input:focus {
   background: #fff;
 }
 .resume-preview__project-dates-sep {

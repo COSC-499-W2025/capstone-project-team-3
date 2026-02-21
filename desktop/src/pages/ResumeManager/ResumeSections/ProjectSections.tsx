@@ -210,36 +210,45 @@ function ProjectBlock({
             data-placeholder="Project title"
           />
           <div className="resume-preview__project-dates-edit">
-            {!startMonth && !endMonth && (
-              <span className="resume-preview__project-dates-placeholder" aria-hidden>
-                Start – End
-              </span>
-            )}
-            <input
-              type="month"
-              className="resume-preview__project-date-input"
-              aria-label="Start (month and year)"
-              value={startMonth}
-              onChange={(e) => {
-                const v = e.target.value;
-                setStartMonth(v);
-                emitDatesChange(v, endMonth);
-              }}
-              onBlur={() => commit()}
-            />
+            <div className="resume-preview__project-date-wrap">
+              <input
+                type="month"
+                className="resume-preview__project-date-input"
+                aria-label="Start (month and year)"
+                value={startMonth}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setStartMonth(v);
+                  emitDatesChange(v, endMonth);
+                }}
+                onBlur={() => commit()}
+              />
+              {!startMonth && (
+                <span className="resume-preview__project-date-placeholder" aria-hidden>
+                  Start
+                </span>
+              )}
+            </div>
             <span className="resume-preview__project-dates-sep"> – </span>
-            <input
-              type="month"
-              className="resume-preview__project-date-input"
-              aria-label="End (month and year)"
-              value={endMonth}
-              onChange={(e) => {
-                const v = e.target.value;
-                setEndMonth(v);
-                emitDatesChange(startMonth, v);
-              }}
-              onBlur={() => commit()}
-            />
+            <div className="resume-preview__project-date-wrap">
+              <input
+                type="month"
+                className="resume-preview__project-date-input"
+                aria-label="End (month and year)"
+                value={endMonth}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setEndMonth(v);
+                  emitDatesChange(startMonth, v);
+                }}
+                onBlur={() => commit()}
+              />
+              {!endMonth && (
+                <span className="resume-preview__project-date-placeholder" aria-hidden>
+                  End
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <p className="resume-preview__project-skills">

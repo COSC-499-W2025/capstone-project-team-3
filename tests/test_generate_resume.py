@@ -53,6 +53,7 @@ def db_connection(monkeypatch):
             github_user TEXT,
             education TEXT,
             job_title TEXT,
+            education_details JSON,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -194,6 +195,7 @@ def test_load_user(db_connection):
     assert user["email"] == "john@example.com"
     assert user["education"] == "University X"
     assert user["job_title"] == "Developer"
+    assert user["education_details"] is None  # No education_details in seed data
     assert user["links"][0]["url"] == "https://github.com/johndoe"
 
 

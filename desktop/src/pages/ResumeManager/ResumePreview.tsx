@@ -52,6 +52,14 @@ export function ResumePreview({
     onSectionChange?.("skills", skills);
   };
 
+  const handleProjectChange = (globalIndex: number, project: Project) => {
+    const newProjects = [...projects];
+    if (globalIndex >= 0 && globalIndex < newProjects.length) {
+      newProjects[globalIndex] = { ...newProjects[globalIndex], ...project };
+      onSectionChange?.("projects", newProjects);
+    }
+  };
+
   useLayoutEffect(() => {
     const refs = sectionRefs.current;
     const heights: number[] = [];
@@ -163,6 +171,9 @@ export function ResumePreview({
                     <ProjectsSection
                       projects={pageProjects}
                       showHeading={sectionIndices.includes(3)}
+                      isEditing={isEditing}
+                      onProjectChange={handleProjectChange}
+                      projectStartIndex={projectIndices[0]}
                     />
                   )}
                 </div>

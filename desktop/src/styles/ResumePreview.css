@@ -219,6 +219,30 @@
   margin-bottom: 2px;
 }
 
+/* Project edit: inline skills (comma-separated) */
+.resume-preview__skills-edit-inline {
+  display: inline;
+}
+
+/* Project edit: bullets as newline-separated block */
+.resume-preview__project-bullets-edit-wrapper {
+  margin: 0 0 0 1em;
+}
+.resume-preview__project-bullets-hint {
+  display: block;
+  font-size: 9pt;
+  color: #666;
+  margin-bottom: 2px;
+}
+.resume-preview__project-bullets-edit {
+  min-height: 2.5em;
+  white-space: pre-wrap;
+  list-style: disc;
+  margin: 0 0 0 1em;
+  padding: 0;
+  font-size: 11pt;
+}
+
 /* Contenteditable styles */
 [contenteditable="true"] {
   outline: 1px solid #ccc;

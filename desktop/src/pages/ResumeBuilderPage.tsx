@@ -178,7 +178,6 @@ export function ResumeBuilderPage() {
 
   const handleUpdateExistingResume = async () => {
     if (!activeContent || !currentResume?.id) return;
-    
     try {
       setSaving(true);
       
@@ -193,15 +192,22 @@ export function ResumeBuilderPage() {
       // If projects were edited, include them
       // (For now, only skills are editable, but this is future-ready)
       if (editedSections.has('projects')) {
-        payload.projects = activeContent.projects.map((project, index) => ({
-          project_id: project.title, // TODO: Need actual project_id from backend
-          project_name: project.title,
-          start_date: project.dates?.split(' – ')[0],
-          end_date: project.dates?.split(' – ')[1],
-          skills: project.skills,
-          bullets: project.bullets,
-          display_order: index + 1
-        }));
+        payload.projects = activeContent.projects.map((project, index) => {
+          if (!project.project_id) {
+            throw new Error(
+              "Cannot save project edits: project_id missing. Reload the resume and try again."
+            );
+          }
+          return {
+            project_id: project.project_id,
+            project_name: project.title,
+            start_date: project.dates?.split(' – ')[0],
+            end_date: project.dates?.split(' – ')[1],
+            skills: project.skills,
+            bullets: project.bullets,
+            display_order: index + 1
+          };
+        });
       }
       
       await updateResume(currentResume.id, payload);

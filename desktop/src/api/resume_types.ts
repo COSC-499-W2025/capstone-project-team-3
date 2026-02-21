@@ -1,4 +1,6 @@
 export interface Project {
+  /** Optional because the resume API never returns it; only the frontend may set it when resolving for save. */
+  project_id?: string;
   title: string;
   dates: string;
   skills: string[];

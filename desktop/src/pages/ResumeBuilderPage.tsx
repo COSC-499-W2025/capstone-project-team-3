@@ -6,6 +6,12 @@ import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
 import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX, saveNewResume, updateResume } from "../api/resume";
 
+/** Convert YYYY-MM to YYYY-MM-01 for backend fromisoformat. */
+function toISOStartOfMonth(ym: string): string {
+  if (!/^\d{4}-\d{2}$/.test(ym)) return ym;
+  return `${ym}-01`;
+}
+
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -198,11 +204,13 @@ export function ResumeBuilderPage() {
               "Cannot save project edits: project_id missing. Reload the resume and try again."
             );
           }
+          const start = project.start_date ? toISOStartOfMonth(project.start_date) : undefined;
+          const end = project.end_date ? toISOStartOfMonth(project.end_date) : undefined;
           return {
             project_id: project.project_id,
             project_name: project.title,
-            start_date: project.dates?.split(' – ')[0],
-            end_date: project.dates?.split(' – ')[1],
+            ...(start && { start_date: start }),
+            ...(end && { end_date: end }),
             skills: project.skills,
             bullets: project.bullets,
             display_order: index + 1

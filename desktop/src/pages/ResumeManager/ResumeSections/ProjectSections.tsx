@@ -1,5 +1,32 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Project } from "../../../api/resume_types";
+
+const MONTH_ABBREV = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "YYYY-MM" -> "Jan 2024" */
+function formatMonthYear(ym: string): string {
+  if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return "";
+  const [y, m] = ym.split("-").map(Number);
+  return `${MONTH_ABBREV[m - 1]} ${y}`;
+}
+
+/** "Jan 2024" or "Jan 2024 – Mar 2024" -> { start?: "YYYY-MM", end?: "YYYY-MM" } */
+function parseDisplayDates(dates: string): { start?: string; end?: string } {
+  if (!dates?.trim()) return {};
+  const parts = dates.split(" – ").map((p) => p.trim());
+  const result: { start?: string; end?: string } = {};
+  if (parts[0]) {
+    const m = MONTH_ABBREV.indexOf(parts[0].slice(0, 3));
+    const y = parts[0].slice(-4);
+    if (m >= 0 && /^\d{4}$/.test(y)) result.start = `${y}-${String(m + 1).padStart(2, "0")}`;
+  }
+  if (parts[1]) {
+    const m = MONTH_ABBREV.indexOf(parts[1].slice(0, 3));
+    const y = parts[1].slice(-4);
+    if (m >= 0 && /^\d{4}$/.test(y)) result.end = `${y}-${String(m + 1).padStart(2, "0")}`;
+  }
+  return result;
+}
 
 /** Backend may send skills as string (master resume) or array (saved resume). Normalize to array. */
 function projectSkills(p: { skills?: string[] | string }): string[] {
@@ -74,17 +101,23 @@ function ProjectBlock({
   const bulletsText = bullets.join("\n");
 
   const titleRef = useRef<HTMLParagraphElement>(null);
-  const datesRef = useRef<HTMLSpanElement>(null);
   const skillsRef = useRef<HTMLSpanElement>(null);
   const bulletsRef = useRef<HTMLDivElement>(null);
+
+  const parsed = parseDisplayDates(project.dates);
+  const [startMonth, setStartMonth] = useState<string>(() => project.start_date ?? parsed.start ?? "");
+  const [endMonth, setEndMonth] = useState<string>(() => project.end_date ?? parsed.end ?? "");
+
+  useEffect(() => {
+    const next = parseDisplayDates(project.dates);
+    setStartMonth((prev) => project.start_date ?? next.start ?? prev);
+    setEndMonth((prev) => project.end_date ?? next.end ?? prev);
+  }, [project.start_date, project.end_date, project.dates]);
 
   const syncRefs = () => {
     if (!isEditing) return;
     if (titleRef.current && titleRef.current.textContent !== project.title) {
       titleRef.current.textContent = project.title;
-    }
-    if (datesRef.current && datesRef.current.textContent !== project.dates) {
-      datesRef.current.textContent = project.dates;
     }
     if (skillsRef.current && skillsRef.current.textContent !== skillsText) {
       skillsRef.current.textContent = skillsText;
@@ -96,11 +129,23 @@ function ProjectBlock({
 
   useEffect(syncRefs, [isEditing, project.title, project.dates, skillsText, bulletsText]);
 
+  const emitDatesChange = (start: string, end: string) => {
+    const datesDisplay = start || end
+      ? [formatMonthYear(start), formatMonthYear(end)].filter(Boolean).join(" – ") || "Start – End"
+      : "";
+    onChange({
+      ...project,
+      dates: datesDisplay,
+      start_date: start || undefined,
+      end_date: end || undefined,
+    });
+  };
+
   /** Read bullets as lines; innerText so Enter (br/div) becomes newline. */
   const getBulletsText = (): string =>
     (bulletsRef.current?.innerText ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-  const commit = () => {
+  const commit = (overrides?: Partial<Project>) => {
     const rawTitle = titleRef.current?.textContent?.trim() ?? "";
     if (!rawTitle) {
       alert("A project name can never be empty.");
@@ -109,7 +154,11 @@ function ProjectBlock({
       onChange({
         ...project,
         title: project.title,
-        dates: datesRef.current?.textContent?.trim() ?? project.dates,
+        dates: startMonth || endMonth
+          ? [formatMonthYear(startMonth), formatMonthYear(endMonth)].filter(Boolean).join(" – ")
+          : project.dates,
+        start_date: startMonth || undefined,
+        end_date: endMonth || undefined,
         skills: (skillsRef.current?.textContent ?? "")
           .split(",")
           .map((s) => s.trim())
@@ -118,10 +167,10 @@ function ProjectBlock({
           .split("\n")
           .map((b) => b.trim())
           .filter(Boolean),
+        ...overrides,
       });
       return;
     }
-    const dates = datesRef.current?.textContent?.trim() ?? project.dates;
     const rawSkills = skillsRef.current?.textContent ?? "";
     const newSkills = rawSkills
       .split(",")
@@ -132,7 +181,20 @@ function ProjectBlock({
       .split("\n")
       .map((b) => b.trim())
       .filter(Boolean);
-    onChange({ ...project, title: rawTitle, dates, skills: newSkills, bullets: newBullets });
+    const datesDisplay =
+      startMonth || endMonth
+        ? [formatMonthYear(startMonth), formatMonthYear(endMonth)].filter(Boolean).join(" – ") || ""
+        : "";
+    onChange({
+      ...project,
+      title: rawTitle,
+      dates: datesDisplay,
+      start_date: startMonth || undefined,
+      end_date: endMonth || undefined,
+      skills: newSkills,
+      bullets: newBullets,
+      ...overrides,
+    });
   };
 
   if (isEditing) {
@@ -144,17 +206,41 @@ function ProjectBlock({
             className="resume-preview__project-title"
             contentEditable
             suppressContentEditableWarning
-            onBlur={commit}
+            onBlur={() => commit()}
             data-placeholder="Project title"
           />
-          <span
-            ref={datesRef}
-            className="resume-preview__project-dates"
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={commit}
-            data-placeholder="Start – End"
-          />
+          <div className="resume-preview__project-dates-edit">
+            {!startMonth && !endMonth && (
+              <span className="resume-preview__project-dates-placeholder" aria-hidden>
+                Start – End
+              </span>
+            )}
+            <input
+              type="month"
+              className="resume-preview__project-date-input"
+              aria-label="Start (month and year)"
+              value={startMonth}
+              onChange={(e) => {
+                const v = e.target.value;
+                setStartMonth(v);
+                emitDatesChange(v, endMonth);
+              }}
+              onBlur={() => commit()}
+            />
+            <span className="resume-preview__project-dates-sep"> – </span>
+            <input
+              type="month"
+              className="resume-preview__project-date-input"
+              aria-label="End (month and year)"
+              value={endMonth}
+              onChange={(e) => {
+                const v = e.target.value;
+                setEndMonth(v);
+                emitDatesChange(startMonth, v);
+              }}
+              onBlur={() => commit()}
+            />
+          </div>
         </div>
         <p className="resume-preview__project-skills">
           Skills:{" "}
@@ -162,7 +248,7 @@ function ProjectBlock({
             ref={skillsRef}
             contentEditable
             suppressContentEditableWarning
-            onBlur={commit}
+            onBlur={() => commit()}
             className="resume-preview__skills-edit-inline"
             data-placeholder="Skill1, Skill2"
           />
@@ -174,7 +260,7 @@ function ProjectBlock({
             className="resume-preview__project-bullets-edit"
             contentEditable
             suppressContentEditableWarning
-            onBlur={commit}
+            onBlur={() => commit()}
             data-placeholder="Bullet one&#10;Bullet two"
             aria-description="One bullet per line"
           />

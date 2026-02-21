@@ -3,6 +3,10 @@ export interface Project {
   project_id?: string;
   title: string;
   dates: string;
+  /** ISO date (YYYY-MM-DD or YYYY-MM-01) for save payload; backend expects this format. */
+  start_date?: string;
+  /** ISO date (YYYY-MM-DD or YYYY-MM-01) for save payload; backend expects this format. */
+  end_date?: string;
   skills: string[];
   bullets: string[];
 }

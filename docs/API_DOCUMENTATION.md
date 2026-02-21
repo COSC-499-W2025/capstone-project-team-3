@@ -255,28 +255,36 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 12. Edit Portfolio Project
+### 12. Edit Portfolio Projects (Batch)
 
-**What it does:** Updates project information (rank, summary, dates).
+**What it does:** Updates multiple projects in a single request.
 
 **URL:** `POST /api/portfolio/edit`
 
 **Request:**
 ```json
 {
-  "project_id": "abc123",
-  "field": "summary",
-  "value": "Updated description"
+  "edits": [
+    {
+      "project_signature": "sig1",
+      "project_name": "New Name",
+      "project_summary": "New summary",
+      "created_at": "2024-01-15",
+      "last_modified": "2024-06-10",
+      "rank": 0.8
+    }
+  ]
 }
 ```
 
-**Supported fields:** `rank`, `summary`, `dates`
+**Supported fields:** `project_name`, `project_summary`, `created_at`, `last_modified`, `rank` (0.0-1.0)
 
 **Response:**
 ```json
 {
   "status": "ok",
-  "message": "Project updated"
+  "projects_updated": ["sig1"],
+  "count": 1
 }
 ```
 
@@ -392,40 +400,53 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 18. Preview Resume
+### 18. Get Resume (Master or Filtered)
 
-**What it does:** Generates HTML preview of resume.
+**What it does:** Returns resume data (master or filtered by projects).
 
-**URL:** `POST /api/resume/preview`
+**URL:** `GET /resume?project_ids=proj1,proj2`
 
-**Request:**
+**Parameters:**
+- `project_ids` - Optional comma-separated list (default: master resume)
+
+**Response:**
 ```json
 {
-  "resume_id": "resume_123"
+  "user_info": {...},
+  "projects": [...],
+  "skills": [...]
 }
 ```
 
-**Response:** HTML page showing resume layout.
-
 ---
 
-### 19. Export Resume as PDF
+### 19. Export Resume as PDF (GET)
 
 **What it does:** Downloads resume as PDF file.
 
-**URL:** `GET /api/resume/export/pdf?resume_id=resume_123`
+**URL:** `GET /resume/export/pdf?project_ids=proj1,proj2`
+
+**Parameters:**
+- `project_ids` - Optional comma-separated list
 
 **Response:** PDF file download.
 
+**Alternative:** `POST /resume/export/pdf` with body `{"project_ids": [...]}`
+
 ---
 
-### 20. Export Resume as LaTeX
+### 20. Export Resume as LaTeX (GET)
 
 **What it does:** Downloads resume as LaTeX (.tex) file.
 
-**URL:** `GET /api/resume/export/tex?resume_id=resume_123`
+**URL:** `GET /resume/export/tex?project_ids=proj1,proj2`
+
+**Parameters:**
+- `project_ids` - Optional comma-separated list
 
 **Response:** .tex file download.
+
+**Alternative:** `POST /resume/export/tex` with body `{"project_ids": [...]}`
 
 **Note:** LaTeX can be edited and compiled to PDF.
 
@@ -433,9 +454,9 @@ This document explains all API endpoints in Project Insights.
 
 ### 21. Delete Resume
 
-**What it does:** Deletes a saved resume.
+**What it does:** Deletes a saved resume (cannot delete Master Resume).
 
-**URL:** `DELETE /api/resume/{resume_id}`
+**URL:** `DELETE /resume/{resume_id}`
 
 **Response:**
 ```json

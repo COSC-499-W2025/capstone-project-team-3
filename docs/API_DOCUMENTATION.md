@@ -66,25 +66,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 3. Get Specific Project
-
-**What it does:** Returns details for one project.
-
-**URL:** `GET /api/projects/{project_id}`
-
-**Response:**
-```json
-{
-  "id": "abc123",
-  "name": "My Project",
-  "score": 0.85,
-  "skills": ["Python", "FastAPI", "Docker"]
-}
-```
-
----
-
-### 4. Get All Skills
+### 3. Get All Skills
 
 **What it does:** Lists all skills across projects.
 
@@ -108,7 +90,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 5. Get Top Skills
+### 4. Get Top Skills
 
 **What it does:** Returns most-used skills.
 
@@ -117,11 +99,25 @@ This document explains all API endpoints in Project Insights.
 **Parameters:**
 - `limit` - Number of results (default: 10, max: 50)
 
-**Response:** Same as "Get All Skills", sorted by frequency.
+**Response:**
+```json
+[
+  {
+    "skill": "Python",
+    "frequency": 8,
+    "source": "code_analysis"
+  },
+  {
+    "skill": "JavaScript",
+    "frequency": 5,
+    "source": "code_analysis"
+  }
+]
+```
 
 ---
 
-### 6. Get Recent Skills
+### 5. Get Recent Skills
 
 **What it does:** Lists recently used skills.
 
@@ -141,7 +137,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 7. Get User Preferences
+### 6. Get User Preferences
 
 **What it does:** Returns user profile information.
 
@@ -166,7 +162,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 8. Search Schools
+### 7. Search Schools
 
 **What it does:** Searches educational institutions.
 
@@ -189,7 +185,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 9. List All Schools
+### 8. List All Schools
 
 **What it does:** Returns all schools in database.
 
@@ -203,7 +199,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 10. Get Portfolio Data
+### 9. Get Portfolio Data
 
 **What it does:** Returns complete portfolio with all project analytics and graphs.
 
@@ -238,7 +234,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 11. View Portfolio Dashboard
+### 10. View Portfolio Dashboard
 
 **What it does:** Opens interactive HTML dashboard with charts and project cards.
 
@@ -255,7 +251,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 12. Edit Portfolio Projects (Batch)
+### 11. Edit Portfolio Projects (Batch)
 
 **What it does:** Updates multiple projects in a single request.
 
@@ -290,7 +286,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 13. Upload Project Thumbnail
+### 12. Upload Project Thumbnail
 
 **What it does:** Uploads an image for a project.
 
@@ -322,7 +318,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 14. Get Project Thumbnail
+### 13. Get Project Thumbnail
 
 **What it does:** Returns the thumbnail image file.
 
@@ -336,7 +332,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 15. Upload File Page
+### 14. Upload File Page
 
 **What it does:** Shows HTML page for uploading project ZIP files.
 
@@ -346,7 +342,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 16. Upload Projects ZIP
+### 15. Upload Projects ZIP
 
 **What it does:** Uploads and extracts ZIP file containing projects for analysis.
 
@@ -371,7 +367,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 17. Update User Preferences
+### 16. Update User Preferences
 
 **What it does:** Updates your personal information and settings.
 
@@ -400,7 +396,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 18. Get Resume (Master or Filtered)
+### 17. Get Resume (Master or Filtered)
 
 **What it does:** Returns resume data (master or filtered by projects).
 
@@ -420,7 +416,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 19. Export Resume as PDF (GET)
+### 18. Export Resume as PDF (GET)
 
 **What it does:** Downloads resume as PDF file.
 
@@ -435,7 +431,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 20. Export Resume as LaTeX (GET)
+### 19. Export Resume as LaTeX (GET)
 
 **What it does:** Downloads resume as LaTeX (.tex) file.
 
@@ -452,7 +448,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 21. Delete Resume
+### 20. Delete Resume
 
 **What it does:** Deletes a saved resume (cannot delete Master Resume).
 
@@ -471,7 +467,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 22. Create Tailored Resume
+### 21. Create Tailored Resume
 
 **What it does:** Creates a new resume with selected projects.
 
@@ -496,7 +492,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 23. Get Saved Resume
+### 22. Get Saved Resume
 
 **What it does:** Loads a previously saved resume by ID.
 
@@ -515,7 +511,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 24. List All Resumes
+### 23. List All Resumes
 
 **What it does:** Returns all saved resumes for sidebar display.
 
@@ -533,7 +529,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 25. Save Edited Resume
+### 24. Save Edited Resume
 
 **What it does:** Saves edits to an existing resume.
 
@@ -561,57 +557,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 26. Get Frequent Skills
-
-**What it does:** Returns most frequently used skills across all projects.
-
-**URL:** `GET /api/skills/frequent?limit=10`
-
-**Parameters:**
-- `limit` - Number of skills to return (default: 10, max: 50)
-
-**Response:**
-```json
-[
-  {
-    "skill": "Python",
-    "frequency": 8,
-    "source": "code_analysis"
-  },
-  {
-    "skill": "JavaScript",
-    "frequency": 5,
-    "source": "code_analysis"
-  }
-]
-```
-
----
-
-### 27. Get Chronological Skills
-
-**What it does:** Returns skills ordered by most recent usage.
-
-**URL:** `GET /api/skills/chronological?limit=10`
-
-**Parameters:**
-- `limit` - Number of skills to return (default: 10, max: 50)
-
-**Response:**
-```json
-[
-  {
-    "skill": "React",
-    "latest_use": "2024-02-15",
-    "source": "code_analysis",
-    "frequency": 3
-  }
-]
-```
-
----
-
-### 28. Get Project by Signature
+### 25. Get Project by Signature
 
 **What it does:** Returns detailed information for a specific project.
 
@@ -634,7 +580,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 29. Record Privacy Consent
+### 26. Record Privacy Consent
 
 **What it does:** Records user consent decision for privacy.
 
@@ -658,7 +604,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 30. Get Privacy Consent Status
+### 27. Get Privacy Consent Status
 
 **What it does:** Checks if user has given consent.
 
@@ -675,7 +621,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 31. Revoke Privacy Consent
+### 28. Revoke Privacy Consent
 
 **What it does:** Revokes user consent.
 
@@ -692,7 +638,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 32. Get Privacy Consent Text
+### 29. Get Privacy Consent Text
 
 **What it does:** Returns privacy consent text for display.
 
@@ -712,7 +658,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 33. Resolve Upload Status
+### 30. Resolve Upload Status
 
 **What it does:** Returns status and path if uploaded ZIP exists.
 
@@ -835,6 +781,6 @@ fetch(`${API_BASE}/api/resume/123`, {
 ```
 
 ---
-**Last Updated:** February 16, 2026  
-**Total Endpoints Documented:** 28  
+**Last Updated:** February 20, 2026  
+**Total Endpoints Documented:** 30  
 **Questions?** Contact development team

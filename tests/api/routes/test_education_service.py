@@ -134,8 +134,10 @@ class TestCanadianInstitutionsAPI:
         results = search_institutions_simple(query="University", limit=50)
         
         assert len(results) == 2  # Duplicates removed
-        assert "University of Toronto" in results
-        assert "University of British Columbia" in results
+        # Check that the results contain dictionaries with 'name' key
+        institution_names = [inst["name"] for inst in results]
+        assert "University of Toronto" in institution_names
+        assert "University of British Columbia" in institution_names
 
     @patch("urllib.request.urlopen")
     def test_search_institutions_api_failure(self, mock_urlopen):

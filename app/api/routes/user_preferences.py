@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, field_validator
-from app.api.routes.eduction_service import search_institutions, get_all_institutions
+from app.utils.canadian_institutions_api import (
+    search_institutions,
+    search_institutions_simple,
+    get_all_institutions
+)
 from app.data.db import get_connection
 from typing import List, Optional
 import logging
@@ -13,18 +17,17 @@ router = APIRouter()
 class EducationDetail(BaseModel):
     institution: str
     degree: str
-    program: str
-    start_date: str  # Format: YYYY-MM-DD
-    end_date: Optional[str] = None  # Format: YYYY-MM-DD or None if ongoing
+    start_date: Optional[str] = None  # Format: YYYY-MM-DD or YYYY
+    end_date: Optional[str] = None  # Format: YYYY-MM-DD or YYYY, null if ongoing
     gpa: Optional[float] = None # GPA on a 4.0 scale
 
     
     @field_validator("start_date", "end_date", check_fields=False)
     @classmethod
     def validate_date_format(cls, value):
-        """Validate date format - accepts YYYY or YYYY-MM-DD"""
-        if value is None:
-            return value
+        """Validate date format - accepts YYYY or YYYY-MM-DD or empty string"""
+        if value is None or value == "":
+            return None
         
         # Check if it matches YYYY format (year only)
         if re.match(r"^\d{4}$", value):
@@ -111,7 +114,8 @@ def save_user_preferences(request: UserPreferenceRequest):
 @router.get("/institutions/search")
 def search_canadian_institutions(
     q: str = Query("", description="Search query for institution name"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of results")
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of results"),
+    simple: bool = Query(True, description="Return simple list with names and locations only")
 ):
     """
     Search Canadian post-secondary institutions.
@@ -119,12 +123,19 @@ def search_canadian_institutions(
     Query parameters:
     - q: Search term (e.g., "University of", "Toronto")
     - limit: Max results (1-200)
+    - simple: If true, returns institution names with location; if false, includes programs
     
     Returns:
-        List of matching institutions with details
+        List of matching institutions with details or simple name list
     """
     try:
-        institutions = search_institutions(query=q, limit=limit)
+        if simple:
+            # Simple search with names and locations (for autocomplete)
+            institutions = search_institutions_simple(query=q, limit=limit)
+        else:
+            # Full search with program details
+            institutions = search_institutions(query=q, limit=limit)
+        
         return {
             "status": "ok",
             "count": len(institutions),

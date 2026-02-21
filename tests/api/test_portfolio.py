@@ -1105,3 +1105,58 @@ def test_portfolio_with_score_override():
         
         assert normal_project["score_overridden"] == False
         assert normal_project["score_overridden_value"] is None
+
+
+class TestPortfolioInteractiveExport:
+    """Regression tests for interactive HTML export behavior."""
+
+    def test_portfolio_dashboard_has_only_interactive_export_button(self):
+        """Dashboard HTML should expose only the interactive export action."""
+        response = client.get("/api/portfolio-dashboard")
+
+        assert response.status_code == 200
+        content = response.text
+
+        assert "Download Interactive HTML" in content
+        assert "downloadPortfolioInteractiveHTML()" in content
+        assert "Download as HTML" not in content
+        assert "downloadPortfolioHTML()" not in content
+
+    def test_portfolio_js_interactive_export_wiring_exists(self):
+        """portfolio.js should include interactive export entrypoints and remove legacy one."""
+        response = client.get("/api/static/portfolio.js")
+
+        assert response.status_code == 200
+        content = response.text
+
+        assert "downloadPortfolioInteractiveHTML()" in content
+        assert "window.downloadPortfolioInteractiveHTML = function()" in content
+        assert "window.portfolioDashboard.downloadPortfolioInteractiveHTML();" in content
+        assert "window.downloadPortfolioHTML = function()" not in content
+
+    def test_portfolio_js_interactive_export_payload_and_charts(self):
+        """Exported interactive HTML should include embedded data and chart recreation dependencies."""
+        response = client.get("/api/static/portfolio.js")
+
+        assert response.status_code == 200
+        content = response.text
+
+        assert "window.__PORTFOLIO_EXPORT_DATA" in content
+        assert "https://cdn.jsdelivr.net/npm/chart.js" in content
+        assert "createPieChart('languageChart'" in content
+        assert "createBarChart('complexityChart'" in content
+        assert "createBarChart('scoreChart'" in content
+        assert "createLineChart('activityChart'" in content
+        assert "createHorizontalBarChart('skillsChart'" in content
+        assert "new Chart(ctx" in content
+
+    def test_portfolio_js_exported_show_more_handler_exists(self):
+        """Export script should include toggleSummary so Show More works after download."""
+        response = client.get("/api/static/portfolio.js")
+
+        assert response.status_code == 200
+        content = response.text
+
+        assert "window.toggleSummary = function(button)" in content
+        assert "button.textContent = 'Show More';" in content
+        assert "button.textContent = 'Show Less';" in content

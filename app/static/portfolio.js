@@ -905,6 +905,258 @@ showError(message) {
         alert(`Error: ${message}`);
     }
 
+    downloadPortfolioInteractiveHTML() {
+        try {
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) {
+                throw new Error('Main content not found');
+            }
+
+            if (!this.currentPortfolioData) {
+                throw new Error('Portfolio data is not loaded yet');
+            }
+
+            const mainClone = mainContent.cloneNode(true);
+            mainClone.querySelectorAll('.dashboard-actions').forEach(el => el.remove());
+
+            const styleTag = document.querySelector('style');
+            const baseCss = styleTag ? styleTag.textContent : '';
+            const exportData = JSON.stringify(this.currentPortfolioData).replace(/<\//g, '<\\/');
+
+            const exportCss = `
+                body {
+                    background: var(--primary-bg) !important;
+                    margin: 0 !important;
+                }
+
+                .container,
+                .portfolio-layout {
+                    display: block !important;
+                    height: auto !important;
+                    background: transparent !important;
+                }
+
+                .main-content {
+                    max-width: 1500px;
+                    margin: 0 auto;
+                    padding: 32px;
+                    overflow: visible !important;
+                }
+
+                .graph-card,
+                .overview-card,
+                .project-card,
+                .analysis-card,
+                .formula-card {
+                    break-inside: avoid;
+                }
+            `;
+
+            const interactiveScript = `
+                (function() {
+                    const data = window.__PORTFOLIO_EXPORT_DATA;
+                    if (!data || typeof Chart === 'undefined') return;
+
+                    window.toggleSummary = function(button) {
+                        const summaryContent = button.closest('.summary-content');
+                        if (!summaryContent) return;
+                        const summaryText = summaryContent.querySelector('.summary-text');
+                        if (!summaryText) return;
+                        const isExpanded = !summaryText.classList.contains('truncated');
+
+                        if (isExpanded) {
+                            summaryText.classList.add('truncated');
+                            button.textContent = 'Show More';
+                        } else {
+                            summaryText.classList.remove('truncated');
+                            button.textContent = 'Show Less';
+                        }
+                    };
+
+                    function createPieChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: ['#2d3748', '#4a5568', '#718096', '#a0aec0', '#48bb78', '#ed8936', '#667eea', '#764ba2', '#f687b3', '#9f7aea', '#38b2ac', '#68d391'],
+                                    borderColor: '#ffffff',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { color: '#4a5568', font: { size: 12 }, padding: 15, usePointStyle: true }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    function createBarChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: '#2d3748',
+                                    borderColor: '#4a5568',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } },
+                                    x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    function createHorizontalBarChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: '#4a5568',
+                                    borderColor: '#2d3748',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } },
+                                    y: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    function createLineChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        const sorted = Object.entries(chartData || {}).sort();
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: sorted.map(([month]) => month),
+                                datasets: [{
+                                    label: 'Activity',
+                                    data: sorted.map(([, value]) => value),
+                                    borderColor: '#2d3748',
+                                    backgroundColor: 'rgba(45, 55, 72, 0.1)',
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointBackgroundColor: '#2d3748',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 5
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: '#e2e8f0' },
+                                        ticks: { color: '#4a5568', font: { size: 11 }, stepSize: 0.5 },
+                                        title: { display: true, text: 'Activity Level', color: '#4a5568', font: { size: 12, weight: 'bold' } }
+                                    },
+                                    x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    const graphs = data.graphs || {};
+                    createPieChart('languageChart', graphs.language_distribution || {});
+                    createBarChart('complexityChart', {
+                        'Small (<1000)': graphs.complexity_distribution?.distribution?.small || 0,
+                        'Medium (1000-3000)': graphs.complexity_distribution?.distribution?.medium || 0,
+                        'Large (>3000)': graphs.complexity_distribution?.distribution?.large || 0
+                    });
+                    createBarChart('scoreChart', {
+                        'Excellent (90-100%)': graphs.score_distribution?.distribution?.excellent || 0,
+                        'Good (80-89%)': graphs.score_distribution?.distribution?.good || 0,
+                        'Fair (70-79%)': graphs.score_distribution?.distribution?.fair || 0,
+                        'Poor (<70%)': graphs.score_distribution?.distribution?.poor || 0
+                    });
+                    createLineChart('activityChart', graphs.monthly_activity || {});
+                    createHorizontalBarChart('skillsChart', graphs.top_skills || {});
+                    const typeData = data.project_type_analysis || {};
+                    createBarChart('projectTypeChart', {
+                        'GitHub Projects': typeData.github?.count || 0,
+                        'Local Projects': typeData.local?.count || 0
+                    });
+                })();
+            `;
+
+            const exportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Dashboard</title>
+    <style>${baseCss}\n${exportCss}</style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+${mainClone.outerHTML}
+<script>window.__PORTFOLIO_EXPORT_DATA = ${exportData};</script>
+<script>${interactiveScript}</script>
+</body>
+</html>`;
+
+            const blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+            a.href = url;
+            a.download = `portfolio-interactive-${timestamp}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to export interactive portfolio HTML:', error);
+            alert('Failed to download interactive portfolio HTML. Please try again.');
+        }
+    }
+
     shouldTruncateSummary(summary) {
         // Truncate if summary is longer than 25 words or 150 characters  
         // This ensures consistent card heights with uniform truncation
@@ -967,6 +1219,14 @@ window.toggleSummary = function(button) {
         summaryText.classList.remove('truncated');
         button.textContent = 'Show Less';
     }
+};
+
+window.downloadPortfolioInteractiveHTML = function() {
+    if (!window.portfolioDashboard) {
+        alert('Portfolio is still loading. Please wait a moment and try again.');
+        return;
+    }
+    window.portfolioDashboard.downloadPortfolioInteractiveHTML();
 };
 
 // Initialize dashboard when page loads

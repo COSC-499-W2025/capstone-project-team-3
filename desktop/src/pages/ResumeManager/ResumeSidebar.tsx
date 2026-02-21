@@ -51,7 +51,7 @@ export const ResumeSidebar = ({
             >
               <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
               <span className="resume-sidebar__actions">
-                {!r.is_master && (
+                {!r.is_master && r.id != null && (
                   <button 
                     type="button" 
                     className="resume-sidebar__icon-btn" 

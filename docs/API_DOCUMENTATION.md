@@ -448,6 +448,110 @@ This document explains all API endpoints in Project Insights.
 **Error:** `404` if resume doesn't exist.
 
 
+---
+
+### 29. Record Privacy Consent
+
+**What it does:** Records user consent decision for privacy.
+
+**URL:** `POST /api/privacy-consent`
+
+**Request:**
+```json
+{
+  "accepted": true
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Consent recorded successfully"
+}
+```
+
+
+---
+
+### 30. Get Privacy Consent Status
+
+**What it does:** Checks if user has given consent.
+
+**URL:** `GET /api/privacy-consent`
+
+**Response:**
+```json
+{
+  "has_consent": true,
+  "timestamp": "2024-01-15T10:00:00Z"
+}
+```
+
+
+---
+
+### 31. Revoke Privacy Consent
+
+**What it does:** Revokes user consent.
+
+**URL:** `DELETE /api/privacy-consent`
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Consent revoked successfully"
+}
+```
+
+
+---
+
+### 32. Get Privacy Consent Text
+
+**What it does:** Returns privacy consent text for display.
+
+**URL:** `GET /api/privacy-consent/text`
+
+**Response:**
+```json
+{
+  "consent_message": "...",
+  "detailed_info": "...",
+  "granted_message": "...",
+  "declined_message": "...",
+  "already_provided_message": "..."
+}
+```
+
+
+---
+
+### 33. Resolve Upload Status
+
+**What it does:** Returns status and path if uploaded ZIP exists.
+
+**URL:** `GET /api/resolve-upload/{upload_id}`
+
+**Response (found):**
+```json
+{
+  "status": "ok",
+  "path": "app/uploads/abc123.zip"
+}
+```
+
+**Response (pending):**
+```json
+{
+  "status": "pending"
+}
+```
+
+
+
+
 ### Using JavaScript
 
 ```javascript
@@ -521,6 +625,12 @@ fetch(`${API_BASE}/api/resume/123`, {
 - Export PDF: `/api/resume/export/pdf`
 - Export LaTeX: `/api/resume/export/tex`
 - Delete: `DELETE /api/resume/{id}`
+
+**Privacy & Consent:**
+- Get Status: `GET /api/privacy-consent`
+- Record: `POST /api/privacy-consent`
+- Revoke: `DELETE /api/privacy-consent`
+- Get Text: `GET /api/privacy-consent/text`
 
 
 ## Error Handling

@@ -115,13 +115,15 @@ def get_all_institutions(cache_duration_hours: int = 24) -> List[str]:
         offset = 0
         max_records = 5294  # Total from API
         
+        # Create SSL context once for reuse
+        ssl_context = create_ssl_context()
+        
         while offset < max_records:
             url = f"{CANADA_API_BASE}/datastore_search?resource_id={INSTITUTIONS_RESOURCE_ID}&limit={limit}&offset={offset}"
             
             logger.info(f"Fetching batch: offset={offset}, limit={limit}")
             
-            context = create_ssl_context()
-            with urllib.request.urlopen(url, timeout=10, context=context) as response:
+            with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
                 data = json.loads(response.read().decode())
             
             if not data.get("success"):

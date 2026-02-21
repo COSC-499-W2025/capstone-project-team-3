@@ -58,6 +58,7 @@ export function SkillsSection({
         <span className="resume-preview__skills-label">Skills:</span>
         {isEditing ? (
           <p 
+            key="skills-edit"
             ref={contentRef}
             className="resume-preview__skills-list"
             contentEditable={true}
@@ -67,7 +68,7 @@ export function SkillsSection({
             data-placeholder="Enter skills separated by commas..."
           />
         ) : (
-          <p className="resume-preview__skills-list">
+          <p key="skills-display" className="resume-preview__skills-list">
             {skills.Skills.map((s, i) => (
               <span key={i}>
                 <span className="resume-preview__skill-inline">{s}</span>

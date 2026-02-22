@@ -29,13 +29,21 @@ async def set_project_thumbnail(
 ):
     """
     Associate a portfolio image as thumbnail for a given project.
+    Supports: JPEG, PNG, GIF, SVG, and WebP formats.
     """
-    # Validate image type
-    if not image.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image.")
+    # Validate image type - now including SVG and GIF
+    allowed_types = [
+        "image/jpeg", "image/jpg", "image/png", 
+        "image/gif", "image/svg+xml", "image/webp"
+    ]
+    if image.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unsupported file type. Allowed: JPEG, PNG, GIF, SVG, WebP. Got: {image.content_type}"
+        )
     
     # Get file extension
-    file_ext = os.path.splitext(image.filename)[1]
+    file_ext = os.path.splitext(image.filename)[1].lower()
     if not file_ext:
         file_ext = ".jpg"  # Default to jpg if no extension
     

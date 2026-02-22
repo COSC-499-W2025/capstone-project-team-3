@@ -89,6 +89,20 @@ def test_resume_download_tex_with_project_ids(mock_tex, mock_model, client, fake
     assert response.text == "LATEX PREVIEW CONTENT"
     mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
 
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_both_params_returns_400(mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/tex returns 400 when both resume_id and project_ids are provided."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX CONTENT"
+
+    response = client.get("/resume/export/tex?resume_id=5&project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 400
+    assert "Cannot specify both project_ids and resume_id" in response.json()["detail"]
+    # These should NOT be called since validation fails
+    mock_model.assert_not_called()
+    mock_tex.assert_not_called()
 
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")
@@ -138,6 +152,24 @@ def test_resume_pdf_download_with_project_ids(mock_compile, mock_tex, mock_model
     assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
     assert response.content.startswith(b"%PDF")
     mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+@patch("app.api.routes.resume.compile_pdf")
+def test_resume_download_pdf_with_both_params_returns_400(mock_compile, mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/pdf returns 400 when both resume_id and project_ids are provided."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 fake pdf"
+
+    response = client.get("/resume/export/pdf?resume_id=5&project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 400
+    assert "Cannot specify both project_ids and resume_id" in response.json()["detail"]
+    # These should NOT be called since validation fails
+    mock_model.assert_not_called()
+    mock_tex.assert_not_called()
+    mock_compile.assert_not_called()
 
 @patch("app.api.routes.resume.subprocess.run")
 @patch("app.api.routes.resume.os.path.exists")

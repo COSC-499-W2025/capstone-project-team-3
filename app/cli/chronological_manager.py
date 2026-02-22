@@ -288,7 +288,7 @@ class ChronologicalCLI:
             elif action == '1':
                 continue  # Refresh display
             elif action == '2':
-                self._update_skill_date(project_id, skills)
+                self._update_skill_date(skills)
             else:
                 print("Invalid option. Try again.")
     
@@ -331,13 +331,13 @@ class ChronologicalCLI:
             elif action == '2':
                 self._add_skill(project_id)
             elif action == '3':
-                self._remove_skill(project_id, skills)
+                self._remove_skill(skills)
             elif action == '4':
-                self._edit_skill_name(project_id, skills)
+                self._edit_skill_name(skills)
             else:
                 print("Invalid option. Try again.")
     
-    def _update_skill_date(self, project_id: str, skills: list):
+    def _update_skill_date(self, skills: list):
         """Update the date for a skill."""
         if not skills:
             print("No skills to update.")
@@ -356,7 +356,7 @@ class ChronologicalCLI:
                     selected_skill['date']
                 )
                 
-                self.manager.update_skill_date(project_id, selected_skill['skill'], new_date)
+                self.manager.update_skill_date(selected_skill['id'], new_date)
                 print(f"✓ Updated {selected_skill['skill']} date to {new_date}")
             else:
                 print("Invalid selection.")
@@ -399,7 +399,7 @@ class ChronologicalCLI:
         self.manager.add_skill_with_date(project_id, skill_name, source, date)
         print(f"✓ Added skill: {skill_name} ({date})")
     
-    def _remove_skill(self, project_id: str, skills: list):
+    def _remove_skill(self, skills: list):
         """Remove a skill."""
         if not skills:
             print("No skills to remove.")
@@ -416,7 +416,7 @@ class ChronologicalCLI:
                 confirm = input(f"Remove '{selected_skill['skill']}'? (y/n): ")
                 
                 if self._is_yes(confirm):
-                    self.manager.remove_skill(project_id, selected_skill['skill'])
+                    self.manager.remove_skill(selected_skill['id'])
                     print(f"✓ Removed {selected_skill['skill']}")
                 else:
                     print("Cancelled.")
@@ -425,7 +425,7 @@ class ChronologicalCLI:
         except ValueError:
             print("Invalid input.")
     
-    def _edit_skill_name(self, project_id: str, skills: list):
+    def _edit_skill_name(self, skills: list):
         """Edit/rename a skill."""
         if not skills:
             print("No skills to edit.")
@@ -458,7 +458,7 @@ class ChronologicalCLI:
                 confirm = input(f"Rename '{selected_skill['skill']}' to '{new_name}'? (y/n): ")
                 
                 if self._is_yes(confirm):
-                    self.manager.update_skill_name(project_id, selected_skill['skill'], new_name)
+                    self.manager.update_skill_name(selected_skill['id'], new_name)
                     print(f"✓ Renamed '{selected_skill['skill']}' to '{new_name}'")
                 else:
                     print("Cancelled.")

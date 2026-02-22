@@ -93,13 +93,95 @@ describe('ResumeSidebar', () => {
     expect(container.querySelector('.resume-sidebar')?.classList.contains('resume-sidebar--closed')).toBe(true);
   });
 
-  test('clicking edit or more options does not trigger row selection', () => {
-    renderSidebar();
+  test('clicking edit or delete does not trigger row selection', () => {
+    const onDelete = jest.fn();
+    renderSidebar({ onDelete });
 
     fireEvent.click(screen.getAllByLabelText('Edit resume')[0]);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getAllByLabelText('More options')[0]);
+    const deleteButtons = screen.getAllByLabelText('Delete resume');
+    window.confirm = jest.fn(() => false); // Cancel delete to avoid triggering onDelete
+    fireEvent.click(deleteButtons[0]);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
+  });
+
+  test('delete button only shows for non-master resumes (id > 1)', () => {
+    const onDelete = jest.fn();
+    renderSidebar({ onDelete });
+
+    const deleteButtons = screen.queryAllByLabelText('Delete resume');
+    // Should have 2 delete buttons (for id=2 and id=3, not for id=null)
+    expect(deleteButtons.length).toBe(2);
+  });
+
+  test('master resume does not have delete button', () => {
+    const list: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+      { id: 1, name: 'Resume with id=1', is_master: false },
+    ];
+    const onDelete = jest.fn();
+    renderSidebar({ resumeList: list, onDelete });
+
+    // Neither master (id=null) nor id=1 should have delete button
+    const deleteButtons = screen.queryAllByLabelText('Delete resume');
+    expect(deleteButtons.length).toBe(0);
+  });
+
+  test('clicking delete button shows confirmation dialog', () => {
+    const onDelete = jest.fn();
+    window.confirm = jest.fn(() => true);
+    renderSidebar({ onDelete });
+
+    const deleteButtons = screen.getAllByLabelText('Delete resume');
+    fireEvent.click(deleteButtons[0]);
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "Software Engineer Resume"?');
+  });
+
+  test('clicking delete calls onDelete when user confirms', () => {
+    const onDelete = jest.fn();
+    window.confirm = jest.fn(() => true);
+    renderSidebar({ onDelete });
+
+    const deleteButtons = screen.getAllByLabelText('Delete resume');
+    fireEvent.click(deleteButtons[0]); // Delete second resume (id=2)
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(onDelete).toHaveBeenCalledWith(2);
+  });
+
+  test('clicking delete does not call onDelete when user cancels', () => {
+    const onDelete = jest.fn();
+    window.confirm = jest.fn(() => false);
+    renderSidebar({ onDelete });
+
+    const deleteButtons = screen.getAllByLabelText('Delete resume');
+    fireEvent.click(deleteButtons[0]);
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  test('delete button uses resume name in confirmation or fallback text', () => {
+    const list: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+      { id: 2, name: '', is_master: false }, // Empty name
+    ];
+    const onDelete = jest.fn();
+    window.confirm = jest.fn(() => false);
+    renderSidebar({ resumeList: list, onDelete });
+
+    const deleteButton = screen.getByLabelText('Delete resume');
+    fireEvent.click(deleteButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "this resume"?');
+  });
+
+  test('no delete buttons appear when onDelete is not provided', () => {
+    renderSidebar({ onDelete: undefined });
+
+    const deleteButtons = screen.queryAllByLabelText('Delete resume');
+    expect(deleteButtons.length).toBe(0);
   });
 });

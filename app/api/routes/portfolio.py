@@ -19,17 +19,6 @@ class ProjectEdit(BaseModel):
     project_summary: Optional[str] = None # TBD Project Summary length limit
     created_at: Optional[datetime] = None
     last_modified: Optional[datetime] = None
-    rank: Optional[float] = None
-
-    # Validate rank is between 0.0 and 1.0 if provided
-    @field_validator("rank")
-    @classmethod
-    def validate_rank(cls, value):
-        if value is None:
-            return value
-        if not 0.0 <= value <= 1.0:
-            raise ValueError("rank must be between 0.0 and 1.0")
-        return value
 
 class BatchEditPayload(BaseModel):
     edits: List[ProjectEdit] 
@@ -94,16 +83,14 @@ def edit_portfolio(payload: BatchEditPayload):
       "project_name": "New Name 1",
       "project_summary": "New summary 1",
       "created_at": "2024-01-15",
-      "last_modified": "2024-06-10",
-      "rank": 0.8
+      "last_modified": "2024-06-10"
     },
     {
       "project_signature": "sig2",
       'project_name': "Updated Project 2",
       "project_summary": "Updated summary",
       "last_modified": "2024-06-12",
-      "created_at": "2024-02-20",
-      "rank": 1.1 
+      "created_at": "2024-02-20"
     }
   ]
  }
@@ -111,8 +98,8 @@ def edit_portfolio(payload: BatchEditPayload):
     if not payload.edits:
         raise HTTPException(status_code=400, detail="No edits provided")
     
-    ALLOWED_FIELDS = {"project_name", "project_summary", "created_at", "last_modified", "rank"}
-    field_map = {"project_name": "name", "project_summary": "summary", "created_at": "created_at", "last_modified": "last_modified", "rank": "rank"}
+    ALLOWED_FIELDS = {"project_name", "project_summary", "created_at", "last_modified"}
+    field_map = {"project_name": "name", "project_summary": "summary", "created_at": "created_at", "last_modified": "last_modified"}
     
     conn, cur = None, None
 

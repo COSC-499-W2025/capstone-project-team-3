@@ -39,6 +39,11 @@ export async function getResumeById(id: number): Promise<Resume> {
   return res.json() as Promise<Resume>;
 }
 
+export async function deleteResume(id: number): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/resume/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json();
+}
 // Save new resume with selected projects
 export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {

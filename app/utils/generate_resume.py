@@ -228,14 +228,21 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             # Limit to 5 for display
             limited_skills = skills[:5]
 
+            # Parse bullets: stored as JSON in DB, so decode if string
+            if override_bullets:
+                bullets_list = json.loads(override_bullets) if isinstance(override_bullets, str) else override_bullets
+            else:
+                bullets_list = bullets_map.get(pid, [])
+
             projects.append({
+                "project_id": pid,
                 "title": override_name or base_name,
                 "dates": format_dates(
                     start or created_at,
                     end or last_modified
                 ),
                 "skills": limited_skills,
-                "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+                "bullets": bullets_list
             })
         
         return {

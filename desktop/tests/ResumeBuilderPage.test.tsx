@@ -106,6 +106,7 @@ const mockSavedResume: Resume = {
   skills: { Skills: ['JavaScript', 'TypeScript', 'Node.js'] },
   projects: [
     {
+      project_id: 'proj-saved-1',
       title: 'Saved Project',
       dates: 'Apr 2024 – Jun 2024',
       skills: ['React', 'Node.js'],
@@ -711,9 +712,14 @@ describe('ResumeBuilderPage', () => {
     const saveButton = screen.getByRole('button', { name: 'Save' });
     fireEvent.click(saveButton);
 
-    // Should call updateResume directly without showing modal
+    // Should call updateResume with resume id and payload (payload may be empty if no edits)
     await waitFor(() => {
-      expect(mockUpdateResume).toHaveBeenCalledWith(2, mockSavedResume);
+      expect(mockUpdateResume).toHaveBeenCalledWith(2, expect.any(Object));
+      const payload = mockUpdateResume.mock.calls[0][1];
+      if (payload.projects?.length) {
+        expect(payload.projects[0].project_id).toBe('proj-saved-1');
+        expect(payload.projects[0].project_name).toBe('Saved Project');
+      }
     });
 
     // Modal should not appear

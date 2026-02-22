@@ -16,12 +16,87 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from app.utils.chronological_utils import ChronologicalManager
 from datetime import datetime
 
+# Standard skill name casing for normalization
+TECH_CORRECT_CASING = {
+    "python": "Python",
+    "javascript": "JavaScript",
+    "java": "Java",
+    "c++": "C++",
+    "c#": "C#",
+    "typescript": "TypeScript",
+    "go": "Go",
+    "rust": "Rust",
+    "react": "React",
+    "angular": "Angular",
+    "vue": "Vue",
+    "django": "Django",
+    "flask": "Flask",
+    "spring": "Spring",
+    "express": "Express",
+    "postgresql": "PostgreSQL",
+    "mongodb": "MongoDB",
+    "mysql": "MySQL",
+    "redis": "Redis",
+    "elasticsearch": "Elasticsearch",
+    "docker": "Docker",
+    "kubernetes": "Kubernetes",
+    "aws": "AWS",
+    "azure": "Azure",
+    "gcp": "GCP",
+    "git": "Git",
+    "devops": "DevOps",
+    "ci/cd": "CI/CD",
+    "fastapi": "FastAPI",
+    "node.js": "Node.js",
+    "nodejs": "Node.js"
+}
+
 
 class ChronologicalCLI:
     """Simple CLI for correcting project dates."""
     
     def __init__(self, manager: ChronologicalManager = None):
         self.manager = manager or ChronologicalManager()
+    
+    def _normalize_skill_name(self, skill_name: str) -> str:
+        """Normalize skill name to standard casing.
+        
+        Args:
+            skill_name: Raw skill name input
+            
+        Returns:
+            Normalized skill name with proper casing
+        """
+        skill_lower = skill_name.lower().strip()
+        
+        # Check against known technical terms
+        if skill_lower in TECH_CORRECT_CASING:
+            return TECH_CORRECT_CASING[skill_lower]
+        
+        # Default to title case for unknown skills
+        return skill_name.strip().title()
+    
+    def _is_yes(self, response: str) -> bool:
+        """Check if user response is affirmative.
+        
+        Args:
+            response: User input string
+            
+        Returns:
+            True if response is 'y' or 'yes' (case-insensitive)
+        """
+        return response.strip().lower() in ('y', 'yes')
+    
+    def _is_no(self, response: str) -> bool:
+        """Check if user response is negative.
+        
+        Args:
+            response: User input string
+            
+        Returns:
+            True if response is 'n' or 'no' (case-insensitive)
+        """
+        return response.strip().lower() in ('n', 'no')
     
     def _format_date(self, date_str: str) -> str:
         """Strip time from date string, show only date."""
@@ -69,8 +144,8 @@ class ChronologicalCLI:
                     self._project_menu(selected_project)
                     
                     # Ask if they want to edit another
-                    another = input("\nEdit another project? (yes/no): ").strip().lower()
-                    if another != 'yes':
+                    another = input("\nEdit another project? (y/n): ")
+                    if not self._is_yes(another):
                         print("Done!")
                         return
                     print("\n" + "=" * 60 + "\n")
@@ -148,8 +223,8 @@ class ChronologicalCLI:
                 print(f"  Modified: {modified} → {new_modified}")
             print("-" * 60)
             
-            confirm = input("Save these changes? (yes/no): ").strip().lower()
-            if confirm == 'yes':
+            confirm = input("Save these changes? (y/n): ")
+            if self._is_yes(confirm):
                 self.manager.update_project_dates(
                     project['project_signature'],
                     new_created,
@@ -291,11 +366,16 @@ class ChronologicalCLI:
     def _add_skill(self, project_id: str):
         """Add a new skill with date."""
         print("\nAdd New Skill")
-        skill_name = input("Skill name: ").strip()
+        skill_name_raw = input("Skill name: ").strip()
         
-        if not skill_name:
+        if not skill_name_raw:
             print("Skill name cannot be empty.")
             return
+        
+        # Normalize skill name
+        skill_name = self._normalize_skill_name(skill_name_raw)
+        if skill_name != skill_name_raw:
+            print(f"  → Normalized to: {skill_name}")
         
         print("Source type:")
         print("  [1] Code")
@@ -333,9 +413,9 @@ class ChronologicalCLI:
             choice = int(input("\nSkill number: ").strip()) - 1
             if 0 <= choice < len(skills):
                 selected_skill = skills[choice]
-                confirm = input(f"Remove '{selected_skill['skill']}'? (yes/no): ").strip().lower()
+                confirm = input(f"Remove '{selected_skill['skill']}'? (y/n): ")
                 
-                if confirm == 'yes':
+                if self._is_yes(confirm):
                     self.manager.remove_skill(project_id, selected_skill['skill'])
                     print(f"✓ Removed {selected_skill['skill']}")
                 else:
@@ -360,19 +440,24 @@ class ChronologicalCLI:
             if 0 <= choice < len(skills):
                 selected_skill = skills[choice]
                 print(f"\nCurrent name: {selected_skill['skill']}")
-                new_name = input("Enter new name: ").strip()
+                new_name_raw = input("Enter new name: ").strip()
                 
-                if not new_name:
+                if not new_name_raw:
                     print("Skill name cannot be empty.")
                     return
+                
+                # Normalize skill name
+                new_name = self._normalize_skill_name(new_name_raw)
+                if new_name != new_name_raw:
+                    print(f"  → Normalized to: {new_name}")
                 
                 if new_name == selected_skill['skill']:
                     print("No changes made.")
                     return
                 
-                confirm = input(f"Rename '{selected_skill['skill']}' to '{new_name}'? (yes/no): ").strip().lower()
+                confirm = input(f"Rename '{selected_skill['skill']}' to '{new_name}'? (y/n): ")
                 
-                if confirm == 'yes':
+                if self._is_yes(confirm):
                     self.manager.update_skill_name(project_id, selected_skill['skill'], new_name)
                     print(f"✓ Renamed '{selected_skill['skill']}' to '{new_name}'")
                 else:

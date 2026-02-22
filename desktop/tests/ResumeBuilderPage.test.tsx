@@ -73,12 +73,12 @@ const mockMasterResume: Resume = {
   name: 'John Doe',
   email: 'john@example.com',
   links: [{ label: 'GitHub', url: 'https://github.com/johndoe' }],
-  education: {
+  education: [{
     school: 'University of Example',
     degree: 'BSc Computer Science',
     dates: 'Sept 2020 – May 2024',
     gpa: '3.8'
-  },
+  }],
   skills: { Skills: ['Python', 'JavaScript', 'React'] },
   projects: [
     {
@@ -94,11 +94,11 @@ const mockSavedResume: Resume = {
   name: 'John Doe',
   email: 'john@example.com',
   links: [{ label: 'GitHub', url: 'https://github.com/johndoe' }],
-  education: {
+  education: [{
     school: 'University of Example',
     degree: 'BSc Computer Science',
     dates: 'Sept 2020 – May 2024'
-  },
+  }],
   skills: { Skills: ['JavaScript', 'TypeScript', 'Node.js'] },
   projects: [
     {
@@ -114,11 +114,11 @@ const mockPreviewResumeData: Resume = {
   name: 'John Doe',
   email: 'john@example.com',
   links: [{ label: 'GitHub', url: 'https://github.com/johndoe' }],
-  education: {
+  education: [{
     school: 'University of Example',
     degree: 'BSc Computer Science',
     dates: 'Sept 2020 – May 2024'
-  },
+  }],
   skills: { Skills: ['Python', 'Django', 'PostgreSQL'] },
   projects: [
     {

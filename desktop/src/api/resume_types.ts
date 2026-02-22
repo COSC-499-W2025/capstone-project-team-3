@@ -26,10 +26,9 @@ export interface Resume {
   email: string;
   links: Link[];
 
-  education: Education;
+  education: Education[];
 
   skills: Skills;
 
   projects: Project[];
 }
-

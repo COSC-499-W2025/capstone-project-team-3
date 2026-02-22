@@ -22,13 +22,62 @@ def format_dates(start: str, end: str) -> str:
         return f"{s} – {e}"
     except Exception:
         return ""
+
+def parse_education_details(education_details_json: Optional[str], fallback_education: str = "", fallback_job_title: str = "") -> List[Dict[str, Any]]:
+    """
+    Parse education_details JSON and return a list of education entries.
+    Falls back to legacy education/job_title fields if education_details is empty.
+    """
+    if education_details_json:
+        try:
+            details = json.loads(education_details_json)
+            if isinstance(details, list) and len(details) > 0:
+                # Map education_details to the expected format
+                result = []
+                for entry in details:
+                    # Handle date formatting
+                    start = entry.get("start_date", "")
+                    end = entry.get("end_date", "")
+                    
+                    # Format dates if both are present
+                    if start and end:
+                        dates = format_dates(start, end)
+                    elif start:
+                        # Year-only format
+                        try:
+                            dates = f"{datetime.fromisoformat(start).strftime('%Y')} – Present"
+                        except:
+                            dates = f"{start} – Present"
+                    else:
+                        dates = ""
+                    
+                    result.append({
+                        "school": entry.get("institution", ""),
+                        "degree": entry.get("degree", ""),
+                        "dates": dates,
+                        "gpa": str(entry.get("gpa", "")) if entry.get("gpa") else ""
+                    })
+                return result
+        except (json.JSONDecodeError, TypeError, KeyError):
+            pass
+    
+    # Fallback to legacy fields if no valid education_details
+    if fallback_education or fallback_job_title:
+        return [{
+            "school": fallback_education,
+            "degree": fallback_job_title,
+            "dates": "",
+            "gpa": ""
+        }]
+    
+    return []
     
 def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
     try:
         cursor.execute(
             """
-            SELECT name, email, github_user, education, job_title
+            SELECT name, email, github_user, education, job_title, education_details
             FROM USER_PREFERENCES
             ORDER BY updated_at
             DESC LIMIT 1
@@ -53,6 +102,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "links": links,
         "education": row[3],
         "job_title": row[4],
+        "education_details": row[5],  # JSON string or None
     }
 
 def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:
@@ -238,16 +288,18 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                 "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
             })
         
+        # Parse education details
+        education_list = parse_education_details(
+            user.get("education_details"),
+            fallback_education=user.get("education", ""),
+            fallback_job_title=user.get("job_title", "")
+        )
+        
         return {
             "name": user["name"],
             "email": user["email"],
             "links": user["links"],
-            "education": {
-                "school": user["education"],
-                "degree": user["job_title"],
-                "dates": "",
-                "gpa": ""
-            },
+            "education": education_list,
             "skills": {
                 "Skills": all_skills
             },
@@ -300,16 +352,18 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
                 for skill in skills
             })
 
+        # Parse education details
+        education_list = parse_education_details(
+            user.get("education_details"),
+            fallback_education=user.get("education", ""),
+            fallback_job_title=user.get("job_title", "")
+        )
+
         return {
             "name": user["name"],
             "email": user["email"],
             "links": user["links"],
-            "education": {
-                "school": user["education"],
-                "degree": user["job_title"],
-                "dates": "", #placeholder for now (could improve user pref to include grad dates)
-                "gpa": "" #only if user wishes to include
-            },
+            "education": education_list,
             "skills": {
                 "Skills": all_skills
             },

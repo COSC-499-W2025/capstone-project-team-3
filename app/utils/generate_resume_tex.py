@@ -112,6 +112,28 @@ def render_links(links):
         )
 
     return " \\quad ".join(rendered)
+
+def render_education(education_list: List[Dict[str, Any]]) -> str:
+    """Return LaTeX blocks for education entries."""
+    if not education_list:
+        return ""
+    
+    blocks = []
+    for edu in education_list:
+        school = escape_latex(edu.get("school", ""))
+        degree = escape_latex(edu.get("degree", ""))
+        dates = escape_latex(edu.get("dates", ""))
+        gpa = escape_latex(str(edu.get("gpa", "")).strip())
+        
+        # Build GPA line if available
+        gpa_line = rf"{{\sl GPA: {gpa}}}\\" if gpa else ""
+        
+        block = rf"""{school} \hfill {dates}\\
+{{\sl {degree}}}\\
+{gpa_line}"""
+        blocks.append(block.strip())
+    
+    return "\n\n".join(blocks)
     
 def generate_resume_tex(resume: Dict[str, Any]) -> str:
     """Return LaTeX resume document rendered from the resume model."""
@@ -123,12 +145,22 @@ def generate_resume_tex(resume: Dict[str, Any]) -> str:
     links_block = render_links(resume.get("links", []))
     tex = tex.replace("{links_block}", links_block)
 
-    tex = tex.replace("{edu_school}", escape_latex(resume["education"]["school"]))
-    tex = tex.replace("{edu_degree}", escape_latex(resume["education"]["degree"]))
-    tex = tex.replace("{edu_dates}", escape_latex(resume["education"]["dates"]))
-    gpa_val = escape_latex(str(resume.get("education", {}).get("gpa", "")).strip())
-    edu_gpa_line = rf"{{\sl GPA: {gpa_val}}}\\" if gpa_val else ""
-    tex = tex.replace("{edu_gpa_line}", edu_gpa_line)
+    # Handle education - now supports multiple entries
+    education_list = resume.get("education", [])
+    if isinstance(education_list, list):
+        education_block = render_education(education_list)
+    else:
+        # Fallback for old single-object format
+        education_block = render_education([education_list])
+    
+    # Replace old placeholders with new education block
+    tex = tex.replace("{edu_school}", "")
+    tex = tex.replace("{edu_degree}", "")
+    tex = tex.replace("{edu_dates}", "")
+    tex = tex.replace("{edu_gpa_line}", "")
+    
+    # Replace with new education section
+    tex = tex.replace("{education_section}", education_block)
 
     tex = tex.replace("{skills_table}", render_skills(resume["skills"]))
     tex = tex.replace("{projects}", render_projects(resume["projects"]))

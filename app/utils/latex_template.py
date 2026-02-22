@@ -1,7 +1,7 @@
 class ResumeTemplate:
     
     # Placeholders in LATEX_TEMPLATE are:
-    # name, email, links_block, edu_school, edu_degree, edu_dates, edu_gpa_line,
+    # name, email, links_block, education_section,
     # skills_table, projects
     
     LATEX_TEMPLATE = r"""
@@ -85,9 +85,7 @@ class ResumeTemplate:
 
     \header{Education}
     \vspace{2mm}
-    \textbf{{edu_school}}\\ %degree added by user
-    {edu_degree} \hfill {edu_dates}\\ % role/aspiring added here - dates included if provided
-    {edu_gpa_line} % gpa can be added if provided by user
+    {education_section}
     \vspace{2mm}
 
     \header{Skills}

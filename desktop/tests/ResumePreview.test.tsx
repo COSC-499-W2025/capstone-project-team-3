@@ -14,12 +14,12 @@ describe('ResumePreview', () => {
     links: [
       { label: 'GitHub', url: 'https://github.com/johndoe' }
     ],
-    education: {
+    education: [{
       school: 'University of Example',
       degree: 'Bachelor of Science in Computer Science',
       dates: 'Sept 2020 – May 2024',
       gpa: '3.8'
-    },
+    }],
     skills: {
       Skills: ['Python', 'JavaScript', 'React', 'Node.js', 'SQL']
     },
@@ -79,10 +79,10 @@ describe('ResumePreview', () => {
       name: 'Test User',
       email: 'test@example.com',
       links: [],
-      education: {
+      education: [{
         school: 'Test School',
         degree: 'Test Degree'
-      },
+      }],
       skills: {
         Skills: ['Python']
       },

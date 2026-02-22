@@ -19,6 +19,8 @@ export function ConsentPage() {
   const [messages, setMessages] = useState<ConsentTextResponse | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [hasConsent, setHasConsent] = useState(false);
+  const [consentTimestamp, setConsentTimestamp] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchConsentStatus = async () => {
@@ -33,16 +35,11 @@ export function ConsentPage() {
         if (!textRes.ok) throw new Error(await textRes.text());
         const textData: ConsentTextResponse = await textRes.json();
         
-        if (data.has_consent) {
-          console.log("Already consented, showing notification");
-          setNotification(textData.already_provided_message);
-          setTimeout(() => navigate("/uploadpage"), 2000);
-        } else {
-          console.log("Consent text loaded:", textData);
-          setConsentText(textData.consent_message);
-          setDetailedInfo(textData.detailed_info);
-          setMessages(textData);
-        }
+        setMessages(textData);
+        setConsentText(textData.consent_message);
+        setDetailedInfo(textData.detailed_info);
+        setHasConsent(data.has_consent);
+        setConsentTimestamp(data.timestamp);
       } catch (err) {
         console.error("Failed to load consent:", err);
       }
@@ -52,26 +49,36 @@ export function ConsentPage() {
   }, [navigate]);
 
   const handleSubmit = async (accepted: boolean) => {
-    console.log("handleSubmit called with accepted:", accepted);
-    console.log("messages:", messages);
     if (!messages) return;
     try {
-      console.log("Sending POST request...");
       const response = await fetch(`${API_BASE_URL}/api/privacy-consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accepted }),
       });
       
-      console.log("Response status:", response.status);
       if (!response.ok) throw new Error(await response.text());
       
       const message = accepted ? messages.granted_message : messages.declined_message;
-      console.log("Setting notification:", message);
       setNotification(message);
       setTimeout(() => navigate(accepted ? "/uploadpage" : "/"), 2000);
     } catch (error) {
       console.error("Failed to submit consent:", error);
+    }
+  };
+
+  const handleRevoke = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/privacy-consent`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      setNotification("Consent withdrawn successfully");
+      setTimeout(() => navigate("/"), 2000);
+    } catch (error) {
+      console.error("Failed to revoke consent:", error);
     }
   };
 
@@ -85,11 +92,27 @@ export function ConsentPage() {
       
       <div className="consent-frame">
         <div className="consent-content">
-          <pre>{showDetails ? detailedInfo : consentText}</pre>
+          {hasConsent ? (
+            <pre>
+              {messages?.already_provided_message}
+              {consentTimestamp && `\n\nConsent provided on: ${new Date(consentTimestamp).toLocaleString()}`}
+            </pre>
+          ) : (
+            <pre>{showDetails ? detailedInfo : consentText}</pre>
+          )}
         </div>
 
         <div className="consent-actions">
-          {!showDetails ? (
+          {hasConsent ? (
+            <>
+              <button onClick={() => navigate("/uploadpage")}>
+                Continue
+              </button>
+              <button onClick={handleRevoke}>
+                Revoke Consent
+              </button>
+            </>
+          ) : !showDetails ? (
             <>
               <button onClick={() => handleSubmit(false)} disabled={!messages}>
                 Decline

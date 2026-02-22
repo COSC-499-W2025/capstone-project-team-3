@@ -4,7 +4,18 @@ import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
-import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX, saveNewResume, updateResume } from "../api/resume";
+import { 
+  getResumes, 
+  buildResume, 
+  getResumeById, 
+  previewResume, 
+  deleteResume, 
+  downloadResumePDF, 
+  downloadResumeTeX, 
+  saveNewResume, 
+  updateResume, 
+  type ResumeListItem 
+} from "../api/resume";
 
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
@@ -106,6 +117,22 @@ export function ResumeBuilderPage() {
     } else {
       // Normal selection when not in preview mode
       setActiveIndex(index);
+    }
+  };
+
+  const handleDeleteResume = async (resumeId: number) => {
+    try {
+      await deleteResume(resumeId);
+      // Refresh the resume list after deletion
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+      // Reset to first resume if current one was deleted
+      if (activeIndex >= updatedList.length) {
+        setActiveIndex(Math.max(0, updatedList.length - 1));
+      }
+    } catch (error) {
+      console.error('Failed to delete resume:', error);
+      alert('Failed to delete resume. Please try again.');
     }
   };
 
@@ -213,7 +240,7 @@ export function ResumeBuilderPage() {
 
   return (
     <div className="page page--resume-builder">
-      {/* Header with navigation and actions */}
+      {/* Header with download button */}
       <div className="resume-builder__header">
         <div className="resume-builder__nav">
           <button 
@@ -295,6 +322,7 @@ export function ResumeBuilderPage() {
             activeIndex={activeIndex}
             onTailorNew={() => navigate('/projectselectionpage')}
             onSelect={handleSelectResume}
+            onDelete={handleDeleteResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
           />

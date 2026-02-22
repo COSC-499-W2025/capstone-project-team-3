@@ -218,13 +218,17 @@ class TestChronologicalManager:
         """Test updating a skill's date."""
         manager = ChronologicalManager(db_path=temp_db)
         
+        # Get Flask skill ID
+        skills = manager.get_chronological_skills('proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        
         # Update Flask date
-        manager.update_skill_date('proj1', 'Flask', '2024-02-15')
+        manager.update_skill_date(flask_skill['id'], '2024-02-15')
         
         # Verify update
         skills = manager.get_chronological_skills('proj1')
-        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
-        assert flask_skill['date'] == '2024-02-15'
+        flask_skill_updated = [s for s in skills if s['skill'] == 'Flask'][0]
+        assert flask_skill_updated['date'] == '2024-02-15'
         
         manager.close()
     
@@ -247,8 +251,12 @@ class TestChronologicalManager:
         """Test removing a skill from a project."""
         manager = ChronologicalManager(db_path=temp_db)
         
+        # Get Flask skill ID
+        skills = manager.get_chronological_skills('proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        
         # Remove Flask
-        manager.remove_skill('proj1', 'Flask')
+        manager.remove_skill(flask_skill['id'])
         
         # Verify removal
         skills = manager.get_chronological_skills('proj1')
@@ -261,8 +269,12 @@ class TestChronologicalManager:
         """Test that skills remain chronologically ordered after date update."""
         manager = ChronologicalManager(db_path=temp_db)
         
+        # Get Docker skill ID
+        skills = manager.get_chronological_skills('proj1')
+        docker_skill = [s for s in skills if s['skill'] == 'Docker'][0]
+        
         # Update Docker to an earlier date
-        manager.update_skill_date('proj1', 'Docker', '2024-01-20')
+        manager.update_skill_date(docker_skill['id'], '2024-01-20')
         
         # Verify chronological order
         skills = manager.get_chronological_skills('proj1')
@@ -275,8 +287,12 @@ class TestChronologicalManager:
         """Test renaming a skill."""
         manager = ChronologicalManager(db_path=temp_db)
         
+        # Get Python skill ID
+        skills = manager.get_chronological_skills('proj1')
+        python_skill = [s for s in skills if s['skill'] == 'Python'][0]
+        
         # Rename Python to Python3
-        manager.update_skill_name('proj1', 'Python', 'Python3')
+        manager.update_skill_name(python_skill['id'], 'Python3')
         
         # Verify rename
         skills = manager.get_chronological_skills('proj1')
@@ -295,13 +311,13 @@ class TestChronologicalManager:
         """Test that renaming a skill preserves its date."""
         manager = ChronologicalManager(db_path=temp_db)
         
-        # Get original date
+        # Get original date and ID
         skills = manager.get_chronological_skills('proj1')
         flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
         original_date = flask_skill['date']
         
         # Rename Flask to Flask-RESTful
-        manager.update_skill_name('proj1', 'Flask', 'Flask-RESTful')
+        manager.update_skill_name(flask_skill['id'], 'Flask-RESTful')
         
         # Verify date is preserved
         skills = manager.get_chronological_skills('proj1')
@@ -318,9 +334,16 @@ class TestChronologicalManager:
         skills_before = manager.get_chronological_skills('proj2')
         assert any(s['skill'] == 'JavaScript' for s in skills_before)
         
+        # Get JavaScript skill ID
+        js_skill = [s for s in skills_before if s['skill'] == 'JavaScript'][0]
+        
         # Simulate case correction
-        manager.update_skill_name('proj2', 'JavaScript', 'javascript')
-        manager.update_skill_name('proj2', 'javascript', 'JavaScript')
+        manager.update_skill_name(js_skill['id'], 'javascript')
+        
+        # Get the skill again for second update
+        skills = manager.get_chronological_skills('proj2')
+        js_skill_lower = [s for s in skills if s['skill'] == 'javascript'][0]
+        manager.update_skill_name(js_skill_lower['id'], 'JavaScript')
         
         # Verify final name
         skills = manager.get_chronological_skills('proj2')

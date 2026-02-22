@@ -49,17 +49,16 @@ def resolve_effective_score(
         if score_overridden_value is not None
         else None
     )
-    display_score = (
+    effective_score = (
         overridden_value
         if is_overridden and overridden_value is not None
         else score_original
     )
     return {
-        "score": display_score,
+        "score": effective_score,
         "score_original": score_original,
         "score_overridden": is_overridden,
         "score_overridden_value": overridden_value,
-        "display_score": display_score,
     }
 
 
@@ -274,9 +273,9 @@ def preview_project_score_override(
         "project_signature": project_data["project_signature"],
         "name": project_data["name"],
         "exclude_metrics": exclusions,
-        "current_score": current_fields["display_score"],
+        "current_score": current_fields["score"],
         "score_original": current_fields["score_original"],
-        "preview_score": preview_fields["display_score"],
+        "preview_score": preview_fields["score"],
         "breakdown": breakdown,
     }
 
@@ -320,7 +319,6 @@ def apply_project_score_override(
         "score_original": _to_float(preview["score_original"], 0.0),
         "score_overridden": True,
         "score_overridden_value": new_score,
-        "display_score": new_score,
         "breakdown": preview["breakdown"],
     }
 

@@ -111,7 +111,6 @@ def test_get_portfolio_resume_insights(setup_test_db):
     assert override_project["score"] == pytest.approx(0.95)
     assert override_project["score_original"] == pytest.approx(0.4)
     assert override_project["score_overridden"] is True
-    assert override_project["display_score"] == pytest.approx(0.95)
 
     assert portfolio["top_projects"][0]["project_signature"] == "sig2"
     assert resume is not None

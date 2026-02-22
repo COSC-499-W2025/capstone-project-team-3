@@ -50,7 +50,6 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     assert data[0]["score_original"] == 1.0
     assert data[0]["score_overridden"] is False
     assert data[0]["score_overridden_value"] is None
-    assert data[0]["display_score"] == 1.0
     assert data[0]["date_added"] == "2020-01-01"
 
     assert data[1]["id"] == "p2"
@@ -60,7 +59,6 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     assert data[1]["score_original"] == 2.0
     assert data[1]["score_overridden"] is True
     assert data[1]["score_overridden_value"] == 0.95
-    assert data[1]["display_score"] == 0.95
     assert data[1]["date_added"] == "2021-01-01"
 
     # Ensure DB connection is closed
@@ -132,7 +130,6 @@ def test_get_project_returns_single_project(mock_load_skills, mock_load_projects
     assert data["score_original"] == 0.65
     assert data["score_overridden"] is True
     assert data["score_overridden_value"] == 0.82
-    assert data["display_score"] == 0.82
     mock_get_conn.return_value.close.assert_called_once()
 
 
@@ -211,7 +208,7 @@ def test_preview_score_override_validation_error(mock_preview):
 def test_apply_score_override_endpoint(mock_apply):
     mock_apply.return_value = {
         "project_signature": "sig-1",
-        "display_score": 0.93,
+        "score": 0.93,
         "score_overridden": True,
         "score_overridden_value": 0.93,
         "exclude_metrics": ["total_lines"],
@@ -223,7 +220,7 @@ def test_apply_score_override_endpoint(mock_apply):
         json={"exclude_metrics": ["total_lines"]},
     )
     assert response.status_code == 200
-    assert response.json()["display_score"] == 0.93
+    assert response.json()["score"] == 0.93
     assert response.json()["score_overridden"] is True
     mock_apply.assert_called_once_with(
         project_signature="sig-1",
@@ -235,7 +232,7 @@ def test_apply_score_override_endpoint(mock_apply):
 def test_clear_score_override_endpoint(mock_clear):
     mock_clear.return_value = {
         "project_signature": "sig-1",
-        "display_score": 0.7,
+        "score": 0.7,
         "score_overridden": False,
         "score_overridden_value": None,
     }
@@ -243,6 +240,6 @@ def test_clear_score_override_endpoint(mock_clear):
     client = TestClient(app)
     response = client.post("/projects/sig-1/score-override/clear")
     assert response.status_code == 200
-    assert response.json()["display_score"] == 0.7
+    assert response.json()["score"] == 0.7
     assert response.json()["score_overridden"] is False
     mock_clear.assert_called_once_with(project_signature="sig-1")

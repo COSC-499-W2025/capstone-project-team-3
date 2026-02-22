@@ -97,7 +97,6 @@ def get_portfolio_resume_insights():
             "score_original": score_fields["score_original"],
             "score_overridden": score_fields["score_overridden"],
             "score_overridden_value": score_fields["score_overridden_value"],
-            "display_score": score_fields["display_score"],
             "metrics": metrics
         })
 
@@ -318,7 +317,6 @@ def get_projects_by_signatures(signatures: list):
             "score_original": score_fields["score_original"],
             "score_overridden": score_fields["score_overridden"],
             "score_overridden_value": score_fields["score_overridden_value"],
-            "display_score": score_fields["display_score"],
             "metrics": metrics,
             "resume_bullets": resume_bullets
         })

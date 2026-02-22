@@ -311,15 +311,15 @@ class TestChronologicalCLI:
         original_date = flask_skill['date']
         original_source = flask_skill['source']
         
-        # Simulate renaming Flask to Flask-RESTful
+        # Simulate renaming Flask to Flask-RESTful (will be normalized to Flask-Restful)
         inputs = iter(['2', 'Flask-RESTful', 'yes'])  # Skill 2 is Flask
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         
         cli._edit_skill_name('test_proj1', skills)
         
-        # Verify properties preserved
+        # Verify properties preserved (note: normalized to Flask-Restful via title case)
         updated_skills = manager.get_chronological_skills('test_proj1')
-        flask_restful = [s for s in updated_skills if s['skill'] == 'Flask-RESTful'][0]
+        flask_restful = [s for s in updated_skills if s['skill'] == 'Flask-Restful'][0]
         assert flask_restful['date'] == original_date
         assert flask_restful['source'] == original_source
         

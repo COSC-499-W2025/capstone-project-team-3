@@ -165,8 +165,12 @@ class TestChronologicalCLI:
         manager = ChronologicalManager(db_path=temp_db)
         cli = ChronologicalCLI(manager=manager)
         
+        # Get Flask skill ID
+        skills = manager.get_chronological_skills('test_proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        
         # Update Flask date
-        manager.update_skill_date('test_proj1', 'Flask', '2024-03-01')
+        manager.update_skill_date(flask_skill['id'], '2024-03-01')
         
         # Verify update
         skills = manager.get_chronological_skills('test_proj1')
@@ -180,8 +184,12 @@ class TestChronologicalCLI:
         manager = ChronologicalManager(db_path=temp_db)
         cli = ChronologicalCLI(manager=manager)
         
+        # Get Flask skill ID
+        skills = manager.get_chronological_skills('test_proj1')
+        flask_skill = [s for s in skills if s['skill'] == 'Flask'][0]
+        
         # Remove Flask
-        manager.remove_skill('test_proj1', 'Flask')
+        manager.remove_skill(flask_skill['id'])
         
         # Verify removal
         skills = manager.get_chronological_skills('test_proj1')
@@ -290,7 +298,7 @@ class TestChronologicalCLI:
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         
         # Edit skill
-        cli._edit_skill_name('test_proj1', skills)
+        cli._edit_skill_name(skills)
         
         # Verify rename
         updated_skills = manager.get_chronological_skills('test_proj1')
@@ -315,7 +323,7 @@ class TestChronologicalCLI:
         inputs = iter(['2', 'Flask-RESTful', 'yes'])  # Skill 2 is Flask
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         
-        cli._edit_skill_name('test_proj1', skills)
+        cli._edit_skill_name(skills)
         
         # Verify properties preserved (note: normalized to Flask-Restful via title case)
         updated_skills = manager.get_chronological_skills('test_proj1')
@@ -336,7 +344,7 @@ class TestChronologicalCLI:
         inputs = iter(['1', ''])
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         
-        cli._edit_skill_name('test_proj1', skills)
+        cli._edit_skill_name(skills)
         
         # Verify no change
         updated_skills = manager.get_chronological_skills('test_proj1')
@@ -360,7 +368,7 @@ class TestChronologicalCLI:
         inputs = iter(['1', 'NewName', 'no'])
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         
-        cli._edit_skill_name('test_proj1', skills)
+        cli._edit_skill_name(skills)
         
         # Verify no change
         updated_skills = manager.get_chronological_skills('test_proj1')

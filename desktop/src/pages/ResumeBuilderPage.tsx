@@ -4,9 +4,18 @@ import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
-import { getResumes, buildResume, getResumeById, previewResume, deleteResume, type ResumeListItem } from "../api/resume";
-import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX } from "../api/resume";
-import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX, saveNewResume, updateResume } from "../api/resume";
+import { 
+  getResumes, 
+  buildResume, 
+  getResumeById, 
+  previewResume, 
+  deleteResume, 
+  downloadResumePDF, 
+  downloadResumeTeX, 
+  saveNewResume, 
+  updateResume, 
+  type ResumeListItem 
+} from "../api/resume";
 
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
@@ -124,6 +133,9 @@ export function ResumeBuilderPage() {
     } catch (error) {
       console.error('Failed to delete resume:', error);
       alert('Failed to delete resume. Please try again.');
+    }
+  };
+
   const handleDownload = async (format: 'pdf' | 'tex') => {
     try {
       setDownloading(true);
@@ -228,16 +240,6 @@ export function ResumeBuilderPage() {
 
   return (
     <div className="page page--resume-builder">
-      <div className="card card--sidebar">
-        <ResumeSidebar
-          resumeList={resumeList}
-          activeIndex={activeIndex}
-          onTailorNew={() => navigate('/projectselectionpage')}
-          onSelect={handleSelectResume}
-          onDelete={handleDeleteResume}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        />
       {/* Header with download button */}
       <div className="resume-builder__header">
         <div className="resume-builder__nav">
@@ -320,6 +322,7 @@ export function ResumeBuilderPage() {
             activeIndex={activeIndex}
             onTailorNew={() => navigate('/projectselectionpage')}
             onSelect={handleSelectResume}
+            onDelete={handleDeleteResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
           />

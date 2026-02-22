@@ -66,25 +66,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 3. Get Specific Project
-
-**What it does:** Returns details for one project.
-
-**URL:** `GET /api/projects/{project_id}`
-
-**Response:**
-```json
-{
-  "id": "abc123",
-  "name": "My Project",
-  "score": 0.85,
-  "skills": ["Python", "FastAPI", "Docker"]
-}
-```
-
----
-
-### 4. Get All Skills
+### 3. Get All Skills
 
 **What it does:** Lists all skills across projects.
 
@@ -108,7 +90,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 5. Get Top Skills
+### 4. Get Top Skills
 
 **What it does:** Returns most-used skills.
 
@@ -117,11 +99,25 @@ This document explains all API endpoints in Project Insights.
 **Parameters:**
 - `limit` - Number of results (default: 10, max: 50)
 
-**Response:** Same as "Get All Skills", sorted by frequency.
+**Response:**
+```json
+[
+  {
+    "skill": "Python",
+    "frequency": 8,
+    "source": "code_analysis"
+  },
+  {
+    "skill": "JavaScript",
+    "frequency": 5,
+    "source": "code_analysis"
+  }
+]
+```
 
 ---
 
-### 6. Get Recent Skills
+### 5. Get Recent Skills
 
 **What it does:** Lists recently used skills.
 
@@ -141,7 +137,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 7. Get User Preferences
+### 6. Get User Preferences
 
 **What it does:** Returns user profile information.
 
@@ -166,7 +162,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 8. Search Schools
+### 7. Search Schools
 
 **What it does:** Searches educational institutions.
 
@@ -189,7 +185,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 9. List All Schools
+### 8. List All Schools
 
 **What it does:** Returns all schools in database.
 
@@ -203,7 +199,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 10. Get Portfolio Data
+### 9. Get Portfolio Data
 
 **What it does:** Returns complete portfolio with all project analytics and graphs.
 
@@ -238,7 +234,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 11. View Portfolio Dashboard
+### 10. View Portfolio Dashboard
 
 **What it does:** Opens interactive HTML dashboard with charts and project cards.
 
@@ -255,34 +251,42 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 12. Edit Portfolio Project
+### 11. Edit Portfolio Projects (Batch)
 
-**What it does:** Updates project information (rank, summary, dates).
+**What it does:** Updates multiple projects in a single request.
 
 **URL:** `POST /api/portfolio/edit`
 
 **Request:**
 ```json
 {
-  "project_id": "abc123",
-  "field": "summary",
-  "value": "Updated description"
+  "edits": [
+    {
+      "project_signature": "sig1",
+      "project_name": "New Name",
+      "project_summary": "New summary",
+      "created_at": "2024-01-15",
+      "last_modified": "2024-06-10",
+      "rank": 0.8
+    }
+  ]
 }
 ```
 
-**Supported fields:** `rank`, `summary`, `dates`
+**Supported fields:** `project_name`, `project_summary`, `created_at`, `last_modified`, `rank` (0.0-1.0)
 
 **Response:**
 ```json
 {
   "status": "ok",
-  "message": "Project updated"
+  "projects_updated": ["sig1"],
+  "count": 1
 }
 ```
 
 ---
 
-### 13. Upload Project Thumbnail
+### 12. Upload Project Thumbnail
 
 **What it does:** Uploads an image for a project.
 
@@ -314,7 +318,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 14. Get Project Thumbnail
+### 13. Get Project Thumbnail
 
 **What it does:** Returns the thumbnail image file.
 
@@ -328,7 +332,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 15. Upload File Page
+### 14. Upload File Page
 
 **What it does:** Shows HTML page for uploading project ZIP files.
 
@@ -338,7 +342,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 16. Upload Projects ZIP
+### 15. Upload Projects ZIP
 
 **What it does:** Uploads and extracts ZIP file containing projects for analysis.
 
@@ -363,7 +367,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 17. Update User Preferences
+### 16. Update User Preferences
 
 **What it does:** Updates your personal information and settings.
 
@@ -392,50 +396,63 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 18. Preview Resume
+### 17. Get Resume (Master or Filtered)
 
-**What it does:** Generates HTML preview of resume.
+**What it does:** Returns resume data (master or filtered by projects).
 
-**URL:** `POST /api/resume/preview`
+**URL:** `GET /resume?project_ids=proj1,proj2`
 
-**Request:**
+**Parameters:**
+- `project_ids` - Optional comma-separated list (default: master resume)
+
+**Response:**
 ```json
 {
-  "resume_id": "resume_123"
+  "user_info": {...},
+  "projects": [...],
+  "skills": [...]
 }
 ```
 
-**Response:** HTML page showing resume layout.
-
 ---
 
-### 19. Export Resume as PDF
+### 18. Export Resume as PDF (GET)
 
 **What it does:** Downloads resume as PDF file.
 
-**URL:** `GET /api/resume/export/pdf?resume_id=resume_123`
+**URL:** `GET /resume/export/pdf?project_ids=proj1,proj2`
+
+**Parameters:**
+- `project_ids` - Optional comma-separated list
 
 **Response:** PDF file download.
 
+**Alternative:** `POST /resume/export/pdf` with body `{"project_ids": [...]}`
+
 ---
 
-### 20. Export Resume as LaTeX
+### 19. Export Resume as LaTeX (GET)
 
 **What it does:** Downloads resume as LaTeX (.tex) file.
 
-**URL:** `GET /api/resume/export/tex?resume_id=resume_123`
+**URL:** `GET /resume/export/tex?project_ids=proj1,proj2`
+
+**Parameters:**
+- `project_ids` - Optional comma-separated list
 
 **Response:** .tex file download.
+
+**Alternative:** `POST /resume/export/tex` with body `{"project_ids": [...]}`
 
 **Note:** LaTeX can be edited and compiled to PDF.
 
 ---
 
-### 21. Delete Resume
+### 20. Delete Resume
 
-**What it does:** Deletes a saved resume.
+**What it does:** Deletes a saved resume (cannot delete Master Resume).
 
-**URL:** `DELETE /api/resume/{resume_id}`
+**URL:** `DELETE /resume/{resume_id}`
 
 **Response:**
 ```json
@@ -446,6 +463,223 @@ This document explains all API endpoints in Project Insights.
 ```
 
 **Error:** `404` if resume doesn't exist.
+
+
+---
+
+### 21. Create Tailored Resume
+
+**What it does:** Creates a new resume with selected projects.
+
+**URL:** `POST /resume`
+
+**Request:**
+```json
+{
+  "project_ids": ["proj1", "proj2", "proj3"]
+}
+```
+
+**Response:**
+```json
+{
+  "resume_id": "resume_456",
+  "message": "Resume created successfully"
+}
+```
+
+**Error:** `400` if no projects selected.
+
+---
+
+### 22. Get Saved Resume
+
+**What it does:** Loads a previously saved resume by ID.
+
+**URL:** `GET /resume/{resume_id}`
+
+**Response:**
+```json
+{
+  "resume_id": 123,
+  "projects": [...],
+  "user_info": {...}
+}
+```
+
+**Error:** `404` if resume not found.
+
+---
+
+### 23. List All Resumes
+
+**What it does:** Returns all saved resumes for sidebar display.
+
+**URL:** `GET /resume_names`
+
+**Response:**
+```json
+{
+  "resumes": [
+    {"id": 1, "name": "Master Resume", "is_master": true},
+    {"id": 2, "name": "Software Engineer Resume", "is_master": false}
+  ]
+}
+```
+
+---
+
+### 24. Save Edited Resume
+
+**What it does:** Saves edits to an existing resume.
+
+**URL:** `POST /resume/{id}/edit`
+
+**Request:**
+```json
+{
+  "project_overrides": {...},
+  "custom_sections": {...}
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Resume edits saved"
+}
+```
+
+**Errors:**
+- `404` - Resume not found
+- `409` - Persistence error
+
+---
+
+### 25. Get Project by Signature
+
+**What it does:** Returns detailed information for a specific project.
+
+**URL:** `GET /api/projects/{signature}`
+
+**Response:**
+```json
+{
+  "project_signature": "abc123",
+  "name": "My Project",
+  "summary": "Project description",
+  "skills": [...],
+  "languages": [...],
+  "created_at": "2024-01-01",
+  "score": 0.85
+}
+```
+
+**Error:** `404` if project not found.
+
+---
+
+### 26. Record Privacy Consent
+
+**What it does:** Records user consent decision for privacy.
+
+**URL:** `POST /api/privacy-consent`
+
+**Request:**
+```json
+{
+  "accepted": true
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Consent recorded successfully"
+}
+```
+
+
+---
+
+### 27. Get Privacy Consent Status
+
+**What it does:** Checks if user has given consent.
+
+**URL:** `GET /api/privacy-consent`
+
+**Response:**
+```json
+{
+  "has_consent": true,
+  "timestamp": "2024-01-15T10:00:00Z"
+}
+```
+
+
+---
+
+### 28. Revoke Privacy Consent
+
+**What it does:** Revokes user consent.
+
+**URL:** `DELETE /api/privacy-consent`
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Consent revoked successfully"
+}
+```
+
+
+---
+
+### 29. Get Privacy Consent Text
+
+**What it does:** Returns privacy consent text for display.
+
+**URL:** `GET /api/privacy-consent/text`
+
+**Response:**
+```json
+{
+  "consent_message": "...",
+  "detailed_info": "...",
+  "granted_message": "...",
+  "declined_message": "...",
+  "already_provided_message": "..."
+}
+```
+
+
+---
+
+### 30. Resolve Upload Status
+
+**What it does:** Returns status and path if uploaded ZIP exists.
+
+**URL:** `GET /api/resolve-upload/{upload_id}`
+
+**Response (found):**
+```json
+{
+  "status": "ok",
+  "path": "app/uploads/abc123.zip"
+}
+```
+
+**Response (pending):**
+```json
+{
+  "status": "pending"
+}
+```
+
+
 
 
 ### Using JavaScript
@@ -522,6 +756,12 @@ fetch(`${API_BASE}/api/resume/123`, {
 - Export LaTeX: `/api/resume/export/tex`
 - Delete: `DELETE /api/resume/{id}`
 
+**Privacy & Consent:**
+- Get Status: `GET /api/privacy-consent`
+- Record: `POST /api/privacy-consent`
+- Revoke: `DELETE /api/privacy-consent`
+- Get Text: `GET /api/privacy-consent/text`
+
 
 ## Error Handling
 
@@ -541,6 +781,6 @@ fetch(`${API_BASE}/api/resume/123`, {
 ```
 
 ---
-**Last Updated:** February 16, 2026  
-**Total Endpoints Documented:** 21  
+**Last Updated:** February 20, 2026  
+**Total Endpoints Documented:** 30  
 **Questions?** Contact development team

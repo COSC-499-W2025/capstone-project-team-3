@@ -137,6 +137,8 @@ def resume_tex_export(
         
     try:
         tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -263,6 +265,8 @@ async def resume_pdf_export(
         
     try:
         tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

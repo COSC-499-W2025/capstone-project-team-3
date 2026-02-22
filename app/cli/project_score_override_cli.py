@@ -157,13 +157,14 @@ def _run_project_actions(signature: str, project_name: str) -> None:
             return
 
         if action in ("1", "breakdown", "understand"):
+            print("✅ Score breakdown displayed above.")
             continue
 
         if action == "4" or action == "clear":
             try:
                 cleared = clear_project_score_override(signature)
                 print(
-                    f"Override cleared. Score restored to {_to_float(cleared.get('score')):.3f}"
+                    f"✅ Override cleared. Score restored to {_to_float(cleared.get('score')):.3f}"
                 )
             except ProjectNotFoundError:
                 print("Project not found.")
@@ -179,7 +180,7 @@ def _run_project_actions(signature: str, project_name: str) -> None:
             try:
                 preview = preview_project_score_override(signature, exclusions)
                 print(
-                    f"Preview score: {_to_float(preview.get('preview_score')):.3f} "
+                    f"✅ Preview score: {_to_float(preview.get('preview_score')):.3f} "
                     f"(current: {_to_float(preview.get('current_score')):.3f})"
                 )
             except (ProjectNotFoundError, OverrideValidationError) as exc:
@@ -188,7 +189,7 @@ def _run_project_actions(signature: str, project_name: str) -> None:
 
         try:
             applied = apply_project_score_override(signature, exclusions)
-            print(f"Override applied. New score: {_to_float(applied.get('score')):.3f}*")
+            print(f"✅ Override applied. New score: {_to_float(applied.get('score')):.3f}*")
         except (ProjectNotFoundError, OverrideValidationError) as exc:
             print(f"Cannot apply override: {exc}")
 

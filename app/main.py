@@ -32,6 +32,7 @@ from app.utils.env_utils import check_gemini_api_key
 from app.utils.scan_utils import run_scan_flow
 from app.utils.delete_insights_utils import get_projects
 from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
+from app.cli.project_score_override_cli import run_project_score_override_cli
 from app.utils.clean_up import cleanup_upload
 from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
 from app.utils.non_code_parsing.document_parser import parsed_input_text
@@ -100,6 +101,24 @@ def display_startup_info():
     
     print("="*60)
 
+
+def _open_chronology_manager() -> None:
+    print("\n📅 Opening Chronological Manager...")
+    try:
+        chrono_cli = ChronologicalCLI()
+        chrono_cli.run()
+        print("\n✅ Chronology corrections complete!")
+    except Exception as e:
+        print(f"❌ Error in chronology manager: {e}")
+
+
+def _open_ranking_manager(project_signatures) -> None:
+    signatures = [p for p in (project_signatures or []) if p]
+    if not signatures:
+        print("No projects available for score ranking.")
+        return
+    run_project_score_override_cli(signatures, require_confirmation=False)
+
 # Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
@@ -148,26 +167,41 @@ def main():
             except Exception:
                 existing_projects = None
             
-            # If user has existing projects, ask if they want to make corrections first
+            # If user has existing projects, offer pre-upload actions
             if existing_projects:
                 print("\n💡 You have previously generated insights for your projects.")
+                existing_signatures = [
+                    p.get("project_signature")
+                    for p in existing_projects
+                    if isinstance(p, dict) and p.get("project_signature")
+                ]
                 while True:
-                    correction_choice = input("\nWould you like to make corrections to chronology (dates/skills) before uploading?\n  📅 'yes' - Update project dates, add/edit skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
-                    
-                    if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
-                        print("\n📝 Opening Corrections Menu...")
-                        try:
-                            chrono_cli = ChronologicalCLI()
-                            chrono_cli.run()
-                            print("\n✅ Corrections complete! Continuing to file upload...")
-                        except Exception as e:
-                            print(f"❌ Error in corrections menu: {e}")
+                    correction_choice = input(
+                        "\nWould you like to:\n"
+                        "  📅 'corrections' - Update chronology (dates), add/edit skills\n"
+                        "  🏆 'ranking'     - Inspect/update project score\n"
+                        "  🔄 'continue'    - Analyze another project\n"
+                        "  🚪 'exit'        - Exit the application\n"
+                        "Choice (corrections/ranking/continue/exit): "
+                    ).lower().strip()
+
+                    if correction_choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
+                        _open_chronology_manager()
+                        continue
+                    elif correction_choice in ['ranking', 'rank', 'score', 'scores', 'override']:
+                        _open_ranking_manager(existing_signatures)
+                        continue
+                    elif correction_choice in ['continue', 'c', 'skip', 'next']:
+                        print("\n⏭️ Continuing to file upload...")
                         break
-                    elif correction_choice in ['no', 'n', 'skip', 'continue']:
-                        print("\n⏭️  Skipping corrections...")
+                    elif correction_choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                        print("👋 Exiting Project Insights. Thank you for using our service!")
                         break
                     else:
-                        print("❌ Please enter 'yes' or 'no'")
+                        print("❌ Please enter 'corrections', 'ranking', 'continue', or 'exit'")
+
+                if correction_choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
+                    break
             
             print("\n" + "="*60)
             print("🔍 PROJECT ANALYSIS SESSION")
@@ -524,26 +558,30 @@ def main():
             print(f"{'='*60}")
             
             while True:
-                choice = input("\nWould you like to:\n  📅 'corrections' - Update chronology (dates), add/edit skills\n  🔄 'continue'    - Analyze another project\n  🚪 'exit'        - Exit the application\n\nChoice (corrections/continue/exit): ").lower().strip()
+                choice = input(
+                    "\nWould you like to:\n"
+                    "  📅 'corrections' - Update chronology (dates), add/edit skills\n"
+                    "  🏆 'ranking'     - Inspect/update project score\n"
+                    "  🔄 'continue'    - Analyze another project\n"
+                    "  🚪 'exit'        - Exit the application\n\n"
+                    "Choice (corrections/ranking/continue/exit): "
+                ).lower().strip()
                 
                 if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                     print("👋 Exiting Project Insights. Thank you for using our service!")
                     break
                 elif choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
-                    print("\n📝 Opening Corrections Menu...")
-                    try:
-                        chrono_cli = ChronologicalCLI()
-                        chrono_cli.run()
-                        print("\n✅ Corrections complete!")
-                    except Exception as e:
-                        print(f"❌ Error in corrections menu: {e}")
+                    _open_chronology_manager()
                     # After editing dates, show the menu again
+                    continue
+                elif choice in ['ranking', 'rank', 'score', 'scores', 'override']:
+                    _open_ranking_manager(project_signatures)
                     continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
                     print("🔄 Starting new analysis session...")
                     break
                 else:
-                    print("❌ Please enter 'corrections', 'continue', or 'exit'")
+                    print("❌ Please enter 'corrections', 'ranking', 'continue', or 'exit'")
             
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:

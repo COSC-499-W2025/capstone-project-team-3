@@ -95,7 +95,7 @@ describe('ResumeSidebar', () => {
 
   test('clicking edit or delete does not trigger row selection', () => {
     const onDelete = jest.fn();
-    renderSidebar({ onDelete });
+    renderSidebar({ onEdit: jest.fn(), onDelete });
 
     fireEvent.click(screen.getAllByLabelText('Edit resume')[0]);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
@@ -104,6 +104,31 @@ describe('ResumeSidebar', () => {
     window.confirm = jest.fn(() => false); // Cancel delete to avoid triggering onDelete
     fireEvent.click(deleteButtons[0]);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
+  });
+
+  test('does not show Edit button for master resume', () => {
+    renderSidebar({ onEdit: jest.fn(), onDelete: jest.fn() });
+
+    const editButtons = screen.getAllByLabelText('Edit resume');
+    // Only 2 saved resumes (id != null), so only 2 Edit buttons
+    expect(editButtons).toHaveLength(2);
+    // Master Resume row (first) has no Edit button
+    const firstRow = screen.getByText('Master Resume').closest('.resume-sidebar__item');
+    expect(firstRow?.querySelector('[aria-label="Edit resume"]')).toBeNull();
+  });
+
+  test('does not show Edit button for preview resume (id null)', () => {
+    const listWithPreview: ResumeListItem[] = [
+      { id: null, name: 'Preview Resume (Unsaved)', is_master: false },
+      { id: 2, name: 'Saved Resume', is_master: false },
+    ];
+    renderSidebar({ resumeList: listWithPreview, onEdit: jest.fn(), onDelete: jest.fn() });
+
+    // Only the saved resume (id 2) has Edit button
+    const editButtons = screen.getAllByLabelText('Edit resume');
+    expect(editButtons).toHaveLength(1);
+    const previewRow = screen.getByText('Preview Resume (Unsaved)').closest('.resume-sidebar__item');
+    expect(previewRow?.querySelector('[aria-label="Edit resume"]')).toBeNull();
   });
 
   test('delete button only shows for non-master resumes (id > 1)', () => {

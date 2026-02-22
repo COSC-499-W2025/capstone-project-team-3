@@ -204,4 +204,31 @@ describe('ResumePreview', () => {
     expect(screen.getAllByText('Project 1').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Project 10').length).toBeGreaterThan(0);
   });
+
+  test('renders in edit mode with projects and onSectionChange without crashing', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        }
+      ]
+    };
+    const onSectionChange = jest.fn();
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={onSectionChange}
+      />
+    );
+
+    expect(screen.getAllByText('E-commerce Website').length).toBeGreaterThan(0);
+  });
 });

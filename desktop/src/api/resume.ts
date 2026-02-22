@@ -55,12 +55,15 @@ export async function saveNewResume(name: string, projectIds: string[]): Promise
   return res.json() as Promise<{ resume_id: number }>;
 }
 
-// Update existing saved resume
-export async function updateResume(id: number, resume: Resume): Promise<void> {
+// Update existing saved resume with partial edits
+export async function updateResume(
+  id: number, 
+  payload: { skills?: string[], projects?: any[] }
+): Promise<void> {
   const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(resume)
+    body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Resume } from "../api/resume_types";
+import { Resume, Skills, Project } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
@@ -17,6 +17,12 @@ import {
   type ResumeListItem 
 } from "../api/resume";
 
+/** Convert YYYY-MM to YYYY-MM-01 for backend fromisoformat. */
+function toISOStartOfMonth(ym: string): string {
+  if (!/^\d{4}-\d{2}$/.test(ym)) return ym;
+  return `${ym}-01`;
+}
+
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -31,6 +37,8 @@ export function ResumeBuilderPage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveResumeName, setSaveResumeName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSections, setEditedSections] = useState<Set<string>>(new Set());
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -92,7 +100,21 @@ export function ResumeBuilderPage() {
     }
   }, [baseResumeList, activeIndex, isPreviewMode]);
 
+  const handleEditResume = () => {
+    setIsEditing(true);
+    setEditedSections(new Set()); // Clear edited sections when entering edit mode
+  };
+
+  const handleSectionChange = (section: "skills" | "projects", data: Skills | Project[]) => {
+    setActiveContent(prev => (prev ? { ...prev, [section]: data } : prev));
+    setEditedSections(prev => new Set(prev).add(section));
+  };
+
   const handleSelectResume = (index: number) => {
+    // Exit edit mode when switching resumes
+    setIsEditing(false);
+    setEditedSections(new Set()); // Clear edited sections when switching
+    
     // If selecting the preview resume (index 0 in preview mode), do nothing
     if (isPreviewMode && index === 0) {
       return;
@@ -115,6 +137,10 @@ export function ResumeBuilderPage() {
         }
       }
     } else {
+      // Normal selection when not in preview mode
+      if (index !== activeIndex) {
+        setActiveContent(null); // Don’t show previous resume while new one loads
+      }
       // Normal selection when not in preview mode
       setActiveIndex(index);
     }
@@ -185,12 +211,43 @@ export function ResumeBuilderPage() {
 
   const handleUpdateExistingResume = async () => {
     if (!activeContent || !currentResume?.id) return;
-    
     try {
       setSaving(true);
-      await updateResume(currentResume.id, activeContent);
-      // Could show a success message here
-      // console.log('Resume updated successfully');
+      
+      // Build payload with only edited sections
+      const payload: { skills?: string[], projects?: any[] } = {};
+      
+      if (editedSections.has('skills')) {
+        // Transform { Skills: [...] } to [...]
+        payload.skills = activeContent.skills.Skills;
+      }
+      
+      // If projects were edited, include them
+      // (For now, only skills are editable, but this is future-ready)
+      if (editedSections.has('projects')) {
+        payload.projects = activeContent.projects.map((project, index) => {
+          if (!project.project_id) {
+            throw new Error(
+              "Cannot save project edits: project_id missing. Reload the resume and try again."
+            );
+          }
+          const start = project.start_date ? toISOStartOfMonth(project.start_date) : undefined;
+          const end = project.end_date ? toISOStartOfMonth(project.end_date) : undefined;
+          return {
+            project_id: project.project_id,
+            project_name: project.title,
+            ...(start && { start_date: start }),
+            ...(end && { end_date: end }),
+            skills: project.skills,
+            bullets: project.bullets,
+            display_order: index + 1
+          };
+        });
+      }
+      
+      await updateResume(currentResume.id, payload);
+      setIsEditing(false); // Exit edit mode after save
+      setEditedSections(new Set()); // Clear edited sections
     } catch (error) {
       console.error('Failed to update resume:', error);
       alert('Failed to update resume. Please try again.');
@@ -325,12 +382,19 @@ export function ResumeBuilderPage() {
             onDelete={handleDeleteResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            onEdit={handleEditResume}
           />
         </div>
         <div className="resume-builder__main">
           <div className="container">
             <div className="card">
-              {activeContent && <ResumePreview resume={activeContent} />}
+              {activeContent && (
+                <ResumePreview 
+                  resume={activeContent}
+                  isEditing={isEditing}
+                  onSectionChange={handleSectionChange}
+                />
+              )}
             </div>
           </div>
         </div>

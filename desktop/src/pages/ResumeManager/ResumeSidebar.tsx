@@ -8,7 +8,8 @@ export const ResumeSidebar = ({
   onTailorNew,
   onDelete,
   sidebarOpen = true,
-  onToggleSidebar
+  onToggleSidebar,
+  onEdit
 }: {
   resumeList: ResumeListItem[];
   activeIndex: number;
@@ -17,6 +18,7 @@ export const ResumeSidebar = ({
   onDelete?: (id: number) => void;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  onEdit?: () => void;
 }) => {
   return (
     <aside className={`resume-sidebar ${sidebarOpen ? "resume-sidebar--open" : "resume-sidebar--closed"}`}>
@@ -51,9 +53,21 @@ export const ResumeSidebar = ({
             >
               <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
               <span className="resume-sidebar__actions">
-                <button type="button" className="resume-sidebar__icon-btn" aria-label="Edit resume" onClick={(e) => { e.stopPropagation(); }}>
-                  <img src="/edit_icon.svg" alt="" width={20} height={20} />
-                </button>
+                {!r.is_master && r.id != null && (
+                  <button 
+                    type="button" 
+                    className="resume-sidebar__icon-btn" 
+                    aria-label="Edit resume" 
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      if (i === activeIndex && onEdit) {
+                        onEdit();
+                      }
+                    }}
+                  >
+                    <img src="/edit_icon.svg" alt="" width={20} height={20} />
+                  </button>
+                )}
                 {r.id !== null && r.id !== 1 && onDelete && (
                   <button 
                     type="button" 

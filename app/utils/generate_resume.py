@@ -327,23 +327,17 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
     finally:
         conn.close()
 
-def create_resume(name: str | None = None) -> int:
+def create_resume(name: str) -> int:
     """Create a Resume and if no name is provided, set a default name"""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         "INSERT INTO RESUME (name) VALUES (?)",
-        (name or "",)
+        (name,)
     )
 
     resume_id = cursor.lastrowid
-    # If no name was provided, update the name to 'Resume-id'
-    if not name:
-        cursor.execute(
-            "UPDATE RESUME SET name = ? WHERE id = ?",
-            (f"Resume-{resume_id}", resume_id)
-        )
     conn.commit()
     conn.close()
     return resume_id

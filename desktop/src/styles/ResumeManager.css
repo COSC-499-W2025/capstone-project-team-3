@@ -4,7 +4,7 @@
   --border-light: #e5e7eb;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
-  --accent-green: #2ec866;
+  --button-blue: #1e3a8a;
 }
 
 body {
@@ -27,10 +27,147 @@ body {
 
 /* Resume builder: full viewport, sidebar and main each have their own scroll */
 .page--resume-builder {
-  flex-direction: row;
+  flex-direction: column;
   align-items: stretch;
   height: 100vh;
   max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Header with navigation and actions */
+.resume-builder__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+  z-index: 10;
+}
+
+.resume-builder__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.nav-link {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+  background: none;
+  border-radius: 0;
+}
+
+.nav-separator {
+  color: var(--text-secondary);
+}
+
+.nav-current {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.resume-builder__actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Button styles */
+.btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn--secondary {
+  background: var(--bg-card);
+  border-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.btn--secondary:hover {
+  background: var(--bg-page);
+}
+
+.btn--primary {
+  background:  var(--color-navy);
+  border-color: var(--color-navy);
+  color: white;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background-color: var(--color-blue-darker);
+}
+
+.btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: white;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-page);
+  border-radius: 0;
+}
+
+.resume-builder__content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -41,6 +178,10 @@ body {
   min-height: 0;
   overflow: hidden;
   border-radius: 0;
+  border-right: 1px solid var(--border-light);
+  border-top: none;
+  border-left: none;
+  border-bottom: none;
 }
 
 .resume-builder__main {

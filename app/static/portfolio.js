@@ -828,7 +828,7 @@ showError(message) {
         // Create a hidden file input element
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/*';
+        input.accept = 'image/jpeg,image/png,image/gif,image/svg+xml,image/webp';
         input.style.display = 'none';
         
         input.onchange = async (e) => {

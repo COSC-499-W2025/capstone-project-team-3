@@ -15,6 +15,8 @@ export function ResumeBuilderPage() {
   const [activeContent, setActiveContent] = useState<Resume | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [previewProjectIds, setPreviewProjectIds] = useState<string[]>([]);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -41,6 +43,21 @@ export function ResumeBuilderPage() {
       setPreviewProjectIds([]);
     }
   }, [searchParams]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown')) {
+        setShowDownloadMenu(false);
+      }
+    };
+
+    if (showDownloadMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDownloadMenu]);
 
   // Load content whenever selection changes (only if not in preview mode)
   useEffect(() => {
@@ -97,6 +114,24 @@ export function ResumeBuilderPage() {
     } catch (error) {
       console.error('Failed to delete resume:', error);
       alert('Failed to delete resume. Please try again.');
+  const handleDownload = async (format: 'pdf' | 'tex') => {
+    try {
+      setDownloading(true);
+      setShowDownloadMenu(false);
+      
+      const currentResume = resumeList[activeIndex];
+      const filename = currentResume?.name || 'resume';
+      
+      // TODO: Connect to backend download functionality
+      console.log(`Download ${format.toUpperCase()} requested for: ${filename}`);
+      
+      // Simulate download delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Failed to download resume. Please try again.');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -112,11 +147,57 @@ export function ResumeBuilderPage() {
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
         />
+      {/* Header with download button */}
+      <div className="resume-builder__header">
+        <div className="resume-builder__nav">
+          {/* Placeholder for future navigation */}
+        </div>
+        <div className="resume-builder__actions">
+          <div className="dropdown">
+            <button 
+              className="btn btn--primary"
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              disabled={downloading}
+            >
+              {downloading ? 'Downloading...' : 'Download'}
+              <span className="dropdown-arrow">▼</span>
+            </button>
+            {showDownloadMenu && (
+              <div className="dropdown-menu">
+                <button 
+                  className="dropdown-item"
+                  onClick={() => handleDownload('pdf')}
+                >
+                  Download as PDF
+                </button>
+                <button 
+                  className="dropdown-item"
+                  onClick={() => handleDownload('tex')}
+                >
+                  Download as TeX
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="resume-builder__main">
-        <div className="container">
-          <div className="card">
-            {activeContent && <ResumePreview resume={activeContent} />}
+
+      <div className="resume-builder__content">
+        <div className="card card--sidebar">
+          <ResumeSidebar
+            resumeList={resumeList}
+            activeIndex={activeIndex}
+            onTailorNew={() => navigate('/projectselectionpage')}
+            onSelect={handleSelectResume}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          />
+        </div>
+        <div className="resume-builder__main">
+          <div className="container">
+            <div className="card">
+              {activeContent && <ResumePreview resume={activeContent} />}
+            </div>
           </div>
         </div>
       </div>

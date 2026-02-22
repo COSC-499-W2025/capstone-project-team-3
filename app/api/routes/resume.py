@@ -27,9 +27,19 @@ def tex_hash(tex: str) -> str:
     """Creates a unique hash of the LaTex source for futurer caching """
     return hashlib.sha256(tex.encode("utf-8")).hexdigest()
 
-def get_resume_tex(project_ids: Optional[List[str]]) -> str:
-    """Helper method that builds resume model and generates resume in tex format"""
-    resume_model = build_resume_model(project_ids=project_ids)
+def get_resume_tex(project_ids: Optional[List[str]] = None, resume_id: Optional[int] = None) -> str:
+    """Helper method that builds resume model and generates resume in tex format.
+    
+    Args:
+        project_ids: For preview mode - builds from base PROJECT table
+        resume_id: For saved resumes - loads from RESUME_PROJECT table with edits
+    """
+    if resume_id is not None:
+        # Load saved/edited resume from RESUME_PROJECT table
+        resume_model = load_saved_resume(resume_id)
+    else:
+        # Build from base PROJECT table (preview or master resume)
+        resume_model = build_resume_model(project_ids=project_ids)
     return generate_resume_tex(resume_model)
 
 def escape_tex_for_html(tex: str) -> str:
@@ -108,25 +118,30 @@ def save_edited_resume(id: int, payload: Dict[str, Any]):
     
 
 @router.get("/resume/export/tex")
-def resume_tex_export(project_ids: Optional[List[str]] = Query(None)):
+def resume_tex_export(
+    project_ids: Optional[List[str]] = Query(None),
+    resume_id: Optional[int] = Query(None)
+):
+    """Export resume as TeX.
+    
+    Use resume_id for saved/edited resumes (loads from RESUME_PROJECT).
+    Use project_ids for preview mode (builds from base PROJECT table).
+    Use neither for master resume.
+    """
+    # Validate that only one parameter is provided
+    if project_ids and resume_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot specify both project_ids and resume_id. Use resume_id for saved resumes or project_ids for preview."
+        )
+        
     try:
-        tex = get_resume_tex(project_ids)
+        tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return Response(
-        content=tex,
-        media_type="application/x-tex",
-        headers={"Content-Disposition": "attachment; filename=resume.tex"},
-    )
-
-@router.post("/resume/export/tex")
-def resume_tex_filtered(filter: ResumeFilter):
-    """This method downloads a resume for specified projects."""
-    try:
-        tex = get_resume_tex(filter.project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     return Response(
         content=tex,
         media_type="application/x-tex",
@@ -232,9 +247,26 @@ def get_or_compile_pdf(tex: str) -> bytes:
         
 @router.get("/resume/export/pdf")
 # Make the endpoint async to allow awaiting background tasks
-async def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
+async def resume_pdf_export(
+    project_ids: Optional[List[str]] = Query(None),
+    resume_id: Optional[int] = Query(None)
+):
+    """Export resume as PDF.
+    
+    Use resume_id for saved/edited resumes (loads from RESUME_PROJECT).
+    Use project_ids for preview mode (builds from base PROJECT table).
+    Use neither for master resume.
+    """
+    if project_ids and resume_id is not None:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot specify both project_ids and resume_id. Use resume_id for saved resumes or project_ids for preview."
+        )
+        
     try:
-        tex = get_resume_tex(project_ids)
+        tex = get_resume_tex(project_ids=project_ids, resume_id=resume_id)
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -249,24 +281,6 @@ async def resume_pdf_export(project_ids: Optional[List[str]] = Query(None)):
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
-    
-@router.post("/resume/export/pdf")
-async def resume_pdf_filtered(filter: ResumeFilter):
-    """This method downloads a resume for specified projects."""
-    try:
-        tex = get_resume_tex(filter.project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    pdf_bytes = await run_in_threadpool(
-        get_or_compile_pdf,
-        tex,
-    )
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=resume.pdf"},
-    )
-
 
 @router.delete("/resume/{resume_id}")
 def delete_saved_resume(resume_id: int):

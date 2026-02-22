@@ -20,6 +20,10 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _humanize_metric_name(metric_name: str) -> str:
+    return metric_name.replace("_", " ")
+
+
 def format_project_score_display(project: Dict[str, Any]) -> str:
     """
     Format project score with override marker.
@@ -44,6 +48,73 @@ def _print_breakdown_summary(project_name: str, breakdown_payload: Dict[str, Any
         f"non-code={_to_float(blend.get('non_code_percentage')):.3f}"
     )
     print(f"   Final score: {_to_float(breakdown.get('final_score')):.3f}")
+    print(
+        f"   Effort mix: code_lines={int(_to_float(blend.get('code_lines')))}, "
+        f"doc_words={int(_to_float(blend.get('doc_word_count')))} "
+        f"(doc_line_equiv={_to_float(blend.get('doc_line_equiv')):.1f})"
+    )
+
+    code_metrics = code.get("metrics", {})
+    if code_metrics:
+        print("\n   Code metrics:")
+        for metric_name, metric_data in code_metrics.items():
+            readable_name = _humanize_metric_name(metric_name)
+            if not isinstance(metric_data, dict):
+                raw_value = _to_float(metric_data)
+                raw_display = int(raw_value) if raw_value.is_integer() else round(raw_value, 3)
+                print(
+                    f"      - {readable_name}: your project has {raw_display}. "
+                    f"(Detailed benchmark data is unavailable for this metric.)"
+                )
+                continue
+            raw = _to_float(metric_data.get("raw"))
+            cap = _to_float(metric_data.get("cap"))
+            normalized = _to_float(metric_data.get("normalized"))
+            weight = _to_float(metric_data.get("weight"))
+            contribution = _to_float(metric_data.get("contribution"))
+            raw_display = int(raw) if raw.is_integer() else round(raw, 3)
+            cap_display = int(cap) if cap.is_integer() else round(cap, 3)
+            gap = max(cap - raw, 0.0)
+            gap_display = int(gap) if float(gap).is_integer() else round(gap, 3)
+            print(
+                f"      - {readable_name}: your project has {raw_display}. "
+                f"A full score for this metric is {cap_display}. "
+                f"You are at {normalized * 100:.1f}% of full score "
+                f"({gap_display} away from the cap). "
+                f"This metric weight is {weight * 100:.1f}% and currently contributes {contribution:.3f}."
+            )
+    else:
+        print("\n   Code metrics: none (no code metrics available).")
+
+    non_code_metrics = non_code.get("metrics", {})
+    if non_code_metrics:
+        print("\n   Non-code metrics:")
+        for metric_name, metric_data in non_code_metrics.items():
+            readable_name = _humanize_metric_name(metric_name)
+            if not isinstance(metric_data, dict):
+                raw_value = _to_float(metric_data)
+                raw_display = int(raw_value) if raw_value.is_integer() else round(raw_value, 3)
+                print(
+                    f"      - {readable_name}: your project has {raw_display}. "
+                    f"(Detailed benchmark data is unavailable for this metric.)"
+                )
+                continue
+            raw = _to_float(metric_data.get("raw"))
+            cap = _to_float(metric_data.get("cap"))
+            normalized = _to_float(metric_data.get("normalized"))
+            weight = _to_float(metric_data.get("weight"))
+            contribution = _to_float(metric_data.get("contribution"))
+            raw_display = int(raw) if raw.is_integer() else round(raw, 3)
+            cap_display = int(cap) if cap.is_integer() else round(cap, 3)
+            gap = max(cap - raw, 0.0)
+            gap_display = int(gap) if float(gap).is_integer() else round(gap, 3)
+            print(
+                f"      - {readable_name}: your project has {raw_display}. "
+                f"A full score for this metric is {cap_display}. "
+                f"You are at {normalized * 100:.1f}% of full score "
+                f"({gap_display} away from the cap). "
+                f"This metric weight is {weight * 100:.1f}% and currently contributes {contribution:.3f}."
+            )
 
 
 def _prompt_metric_exclusions(breakdown_payload: Dict[str, Any]) -> List[str]:

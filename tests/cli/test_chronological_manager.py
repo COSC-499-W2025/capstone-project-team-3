@@ -372,6 +372,81 @@ class TestChronologicalCLI:
         assert 'Cancelled' in captured.out
         
         manager.close()
+    
+    def test_normalize_skill_name_known_skills(self, temp_db):
+        """Test skill name normalization for known technical skills."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Test various casings of known skills
+        assert cli._normalize_skill_name('python') == 'Python'
+        assert cli._normalize_skill_name('PYTHON') == 'Python'
+        assert cli._normalize_skill_name('PyThOn') == 'Python'
+        
+        assert cli._normalize_skill_name('javascript') == 'JavaScript'
+        assert cli._normalize_skill_name('JAVASCRIPT') == 'JavaScript'
+        
+        assert cli._normalize_skill_name('postgresql') == 'PostgreSQL'
+        assert cli._normalize_skill_name('docker') == 'Docker'
+        assert cli._normalize_skill_name('aws') == 'AWS'
+        
+        manager.close()
+    
+    def test_normalize_skill_name_unknown_skills(self, temp_db):
+        """Test skill name normalization for unknown skills defaults to title case."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Test unknown skills get title cased
+        assert cli._normalize_skill_name('some skill') == 'Some Skill'
+        assert cli._normalize_skill_name('custom tool') == 'Custom Tool'
+        assert cli._normalize_skill_name('MY FRAMEWORK') == 'My Framework'
+        
+        manager.close()
+    
+    def test_is_yes_various_inputs(self, temp_db):
+        """Test _is_yes accepts various affirmative inputs."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Test yes variations
+        assert cli._is_yes('y') is True
+        assert cli._is_yes('Y') is True
+        assert cli._is_yes('yes') is True
+        assert cli._is_yes('Yes') is True
+        assert cli._is_yes('YES') is True
+        assert cli._is_yes('  yes  ') is True  # with whitespace
+        
+        # Test non-yes inputs
+        assert cli._is_yes('n') is False
+        assert cli._is_yes('no') is False
+        assert cli._is_yes('yeah') is False
+        assert cli._is_yes('yep') is False
+        assert cli._is_yes('') is False
+        
+        manager.close()
+    
+    def test_is_no_various_inputs(self, temp_db):
+        """Test _is_no accepts various negative inputs."""
+        manager = ChronologicalManager(db_path=temp_db)
+        cli = ChronologicalCLI(manager=manager)
+        
+        # Test no variations
+        assert cli._is_no('n') is True
+        assert cli._is_no('N') is True
+        assert cli._is_no('no') is True
+        assert cli._is_no('No') is True
+        assert cli._is_no('NO') is True
+        assert cli._is_no('  no  ') is True  # with whitespace
+        
+        # Test non-no inputs
+        assert cli._is_no('y') is False
+        assert cli._is_no('yes') is False
+        assert cli._is_no('nope') is False
+        assert cli._is_no('nah') is False
+        assert cli._is_no('') is False
+        
+        manager.close()
 
 
 if __name__ == "__main__":

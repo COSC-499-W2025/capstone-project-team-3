@@ -25,6 +25,8 @@ jest.mock('../src/api/resume', () => ({
   deleteResume: jest.fn(),
   downloadResumePDF: jest.fn(),
   downloadResumeTeX: jest.fn(),
+  saveNewResume: jest.fn(),
+  updateResume: jest.fn(),
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
@@ -80,6 +82,8 @@ const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
 const mockDeleteResume = resumeApi.deleteResume as ReturnType<typeof jest.fn>;
 const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
 const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
+const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
+const mockUpdateResume = resumeApi.updateResume as ReturnType<typeof jest.fn>;
 
 const mockResumeList: ResumeListItem[] = [
   { id: null, name: 'Master Resume', is_master: true },
@@ -158,6 +162,8 @@ describe('ResumeBuilderPage', () => {
     mockPreviewResume.mockResolvedValue(mockPreviewResumeData);
     mockDownloadResumePDF.mockResolvedValue(undefined);
     mockDownloadResumeTeX.mockResolvedValue(undefined);
+    mockSaveNewResume.mockResolvedValue({ id: 3 });
+    mockUpdateResume.mockResolvedValue(undefined);
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -782,6 +788,209 @@ describe('ResumeBuilderPage', () => {
     expect(finalButton.hasAttribute('disabled')).toBe(false);
 
     consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  // Save functionality tests  
+  test('clicking save in modal saves new resume and exits preview mode', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Change name
+    const input = screen.getByPlaceholderText('Enter resume name...') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Frontend Resume' } });
+
+    // Click save in modal - find by class to ensure we get the modal button
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    // Should call saveNewResume with correct params
+    await waitFor(() => {
+      expect(mockSaveNewResume).toHaveBeenCalledWith('Frontend Resume', ['proj1', 'proj2']);
+    });
+
+    // Should reload resume list
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2); // Once on mount, once after save
+    });
+
+    // Should navigate to exit preview mode
+    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage', { replace: true });
+  });
+
+  test('clicking save on existing resume updates it directly without modal', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    // Should call updateResume directly without showing modal
+    await waitFor(() => {
+      expect(mockUpdateResume).toHaveBeenCalledWith(2, mockSavedResume);
+    });
+
+    // Modal should not appear
+    expect(screen.queryByText('Save Résumé version as:')).toBeNull();
+  });
+
+  test('save button shows Saving... and is disabled during save operation', async () => {
+    let resolveUpdate: () => void;
+    const updatePromise = new Promise<void>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    mockUpdateResume.mockReturnValue(updatePromise);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    // Button should show "Saving..." and be disabled
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Saving...' });
+      expect(button).toBeDefined();
+      expect(button.hasAttribute('disabled')).toBe(true);
+    });
+
+    // Resolve the save
+    resolveUpdate!();
+
+    // Button should return to normal
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDefined();
+    });
+  });
+
+  test('handles save error gracefully for existing resume', async () => {
+    mockUpdateResume.mockRejectedValue(new Error('Network error'));
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to update resume. Please try again.');
+    });
+
+    // Button should be enabled again
+    const finalButton = screen.getByRole('button', { name: 'Save' });
+    expect(finalButton.hasAttribute('disabled')).toBe(false);
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  test('handles save error gracefully for new resume', async () => {
+    mockSaveNewResume.mockRejectedValue(new Error('Network error'));
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    mockSearchParams.append('project_ids', 'proj1');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Click save in modal
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to save resume. Please try again.');
+    });
+
+    // Modal should still be open
+    expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  test('does not save if resume name is empty', async () => {
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    mockSearchParams.append('project_ids', 'proj1');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Clear the input
+    const input = screen.getByPlaceholderText('Enter resume name...') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '   ' } });
+
+    // Click save in modal
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    // Should show alert
+    expect(alertMock).toHaveBeenCalledWith('Please enter a resume name');
+
+    // Should not call save API
+    expect(mockSaveNewResume).not.toHaveBeenCalled();
+
     alertMock.mockRestore();
   });
 });

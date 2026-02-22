@@ -114,7 +114,10 @@ export function ResumePreview({ resume }: { resume: Resume }) {
             const hasSkills = sectionIndices.includes(2);
             const projectSectionIndices = sectionIndices.filter((si) => si >= 3);
             const projectIndices = projectSectionIndices.map((si) => si - 3);
-            const pageProjects = projectIndices.map((i) => projects[i]);
+            // Filter out invalid indices to prevent accessing undefined projects during state updates
+            const pageProjects = projectIndices
+              .filter(i => i >= 0 && i < projects.length)
+              .map((i) => projects[i]);
 
             return (
               <div

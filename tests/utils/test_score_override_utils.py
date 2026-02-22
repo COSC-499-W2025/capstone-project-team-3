@@ -71,7 +71,6 @@ def test_resolve_effective_score_not_overridden():
     assert resolved["score_original"] == pytest.approx(0.7)
     assert resolved["score_overridden"] is False
     assert resolved["score_overridden_value"] is None
-    assert resolved["display_score"] == pytest.approx(0.7)
 
 
 def test_resolve_effective_score_overridden():
@@ -80,17 +79,16 @@ def test_resolve_effective_score_overridden():
     assert resolved["score_original"] == pytest.approx(0.4)
     assert resolved["score_overridden"] is True
     assert resolved["score_overridden_value"] == pytest.approx(0.95)
-    assert resolved["display_score"] == pytest.approx(0.95)
 
 
 def test_resolve_effective_score_string_override_flags():
     not_overridden = resolve_effective_score(0.7, "0", 0.95)
     assert not_overridden["score_overridden"] is False
-    assert not_overridden["display_score"] == pytest.approx(0.7)
+    assert not_overridden["score"] == pytest.approx(0.7)
 
     overridden = resolve_effective_score(0.7, "1", 0.95)
     assert overridden["score_overridden"] is True
-    assert overridden["display_score"] == pytest.approx(0.95)
+    assert overridden["score"] == pytest.approx(0.95)
 
 
 def test_compute_project_breakdown_non_git(isolated_db):
@@ -99,7 +97,7 @@ def test_compute_project_breakdown_non_git(isolated_db):
 
     assert payload["project_signature"] == signature
     assert payload["score_overridden"] is False
-    assert payload["display_score"] == pytest.approx(0.62)
+    assert payload["score"] == pytest.approx(0.62)
     assert payload["breakdown"]["code"]["type"] == "non_git"
     assert "total_lines" in payload["breakdown"]["code"]["metrics"]
 
@@ -134,7 +132,7 @@ def test_apply_then_clear_override_persists_state(isolated_db):
 
     applied = apply_project_score_override(signature, ["test_files_changed"])
     assert applied["score_overridden"] is True
-    assert applied["score_overridden_value"] == pytest.approx(applied["display_score"])
+    assert applied["score_overridden_value"] == pytest.approx(applied["score"])
 
     conn = dbmod.get_connection()
     cur = conn.cursor()
@@ -154,7 +152,7 @@ def test_apply_then_clear_override_persists_state(isolated_db):
     cleared = clear_project_score_override(signature)
     assert cleared["score_overridden"] is False
     assert cleared["score_overridden_value"] is None
-    assert cleared["display_score"] == pytest.approx(cleared["score_original"])
+    assert cleared["score"] == pytest.approx(cleared["score_original"])
 
 
 def test_compute_project_breakdown_not_found():

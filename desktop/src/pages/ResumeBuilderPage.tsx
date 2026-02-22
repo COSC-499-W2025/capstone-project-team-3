@@ -6,6 +6,7 @@ import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
 import { getResumes, buildResume, getResumeById, previewResume, deleteResume, type ResumeListItem } from "../api/resume";
 import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX } from "../api/resume";
+import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX, saveNewResume, updateResume } from "../api/resume";
 
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export function ResumeBuilderPage() {
   const [downloading, setDownloading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveResumeName, setSaveResumeName] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -164,16 +166,59 @@ export function ResumeBuilderPage() {
       setSaveResumeName(`Resume - ${timestamp}`);
       setShowSaveModal(true);
     } else {
-      // For existing resumes, implement save logic later
-      console.log('Save existing resume');
+      // For existing saved resumes, update directly
+      handleUpdateExistingResume();
     }
   };
 
-  const handleSaveResume = () => {
-    // TODO: Implement backend save logic
-    console.log('Saving resume with name:', saveResumeName);
-    console.log('Project IDs:', previewProjectIds);
-    setShowSaveModal(false);
+  const handleUpdateExistingResume = async () => {
+    if (!activeContent || !currentResume?.id) return;
+    
+    try {
+      setSaving(true);
+      await updateResume(currentResume.id, activeContent);
+      // Could show a success message here
+      // console.log('Resume updated successfully');
+    } catch (error) {
+      console.error('Failed to update resume:', error);
+      alert('Failed to update resume. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveResume = async () => {
+    if (!saveResumeName.trim()) {
+      alert('Please enter a resume name');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const result = await saveNewResume(saveResumeName, previewProjectIds);
+      // console.log('Resume saved with ID:', result.resume_id);
+      
+      // Reload resume list
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+      
+      // Exit preview mode and navigate to the newly saved resume
+      navigate('/resumebuilderpage', { replace: true });
+      
+      // Find the index of the newly saved resume
+      const newIndex = updatedList.findIndex(r => r.id === result.resume_id);
+      if (newIndex !== -1) {
+        setActiveIndex(newIndex);
+      }
+      
+      setShowSaveModal(false);
+      setSaveResumeName("");
+    } catch (error) {
+      console.error('Failed to save resume:', error);
+      alert('Failed to save resume. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCloseSaveModal = () => {
@@ -207,8 +252,12 @@ export function ResumeBuilderPage() {
         </div>
         <div className="resume-builder__actions">
           {showSaveButton && (
-            <button className="btn btn--secondary" onClick={handleOpenSaveModal}>
-              Save
+            <button 
+              className="btn btn--secondary" 
+              onClick={handleOpenSaveModal}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save'}
             </button>
           )}
           <div className="dropdown">
@@ -253,8 +302,12 @@ export function ResumeBuilderPage() {
               placeholder="Enter resume name..."
               autoFocus
             />
-            <button className="btn btn--primary modal-save-btn" onClick={handleSaveResume}>
-              Save
+            <button 
+              className="btn btn--primary modal-save-btn" 
+              onClick={handleSaveResume}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>

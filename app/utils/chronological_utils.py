@@ -109,11 +109,11 @@ class ChronologicalManager:
             project_id: Project signature to get skills for
             
         Returns:
-            List of dicts with skill, source, and date ordered by date ascending
+            List of dicts with id, skill, source, and date ordered by date ascending
         """
         cur = self.conn.cursor()
         cur.execute("""
-            SELECT skill, source, date
+            SELECT id, skill, source, date
             FROM SKILL_ANALYSIS
             WHERE project_id = ?
             ORDER BY date ASC, skill ASC
@@ -122,28 +122,28 @@ class ChronologicalManager:
         rows = cur.fetchall()
         return [
             {
-                'skill': row[0],
-                'source': row[1],
-                'date': row[2] or ''
+                'id': row[0],
+                'skill': row[1],
+                'source': row[2],
+                'date': row[3] or ''
             }
             for row in rows
         ]
     
-    def update_skill_date(self, project_id: str, skill: str, new_date: str):
+    def update_skill_date(self, skill_id: int, new_date: str):
         """
-        Update the date for a specific skill in a project.
+        Update the date for a specific skill entry by ID.
         
         Args:
-            project_id: Project signature
-            skill: Skill name to update
+            skill_id: ID of the skill entry to update
             new_date: New date in YYYY-MM-DD format
         """
         cur = self.conn.cursor()
         cur.execute("""
             UPDATE SKILL_ANALYSIS
             SET date = ?
-            WHERE project_id = ? AND skill = ?
-        """, (new_date, project_id, skill))
+            WHERE id = ?
+        """, (new_date, skill_id))
         
         self.conn.commit()
     
@@ -165,37 +165,35 @@ class ChronologicalManager:
         
         self.conn.commit()
     
-    def remove_skill(self, project_id: str, skill: str):
+    def remove_skill(self, skill_id: int):
         """
-        Remove a skill from a project.
+        Remove a skill entry by ID.
         
         Args:
-            project_id: Project signature
-            skill: Skill name to remove
+            skill_id: ID of the skill entry to remove
         """
         cur = self.conn.cursor()
         cur.execute("""
             DELETE FROM SKILL_ANALYSIS
-            WHERE project_id = ? AND skill = ?
-        """, (project_id, skill))
+            WHERE id = ?
+        """, (skill_id,))
         
         self.conn.commit()
     
-    def update_skill_name(self, project_id: str, old_skill: str, new_skill: str):
+    def update_skill_name(self, skill_id: int, new_skill: str):
         """
-        Rename a skill in a project.
+        Rename a skill entry by ID.
         
         Args:
-            project_id: Project signature
-            old_skill: Current skill name
+            skill_id: ID of the skill entry to update
             new_skill: New skill name
         """
         cur = self.conn.cursor()
         cur.execute("""
             UPDATE SKILL_ANALYSIS
             SET skill = ?
-            WHERE project_id = ? AND skill = ?
-        """, (new_skill, project_id, old_skill))
+            WHERE id = ?
+        """, (new_skill, skill_id))
         
         self.conn.commit()
     

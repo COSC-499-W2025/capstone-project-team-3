@@ -62,35 +62,7 @@ def resume_page(project_ids: Optional[List[str]] = Query(None)):
     - No project_ids → master resume
     - project_ids provided → filtered resume
     """
-    # try:
-        # tex = get_resume_tex(project_ids)
-    # except ResumeServiceError as e:
-    #     raise HTTPException(status_code=500, detail=str(e))
-    # preview = escape_tex_for_html(tex)
 
-    # # Build export links dynamically
-    # if project_ids:
-    #     params = "&".join(f"project_ids={pid}" for pid in project_ids)
-    #     tex_link = f"/resume/export/tex?{params}"
-    #     pdf_link = f"/resume/export/pdf?{params}"
-    #     title = "Resume Export (Selected Projects)"
-    # else:
-    #     tex_link = "/resume/export/tex"
-    #     pdf_link = "/resume/export/pdf"
-    #     title = "Resume Export (All Projects)"
-
-    # return f"""
-    # <html>
-    #     <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
-    #         <h2>{title}</h2>
-    #         <p>Download your LaTeX/PDF resume:</p>
-    #         <p><a href="{tex_link}">Download resume.tex</a></p>
-    #         <p><a href="{pdf_link}">Download resume.pdf</a></p>
-    #         <h3>Preview (LaTeX)</h3>
-    #         <pre style="white-space: pre-wrap; border:1px solid #ddd; padding:10px; max-height: 50vh; overflow:auto; background:#fafafa;">{preview}</pre>
-    #     </body>
-    # </html>
-    # """
     try:
         resume_model = build_resume_model(project_ids=project_ids)
         return resume_model
@@ -114,32 +86,6 @@ def list_resumes_endpoint():
         return {"resumes": list_resumes()}
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.post("/resume/preview", response_class=HTMLResponse)
-def generate_resume(filter: ResumeFilter):
-    """
-    This is to generate a resume for selected projects 
-    
-    Example use-cases:
-    - Allowing a user to tailor their resume for a certain job
-    - Generating a resume for the top three ranked projects
-    """
-   
-    try:
-        tex = get_resume_tex(filter.project_ids)
-    except ResumeServiceError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    preview = escape_tex_for_html(tex)
-
-    return f"""
-    <html>
-        <body>
-            <h2>Generated Resume</h2>
-            <p>Projects included: {", ".join(filter.project_ids)}</p>
-            <pre style="white-space: pre-wrap;">{preview}</pre>
-        </body>
-    </html>
-    """
 
 @router.post("/resume/{id}/edit")
 def save_edited_resume(id: int, payload: Dict[str, Any]):

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getProjects, type Project } from "../api/projects";
 import "../styles/ProjectSelectionPage.css";
 
 function ProjectSelectionPage() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -32,8 +34,9 @@ function ProjectSelectionPage() {
 
   const handleGenerateResume = () => {
     const selectedIds = Array.from(selectedProjects);
-    console.log("Generating resume with projects:", selectedIds);
-    // TODO: Implement resume generation with selected projects
+    // Navigate to resume builder with project IDs for preview
+    const params = selectedIds.map(id => `project_ids=${id}`).join('&');
+    navigate(`/resumebuilderpage?${params}`);
   };
 
   if (loading) {

@@ -1,14 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { test, jest, beforeEach, describe } from '@jest/globals';
 import '@testing-library/jest-dom';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, useNavigate } from 'react-router-dom';
 import ProjectSelectionPage from '../src/pages/ProjectSelectionPage';
 import * as projectsApi from '../src/api/projects';
 
 // Mock the projects API
 jest.mock('../src/api/projects');
 
+// Mock react-router-dom's useNavigate
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: jest.fn(),
+}));
+
 const mockGetProjects = projectsApi.getProjects as jest.MockedFunction<typeof projectsApi.getProjects>;
+const mockNavigate = jest.fn();
 
 const mockProjects: projectsApi.Project[] = [
   {
@@ -37,7 +44,8 @@ const mockProjects: projectsApi.Project[] = [
 describe('ProjectSelectionPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    console.log = jest.fn(); // Mock console.log
+    mockNavigate.mockClear();
+    (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
     mockGetProjects.mockImplementation(() => Promise.resolve(mockProjects));
   });
 
@@ -165,7 +173,47 @@ describe('ProjectSelectionPage', () => {
     expect(checkboxes[2]).not.toBeChecked();
   });
 
-  test('generate resume button logs selected project IDs', async () => {
+  test('generate resume button navigates with selected project IDs', async () => {
+    const { container } = render(
+      <BrowserRouter>
+        <ProjectSelectionPage />
+      </BrowserRouter>
+    );
+
+    // Wait for content to load
+    await screen.findByText('Project Alpha');
+
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    fireEvent.click(checkboxes[0]); // Select Project Alpha (id: '1')
+    fireEvent.click(checkboxes[2]); // Select Project Gamma (id: '3')
+
+    const button = screen.getByText('Generate Resume');
+    fireEvent.click(button);
+
+    // Should navigate to resume builder with project IDs as URL params
+    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage?project_ids=1&project_ids=3');
+  });
+
+  test('navigates with single project ID when only one selected', async () => {
+    const { container } = render(
+      <BrowserRouter>
+        <ProjectSelectionPage />
+      </BrowserRouter>
+    );
+
+    // Wait for content to load
+    await screen.findByText('Project Beta');
+
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    fireEvent.click(checkboxes[1]); // Select Project Beta (id: '2')
+
+    const button = screen.getByText('Generate Resume');
+    fireEvent.click(button);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage?project_ids=2');
+  });
+
+  test('navigates with all projects when all are selected', async () => {
     const { container } = render(
       <BrowserRouter>
         <ProjectSelectionPage />
@@ -177,15 +225,13 @@ describe('ProjectSelectionPage', () => {
 
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
     fireEvent.click(checkboxes[2]);
 
     const button = screen.getByText('Generate Resume');
     fireEvent.click(button);
 
-    expect(console.log).toHaveBeenCalledWith(
-      'Generating resume with projects:',
-      expect.arrayContaining(['1', '3'])
-    );
+    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage?project_ids=1&project_ids=2&project_ids=3');
   });
 
   test('when no projects: shows empty message and table with headers', async () => {

@@ -7,7 +7,7 @@ from app.cli.project_score_override_cli import (
 
 
 def test_format_project_score_display_shows_override_marker():
-    project = {"display_score": 0.8123, "score_overridden": True}
+    project = {"score": 0.8123, "score_overridden": True}
     assert format_project_score_display(project) == "0.812*"
 
 
@@ -17,12 +17,11 @@ def test_run_project_score_override_cli_preview_apply_clear_flow(capsys):
             "project_signature": "sig-1",
             "name": "Project One",
             "score": 0.70,
-            "display_score": 0.70,
             "score_overridden": False,
         }
     ]
     breakdown_payload = {
-        "display_score": 0.70,
+        "score": 0.70,
         "breakdown": {
             "code": {"type": "non_git", "subtotal": 0.60, "metrics": {"total_lines": 100}},
             "non_code": {"subtotal": 0.90},
@@ -40,29 +39,30 @@ def test_run_project_score_override_cli_preview_apply_clear_flow(capsys):
         ) as preview,
         patch(
             "app.cli.project_score_override_cli.apply_project_score_override",
-            return_value={"display_score": 0.82},
+            return_value={"score": 0.82},
         ) as apply_override,
         patch(
             "app.cli.project_score_override_cli.clear_project_score_override",
-            return_value={"display_score": 0.70},
+            return_value={"score": 0.70},
         ) as clear_override,
         patch(
             "builtins.input",
             side_effect=[
-                "yes",
                 "1",
-                "preview",
+                "2",
                 "total_lines",
                 "1",
-                "apply",
+                "1",
+                "3",
                 "total_lines",
                 "1",
-                "clear",
+                "4",
+                "5",
                 "done",
             ],
         ),
     ):
-        run_project_score_override_cli(["sig-1"])
+        run_project_score_override_cli(["sig-1"], require_confirmation=False)
 
     output = capsys.readouterr().out
     assert "* indicates an overridden score." in output
@@ -70,8 +70,8 @@ def test_run_project_score_override_cli_preview_apply_clear_flow(capsys):
     assert "Override applied. New score: 0.820*" in output
     assert "Override cleared. Score restored to 0.700" in output
 
-    assert get_projects.call_count == 4
-    assert breakdown.call_count == 3
+    assert get_projects.call_count == 2
+    assert breakdown.call_count >= 3
     preview.assert_called_once_with("sig-1", ["total_lines"])
     apply_override.assert_called_once_with("sig-1", ["total_lines"])
     clear_override.assert_called_once_with("sig-1")

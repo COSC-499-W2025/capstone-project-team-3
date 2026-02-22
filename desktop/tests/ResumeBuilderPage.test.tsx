@@ -22,6 +22,7 @@ jest.mock('../src/api/resume', () => ({
   buildResume: jest.fn(),
   getResumeById: jest.fn(),
   previewResume: jest.fn(),
+  deleteResume: jest.fn(),
   downloadResumePDF: jest.fn(),
   downloadResumeTeX: jest.fn(),
   saveNewResume: jest.fn(),
@@ -29,20 +30,35 @@ jest.mock('../src/api/resume', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
-  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, sidebarOpen, onToggleSidebar }: {
+  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, sidebarOpen, onToggleSidebar }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];
     activeIndex: number;
     onSelect: (i: number) => void;
     onTailorNew?: () => void;
+    onDelete?: (id: number) => void;
     sidebarOpen: boolean;
     onToggleSidebar: () => void;
   }) => (
     <aside data-testid="resume-sidebar" data-open={sidebarOpen}>
       <h2>Your Résumés</h2>
       {resumeList.map((r, i) => (
-        <button key={i} onClick={() => onSelect(i)} data-active={i === activeIndex}>
-          {r.name}
-        </button>
+        <div key={i}>
+          <button onClick={() => onSelect(i)} data-active={i === activeIndex}>
+            {r.name}
+          </button>
+          {r.id !== null && r.id !== 1 && onDelete && (
+            <button 
+              data-testid={`delete-resume-${r.id}`}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
+                  onDelete(r.id);
+                }
+              }}
+            >
+              Delete
+            </button>
+          )}
+        </div>
       ))}
       <button type="button" aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} onClick={onToggleSidebar} />
       <button type="button" onClick={onTailorNew}>Tailor New Resume</button>
@@ -63,6 +79,7 @@ const mockGetResumes = resumeApi.getResumes as ReturnType<typeof jest.fn>;
 const mockBuildResume = resumeApi.buildResume as ReturnType<typeof jest.fn>;
 const mockGetResumeById = resumeApi.getResumeById as ReturnType<typeof jest.fn>;
 const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
+const mockDeleteResume = resumeApi.deleteResume as ReturnType<typeof jest.fn>;
 const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
 const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
 const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
@@ -381,6 +398,89 @@ describe('ResumeBuilderPage', () => {
     expect(mockGetResumeById).not.toHaveBeenCalled();
   });
 
+  test('deleting a resume calls deleteResume API and refreshes the list', async () => {
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
+
+    mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
+    window.confirm = jest.fn(() => true);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Setup mock to return updated list on second call
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Click delete on resume with id=2
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    // Verify confirmation was shown
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "Saved Resume"?');
+
+    // Wait for deleteResume to be called
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Wait for resume list to be refreshed
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('deleting a resume does not call API when user cancels confirmation', async () => {
+    window.confirm = jest.fn(() => false);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    // Verify confirmation was shown
+    expect(window.confirm).toHaveBeenCalled();
+
+    // Verify deleteResume was NOT called
+    expect(mockDeleteResume).not.toHaveBeenCalled();
+  });
+
+  test('deleting a resume handles API errors gracefully', async () => {
+    mockDeleteResume.mockRejectedValue(new Error('Failed to delete'));
+    window.confirm = jest.fn(() => true);
+    window.alert = jest.fn();
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Verify error alert was shown
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith('Failed to delete resume. Please try again.');
+    });
+  });
+
+  test('deleting the active resume switches to first available resume', async () => {
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
+
+    mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
+    window.confirm = jest.fn(() => true);
+
   // Download functionality tests
   test('download button renders and shows dropdown menu on click', async () => {
     render(<ResumeBuilderPage />);
@@ -549,6 +649,38 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
+    // Select the saved resume (index 1)
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => {
+      expect(mockGetResumeById).toHaveBeenCalledWith(2);
+    });
+
+    // Setup mock to return updated list after deletion
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Delete the active saved resume
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Wait for list refresh
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('delete button appears for saved resumes but not for master', async () => {
+    const listWithMultiple: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+      { id: 2, name: 'Saved Resume 1', is_master: false },
+      { id: 3, name: 'Saved Resume 2', is_master: false },
+    ];
+    mockGetResumes.mockResolvedValue(listWithMultiple);
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);
@@ -636,6 +768,10 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
+    // Should have delete buttons for id=2 and id=3, but not for master
+    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
+    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
+    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);

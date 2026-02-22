@@ -6,6 +6,7 @@ export const ResumeSidebar = ({
   activeIndex,
   onSelect,
   onTailorNew,
+  onDelete,
   sidebarOpen = true,
   onToggleSidebar,
   onEdit
@@ -14,6 +15,7 @@ export const ResumeSidebar = ({
   activeIndex: number;
   onSelect: (index: number) => void;
   onTailorNew?: () => void;
+  onDelete?: (id: number) => void;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onEdit?: () => void;
@@ -66,9 +68,21 @@ export const ResumeSidebar = ({
                     <img src="/edit_icon.svg" alt="" width={20} height={20} />
                   </button>
                 )}
-                <button type="button" className="resume-sidebar__icon-btn" aria-label="More options" onClick={(e) => { e.stopPropagation(); }}>
-                  <img src="/more_icon.svg" alt="" width={18} height={18} />
-                </button>
+                {r.id !== null && r.id !== 1 && onDelete && (
+                  <button 
+                    type="button" 
+                    className="resume-sidebar__icon-btn resume-sidebar__icon-btn--delete" 
+                    aria-label="Delete resume" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
+                        onDelete(r.id);
+                      }
+                    }}
+                  >
+                    <img src="/more_icon.svg" alt="" width={18} height={18} />
+                  </button>
+                )}
               </span>
             </div>
           </li>

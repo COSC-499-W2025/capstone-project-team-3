@@ -67,7 +67,53 @@ async def test_upload_thumbnail_invalid_type():
         await set_project_thumbnail(project_id="test_project", image=mock_file)
     
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "File must be an image."
+    assert "Unsupported file type" in exc_info.value.detail
+
+
+@patch("app.api.routes.post_thumbnail.update_project_thumbnail")
+@patch("builtins.open", create=True)
+@pytest.mark.anyio
+async def test_upload_svg_thumbnail(mock_open, mock_update):
+    """Test successful SVG thumbnail upload."""
+    from fastapi import UploadFile
+    
+    mock_file = Mock(spec=UploadFile)
+    mock_file.content_type = "image/svg+xml"
+    mock_file.filename = "test.svg"
+    
+    async def async_read():
+        return b'<svg xmlns="http://www.w3.org/2000/svg"><circle r="10"/></svg>'
+    mock_file.read = async_read
+    
+    from app.api.routes.post_thumbnail import set_project_thumbnail
+    result = await set_project_thumbnail(project_id="test_project", image=mock_file)
+    
+    assert result["success"] is True
+    assert result["thumbnail_path"].endswith(".svg")
+    assert result["thumbnail_url"] == "/api/portfolio/project/thumbnail/test_project"
+
+
+@patch("app.api.routes.post_thumbnail.update_project_thumbnail")
+@patch("builtins.open", create=True)
+@pytest.mark.anyio
+async def test_upload_gif_thumbnail(mock_open, mock_update):
+    """Test successful GIF thumbnail upload."""
+    from fastapi import UploadFile
+    
+    mock_file = Mock(spec=UploadFile)
+    mock_file.content_type = "image/gif"
+    mock_file.filename = "test.gif"
+    
+    async def async_read():
+        return b'GIF89a\x01\x00\x01\x00\x00\x00\x00;'
+    mock_file.read = async_read
+    
+    from app.api.routes.post_thumbnail import set_project_thumbnail
+    result = await set_project_thumbnail(project_id="test_project", image=mock_file)
+    
+    assert result["success"] is True
+    assert result["thumbnail_path"].endswith(".gif")
+    assert result["thumbnail_url"] == "/api/portfolio/project/thumbnail/test_project"
 
 
 @pytest.mark.anyio

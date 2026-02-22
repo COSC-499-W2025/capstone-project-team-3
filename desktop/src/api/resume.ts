@@ -62,6 +62,11 @@ export async function updateResume(id: number, resume: Resume): Promise<void> {
 
 // Download resume as PDF: resumeId for saved resumes, projectIds for preview, or neither for master
 export async function downloadResumePDF(params?: { projectIds?: string[], resumeId?: number, filename?: string }): Promise<void> {
+  // Validate parameters
+  if (params?.resumeId !== undefined && params?.projectIds && params.projectIds.length > 0) {
+    throw new Error("Cannot specify both resumeId and projectIds");
+  }
+
   const queryParams = new URLSearchParams();
   
   // Priority: resume_id > project_ids > master resume
@@ -91,6 +96,11 @@ export async function downloadResumePDF(params?: { projectIds?: string[], resume
 
 // Download resume as TeX: resumeId for saved resumes, projectIds for preview, or neither for master
 export async function downloadResumeTeX(params?: { projectIds?: string[], resumeId?: number, filename?: string }): Promise<void> {
+  // Validate parameters
+  if (params?.resumeId !== undefined && params?.projectIds && params.projectIds.length > 0) {
+    throw new Error("Cannot specify both resumeId and projectIds");
+  }
+  
   const queryParams = new URLSearchParams();
   
   // Priority: resume_id > project_ids > master resume

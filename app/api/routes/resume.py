@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import subprocess
 import os
 import hashlib
@@ -21,7 +21,8 @@ os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 LATEX_BUILD_DIR = "/tmp/latex_build"
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
-    project_ids: list[str]
+    name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
+    project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")
 
 def tex_hash(tex: str) -> str:
     """Creates a unique hash of the LaTex source for futurer caching """
@@ -51,10 +52,8 @@ def create_tailored_resume(filter: ResumeFilter):
     """
     Create a new resume and associate selected projects.
     """
-    if not filter.project_ids:
-        raise HTTPException(400, "No projects selected")
     try:
-        resume_id = create_resume()
+        resume_id = create_resume(name=filter.name)
         attach_projects_to_resume(resume_id, filter.project_ids)
         return {
             "resume_id": resume_id,

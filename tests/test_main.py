@@ -1325,3 +1325,57 @@ def test_main_chronology_update_alias():
         # Assert ChronologicalCLI was instantiated and run was called
         mock_chrono_cli.assert_called_once()
         mock_chrono_instance.run.assert_called_once()
+
+
+def test_main_post_analysis_menu_ranking_option():
+    """Test ranking option in post-analysis menu opens score override CLI."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('app.main.run_project_score_override_cli') as mock_ranking_cli, \
+         patch('app.main.run_scan_flow') as mock_scan, \
+         patch('builtins.input', side_effect=['ranking', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {
+            "status": "ok",
+            "projects": ["/tmp/project1"],
+            "count": 1
+        }
+        mock_scan.return_value = {
+            "files": ["file1.py"],
+            "skip_analysis": True,
+            "reason": "already_analyzed",
+            "signature": "test_sig"
+        }
+
+        main()
+
+        mock_ranking_cli.assert_called_once_with(["test_sig"], require_confirmation=False)
+
+
+def test_main_pre_upload_menu_ranking_option():
+    """Test ranking option before upload opens score override CLI for existing projects."""
+    with patch('app.main.init_db'), \
+         patch('app.main.ConsentManager') as mock_consent, \
+         patch('app.main.file_input_main') as mock_file_input, \
+         patch('app.main.seed_db'), \
+         patch('app.main.UserPreferences') as mock_user_pref, \
+         patch('app.main.LLMConsentManager'), \
+         patch('app.main.get_projects', return_value=[{"name": "Existing", "project_signature": "sig_existing"}]), \
+         patch('app.main.run_project_score_override_cli') as mock_ranking_cli, \
+         patch('builtins.input', side_effect=['no', 'ranking', 'continue', 'exit']), \
+         patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
+
+        mock_consent.return_value.enforce_consent.return_value = True
+        mock_user_pref.return_value.manage_preferences.return_value = None
+        mock_file_input.return_value = {"status": "error"}
+
+        main()
+
+        mock_ranking_cli.assert_called_once_with(["sig_existing"], require_confirmation=False)

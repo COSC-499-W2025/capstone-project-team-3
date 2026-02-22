@@ -39,6 +39,27 @@ export async function getResumeById(id: number): Promise<Resume> {
   return res.json() as Promise<Resume>;
 }
 
+// Save new resume with selected projects
+export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
+  const res = await fetch(`${API_BASE}/resume`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, project_ids: projectIds })
+  });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json() as Promise<{ resume_id: number }>;
+}
+
+// Update existing saved resume
+export async function updateResume(id: number, resume: Resume): Promise<void> {
+  const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(resume)
+  });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+}
+
 // Download resume as PDF: resumeId for saved resumes, projectIds for preview, or neither for master
 export async function downloadResumePDF(params?: { projectIds?: string[], resumeId?: number, filename?: string }): Promise<void> {
   // Validate parameters

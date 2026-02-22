@@ -22,6 +22,8 @@ jest.mock('../src/api/resume', () => ({
   buildResume: jest.fn(),
   getResumeById: jest.fn(),
   previewResume: jest.fn(),
+  downloadResumePDF: jest.fn(),
+  downloadResumeTeX: jest.fn(),
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
@@ -59,6 +61,8 @@ const mockGetResumes = resumeApi.getResumes as ReturnType<typeof jest.fn>;
 const mockBuildResume = resumeApi.buildResume as ReturnType<typeof jest.fn>;
 const mockGetResumeById = resumeApi.getResumeById as ReturnType<typeof jest.fn>;
 const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
+const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
+const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
 
 const mockResumeList: ResumeListItem[] = [
   { id: null, name: 'Master Resume', is_master: true },
@@ -135,6 +139,8 @@ describe('ResumeBuilderPage', () => {
     mockBuildResume.mockResolvedValue(mockMasterResume);
     mockGetResumeById.mockResolvedValue(mockSavedResume);
     mockPreviewResume.mockResolvedValue(mockPreviewResumeData);
+    mockDownloadResumePDF.mockResolvedValue(undefined);
+    mockDownloadResumeTeX.mockResolvedValue(undefined);
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -366,5 +372,280 @@ describe('ResumeBuilderPage', () => {
     // Should not call buildResume or getResumeById in preview mode
     expect(mockBuildResume).not.toHaveBeenCalled();
     expect(mockGetResumeById).not.toHaveBeenCalled();
+  });
+
+  // Download functionality tests
+  test('download button renders and shows dropdown menu on click', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+    expect(screen.getByText('Download as TeX')).toBeDefined();
+  });
+
+  test('downloads PDF for master resume with correct params', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        filename: 'Master Resume'
+      });
+    });
+  });
+
+  test('downloads PDF for saved resume with resume ID', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        resumeId: 2,
+        filename: 'Saved Resume'
+      });
+    });
+  });
+
+  test('downloads PDF in preview mode with project IDs', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        projectIds: ['proj1', 'proj2'],
+        filename: 'Preview Resume (Unsaved)'
+      });
+    });
+  });
+
+  test('downloads TeX for master resume with correct params', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        filename: 'Master Resume'
+      });
+    });
+  });
+
+  test('downloads TeX for saved resume with resume ID', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        resumeId: 2,
+        filename: 'Saved Resume'
+      });
+    });
+  });
+
+  test('downloads TeX in preview mode with project IDs', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        projectIds: ['proj1', 'proj2'],
+        filename: 'Preview Resume (Unsaved)'
+      });
+    });
+  });
+
+  test('closes dropdown menu after selecting download option', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    // Dropdown should close
+    await waitFor(() => {
+      expect(screen.queryByText('Download as PDF')).toBeNull();
+    });
+  });
+
+  test('closes dropdown menu when clicking outside', async () => {
+    const { container } = render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+
+    // Click outside the dropdown
+    fireEvent.mouseDown(container);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Download as PDF')).toBeNull();
+    });
+  });
+
+  test('disables download button and shows "Downloading..." during download', async () => {
+    // Make download promise hang so we can check the state during download
+    let resolveDownload: () => void;
+    const downloadPromise = new Promise<void>((resolve) => {
+      resolveDownload = resolve;
+    });
+    mockDownloadResumePDF.mockReturnValue(downloadPromise);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    // Button should show "Downloading..." and be disabled
+    await waitFor(() => {
+      const button = screen.getByText('Downloading...');
+      expect(button).toBeDefined();
+      expect(button.hasAttribute('disabled')).toBe(true);
+    });
+
+    // Resolve the download
+    resolveDownload!();
+
+    // Button should return to normal
+    await waitFor(() => {
+      expect(screen.getByText('Download')).toBeDefined();
+    });
+  });
+
+  test('handles download error gracefully and shows alert', async () => {
+    mockDownloadResumePDF.mockRejectedValue(new Error('Network error'));
+    
+    // Mock console.error to suppress expected error output
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Mock window.alert
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to download resume. Please try again.');
+    });
+
+    // Button should be enabled again
+    const finalButton = screen.getByText('Download');
+    expect(finalButton.hasAttribute('disabled')).toBe(false);
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
   });
 });

@@ -355,13 +355,13 @@ def test_create_tailored_resume_success(mock_attach, mock_create, client):
     """
     mock_create.return_value = 42
     mock_attach.return_value = None
-    payload = {"project_ids": ["p1", "p2"]}
+    payload = {"name": "My Custom Resume", "project_ids": ["p1", "p2"]}
     response = client.post("/resume", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["resume_id"] == 42
     assert data["message"] == "Resume created successfully"
-    mock_create.assert_called_once_with()
+    mock_create.assert_called_once_with(name="My Custom Resume")
     mock_attach.assert_called_once_with(42, ["p1", "p2"])
 
 
@@ -369,11 +369,34 @@ def test_create_tailored_resume_no_projects(client):
     """
     Test POST /resume returns 400 if no projects are selected.
     """
-    payload = {"project_ids": []}
+    payload = {"name": "Test Resume", "project_ids": []}
     response = client.post("/resume", json=payload)
-    assert response.status_code == 400
-    assert "No projects selected" in response.text
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("project_ids" in str(err) for err in detail)
+    
+def test_create_tailored_resume_missing_name(client):
+    """Verify that missing name returns 422 (Pydantic validation error)."""
+    response = client.post(
+        "/resume",
+        json={"project_ids": ["proj1", "proj2"]}  # Missing name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    # Pydantic returns a list of validation errors
+    assert any("name" in str(err) for err in detail)
 
+def test_create_tailored_resume_empty_name(client):
+    """Verify that empty name returns 422 (min_length=1)."""
+    response = client.post(
+        "/resume",
+        json={"name": "", "project_ids": ["proj1"]} #empty name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("at least 1 character" in str(err) for err in detail)
 
 @patch("app.api.routes.resume.list_resumes")
 def test_list_resumes_endpoint_success(mock_list_resumes, client):

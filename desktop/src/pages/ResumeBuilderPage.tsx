@@ -4,7 +4,7 @@ import { Resume } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
-import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem } from "../api/resume";
+import { getResumes, buildResume, getResumeById, previewResume, type ResumeListItem, downloadResumePDF, downloadResumeTeX } from "../api/resume";
 
 export function ResumeBuilderPage() {
   const navigate = useNavigate();
@@ -17,6 +17,8 @@ export function ResumeBuilderPage() {
   const [previewProjectIds, setPreviewProjectIds] = useState<string[]>([]);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveResumeName, setSaveResumeName] = useState("");
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -26,6 +28,11 @@ export function ResumeBuilderPage() {
         ...baseResumeList,
       ]
     : baseResumeList;
+
+  // Check if current resume is master
+  const currentResume = resumeList[activeIndex];
+  const isMasterResume = currentResume?.is_master || currentResume?.id === 1;
+  const showSaveButton = !isMasterResume;
 
   // Load sidebar items
   useEffect(() => {
@@ -109,11 +116,25 @@ export function ResumeBuilderPage() {
       const currentResume = resumeList[activeIndex];
       const filename = currentResume?.name || 'resume';
       
-      // TODO: Connect to backend download functionality
-      console.log(`Download ${format.toUpperCase()} requested for: ${filename}`);
+      // Build params based on current mode
+      let params: { projectIds?: string[], resumeId?: number, filename: string } | undefined;
       
-      // Simulate download delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isPreviewMode) {
+        // Preview mode: use project IDs
+        params = { projectIds: previewProjectIds, filename };
+      } else if (currentResume?.id && !currentResume.is_master) {
+        // Saved resume: use resume ID
+        params = { resumeId: currentResume.id, filename };
+      } else {
+        // Master resume: no special params, just filename
+        params = { filename };
+      }
+      
+      if (format === 'pdf') {
+        await downloadResumePDF(params);
+      } else {
+        await downloadResumeTeX(params);
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert('Failed to download resume. Please try again.');
@@ -122,14 +143,50 @@ export function ResumeBuilderPage() {
     }
   };
 
+  const handleOpenSaveModal = () => {
+    if (isPreviewMode) {
+      // Generate default name for preview resume
+      const timestamp = Math.floor(Math.random() * 10000000);
+      setSaveResumeName(`Resume - ${timestamp}`);
+      setShowSaveModal(true);
+    } else {
+      // For existing resumes, implement save logic later
+      console.log('Save existing resume');
+    }
+  };
+
+  const handleSaveResume = () => {
+    // TODO: Implement backend save logic
+    console.log('Saving resume with name:', saveResumeName);
+    console.log('Project IDs:', previewProjectIds);
+    setShowSaveModal(false);
+  };
+
+  const handleCloseSaveModal = () => {
+    setShowSaveModal(false);
+    setSaveResumeName("");
+  };
+
   return (
     <div className="page page--resume-builder">
-      {/* Header with download button */}
+      {/* Header with navigation and actions */}
       <div className="resume-builder__header">
         <div className="resume-builder__nav">
-          {/* Placeholder for future navigation */}
+          <button 
+            className="nav-link" 
+            onClick={() => navigate('/')}
+          >
+            Home
+          </button>
+          <span className="nav-separator">&gt;</span>
+          <span className="nav-current">Résumé</span>
         </div>
         <div className="resume-builder__actions">
+          {showSaveButton && (
+            <button className="btn btn--secondary" onClick={handleOpenSaveModal}>
+              Save
+            </button>
+          )}
           <div className="dropdown">
             <button 
               className="btn btn--primary"
@@ -158,6 +215,26 @@ export function ResumeBuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" onClick={handleCloseSaveModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Save Résumé version as:</h2>
+            <input
+              type="text"
+              className="modal-input"
+              value={saveResumeName}
+              onChange={(e) => setSaveResumeName(e.target.value)}
+              placeholder="Enter resume name..."
+              autoFocus
+            />
+            <button className="btn btn--primary modal-save-btn" onClick={handleSaveResume}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="resume-builder__content">
         <div className="card card--sidebar">

@@ -2,7 +2,8 @@ import urllib.request
 import urllib.parse
 import json
 import ssl
-from typing import List, Dict
+import os
+from typing import List, Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,13 +13,33 @@ CANADA_API_BASE = "https://open.canada.ca/data/en/api/3/action"
 # Resource ID for post-secondary programs (contains institution names)
 INSTITUTIONS_RESOURCE_ID = "4b97ce31-2499-442e-8374-f52c69938fee"
 
-# Create SSL context
-def create_ssl_context():
-    """Create SSL context with certificate verification disabled for development."""
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    return context
+def create_ssl_context() -> Optional[ssl.SSLContext]:
+    """
+    Create SSL context with proper certificate verification.
+    
+    By default, uses Python's default SSL verification (secure).
+    Only disables SSL verification if DISABLE_SSL_VERIFY=true is set in environment
+    (for development/debugging of local SSL issues).
+    
+    Returns:
+        SSLContext if SSL verification should be disabled, None otherwise
+    """
+    # Check if SSL verification should be disabled (dev/debug only)
+    disable_ssl = os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true"
+    
+    if disable_ssl:
+        logger.warning(
+            "⚠️  SSL VERIFICATION DISABLED via DISABLE_SSL_VERIFY environment variable. "
+            "This should ONLY be used for local development to debug SSL issues. "
+            "DO NOT use in production!"
+        )
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
+    
+    # Return None to use urllib's default SSL verification (secure)
+    return None
 
 def search_institutions(query: str = "", limit: int = 100) -> List[Dict]:
     """
@@ -40,9 +61,9 @@ def search_institutions(query: str = "", limit: int = 100) -> List[Dict]:
         
         logger.info(f"Fetching institutions from: {url}")
         
-        # Make request with SSL context
-        context = create_ssl_context()
-        with urllib.request.urlopen(url, timeout=10, context=context) as response:
+        # Make request with optional SSL context (None = use default verification)
+        ssl_context = create_ssl_context()
+        with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
             data = json.loads(response.read().decode())
             
         if not data.get("success"):
@@ -186,8 +207,8 @@ def search_institutions_simple(query: str = "", limit: int = 50) -> List[Dict]:
         
         logger.info(f"Searching institutions with URL: {url}")
         
-        context = create_ssl_context()
-        with urllib.request.urlopen(url, timeout=15, context=context) as response:
+        ssl_context = create_ssl_context()
+        with urllib.request.urlopen(url, timeout=15, context=ssl_context) as response:
             data = json.loads(response.read().decode())
         
         if not data.get("success"):

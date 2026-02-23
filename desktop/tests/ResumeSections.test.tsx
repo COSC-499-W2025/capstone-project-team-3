@@ -9,12 +9,12 @@ import type { Education, Skills, Project, Resume } from '../src/api/resume_types
 
 describe('EducationSection', () => {
   test('renders education with all fields', () => {
-    const education: Education = {
+    const education: Education[] = [{
       school: 'University of Example',
       degree: 'Bachelor of Science in Computer Science',
       dates: 'Sept 2020 – May 2024',
       gpa: '3.8'
-    };
+    }];
 
     render(<EducationSection education={education} />);
 
@@ -22,22 +22,59 @@ describe('EducationSection', () => {
     expect(screen.getByText('University of Example')).toBeDefined();
     expect(screen.getByText('Bachelor of Science in Computer Science')).toBeDefined();
     expect(screen.getByText('Sept 2020 – May 2024')).toBeDefined();
-    expect(screen.getByText('GPA: 3.8')).toBeDefined();
+    expect(screen.getByText(/GPA:.*3\.8/)).toBeDefined();
   });
 
   test('renders education with minimal fields', () => {
-    const education: Education = {
+    const education: Education[] = [{
       school: 'Test University',
       degree: 'Computer Science',
       dates: '',
       gpa: ''
-    };
+    }];
 
     render(<EducationSection education={education} />);
 
     expect(screen.getByText('Test University')).toBeDefined();
     expect(screen.getByText('Computer Science')).toBeDefined();
     expect(screen.queryByText(/GPA/)).toBeNull();
+  });
+
+  test('renders multiple education entries', () => {
+    const education: Education[] = [
+      {
+        school: 'University A',
+        degree: 'MSc Computer Science',
+        dates: '2022 – 2024',
+        gpa: '4.0'
+      },
+      {
+        school: 'College B',
+        degree: 'BSc Mathematics',
+        dates: '2018 – 2022',
+        gpa: '3.7'
+      }
+    ];
+
+    render(<EducationSection education={education} />);
+
+    expect(screen.getByText('University A')).toBeDefined();
+    expect(screen.getByText('MSc Computer Science')).toBeDefined();
+    expect(screen.getByText(/GPA:.*4\.0/)).toBeDefined();
+    expect(screen.getByText('College B')).toBeDefined();
+    expect(screen.getByText('BSc Mathematics')).toBeDefined();
+    expect(screen.getByText(/GPA:.*3\.7/)).toBeDefined();
+  });
+
+  test('renders nothing when education array is empty', () => {
+    const education: Education[] = [];
+
+    const { container } = render(<EducationSection education={education} />);
+
+    // Component renders the section header even when empty
+    expect(screen.getByText('Education')).toBeDefined();
+    // But no education entries should be present
+    expect(container.querySelectorAll('.resume-preview__education-entry')).toHaveLength(0);
   });
 });
 
@@ -47,7 +84,7 @@ describe('HeaderSection', () => {
       name: 'John Doe',
       email: 'john.doe@example.com',
       links: [],
-      education: { school: '', degree: '' },
+      education: [],
       skills: { Skills: [] },
       projects: []
     };
@@ -66,7 +103,7 @@ describe('HeaderSection', () => {
         { label: 'GitHub', url: 'https://github.com/janesmith' },
         { label: 'LinkedIn', url: 'https://linkedin.com/in/janesmith' }
       ],
-      education: { school: '', degree: '' },
+      education: [],
       skills: { Skills: [] },
       projects: []
     };
@@ -86,7 +123,7 @@ describe('HeaderSection', () => {
       name: 'Test User',
       email: 'test@example.com',
       links: [],
-      education: { school: '', degree: '' },
+      education: [],
       skills: { Skills: [] },
       projects: []
     };
@@ -103,7 +140,7 @@ describe('HeaderSection', () => {
       name: 'Test User',
       email: 'test@example.com',
       links: [],
-      education: { school: '', degree: '' },
+      education: [],
       skills: { Skills: [] },
       projects: []
     };

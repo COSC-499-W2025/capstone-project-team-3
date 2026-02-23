@@ -146,12 +146,14 @@ def test_generate_resume_tex_happy_path():
         "name": "John Doe",
         "email": "john@example.com",
         "links": [{"label": "GitHub", "url": "https://github.com/johndoe"}],
-        "education": {
-            "school": "University X",
-            "degree": "BSc Computer Science",
-            "dates": "2019 – 2023",
-            "gpa": "3.8",
-        },
+        "education": [
+            {
+                "school": "University X",
+                "degree": "BSc Computer Science",
+                "dates": "2019 – 2023",
+                "gpa": "3.8",
+            }
+        ],
         "skills": {
             "Languages": ["Python", "SQL"],
         },
@@ -184,12 +186,14 @@ def test_generate_resume_tex_no_gpa():
         "name": "Jane",
         "email": "jane@example.com",
         "links": [],
-        "education": {
-            "school": "Uni",
-            "degree": "CS",
-            "dates": "",
-            "gpa": "",
-        },
+        "education": [
+            {
+                "school": "Uni",
+                "degree": "CS",
+                "dates": "",
+                "gpa": "",
+            }
+        ],
         "skills": {"Skills": []},
         "projects": [],
     }
@@ -197,3 +201,40 @@ def test_generate_resume_tex_no_gpa():
     tex = generate_resume_tex(resume)
 
     assert "GPA:" not in tex
+
+
+def test_generate_resume_tex_multiple_education():
+    """
+    generate_resume_tex should handle multiple education entries.
+    """
+    resume = {
+        "name": "Alice Smith",
+        "email": "alice@example.com",
+        "links": [],
+        "education": [
+            {
+                "school": "University A",
+                "degree": "MSc Computer Science",
+                "dates": "2022 – 2024",
+                "gpa": "4.0",
+            },
+            {
+                "school": "College B",
+                "degree": "BSc Mathematics",
+                "dates": "2018 – 2022",
+                "gpa": "3.7",
+            }
+        ],
+        "skills": {"Skills": ["Python"]},
+        "projects": [],
+    }
+
+    tex = generate_resume_tex(resume)
+
+    # Both education entries should be in the output
+    assert "University A" in tex
+    assert "MSc Computer Science" in tex
+    assert "GPA: 4.0" in tex
+    assert "College B" in tex
+    assert "BSc Mathematics" in tex
+    assert "GPA: 3.7" in tex

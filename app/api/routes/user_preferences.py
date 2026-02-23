@@ -17,8 +17,8 @@ router = APIRouter()
 class EducationDetail(BaseModel):
     institution: str
     degree: str
-    start_date: Optional[str] = None  # Format: YYYY-MM-DD or YYYY
-    end_date: Optional[str] = None  # Format: YYYY-MM-DD or YYYY, null if ongoing
+    start_date: str  # Format: YYYY-MM-DD
+    end_date: Optional[str] = None  # Format: YYYY-MM-DD or None if ongoing
     gpa: Optional[float] = None # GPA on a 4.0 scale
 
     

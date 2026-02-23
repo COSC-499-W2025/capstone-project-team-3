@@ -116,7 +116,7 @@ def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = Non
             SELECT project_signature, name, score, created_at, last_modified
             FROM PROJECT
             WHERE project_signature IN ({placeholders})
-            ORDER BY score DESC
+            ORDER BY last_modified DESC
         """
         cursor.execute(query, project_ids)
         return cursor.fetchall()
@@ -125,7 +125,7 @@ def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = Non
             """
             SELECT project_signature, name, score, created_at, last_modified
             FROM PROJECT
-            ORDER BY score DESC
+            ORDER BY last_modified DESC
             """
         )
         return cursor.fetchall()

@@ -22,7 +22,6 @@ from app.api.routes.projects import router as projects_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes.eduction_service import router as education_services_router
 from app.api.routes.post_thumbnail import router as thumbnail_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
@@ -76,7 +75,6 @@ app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(health_router)
-app.include_router(education_services_router, prefix="/api")
 app.include_router(thumbnail_router, prefix="/api")
 
 
@@ -152,16 +150,16 @@ def main():
             if existing_projects:
                 print("\n💡 You have previously generated insights for your projects.")
                 while True:
-                    correction_choice = input("\nWould you like to make corrections to project/skill dates before uploading?\n  📅 'yes' - Update project dates/skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
+                    correction_choice = input("\nWould you like to make corrections to chronology (dates/skills) before uploading?\n  📅 'yes' - Update project dates, add/edit skills\n  ⏭️  'no'  - Continue to file upload\n\nChoice (yes/no): ").lower().strip()
                     
                     if correction_choice in ['yes', 'y', 'correct', 'corrections', 'update', 'edit']:
-                        print("\n📅 Opening Chronological Manager...")
+                        print("\n📝 Opening Corrections Menu...")
                         try:
                             chrono_cli = ChronologicalCLI()
                             chrono_cli.run()
                             print("\n✅ Corrections complete! Continuing to file upload...")
                         except Exception as e:
-                            print(f"❌ Error in chronology manager: {e}")
+                            print(f"❌ Error in corrections menu: {e}")
                         break
                     elif correction_choice in ['no', 'n', 'skip', 'continue']:
                         print("\n⏭️  Skipping corrections...")
@@ -524,19 +522,19 @@ def main():
             print(f"{'='*60}")
             
             while True:
-                choice = input("\nWould you like to:\n  📅 'corrections' - Update project/skill dates\n  🔄 'continue'    - Analyze another project\n  🚪 'exit'        - Exit the application\n\nChoice (corrections/continue/exit): ").lower().strip()
+                choice = input("\nWould you like to:\n  📅 'corrections' - Update chronology (dates), add/edit skills\n  🔄 'continue'    - Analyze another project\n  🚪 'exit'        - Exit the application\n\nChoice (corrections/continue/exit): ").lower().strip()
                 
                 if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                     print("👋 Exiting Project Insights. Thank you for using our service!")
                     break
                 elif choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
-                    print("\n📅 Opening Chronological Manager...")
+                    print("\n📝 Opening Corrections Menu...")
                     try:
                         chrono_cli = ChronologicalCLI()
                         chrono_cli.run()
-                        print("\n✅ Chronology corrections complete!")
+                        print("\n✅ Corrections complete!")
                     except Exception as e:
-                        print(f"❌ Error in chronology manager: {e}")
+                        print(f"❌ Error in corrections menu: {e}")
                     # After editing dates, show the menu again
                     continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:

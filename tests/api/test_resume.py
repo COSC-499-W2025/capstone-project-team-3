@@ -60,6 +60,50 @@ def test_resume_download_tex(mock_tex, mock_model, client, fake_resume_model):
     assert response.text == "LATEX CONTENT"
 
 
+@patch("app.api.routes.resume.load_saved_resume")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_resume_id(mock_tex, mock_load, client, fake_resume_model):
+    """Ensure GET /resume/export/tex with resume_id loads saved resume edits."""
+    mock_load.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX EDITED CONTENT"
+
+    response = client.get("/resume/export/tex?resume_id=5")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
+    assert response.text == "LATEX EDITED CONTENT"
+    mock_load.assert_called_once_with(5)
+
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_project_ids(mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/tex with project_ids uses build_resume_model."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX PREVIEW CONTENT"
+
+    response = client.get("/resume/export/tex?project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
+    assert response.text == "LATEX PREVIEW CONTENT"
+    mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
+
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+def test_resume_download_tex_with_both_params_returns_400(mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/tex returns 400 when both resume_id and project_ids are provided."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX CONTENT"
+
+    response = client.get("/resume/export/tex?resume_id=5&project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 400
+    assert "Cannot specify both project_ids and resume_id" in response.json()["detail"]
+    # These should NOT be called since validation fails
+    mock_model.assert_not_called()
+    mock_tex.assert_not_called()
+
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")
 @patch("app.api.routes.resume.compile_pdf")
@@ -75,39 +119,57 @@ def test_resume_pdf_download(mock_compile, mock_tex, mock_model, client, fake_re
     assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
     assert response.content.startswith(b"%PDF")
 
-@patch("app.api.routes.resume.build_resume_model")
-@patch("app.api.routes.resume.generate_resume_tex")
-def test_resume_export_tex_filtered(mock_tex, mock_model, client, fake_resume_model):
-    """Ensure POST /resume/export/tex returns .tex for specified projects."""
-    mock_model.return_value = fake_resume_model
-    mock_tex.return_value = "LATEX FILTERED CONTENT"
 
-    body = {"project_ids": ["sig_gamma_project/hash"]}
-    response = client.post("/resume/export/tex", json=body)
+@patch("app.api.routes.resume.load_saved_resume")
+@patch("app.api.routes.resume.generate_resume_tex")
+@patch("app.api.routes.resume.compile_pdf")
+def test_resume_pdf_download_with_resume_id(mock_compile, mock_tex, mock_load, client, fake_resume_model):
+    """Confirm GET /resume/export/pdf with resume_id loads saved resume edits."""
+    mock_load.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX EDITED CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 edited pdf"
+
+    response = client.get("/resume/export/pdf?resume_id=5")
 
     assert response.status_code == 200
-    assert response.headers["content-disposition"] == "attachment; filename=resume.tex"
-    assert response.text == "LATEX FILTERED CONTENT"
-    mock_model.assert_called_once()
+    assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
+    assert response.content.startswith(b"%PDF")
+    mock_load.assert_called_once_with(5)
 
 
 @patch("app.api.routes.resume.build_resume_model")
 @patch("app.api.routes.resume.generate_resume_tex")
 @patch("app.api.routes.resume.compile_pdf")
-def test_resume_export_pdf_filtered(mock_compile, mock_tex, mock_model, client, fake_resume_model):
-    """Confirm POST /resume/export/pdf returns a valid PDF for selected projects."""
+def test_resume_pdf_download_with_project_ids(mock_compile, mock_tex, mock_model, client, fake_resume_model):
+    """Confirm GET /resume/export/pdf with project_ids uses build_resume_model."""
     mock_model.return_value = fake_resume_model
-    mock_tex.return_value = "LATEX FILTERED CONTENT"
-    mock_compile.return_value = b"%PDF-1.4 filtered"
+    mock_tex.return_value = "LATEX PREVIEW CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 preview pdf"
 
-    body = {"project_ids": ["sig_alpha_project/hash", "sig_gamma_project/hash"]}
-    response = client.post("/resume/export/pdf", json=body)
+    response = client.get("/resume/export/pdf?project_ids=proj1&project_ids=proj2")
 
     assert response.status_code == 200
     assert response.headers["content-disposition"] == "attachment; filename=resume.pdf"
     assert response.content.startswith(b"%PDF")
-    mock_model.assert_called_once()
+    mock_model.assert_called_once_with(project_ids=["proj1", "proj2"])
 
+@patch("app.api.routes.resume.build_resume_model")
+@patch("app.api.routes.resume.generate_resume_tex")
+@patch("app.api.routes.resume.compile_pdf")
+def test_resume_download_pdf_with_both_params_returns_400(mock_compile, mock_tex, mock_model, client, fake_resume_model):
+    """Ensure GET /resume/export/pdf returns 400 when both resume_id and project_ids are provided."""
+    mock_model.return_value = fake_resume_model
+    mock_tex.return_value = "LATEX CONTENT"
+    mock_compile.return_value = b"%PDF-1.4 fake pdf"
+
+    response = client.get("/resume/export/pdf?resume_id=5&project_ids=proj1&project_ids=proj2")
+
+    assert response.status_code == 400
+    assert "Cannot specify both project_ids and resume_id" in response.json()["detail"]
+    # These should NOT be called since validation fails
+    mock_model.assert_not_called()
+    mock_tex.assert_not_called()
+    mock_compile.assert_not_called()
 
 @patch("app.api.routes.resume.subprocess.run")
 @patch("app.api.routes.resume.os.path.exists")
@@ -293,13 +355,13 @@ def test_create_tailored_resume_success(mock_attach, mock_create, client):
     """
     mock_create.return_value = 42
     mock_attach.return_value = None
-    payload = {"project_ids": ["p1", "p2"]}
+    payload = {"name": "My Custom Resume", "project_ids": ["p1", "p2"]}
     response = client.post("/resume", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["resume_id"] == 42
     assert data["message"] == "Resume created successfully"
-    mock_create.assert_called_once_with()
+    mock_create.assert_called_once_with(name="My Custom Resume")
     mock_attach.assert_called_once_with(42, ["p1", "p2"])
 
 
@@ -307,11 +369,34 @@ def test_create_tailored_resume_no_projects(client):
     """
     Test POST /resume returns 400 if no projects are selected.
     """
-    payload = {"project_ids": []}
+    payload = {"name": "Test Resume", "project_ids": []}
     response = client.post("/resume", json=payload)
-    assert response.status_code == 400
-    assert "No projects selected" in response.text
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("project_ids" in str(err) for err in detail)
+    
+def test_create_tailored_resume_missing_name(client):
+    """Verify that missing name returns 422 (Pydantic validation error)."""
+    response = client.post(
+        "/resume",
+        json={"project_ids": ["proj1", "proj2"]}  # Missing name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    # Pydantic returns a list of validation errors
+    assert any("name" in str(err) for err in detail)
 
+def test_create_tailored_resume_empty_name(client):
+    """Verify that empty name returns 422 (min_length=1)."""
+    response = client.post(
+        "/resume",
+        json={"name": "", "project_ids": ["proj1"]} #empty name
+    )
+    
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("at least 1 character" in str(err) for err in detail)
 
 @patch("app.api.routes.resume.list_resumes")
 def test_list_resumes_endpoint_success(mock_list_resumes, client):

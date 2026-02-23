@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { Resume } from "../../api/resume_types";
+import { Resume, Skills, Project } from "../../api/resume_types";
 import { EducationSection } from "./ResumeSections/EducationSection";
 import { HeaderSection } from "./ResumeSections/HeaderSection";
 import { ProjectsSection } from "./ResumeSections/ProjectSections";
 import { SkillsSection } from "./ResumeSections/SkillsSection";
 import "../../styles/ResumePreview.css";
+
+/** Callback for section-only edits: parent merges into state. */
+export type OnSectionChange = (section: "skills" | "projects", data: Skills | Project[]) => void;
 
 const PAGE_HEIGHT_PX = 1056; // A4-like proportion at 96dpi
 const PAGE_GAP_PX = 32; // Space between pages
@@ -29,13 +32,33 @@ function assignSectionsToPages(sectionHeights: number[]): number[] {
   return out;
 }
 
-export function ResumePreview({ resume }: { resume: Resume }) {
+export function ResumePreview({ 
+  resume, 
+  isEditing = false, 
+  onSectionChange 
+}: { 
+  resume: Resume;
+  isEditing?: boolean;
+  onSectionChange?: OnSectionChange;
+}) {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [sectionHeights, setSectionHeights] = useState<number[]>([]);
   const [sectionToPage, setSectionToPage] = useState<number[]>([]);
 
   const projects = resume.projects ?? [];
   const sectionCount = 3 + projects.length; // header, education, skills, then one per project
+
+  const handleSkillsChange = (skills: Skills) => {
+    onSectionChange?.("skills", skills);
+  };
+
+  const handleProjectChange = (globalIndex: number, project: Project) => {
+    const newProjects = [...projects];
+    if (globalIndex >= 0 && globalIndex < newProjects.length) {
+      newProjects[globalIndex] = { ...newProjects[globalIndex], ...project };
+      onSectionChange?.("projects", newProjects);
+    }
+  };
 
   useLayoutEffect(() => {
     const refs = sectionRefs.current;
@@ -76,7 +99,11 @@ export function ResumePreview({ resume }: { resume: Resume }) {
             <EducationSection education={resume.education} />
           </div>
           <div ref={setSectionRef(2)}>
-            <SkillsSection skills={resume.skills} />
+            <SkillsSection 
+              skills={resume.skills}
+              isEditing={isEditing}
+              onChange={handleSkillsChange}
+            />
           </div>
           {projects.map((_, i) => (
             <div key={i} ref={setSectionRef(3 + i)}>
@@ -114,7 +141,10 @@ export function ResumePreview({ resume }: { resume: Resume }) {
             const hasSkills = sectionIndices.includes(2);
             const projectSectionIndices = sectionIndices.filter((si) => si >= 3);
             const projectIndices = projectSectionIndices.map((si) => si - 3);
-            const pageProjects = projectIndices.map((i) => projects[i]);
+            // Filter out invalid indices to prevent accessing undefined projects during state updates
+            const pageProjects = projectIndices
+              .filter(i => i >= 0 && i < projects.length)
+              .map((i) => projects[i]);
 
             return (
               <div
@@ -130,11 +160,20 @@ export function ResumePreview({ resume }: { resume: Resume }) {
                   {hasEducation && (
                     <EducationSection education={resume.education} />
                   )}
-                  {hasSkills && <SkillsSection skills={resume.skills} />}
+                  {hasSkills && (
+                    <SkillsSection 
+                      skills={resume.skills}
+                      isEditing={isEditing}
+                      onChange={handleSkillsChange}
+                    />
+                  )}
                   {pageProjects.length > 0 && (
                     <ProjectsSection
                       projects={pageProjects}
                       showHeading={sectionIndices.includes(3)}
+                      isEditing={isEditing}
+                      onProjectChange={handleProjectChange}
+                      projectStartIndex={projectIndices[0]}
                     />
                   )}
                 </div>

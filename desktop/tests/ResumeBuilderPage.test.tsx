@@ -22,23 +22,43 @@ jest.mock('../src/api/resume', () => ({
   buildResume: jest.fn(),
   getResumeById: jest.fn(),
   previewResume: jest.fn(),
+  deleteResume: jest.fn(),
+  downloadResumePDF: jest.fn(),
+  downloadResumeTeX: jest.fn(),
+  saveNewResume: jest.fn(),
+  updateResume: jest.fn(),
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
-  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, sidebarOpen, onToggleSidebar }: {
+  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, sidebarOpen, onToggleSidebar }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];
     activeIndex: number;
     onSelect: (i: number) => void;
     onTailorNew?: () => void;
+    onDelete?: (id: number) => void;
     sidebarOpen: boolean;
     onToggleSidebar: () => void;
   }) => (
     <aside data-testid="resume-sidebar" data-open={sidebarOpen}>
       <h2>Your Résumés</h2>
       {resumeList.map((r, i) => (
-        <button key={i} onClick={() => onSelect(i)} data-active={i === activeIndex}>
-          {r.name}
-        </button>
+        <div key={i}>
+          <button onClick={() => onSelect(i)} data-active={i === activeIndex}>
+            {r.name}
+          </button>
+          {r.id !== null && r.id !== 1 && onDelete && (
+            <button 
+              data-testid={`delete-resume-${r.id}`}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
+                  onDelete(r.id);
+                }
+              }}
+            >
+              Delete
+            </button>
+          )}
+        </div>
       ))}
       <button type="button" aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} onClick={onToggleSidebar} />
       <button type="button" onClick={onTailorNew}>Tailor New Resume</button>
@@ -59,6 +79,11 @@ const mockGetResumes = resumeApi.getResumes as ReturnType<typeof jest.fn>;
 const mockBuildResume = resumeApi.buildResume as ReturnType<typeof jest.fn>;
 const mockGetResumeById = resumeApi.getResumeById as ReturnType<typeof jest.fn>;
 const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
+const mockDeleteResume = resumeApi.deleteResume as ReturnType<typeof jest.fn>;
+const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
+const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
+const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
+const mockUpdateResume = resumeApi.updateResume as ReturnType<typeof jest.fn>;
 
 const mockResumeList: ResumeListItem[] = [
   { id: null, name: 'Master Resume', is_master: true },
@@ -98,6 +123,7 @@ const mockSavedResume: Resume = {
   skills: { Skills: ['JavaScript', 'TypeScript', 'Node.js'] },
   projects: [
     {
+      project_id: 'proj-saved-1',
       title: 'Saved Project',
       dates: 'Apr 2024 – Jun 2024',
       skills: ['React', 'Node.js'],
@@ -135,6 +161,10 @@ describe('ResumeBuilderPage', () => {
     mockBuildResume.mockResolvedValue(mockMasterResume);
     mockGetResumeById.mockResolvedValue(mockSavedResume);
     mockPreviewResume.mockResolvedValue(mockPreviewResumeData);
+    mockDownloadResumePDF.mockResolvedValue(undefined);
+    mockDownloadResumeTeX.mockResolvedValue(undefined);
+    mockSaveNewResume.mockResolvedValue({ id: 3 });
+    mockUpdateResume.mockResolvedValue(undefined);
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -366,5 +396,607 @@ describe('ResumeBuilderPage', () => {
     // Should not call buildResume or getResumeById in preview mode
     expect(mockBuildResume).not.toHaveBeenCalled();
     expect(mockGetResumeById).not.toHaveBeenCalled();
+  });
+
+  test('deleting a resume calls deleteResume API and refreshes the list', async () => {
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
+
+    mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
+    window.confirm = jest.fn(() => true);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Setup mock to return updated list on second call
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Click delete on resume with id=2
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    // Verify confirmation was shown
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "Saved Resume"?');
+
+    // Wait for deleteResume to be called
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Wait for resume list to be refreshed
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('deleting a resume does not call API when user cancels confirmation', async () => {
+    window.confirm = jest.fn(() => false);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    // Verify confirmation was shown
+    expect(window.confirm).toHaveBeenCalled();
+
+    // Verify deleteResume was NOT called
+    expect(mockDeleteResume).not.toHaveBeenCalled();
+  });
+
+  test('deleting a resume handles API errors gracefully', async () => {
+    mockDeleteResume.mockRejectedValue(new Error('Failed to delete'));
+    window.confirm = jest.fn(() => true);
+    window.alert = jest.fn();
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Verify error alert was shown
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith('Failed to delete resume. Please try again.');
+    });
+  });
+
+  test('deleting the active resume switches to first available resume', async () => {
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
+
+    mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
+    window.confirm = jest.fn(() => true);
+
+  // Download functionality tests
+  test('download button renders and shows dropdown menu on click', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+    expect(screen.getByText('Download as TeX')).toBeDefined();
+  });
+
+  test('downloads PDF for master resume with correct params', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        filename: 'Master Resume'
+      });
+    });
+  });
+
+  test('downloads PDF for saved resume with resume ID', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        resumeId: 2,
+        filename: 'Saved Resume'
+      });
+    });
+  });
+
+  test('downloads PDF in preview mode with project IDs', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumePDF).toHaveBeenCalledWith({
+        projectIds: ['proj1', 'proj2'],
+        filename: 'Preview Resume (Unsaved)'
+      });
+    });
+  });
+
+  test('downloads TeX for master resume with correct params', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        filename: 'Master Resume'
+      });
+    });
+  });
+
+  test('downloads TeX for saved resume with resume ID', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        resumeId: 2,
+        filename: 'Saved Resume'
+      });
+    });
+  });
+
+  test('downloads TeX in preview mode with project IDs', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click TeX option
+    const texOption = screen.getByText('Download as TeX');
+    fireEvent.click(texOption);
+
+    await waitFor(() => {
+      expect(mockDownloadResumeTeX).toHaveBeenCalledWith({
+        projectIds: ['proj1', 'proj2'],
+        filename: 'Preview Resume (Unsaved)'
+      });
+    });
+  });
+
+  test('closes dropdown menu after selecting download option', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Select the saved resume (index 1)
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => {
+      expect(mockGetResumeById).toHaveBeenCalledWith(2);
+    });
+
+    // Setup mock to return updated list after deletion
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Delete the active saved resume
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    // Wait for list refresh
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('delete button appears for saved resumes but not for master', async () => {
+    const listWithMultiple: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+      { id: 2, name: 'Saved Resume 1', is_master: false },
+      { id: 3, name: 'Saved Resume 2', is_master: false },
+    ];
+    mockGetResumes.mockResolvedValue(listWithMultiple);
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    // Dropdown should close
+    await waitFor(() => {
+      expect(screen.queryByText('Download as PDF')).toBeNull();
+    });
+  });
+
+  test('closes dropdown menu when clicking outside', async () => {
+    const { container } = render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    expect(screen.getByText('Download as PDF')).toBeDefined();
+
+    // Click outside the dropdown
+    fireEvent.mouseDown(container);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Download as PDF')).toBeNull();
+    });
+  });
+
+  test('disables download button and shows "Downloading..." during download', async () => {
+    // Make download promise hang so we can check the state during download
+    let resolveDownload: () => void;
+    const downloadPromise = new Promise<void>((resolve) => {
+      resolveDownload = resolve;
+    });
+    mockDownloadResumePDF.mockReturnValue(downloadPromise);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    // Button should show "Downloading..." and be disabled
+    await waitFor(() => {
+      const button = screen.getByText('Downloading...');
+      expect(button).toBeDefined();
+      expect(button.hasAttribute('disabled')).toBe(true);
+    });
+
+    // Resolve the download
+    resolveDownload!();
+
+    // Button should return to normal
+    await waitFor(() => {
+      expect(screen.getByText('Download')).toBeDefined();
+    });
+  });
+
+  test('handles download error gracefully and shows alert', async () => {
+    mockDownloadResumePDF.mockRejectedValue(new Error('Network error'));
+    
+    // Mock console.error to suppress expected error output
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Mock window.alert
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Should have delete buttons for id=2 and id=3, but not for master
+    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
+    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
+    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
+
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to download resume. Please try again.');
+    });
+
+    // Button should be enabled again
+    const finalButton = screen.getByText('Download');
+    expect(finalButton.hasAttribute('disabled')).toBe(false);
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  // Save functionality tests  
+  test('clicking save in modal saves new resume and exits preview mode', async () => {
+    mockSearchParams.append('project_ids', 'proj1');
+    mockSearchParams.append('project_ids', 'proj2');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Change name
+    const input = screen.getByPlaceholderText('Enter resume name...') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Frontend Resume' } });
+
+    // Click save in modal - find by class to ensure we get the modal button
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    // Should call saveNewResume with correct params
+    await waitFor(() => {
+      expect(mockSaveNewResume).toHaveBeenCalledWith('Frontend Resume', ['proj1', 'proj2']);
+    });
+
+    // Should reload resume list
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2); // Once on mount, once after save
+    });
+
+    // Should navigate to exit preview mode
+    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage', { replace: true });
+  });
+
+  test('clicking save on existing resume updates it directly without modal', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    // Should call updateResume with resume id and payload (payload may be empty if no edits)
+    await waitFor(() => {
+      expect(mockUpdateResume).toHaveBeenCalledWith(2, expect.any(Object));
+      const payload = mockUpdateResume.mock.calls[0][1];
+      if (payload.projects?.length) {
+        expect(payload.projects[0].project_id).toBe('proj-saved-1');
+        expect(payload.projects[0].project_name).toBe('Saved Project');
+      }
+    });
+
+    // Modal should not appear
+    expect(screen.queryByText('Save Résumé version as:')).toBeNull();
+  });
+
+  test('save button shows Saving... and is disabled during save operation', async () => {
+    let resolveUpdate: () => void;
+    const updatePromise = new Promise<void>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    mockUpdateResume.mockReturnValue(updatePromise);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    // Button should show "Saving..." and be disabled
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Saving...' });
+      expect(button).toBeDefined();
+      expect(button.hasAttribute('disabled')).toBe(true);
+    });
+
+    // Resolve the save
+    resolveUpdate!();
+
+    // Button should return to normal
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDefined();
+    });
+  });
+
+  test('handles save error gracefully for existing resume', async () => {
+    mockUpdateResume.mockRejectedValue(new Error('Network error'));
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Switch to saved resume
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalled());
+
+    // Click save button
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to update resume. Please try again.');
+    });
+
+    // Button should be enabled again
+    const finalButton = screen.getByRole('button', { name: 'Save' });
+    expect(finalButton.hasAttribute('disabled')).toBe(false);
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  test('handles save error gracefully for new resume', async () => {
+    mockSaveNewResume.mockRejectedValue(new Error('Network error'));
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    mockSearchParams.append('project_ids', 'proj1');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Click save in modal
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Failed to save resume. Please try again.');
+    });
+
+    // Modal should still be open
+    expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+
+    consoleErrorMock.mockRestore();
+    alertMock.mockRestore();
+  });
+
+  test('does not save if resume name is empty', async () => {
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    mockSearchParams.append('project_ids', 'proj1');
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Preview Resume (Unsaved)');
+    await waitFor(() => expect(mockPreviewResume).toHaveBeenCalled());
+
+    // Open modal
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Résumé version as:')).toBeDefined();
+    });
+
+    // Clear the input
+    const input = screen.getByPlaceholderText('Enter resume name...') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '   ' } });
+
+    // Click save in modal
+    const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
+    fireEvent.click(modalSaveButton);
+
+    // Should show alert
+    expect(alertMock).toHaveBeenCalledWith('Please enter a resume name');
+
+    // Should not call save API
+    expect(mockSaveNewResume).not.toHaveBeenCalled();
+
+    alertMock.mockRestore();
   });
 });

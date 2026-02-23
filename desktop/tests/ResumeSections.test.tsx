@@ -307,4 +307,28 @@ describe('ProjectsSection', () => {
     const skillsText = container.querySelector('.resume-preview__project-skills')?.textContent;
     expect(skillsText).toContain('A, B, C');
   });
+
+  test('in edit mode shows month date inputs with Start/End placeholders', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.getByLabelText('Start (month and year)')).toBeDefined();
+    expect(screen.getByLabelText('End (month and year)')).toBeDefined();
+    expect(screen.getByText('One bullet per line.')).toBeDefined();
+  });
 });

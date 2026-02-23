@@ -1,6 +1,8 @@
 import urllib.request
 import urllib.parse
 import json
+import ssl
+import os
 from typing import List, Dict, Optional
 import logging
 
@@ -10,6 +12,34 @@ logger = logging.getLogger(__name__)
 CANADA_API_BASE = "https://open.canada.ca/data/en/api/3/action"
 # Resource ID for post-secondary programs (contains institution names)
 INSTITUTIONS_RESOURCE_ID = "4b97ce31-2499-442e-8374-f52c69938fee"
+
+def create_ssl_context() -> Optional[ssl.SSLContext]:
+    """
+    Create SSL context with proper certificate verification.
+    
+    By default, uses Python's default SSL verification (secure).
+    Only disables SSL verification if DISABLE_SSL_VERIFY=true is set in environment
+    (for development/debugging of local SSL issues).
+    
+    Returns:
+        SSLContext if SSL verification should be disabled, None otherwise
+    """
+    # Check if SSL verification should be disabled (dev/debug only)
+    disable_ssl = os.getenv("DISABLE_SSL_VERIFY", "false").lower() == "true"
+    
+    if disable_ssl:
+        logger.warning(
+            "⚠️  SSL VERIFICATION DISABLED via DISABLE_SSL_VERIFY environment variable. "
+            "This should ONLY be used for local development to debug SSL issues. "
+            "DO NOT use in production!"
+        )
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
+    
+    # Return None to use urllib's default SSL verification (secure)
+    return None
 
 def search_institutions(query: str = "", limit: int = 100) -> List[Dict]:
     """
@@ -31,8 +61,9 @@ def search_institutions(query: str = "", limit: int = 100) -> List[Dict]:
         
         logger.info(f"Fetching institutions from: {url}")
         
-        # Make request
-        with urllib.request.urlopen(url, timeout=10) as response:
+        # Make request with optional SSL context (None = use default verification)
+        ssl_context = create_ssl_context()
+        with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
             data = json.loads(response.read().decode())
             
         if not data.get("success"):
@@ -105,12 +136,15 @@ def get_all_institutions(cache_duration_hours: int = 24) -> List[str]:
         offset = 0
         max_records = 5294  # Total from API
         
+        # Create SSL context once for reuse
+        ssl_context = create_ssl_context()
+        
         while offset < max_records:
             url = f"{CANADA_API_BASE}/datastore_search?resource_id={INSTITUTIONS_RESOURCE_ID}&limit={limit}&offset={offset}"
             
             logger.info(f"Fetching batch: offset={offset}, limit={limit}")
             
-            with urllib.request.urlopen(url, timeout=10) as response:
+            with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
                 data = json.loads(response.read().decode())
             
             if not data.get("success"):
@@ -145,38 +179,73 @@ def get_all_institutions(cache_duration_hours: int = 24) -> List[str]:
         return []
 
 
-def search_institutions_simple(query: str = "", limit: int = 50) -> List[str]:
+def search_institutions_simple(query: str = "", limit: int = 50) -> List[Dict]:
     """
-    Simple search that returns just institution names (for autocomplete).
+    Simple search that returns institution names (for autocomplete).
+    Uses CKAN full-text search for better matching.
+    
+    Note: The Canadian institutions API doesn't include city/province data.
     
     Args:
         query: Search term to filter institutions
         limit: Maximum number of results
         
     Returns:
-        List of unique institution names matching the query
+        List of dictionaries with institution name only
     """
     try:
-        url = f"{CANADA_API_BASE}/datastore_search?resource_id={INSTITUTIONS_RESOURCE_ID}&limit={limit}"
+        # Use a larger limit to get more records, then filter unique institutions
+        api_limit = min(limit * 10, 1000)  # Get more records to ensure we have enough unique institutions
+        
+        # Build the URL - use plain full text search across all fields
+        url = f"{CANADA_API_BASE}/datastore_search?resource_id={INSTITUTIONS_RESOURCE_ID}&limit={api_limit}"
+        
         if query:
+            # Use q parameter for full text search
+            # Keep plain=true (default) for simple text matching without PostgreSQL syntax
             url += f"&q={urllib.parse.quote(query)}"
         
-        with urllib.request.urlopen(url, timeout=10) as response:
+        logger.info(f"Searching institutions with URL: {url}")
+        
+        ssl_context = create_ssl_context()
+        with urllib.request.urlopen(url, timeout=15, context=ssl_context) as response:
             data = json.loads(response.read().decode())
         
         if not data.get("success"):
+            logger.error(f"API request failed: {data}")
             return []
         
         records = data.get("result", {}).get("records", [])
+        logger.info(f"Retrieved {len(records)} records from API")
         
-        # Extract unique institution names
-        institutions = set()
+        if not records:
+            logger.warning(f"No records found for query: {query}")
+            return []
+        
+        # Extract unique institutions
+        # Filter to only include records where the institution name matches the query
+        institutions_set = set()
+        query_lower = query.lower() if query else ""
+        
         for record in records:
-            name = record.get("institution_name_e")
-            if name and name.strip():
-                institutions.add(name.strip())
+            name = record.get("institution_name_e", "").strip()
+            if not name:
+                continue
+            
+            # If we have a query, only include institutions whose name contains the query
+            if query and query_lower not in name.lower():
+                continue
+                
+            institutions_set.add(name)
         
-        return sorted(list(institutions))
+        # Convert to list of dictionaries and sort by name
+        institutions_list = [{"name": name} for name in sorted(institutions_set)]
+        
+        # Limit to requested number
+        institutions_list = institutions_list[:limit]
+        
+        logger.info(f"Returning {len(institutions_list)} unique institutions")
+        return institutions_list
         
     except Exception as e:
         logger.exception(f"Error in simple search: {e}")

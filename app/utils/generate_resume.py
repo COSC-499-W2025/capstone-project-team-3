@@ -278,14 +278,21 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             # Limit to 5 for display
             limited_skills = skills[:5]
 
+            # Parse bullets: stored as JSON in DB, so decode if string
+            if override_bullets:
+                bullets_list = json.loads(override_bullets) if isinstance(override_bullets, str) else override_bullets
+            else:
+                bullets_list = bullets_map.get(pid, [])
+
             projects.append({
+                "project_id": pid,
                 "title": override_name or base_name,
                 "dates": format_dates(
                     start or created_at,
                     end or last_modified
                 ),
                 "skills": limited_skills,
-                "bullets": override_bullets if override_bullets else bullets_map.get(pid, [])
+                "bullets": bullets_list
             })
         
         # Parse education details
@@ -374,23 +381,17 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
     finally:
         conn.close()
 
-def create_resume(name: str | None = None) -> int:
+def create_resume(name: str) -> int:
     """Create a Resume and if no name is provided, set a default name"""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         "INSERT INTO RESUME (name) VALUES (?)",
-        (name or "",)
+        (name,)
     )
 
     resume_id = cursor.lastrowid
-    # If no name was provided, update the name to 'Resume-id'
-    if not name:
-        cursor.execute(
-            "UPDATE RESUME SET name = ? WHERE id = ?",
-            (f"Resume-{resume_id}", resume_id)
-        )
     conn.commit()
     conn.close()
     return resume_id

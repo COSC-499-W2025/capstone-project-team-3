@@ -589,12 +589,17 @@ showError(message) {
                     </div>
                     
                     <div class="project-rank">${rank} Place</div>
-                    <div class="project-title" style="padding-right: 140px;">${project.title}</div>
-                    
+
+                    <div class="project-title editable-field" data-field="project_name" data-project="${project.id}"style="padding-right: 140px;">${project.title}</div>
+             
                     <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
                         ${this.getDisplayScore(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
                     </div>
-                    <div class="project-dates editable-field" data-field="dates" data-project="${project.id}">
+                    <div class="project-dates editable-field" 
+                         data-field="dates" 
+                         data-project="${project.id}"
+                         data-created-at="${project.created_at || ''}"
+                         data-last-modified="${project.last_modified || ''}">
                         ${project.dates}
                     </div>
                     
@@ -609,21 +614,19 @@ showError(message) {
                         </div>
                     ` : ''}
                     
-                    ${project.summary ? `
-                        <div class="project-summary">
-                            <h4>📝 Project Summary</h4>
-                            <div class="summary-content">
-                                <div class="summary-text ${this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
-                                    <span class="editable-field" data-field="summary" data-project="${project.id}">
-                                        ${project.summary}
-                                    </span>
-                                </div>
-                                ${this.shouldTruncateSummary(project.summary) ? `
-                                    <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
-                                ` : ''}
+                    <div class="project-summary">
+                        <h4>📝 Project Summary</h4>
+                        <div class="summary-content">
+                            <div class="summary-text ${project.summary && this.shouldTruncateSummary(project.summary) ? 'truncated' : ''}">
+                                <span class="editable-field" data-field="summary" data-project="${project.id}">
+                                    ${project.summary || '<em style="color: var(--text-muted);">Click to add a project summary...</em>'}
+                                </span>
                             </div>
+                            ${project.summary && this.shouldTruncateSummary(project.summary) ? `
+                                <button class="show-more-btn" onclick="toggleSummary(this)">Show More</button>
+                            ` : ''}
                         </div>
-                    ` : ''}
+                    </div>
                     
                     <div class="project-metrics">
                         <div class="metric-item">
@@ -693,15 +696,9 @@ showError(message) {
             element.title = 'Click to edit';
             
             element.addEventListener('click', (e) => {
-                const field = e.target.dataset.field;
-                const projectId = e.target.dataset.project;
-                console.log(`Edit ${field} for project ${projectId}`);
-                // Add visual indicator that field is editable
-                e.target.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
-                e.target.style.border = '1px dashed var(--accent)';
-                
-                // TODO: Implement editing logic here
-                alert(`Editing ${field} for project ${projectId.substring(0, 8)}... - Logic to be implemented by teammate`);
+                e.stopPropagation();
+                // Use currentTarget to get the .editable-field element, not the clicked child element
+                this.handleFieldEdit(e.currentTarget);
             });
         });
     }
@@ -905,12 +902,479 @@ showError(message) {
         alert(`Error: ${message}`);
     }
 
+    downloadPortfolioInteractiveHTML() {
+        try {
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) {
+                throw new Error('Main content not found');
+            }
+
+            if (!this.currentPortfolioData) {
+                throw new Error('Portfolio data is not loaded yet');
+            }
+
+            const mainClone = mainContent.cloneNode(true);
+            mainClone.querySelectorAll('.dashboard-actions').forEach(el => el.remove());
+
+            const styleTag = document.querySelector('style');
+            const baseCss = styleTag ? styleTag.textContent : '';
+            const exportData = JSON.stringify(this.currentPortfolioData).replace(/<\//g, '<\\/');
+
+            const exportCss = `
+                body {
+                    background: var(--primary-bg) !important;
+                    margin: 0 !important;
+                }
+
+                .container,
+                .portfolio-layout {
+                    display: block !important;
+                    height: auto !important;
+                    background: transparent !important;
+                }
+
+                .main-content {
+                    max-width: 1500px;
+                    margin: 0 auto;
+                    padding: 32px;
+                    overflow: visible !important;
+                }
+
+                .graph-card,
+                .overview-card,
+                .project-card,
+                .analysis-card,
+                .formula-card {
+                    break-inside: avoid;
+                }
+            `;
+
+            const interactiveScript = `
+                (function() {
+                    const data = window.__PORTFOLIO_EXPORT_DATA;
+                    if (!data || typeof Chart === 'undefined') return;
+
+                    window.toggleSummary = function(button) {
+                        const summaryContent = button.closest('.summary-content');
+                        if (!summaryContent) return;
+                        const summaryText = summaryContent.querySelector('.summary-text');
+                        if (!summaryText) return;
+                        const isExpanded = !summaryText.classList.contains('truncated');
+
+                        if (isExpanded) {
+                            summaryText.classList.add('truncated');
+                            button.textContent = 'Show More';
+                        } else {
+                            summaryText.classList.remove('truncated');
+                            button.textContent = 'Show Less';
+                        }
+                    };
+
+                    function createPieChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: ['#2d3748', '#4a5568', '#718096', '#a0aec0', '#48bb78', '#ed8936', '#667eea', '#764ba2', '#f687b3', '#9f7aea', '#38b2ac', '#68d391'],
+                                    borderColor: '#ffffff',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { color: '#4a5568', font: { size: 12 }, padding: 15, usePointStyle: true }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    function createBarChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: '#2d3748',
+                                    borderColor: '#4a5568',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } },
+                                    x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    function createHorizontalBarChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: Object.keys(chartData || {}),
+                                datasets: [{
+                                    data: Object.values(chartData || {}),
+                                    backgroundColor: '#4a5568',
+                                    borderColor: '#2d3748',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } },
+                                    y: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    function createLineChart(canvasId, chartData) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return;
+                        const sorted = Object.entries(chartData || {}).sort();
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: sorted.map(([month]) => month),
+                                datasets: [{
+                                    label: 'Activity',
+                                    data: sorted.map(([, value]) => value),
+                                    borderColor: '#2d3748',
+                                    backgroundColor: 'rgba(45, 55, 72, 0.1)',
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointBackgroundColor: '#2d3748',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 5
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: '#e2e8f0' },
+                                        ticks: { color: '#4a5568', font: { size: 11 }, stepSize: 0.5 },
+                                        title: { display: true, text: 'Activity Level', color: '#4a5568', font: { size: 12, weight: 'bold' } }
+                                    },
+                                    x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    const graphs = data.graphs || {};
+                    createPieChart('languageChart', graphs.language_distribution || {});
+                    createBarChart('complexityChart', {
+                        'Small (<1000)': graphs.complexity_distribution?.distribution?.small || 0,
+                        'Medium (1000-3000)': graphs.complexity_distribution?.distribution?.medium || 0,
+                        'Large (>3000)': graphs.complexity_distribution?.distribution?.large || 0
+                    });
+                    createBarChart('scoreChart', {
+                        'Excellent (90-100%)': graphs.score_distribution?.distribution?.excellent || 0,
+                        'Good (80-89%)': graphs.score_distribution?.distribution?.good || 0,
+                        'Fair (70-79%)': graphs.score_distribution?.distribution?.fair || 0,
+                        'Poor (<70%)': graphs.score_distribution?.distribution?.poor || 0
+                    });
+                    createLineChart('activityChart', graphs.monthly_activity || {});
+                    createHorizontalBarChart('skillsChart', graphs.top_skills || {});
+                    const typeData = data.project_type_analysis || {};
+                    createBarChart('projectTypeChart', {
+                        'GitHub Projects': typeData.github?.count || 0,
+                        'Local Projects': typeData.local?.count || 0
+                    });
+                })();
+            `;
+
+            const exportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Dashboard</title>
+    <style>${baseCss}\n${exportCss}</style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+${mainClone.outerHTML}
+<script>window.__PORTFOLIO_EXPORT_DATA = ${exportData};</script>
+<script>${interactiveScript}</script>
+</body>
+</html>`;
+
+            const blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+            a.href = url;
+            a.download = `portfolio-interactive-${timestamp}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to export interactive portfolio HTML:', error);
+            alert('Failed to download interactive portfolio HTML. Please try again.');
+        }
+    }
+
     shouldTruncateSummary(summary) {
         // Truncate if summary is longer than 25 words or 150 characters  
         // This ensures consistent card heights with uniform truncation
         const wordCount = summary.split(/\s+/).length;
         const charCount = summary.length;
         return wordCount > 25 || charCount > 150;
+    }
+
+    handleFieldEdit(element) {
+        const field = element.dataset.field;
+        const projectId = element.dataset.project;
+        
+        // Get current value - check if it's a placeholder (em tag)
+        let currentValue = element.textContent.trim();
+        const emElement = element.querySelector('em');
+        if (emElement) {
+            // If there's an em tag, it's placeholder text, so the actual value is empty
+            currentValue = '';
+        }
+        
+        // Prevent multiple edits at once
+        if (element.querySelector('input, textarea')) {
+            return;
+        }
+        
+        // Add visual indicator
+        element.style.backgroundColor = 'rgba(45, 55, 72, 0.1)';
+        element.style.border = '1px dashed var(--accent)';
+        
+        // Create appropriate input based on field type
+        let inputElement;
+        
+        if (field === 'summary') {
+            inputElement = document.createElement('textarea');
+            inputElement.style.width = '100%';
+            inputElement.style.minHeight = '100px';
+            inputElement.style.padding = '8px';
+            inputElement.style.border = '2px solid var(--accent)';
+            inputElement.style.borderRadius = '4px';
+            inputElement.style.fontFamily = 'inherit';
+            inputElement.style.fontSize = 'inherit';
+            inputElement.value = currentValue;
+        } else if (field === 'dates') {
+            // Get the raw dates from the data attributes
+            const createdAt = element.dataset.createdAt || '';
+            const lastModified = element.dataset.lastModified || '';
+            
+            // For dates, we need to parse and edit created_at and last_modified
+            inputElement = document.createElement('div');
+            inputElement.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-size: 12px; color: var(--text-secondary);">Created:</label>
+                    <input type="date" id="created_at_input" value="${createdAt}" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <label style="font-size: 12px; color: var(--text-secondary);">Last Modified:</label>
+                    <input type="date" id="last_modified_input" value="${lastModified}" style="padding: 6px; border: 2px solid var(--accent); border-radius: 4px;">
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button class="save-edit-btn" style="flex: 1; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer;">Save</button>
+                        <button class="cancel-edit-btn" style="flex: 1; padding: 8px; background: var(--text-muted); color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.style.width = '100%';
+            inputElement.style.padding = '6px';
+            inputElement.style.border = '2px solid var(--accent)';
+            inputElement.style.borderRadius = '4px';
+            inputElement.style.fontFamily = 'inherit';
+            inputElement.style.fontSize = 'inherit';
+            inputElement.value = currentValue;
+        }
+        
+        const originalContent = element.innerHTML;
+        element.innerHTML = '';
+        element.appendChild(inputElement);
+        
+        if (field !== 'dates') {
+            // Add save/cancel buttons for non-date fields
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.gap = '8px';
+            buttonContainer.style.marginTop = '8px';
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Save';
+            saveBtn.className = 'save-edit-btn';
+            saveBtn.style.flex = '1';
+            saveBtn.style.padding = '6px';
+            saveBtn.style.background = 'var(--accent)';
+            saveBtn.style.color = 'white';
+            saveBtn.style.border = 'none';
+            saveBtn.style.borderRadius = '4px';
+            saveBtn.style.cursor = 'pointer';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'cancel-edit-btn';
+            cancelBtn.style.flex = '1';
+            cancelBtn.style.padding = '6px';
+            cancelBtn.style.background = 'var(--text-muted)';
+            cancelBtn.style.color = 'white';
+            cancelBtn.style.border = 'none';
+            cancelBtn.style.borderRadius = '4px';
+            cancelBtn.style.cursor = 'pointer';
+            
+            buttonContainer.appendChild(saveBtn);
+            buttonContainer.appendChild(cancelBtn);
+            element.appendChild(buttonContainer);
+        }
+        
+        // Focus input
+        if (field !== 'dates') {
+            inputElement.focus();
+            if (inputElement.tagName === 'INPUT') {
+                inputElement.select();
+            }
+        }
+        
+        // Handle save
+        const saveHandler = async () => {
+            let editData = { project_signature: projectId };
+            
+            if (field === 'summary') {
+                editData.project_summary = inputElement.value;
+            } else if (field === 'project_name') {
+                const newName = inputElement.value.trim();
+                // Validate that project name is not empty
+                if (!newName) {
+                    alert('Project name cannot be empty!');
+                    inputElement.focus();
+                    return;
+                }
+                editData.project_name = newName;
+            } else if (field === 'dates') {
+                const createdAt = document.getElementById('created_at_input').value;
+                const lastModified = document.getElementById('last_modified_input').value;
+                if (createdAt) editData.created_at = createdAt;
+                if (lastModified) editData.last_modified = lastModified;
+            }
+            
+            await this.saveFieldEdit(editData, element, originalContent);
+        };
+        
+        // Handle cancel
+        const cancelHandler = (e) => {
+            if (e) e.stopPropagation(); // Prevent click from bubbling to parent
+            element.innerHTML = originalContent;
+            element.style.backgroundColor = '';
+            element.style.border = '';
+        };
+        
+        // Attach event listeners
+        const saveBtn = element.querySelector('.save-edit-btn');
+        const cancelBtn = element.querySelector('.cancel-edit-btn');
+        
+        if (saveBtn) saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from bubbling to parent
+            saveHandler();
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click from bubbling to parent
+            cancelHandler(e);
+        });
+        
+        // Enter to save (except for textarea), Escape to cancel
+        if (field !== 'summary' && field !== 'dates') {
+            inputElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveHandler();
+                } else if (e.key === 'Escape') {
+                    cancelHandler();
+                }
+            });
+        }
+    }
+
+    async saveFieldEdit(editData, element, originalContent) {
+        try {
+            // Show loading state
+            element.innerHTML = '<span style="color: var(--text-muted);">Saving...</span>';
+            
+            const response = await fetch('/api/portfolio/edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    edits: [editData]
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to save edit');
+            }
+            
+            const result = await response.json();
+            console.log('Edit saved:', result);
+            
+            // Show success feedback
+            element.innerHTML = '<span style="color: var(--success);">✓ Saved!</span>';
+            element.style.backgroundColor = '';
+            element.style.border = '';
+            
+            // Reload portfolio data to show updated values
+            setTimeout(() => {
+                this.loadPortfolio(this.selectedProjects);
+            }, 500);
+        
+            await this.loadProjects(); // Re-fetch all projects
+           await this.loadPortfolio(); // Re-render portfolio with updated data    
+            
+        } catch (error) {
+            console.error('Error saving edit:', error);
+            element.innerHTML = originalContent;
+            element.style.backgroundColor = '';
+            element.style.border = '';
+            this.showError(`Failed to save: ${error.message}`);
+        }
     }
 }
 
@@ -967,6 +1431,14 @@ window.toggleSummary = function(button) {
         summaryText.classList.remove('truncated');
         button.textContent = 'Show Less';
     }
+};
+
+window.downloadPortfolioInteractiveHTML = function() {
+    if (!window.portfolioDashboard) {
+        alert('Portfolio is still loading. Please wait a moment and try again.');
+        return;
+    }
+    window.portfolioDashboard.downloadPortfolioInteractiveHTML();
 };
 
 // Initialize dashboard when page loads

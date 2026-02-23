@@ -350,18 +350,17 @@ def test_resume_exists_true_and_false(db_connection):
     # Non-existent resume
     assert resume_exists(99999) is False
 
-def test_create_resume_default_name(db_connection):
-    """
-    Tests that create_resume sets the default name to 'Resume-id' when no name is provided.
-    """
-    resume_id = create_resume()
-    # Check the name in the database
+def test_create_resume_with_name(db_connection):
+    """Test that create_resume accepts a valid name."""
+    resume_id = create_resume("My Resume")
+    assert resume_id > 0
+    
     cursor = db_connection.cursor()
     cursor.execute("SELECT name FROM RESUME WHERE id = ?", (resume_id,))
     row = cursor.fetchone()
     assert row is not None
-    assert row[0] == f"Resume-{resume_id}"
-
+    assert row[0] == "My Resume"
+    
 def test_attach_projects_to_resume(db_connection):
     """
     Tests that attach_projects_to_resume correctly attaches projects and sets display order.

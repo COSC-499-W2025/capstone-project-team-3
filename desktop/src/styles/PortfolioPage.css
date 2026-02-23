@@ -1,12 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
+:root {
             --primary-bg: #fafafa;
             --secondary-bg: #ffffff;
             --card-bg: #ffffff;
@@ -39,7 +31,7 @@
             font-weight: 400;
         }
 
-        .container {
+        .portfolio-layout {
             display: grid;
             grid-template-columns: 280px 1fr;
             height: 100vh;
@@ -151,41 +143,6 @@
 
         .dashboard-header {
             margin-bottom: 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .dashboard-header-text {
-            min-width: 0;
-        }
-
-        .dashboard-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
-        .download-html-btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 10px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            box-shadow: var(--shadow);
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .download-html-btn:hover {
-            background: var(--accent-secondary);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
         }
 
         .dashboard-header h1 {
@@ -264,22 +221,9 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .container {
+            .portfolio-layout {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
-            }
-
-            .dashboard-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .dashboard-actions {
-                width: 100%;
-            }
-
-            .download-html-btn {
-                width: 100%;
             }
 
             .sidebar {
@@ -808,165 +752,3 @@
                 grid-template-columns: 1fr;
             }
         }
-
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h2>📋 Project Selection</h2>
-            <div class="project-selection">
-                <button class="select-all-btn" onclick="toggleAllProjects()">Select All</button>
-                <div id="projectList">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading projects...
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="dashboard-header">
-                <div class="dashboard-header-text">
-                    <h1>🎯 Portfolio Dashboard</h1>
-                    <p class="dashboard-subtitle">Comprehensive analysis of your development work</p>
-                </div>
-                <div class="dashboard-actions">
-                    <button class="download-html-btn" onclick="downloadPortfolioInteractiveHTML()">⚡ Download Interactive HTML</button>
-                </div>
-            </div>
-
-            <!-- Error Container -->
-            <div id="errorContainer" style="display: none;"></div>
-
-            <!-- Overview Cards -->
-            <div class="overview-cards" id="overviewCards">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Loading overview...
-                </div>
-            </div>
-
-                        <!-- Graph Grid -->
-            <div class="graph-grid">
-                <div class="graph-card">
-                    <h3>📊 Language Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="languageChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="graph-card">
-                    <h3>📈 Project Complexity</h3>
-                    <div class="chart-container">
-                        <canvas id="complexityChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="graph-card">
-                    <h3>🏆 Score Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="scoreChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="graph-card">
-                    <h3>📅 Monthly Activity</h3>
-                    <div class="chart-container">
-                        <canvas id="activityChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="graph-card">
-                    <h3>🛠️ Top Skills</h3>
-                    <div class="chart-container small">
-                        <canvas id="skillsChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="graph-card">
-                    <h3>⚖️ GitHub vs Local</h3>
-                    <div class="chart-container small">
-                        <canvas id="projectTypeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Projects Section -->
-            <div class="projects-section">
-                <h2 class="section-title">🏆 Top Ranked Projects</h2>
-                <div class="top-projects" id="topProjects">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading projects...
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detailed Analysis Section -->
-            <div class="analysis-section">
-                <h2 class="section-title">🔍 Detailed Analysis Insights</h2>
-                <div class="analysis-grid" id="detailedAnalysis">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading analysis...
-                    </div>
-                </div>
-            </div>
-
-            <!-- Scoring Formula Section -->
-            <div class="scoring-formula-section">
-                <h2 class="section-title">📐 Project Scoring Methodology</h2>
-                <div class="formula-grid">
-                    <div class="formula-card">
-                        <div class="formula-header">
-                            <span class="formula-icon">🔗</span>
-                            <div>
-                                <div class="formula-title">GitHub Project Scoring</div>
-                                <div class="formula-subtitle">For projects with Git history and collaboration metrics</div>
-                            </div>
-                        </div>
-                        
-                        <div class="formula-content">
-                            <div class="formula-label">
-                                📐 Calculation Formula
-                            </div>
-                            <div class="formula-text">Score = 0.30 × min(commits/50, 1)
-      + 0.30 × min(days/30, 1)
-      + 0.20 × min(lines/5000, 1)
-      + 0.15 × min(code_files/20, 1)
-      + 0.05 × min(test_files/8, 1)</div>
-                        </div>
-                    </div>
-                    
-                    <div class="formula-card">
-                        <div class="formula-header">
-                            <span class="formula-icon">💻</span>
-                            <div>
-                                <div class="formula-title">Local Project Scoring</div>
-                                <div class="formula-subtitle">For projects without Git history, focusing on structure and quality</div>
-                            </div>
-                        </div>
-                        
-                        <div class="formula-content">
-                            <div class="formula-label">
-                                📐 Calculation Formula
-                            </div>
-                            <div class="formula-text">Score = 0.20 × min(files/40, 1)
-      + 0.15 × min(lines/5000, 1)
-      + 0.20 × min(code_files/30, 1)
-      + 0.15 × min(test_files/10, 1)
-      + 0.30 × min(maintainability/100, 1)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="/api/static/portfolio.js?v=20260214c"></script>
-</body>
-</html>

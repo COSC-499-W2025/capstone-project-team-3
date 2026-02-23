@@ -35,6 +35,11 @@ def create_env_template():
 # 
 GEMINI_API_KEY=your_api_key_here
 
+# SSL Configuration (Development Only)
+# Uncomment if you encounter SSL certificate errors with the Canadian institutions API
+# This should not be enabled in production
+# DISABLE_SSL_VERIFY=true
+
 # Other optional variables
 # PROMPT_ROOT=1
 """

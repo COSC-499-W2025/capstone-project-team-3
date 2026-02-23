@@ -454,6 +454,7 @@ describe('ResumeBuilderPage', () => {
     mockDeleteResume.mockRejectedValue(new Error('Failed to delete'));
     window.confirm = jest.fn(() => true);
     window.alert = jest.fn();
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<ResumeBuilderPage />);
 
@@ -471,6 +472,8 @@ describe('ResumeBuilderPage', () => {
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalledWith('Failed to delete resume. Please try again.');
     });
+
+    consoleErrorMock.mockRestore();
   });
 
   test('deleting the active resume switches to first available resume', async () => {
@@ -480,6 +483,8 @@ describe('ResumeBuilderPage', () => {
 
     mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
     window.confirm = jest.fn(() => true);
+
+  });
 
   // Download functionality tests
   test('download button renders and shows dropdown menu on click', async () => {
@@ -658,6 +663,9 @@ describe('ResumeBuilderPage', () => {
     });
 
     // Setup mock to return updated list after deletion
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
     mockGetResumes.mockResolvedValueOnce(updatedList);
 
     // Delete the active saved resume
@@ -681,20 +689,16 @@ describe('ResumeBuilderPage', () => {
       { id: 3, name: 'Saved Resume 2', is_master: false },
     ];
     mockGetResumes.mockResolvedValue(listWithMultiple);
-    // Open dropdown
-    const downloadButton = screen.getByText('Download');
-    fireEvent.click(downloadButton);
 
-    expect(screen.getByText('Download as PDF')).toBeDefined();
+    render(<ResumeBuilderPage />);
 
-    // Click PDF option
-    const pdfOption = screen.getByText('Download as PDF');
-    fireEvent.click(pdfOption);
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    // Dropdown should close
-    await waitFor(() => {
-      expect(screen.queryByText('Download as PDF')).toBeNull();
-    });
+    // Should have delete buttons for id=2 and id=3, but not for master
+    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
+    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
+    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
   });
 
   test('closes dropdown menu when clicking outside', async () => {
@@ -768,10 +772,6 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    // Should have delete buttons for id=2 and id=3, but not for master
-    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
-    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
-    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);

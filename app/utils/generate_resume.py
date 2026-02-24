@@ -486,11 +486,36 @@ def save_resume_edits(resume_id: int, payload: dict):
         conn.close()
 
 def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
+    """Attach projects to a resume with display_order set by last_modified DESC (newest first)."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    for index, project_id in enumerate(project_ids):
-        cursor.execute("""
+    if not project_ids:
+        conn.close()
+        return
+
+    # Resolve each project_id to its last_modified from PROJECT
+    placeholders = ",".join(["?"] * len(project_ids))
+    cursor.execute(
+        f"""
+        SELECT project_signature, last_modified
+        FROM PROJECT
+        WHERE project_signature IN ({placeholders})
+        """,
+        project_ids,
+    )
+    date_map = {row[0]: row[1] for row in cursor.fetchall()}
+
+    # Sort by last_modified DESC (newest first). project_ids come from the app's project list, so they exist in PROJECT.
+    ordered_ids = sorted(
+        project_ids,
+        key=lambda p: date_map.get(p) or "",
+        reverse=True,
+    )
+
+    for index, project_id in enumerate(ordered_ids):
+        cursor.execute(
+            """
             INSERT INTO RESUME_PROJECT (
                 resume_id,
                 project_id,

@@ -342,6 +342,19 @@ export function ResumeBuilderPage() {
                 >
                   Download as TeX
                 </button>
+                {!isMasterResume && currentResume?.id && (
+                  <button
+                    className="dropdown-item dropdown-item--danger"
+                    onClick={() => {
+                      setShowDownloadMenu(false);
+                      if (window.confirm(`Are you sure you want to delete "${currentResume.name || 'this resume'}"?`)) {
+                        handleDeleteResume(currentResume.id);
+                      }
+                    }}
+                  >
+                    Delete Resume
+                  </button>
+                )}
               </div>
             )}
           </div>

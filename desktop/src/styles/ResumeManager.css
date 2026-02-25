@@ -164,6 +164,14 @@ body {
   border-radius: 0;
 }
 
+.dropdown-item--danger {
+  color: #dc2626;
+}
+
+.dropdown-item--danger:hover {
+  background: #fef2f2;
+}
+
 .resume-builder__content {
   display: flex;
   flex: 1;

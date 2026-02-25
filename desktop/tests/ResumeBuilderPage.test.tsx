@@ -481,6 +481,33 @@ describe('ResumeBuilderPage', () => {
     mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
     window.confirm = jest.fn(() => true);
 
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Select saved resume (activeIndex = 1)
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+
+    // Setup mock to return updated list after deletion
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Delete the active saved resume
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
+  });
+
   // Download functionality tests
   test('download button renders and shows dropdown menu on click', async () => {
     render(<ResumeBuilderPage />);
@@ -649,38 +676,6 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    // Select the saved resume (index 1)
-    const savedButton = screen.getByText('Saved Resume');
-    fireEvent.click(savedButton);
-
-    await waitFor(() => {
-      expect(mockGetResumeById).toHaveBeenCalledWith(2);
-    });
-
-    // Setup mock to return updated list after deletion
-    mockGetResumes.mockResolvedValueOnce(updatedList);
-
-    // Delete the active saved resume
-    const deleteButton = screen.getByTestId('delete-resume-2');
-    fireEvent.click(deleteButton);
-
-    await waitFor(() => {
-      expect(mockDeleteResume).toHaveBeenCalledWith(2);
-    });
-
-    // Wait for list refresh
-    await waitFor(() => {
-      expect(mockGetResumes).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  test('delete button appears for saved resumes but not for master', async () => {
-    const listWithMultiple: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
-      { id: 2, name: 'Saved Resume 1', is_master: false },
-      { id: 3, name: 'Saved Resume 2', is_master: false },
-    ];
-    mockGetResumes.mockResolvedValue(listWithMultiple);
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);
@@ -695,6 +690,25 @@ describe('ResumeBuilderPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Download as PDF')).toBeNull();
     });
+  });
+
+  test('delete button appears for saved resumes but not for master', async () => {
+    const listWithMultiple: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+      { id: 2, name: 'Saved Resume 1', is_master: false },
+      { id: 3, name: 'Saved Resume 2', is_master: false },
+    ];
+    mockGetResumes.mockResolvedValue(listWithMultiple);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Should have delete buttons for id=2 and id=3, but not for master
+    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
+    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
+    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
   });
 
   test('closes dropdown menu when clicking outside', async () => {
@@ -768,10 +782,6 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    // Should have delete buttons for id=2 and id=3, but not for master
-    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
-    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
-    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);

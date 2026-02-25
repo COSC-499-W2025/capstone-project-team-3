@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ResumeListItem } from "../../api/resume";
 import "../../styles/ResumeSidebar.css";
 
@@ -20,6 +21,8 @@ export const ResumeSidebar = ({
   onToggleSidebar?: () => void;
   onEdit?: () => void;
 }) => {
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
   return (
     <aside className={`resume-sidebar ${sidebarOpen ? "resume-sidebar--open" : "resume-sidebar--closed"}`}>
       <div className="resume-sidebar__header">
@@ -69,19 +72,36 @@ export const ResumeSidebar = ({
                   </button>
                 )}
                 {r.id !== null && r.id !== 1 && onDelete && (
-                  <button 
-                    type="button" 
-                    className="resume-sidebar__icon-btn resume-sidebar__icon-btn--delete" 
-                    aria-label="Delete resume" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      if (window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
-                        onDelete(r.id);
-                      }
-                    }}
-                  >
-                    <img src="/more_icon.svg" alt="" width={18} height={18} />
-                  </button>
+                  <div className="resume-sidebar__menu-wrapper">
+                    <button 
+                      type="button" 
+                      className="resume-sidebar__icon-btn" 
+                      aria-label="More actions" 
+                      onClick={(e) => { 
+                        e.stopPropagation();
+                        setOpenMenuIndex(openMenuIndex === i ? null : i);
+                      }}
+                    >
+                      <img src="/more_icon.svg" alt="" width={18} height={18} />
+                    </button>
+                    {openMenuIndex === i && (
+                      <div className="resume-sidebar__dropdown">
+                        <button
+                          type="button"
+                          className="resume-sidebar__dropdown-item resume-sidebar__dropdown-item--danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuIndex(null);
+                            if (r.id != null && window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
+                              onDelete(r.id);
+                            }
+                          }}
+                        >
+                          Delete Resume
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </span>
             </div>

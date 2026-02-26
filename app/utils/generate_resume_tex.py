@@ -90,9 +90,13 @@ def render_projects(projects: List[Dict]) -> str:
 
         title_cap = capitalize_first(project.get('title', ''))
 
+        # Normalize skills to string (saved resumes use list, master/preview use string)
+        raw_skills = project.get("skills", [])
+        skills_str = ", ".join(raw_skills) if isinstance(raw_skills, (list, tuple)) else str(raw_skills)
+
         block = rf""" \vspace*{{3mm}}
 	\textbf{{{escape_latex(title_cap)}}} \hfill {escape_latex(project['dates'])}\\
-    {{\textbf{{Skills: }}\sl {escape_latex(project['skills'])}}}\\[1mm]
+    {{\textbf{{Skills: }}\sl {escape_latex(skills_str)}}}\\[1mm]
     \begin{{itemize}}[leftmargin=2em]
 {bullets_tex}
 \end{{itemize}}

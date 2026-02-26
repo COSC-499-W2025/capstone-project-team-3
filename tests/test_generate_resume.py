@@ -363,25 +363,26 @@ def test_create_resume_with_name(db_connection):
     
 def test_attach_projects_to_resume(db_connection):
     """
-    Tests that attach_projects_to_resume correctly attaches projects and sets display order.
+    Tests that attach_projects_to_resume attaches projects with display_order
+    by last_modified DESC (newest first). Seed: p1 has 2024-06-01, p2 has 2023-12-01.
     """
     # Create a new resume
     cursor = db_connection.cursor()
     cursor.execute("INSERT INTO RESUME (id) VALUES (2)")
     db_connection.commit()
 
-    # Attach two projects
+    # Attach two projects (input order p2, p1); stored order should be by date: p1 first, then p2
     attach_projects_to_resume(2, ["p2", "p1"])
 
-    # Check RESUME_PROJECT table for correct attachment and order
+    # Check RESUME_PROJECT table: order by last_modified DESC → p1 (newer), p2 (older)
     cursor = db_connection.cursor()
     cursor.execute("SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order", (2,))
     rows = cursor.fetchall()
 
     assert len(rows) == 2
-    assert rows[0][0] == "p2"
+    assert rows[0][0] == "p1"
     assert rows[0][1] == 1
-    assert rows[1][0] == "p1"
+    assert rows[1][0] == "p2"
     assert rows[1][1] == 2
 
 

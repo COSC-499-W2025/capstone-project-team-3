@@ -454,6 +454,7 @@ describe('ResumeBuilderPage', () => {
     mockDeleteResume.mockRejectedValue(new Error('Failed to delete'));
     window.confirm = jest.fn(() => true);
     window.alert = jest.fn();
+    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<ResumeBuilderPage />);
 
@@ -471,6 +472,8 @@ describe('ResumeBuilderPage', () => {
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalledWith('Failed to delete resume. Please try again.');
     });
+
+    consoleErrorMock.mockRestore();
   });
 
   test('deleting the active resume switches to first available resume', async () => {
@@ -679,6 +682,19 @@ describe('ResumeBuilderPage', () => {
     // Open dropdown
     const downloadButton = screen.getByText('Download');
     fireEvent.click(downloadButton);
+    // Select the saved resume (index 1)
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => {
+      expect(mockGetResumeById).toHaveBeenCalledWith(2);
+    });
+
+    // Setup mock to return updated list after deletion
+    const updatedList: ResumeListItem[] = [
+      { id: null, name: 'Master Resume', is_master: true },
+    ];
+    mockGetResumes.mockResolvedValueOnce(updatedList);
 
     expect(screen.getByText('Download as PDF')).toBeDefined();
 

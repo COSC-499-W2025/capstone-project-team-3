@@ -285,4 +285,45 @@ describe('ResumePreview', () => {
 
     expect(screen.queryByRole('button', { name: 'Remove project from resume' })).toBeNull();
   });
+
+  test('in edit mode shows drag handle for reordering projects', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        },
+        {
+          ...mockResume.projects[1],
+          project_id: 'sig-456',
+          title: 'Data Analytics Dashboard',
+          dates: 'Apr 2024 – Jun 2024',
+          skills: ['Python', 'Pandas'],
+          bullets: ['Created tool']
+        }
+      ]
+    };
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={jest.fn()}
+      />
+    );
+
+    const dragHandles = screen.getAllByLabelText('Drag to reorder project');
+    expect(dragHandles.length).toBe(2);
+  });
+
+  test('when not editing does not show drag handle', () => {
+    render(<ResumePreview resume={mockResume} />);
+
+    expect(screen.queryByLabelText('Drag to reorder project')).toBeNull();
+  });
 });

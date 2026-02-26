@@ -402,7 +402,13 @@ def update_existing_project(
     return new_project_sig
 
 
-def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float = None, base_threshold: float = 65.0) -> dict:
+def run_scan_flow(
+    root: str,
+    exclude: list = None,
+    similarity_threshold: float = None,
+    base_threshold: float = 65.0,
+    similarity_decision: Optional[bool] = None,
+) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
     Returns dict with 'files', 'skip_analysis', 'score', 'signature' keys.
@@ -412,6 +418,10 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
         exclude: List of patterns to exclude
         similarity_threshold: Fixed threshold (if None, auto-calculates based on project size)
         base_threshold: Base threshold for dynamic calculation (default 65.0)
+        similarity_decision: Optional non-interactive decision for similar projects.
+            - True: update existing similar project
+            - False: create new project
+            - None: prompt user via CLI
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
@@ -465,8 +475,12 @@ def run_scan_flow(root: str, exclude: list = None, similarity_threshold: float =
     path = str(Path(root).resolve())
     
     if match_info:
-        # Similar project found - ASK THE USER what to do
-        user_wants_update = prompt_update_confirmation(match_info, name)
+        # Similar project found - ask user (CLI) unless explicit decision is provided
+        user_wants_update = (
+            similarity_decision
+            if similarity_decision is not None
+            else prompt_update_confirmation(match_info, name)
+        )
         
         if user_wants_update:
             # Update existing project

@@ -20,6 +20,7 @@ from app.api.routes.user_preferences import router as user_preferences_router
 from app.api.routes.skills import router as skills_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.portfolio import router as portfolio_router
+from app.api.routes.analysis import router as analysis_router
 from app.api.routes.health import router as health_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.post_thumbnail import router as thumbnail_router
@@ -75,6 +76,7 @@ app.include_router(user_preferences_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
+app.include_router(analysis_router, prefix="/api")
 app.include_router(health_router)
 app.include_router(thumbnail_router, prefix="/api")
 

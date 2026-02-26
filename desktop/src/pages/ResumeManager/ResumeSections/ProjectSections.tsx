@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Project } from "../../../api/resume_types";
 
 const MONTH_ABBREV = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -49,6 +51,7 @@ export function ProjectsSection({
   onProjectChange,
   onProjectDelete,
   projectStartIndex = 0,
+  enableSortable = false,
 }: {
   projects: Project[];
   showHeading?: boolean;
@@ -59,6 +62,8 @@ export function ProjectsSection({
   onProjectDelete?: (projectId: string) => void;
   /** Index of the first project in this section within resume.projects (for multi-page). */
   projectStartIndex?: number;
+  /** When true and isEditing, each project shows a drag handle for reordering. */
+  enableSortable?: boolean;
 }) {
   const emitProjectChange = (localIndex: number, updated: Project) => {
     onProjectChange?.(projectStartIndex + localIndex, updated);
@@ -75,6 +80,7 @@ export function ProjectsSection({
         const skills = projectSkills(p);
         const bullets = projectBullets(p);
         const globalKey = projectStartIndex + i;
+        const sortableId = enableSortable && isEditing ? globalKey : undefined;
 
         return (
           <ProjectBlock
@@ -83,6 +89,7 @@ export function ProjectsSection({
             isEditing={isEditing}
             onChange={(updated) => emitProjectChange(i, updated)}
             onDelete={onProjectDelete}
+            sortableId={sortableId}
           />
         );
       })}
@@ -95,11 +102,14 @@ function ProjectBlock({
   isEditing,
   onChange,
   onDelete,
+  sortableId,
 }: {
   project: Project;
   isEditing: boolean;
   onChange: (project: Project) => void;
   onDelete?: (projectId: string) => void;
+  /** When set (and isEditing), this block is sortable and shows a drag handle. */
+  sortableId?: number;
 }) {
   const skills = projectSkills(project);
   const bullets = projectBullets(project);
@@ -109,6 +119,38 @@ function ProjectBlock({
   const titleRef = useRef<HTMLParagraphElement>(null);
   const skillsRef = useRef<HTMLSpanElement>(null);
   const bulletsRef = useRef<HTMLDivElement>(null);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: sortableId ?? -1,
+    disabled: sortableId === undefined,
+  });
+
+  const sortableStyle =
+    sortableId !== undefined
+      ? {
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.5 : 1,
+        }
+      : undefined;
+
+  const dragHandle = sortableId !== undefined && (
+    <span
+      className="resume-preview__project-drag-handle"
+      aria-label="Drag to reorder project"
+      {...attributes}
+      {...listeners}
+    >
+      ⋮⋮
+    </span>
+  );
 
   const parsed = parseDisplayDates(project.dates);
   const [startMonth, setStartMonth] = useState<string>(() => project.start_date ?? parsed.start ?? "");
@@ -206,8 +248,14 @@ function ProjectBlock({
   if (isEditing) {
     const canDelete = onDelete && project.project_id;
     return (
-      <div key="project-edit" className="resume-preview__project">
+      <div
+        key="project-edit"
+        ref={setNodeRef}
+        style={sortableStyle}
+        className="resume-preview__project"
+      >
         <div className="resume-preview__project-header">
+          {dragHandle}
           <p
             ref={titleRef}
             className="resume-preview__project-title"

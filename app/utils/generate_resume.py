@@ -530,3 +530,26 @@ def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
 
     conn.commit()
     conn.close()
+
+
+def remove_project_from_resume(resume_id: int, project_id: str) -> None:
+    """Remove a project from a resume (delete from RESUME_PROJECT).
+    Does not delete the project from PROJECT table.
+    Raises ResumeNotFoundError if the resume does not exist.
+    No error if the project was not attached to this resume (idempotent).
+    """
+    if not resume_exists(resume_id):
+        raise ResumeNotFoundError(f"Resume with ID {resume_id} not found")
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM RESUME_PROJECT WHERE resume_id = ? AND project_id = ?",
+            (resume_id, project_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumeServiceError("Failed to remove project from resume") from e
+    finally:
+        conn.close()

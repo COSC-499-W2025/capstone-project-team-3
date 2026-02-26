@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists,save_resume_edits, create_resume, attach_projects_to_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, remove_project_from_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel, Field
@@ -280,6 +280,28 @@ async def resume_pdf_export(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
+
+@router.delete("/resume/{resume_id}/project/{project_id}")
+def delete_project_from_resume(resume_id: int, project_id: str):
+    """
+    Remove a project from a resume.
+
+    Deletes the association from RESUME_PROJECT for the given resume and project.
+    Does not delete the resume or the project from the PROJECT table.
+    """
+    try:
+        remove_project_from_resume(resume_id, project_id)
+        return {
+            "success": True,
+            "message": f"Project {project_id} removed from resume {resume_id}",
+            "resume_id": resume_id,
+            "project_id": project_id,
+        }
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.delete("/resume/{resume_id}")
 def delete_saved_resume(resume_id: int):

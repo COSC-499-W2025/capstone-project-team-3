@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from app.api.routes.resume import router, compile_pdf, get_or_compile_pdf
-from app.utils.generate_resume import ResumeServiceError
+from app.utils.generate_resume import ResumeServiceError, ResumeNotFoundError
 from app.api.routes import resume as resume_mod
 import os
 
@@ -243,6 +243,46 @@ def test_get_or_compile_pdf_cache(tmp_path, monkeypatch):
         pdf2 = get_or_compile_pdf(tex)
         assert pdf2.startswith(b"%PDF")
         mock_compile2.assert_not_called()
+
+
+@patch("app.api.routes.resume.remove_project_from_resume")
+def test_delete_project_from_resume_success(mock_remove, client):
+    """Verify DELETE /resume/{resume_id}/project/{project_id} successfully removes a project from a resume."""
+    mock_remove.return_value = None
+
+    response = client.delete("/resume/5/project/p1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["resume_id"] == 5
+    assert data["project_id"] == "p1"
+    assert "removed from resume" in data["message"]
+    mock_remove.assert_called_once_with(5, "p1")
+
+
+@patch("app.api.routes.resume.remove_project_from_resume")
+def test_delete_project_from_resume_not_found(mock_remove, client):
+    """Verify DELETE /resume/{resume_id}/project/{project_id} returns 404 when resume doesn't exist."""
+    mock_remove.side_effect = ResumeNotFoundError("Resume with ID 999 not found")
+
+    response = client.delete("/resume/999/project/p1")
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
+    mock_remove.assert_called_once_with(999, "p1")
+
+
+@patch("app.api.routes.resume.remove_project_from_resume")
+def test_delete_project_from_resume_service_error(mock_remove, client):
+    """Verify DELETE /resume/{resume_id}/project/{project_id} returns 500 on ResumeServiceError."""
+    mock_remove.side_effect = ResumeServiceError("Failed to remove project from resume")
+
+    response = client.delete("/resume/5/project/p1")
+
+    assert response.status_code == 500
+    assert "Failed to remove project" in response.json()["detail"]
+    mock_remove.assert_called_once_with(5, "p1")
 
 
 @patch("app.api.routes.resume.get_connection")

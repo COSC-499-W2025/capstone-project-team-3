@@ -231,4 +231,58 @@ describe('ResumePreview', () => {
 
     expect(screen.getAllByText('E-commerce Website').length).toBeGreaterThan(0);
   });
+
+  test('in edit mode with onProjectDelete and project_id shows remove project button', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        }
+      ]
+    };
+    const onProjectDelete = jest.fn();
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={jest.fn()}
+        onProjectDelete={onProjectDelete}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Remove project from resume' })).toBeDefined();
+  });
+
+  test('in edit mode without onProjectDelete does not show remove project button', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        }
+      ]
+    };
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Remove project from resume' })).toBeNull();
+  });
 });

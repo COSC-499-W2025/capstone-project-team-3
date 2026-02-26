@@ -4,17 +4,18 @@ import { Resume, Skills, Project } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
-import { 
-  getResumes, 
-  buildResume, 
-  getResumeById, 
-  previewResume, 
-  deleteResume, 
-  downloadResumePDF, 
-  downloadResumeTeX, 
-  saveNewResume, 
-  updateResume, 
-  type ResumeListItem 
+import {
+  getResumes,
+  buildResume,
+  getResumeById,
+  previewResume,
+  deleteResume,
+  deleteProjectFromResume,
+  downloadResumePDF,
+  downloadResumeTeX,
+  saveNewResume,
+  updateResume,
+  type ResumeListItem,
 } from "../api/resume";
 
 /** Convert YYYY-MM to YYYY-MM-01 for backend fromisoformat. */
@@ -159,6 +160,19 @@ export function ResumeBuilderPage() {
     } catch (error) {
       console.error('Failed to delete resume:', error);
       alert('Failed to delete resume. Please try again.');
+    }
+  };
+
+  const handleProjectDelete = async (projectId: string) => {
+    const resumeId = currentResume?.id;
+    if (resumeId == null || isMasterResume) return;
+    try {
+      await deleteProjectFromResume(resumeId, projectId);
+      const updated = await getResumeById(resumeId);
+      setActiveContent(updated);
+    } catch (error) {
+      console.error('Failed to remove project from resume:', error);
+      alert('Failed to remove project from resume. Please try again.');
     }
   };
 
@@ -389,10 +403,11 @@ export function ResumeBuilderPage() {
           <div className="container">
             <div className="card">
               {activeContent && (
-                <ResumePreview 
+                <ResumePreview
                   resume={activeContent}
                   isEditing={isEditing}
                   onSectionChange={handleSectionChange}
+                  onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
                 />
               )}
             </div>

@@ -44,6 +44,18 @@ export async function deleteResume(id: number): Promise<{ success: boolean; mess
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json();
 }
+
+/** Remove a project from a saved resume (does not delete the project from the project list). */
+export async function deleteProjectFromResume(
+  resumeId: number,
+  projectId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/resume/${resumeId}/project/${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json();
+}
 // Save new resume with selected projects
 export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {

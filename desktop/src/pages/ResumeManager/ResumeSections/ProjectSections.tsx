@@ -47,6 +47,7 @@ export function ProjectsSection({
   showHeading = true,
   isEditing = false,
   onProjectChange,
+  onProjectDelete,
   projectStartIndex = 0,
 }: {
   projects: Project[];
@@ -54,6 +55,8 @@ export function ProjectsSection({
   isEditing?: boolean;
   /** Called with (globalIndexInResume, updatedProject) when a project is edited. */
   onProjectChange?: (globalIndex: number, project: Project) => void;
+  /** Called with project_id when user removes the project from the resume (saved resumes only). */
+  onProjectDelete?: (projectId: string) => void;
   /** Index of the first project in this section within resume.projects (for multi-page). */
   projectStartIndex?: number;
 }) {
@@ -79,6 +82,7 @@ export function ProjectsSection({
             project={p}
             isEditing={isEditing}
             onChange={(updated) => emitProjectChange(i, updated)}
+            onDelete={onProjectDelete}
           />
         );
       })}
@@ -90,10 +94,12 @@ function ProjectBlock({
   project,
   isEditing,
   onChange,
+  onDelete,
 }: {
   project: Project;
   isEditing: boolean;
   onChange: (project: Project) => void;
+  onDelete?: (projectId: string) => void;
 }) {
   const skills = projectSkills(project);
   const bullets = projectBullets(project);
@@ -198,6 +204,7 @@ function ProjectBlock({
   };
 
   if (isEditing) {
+    const canDelete = onDelete && project.project_id;
     return (
       <div key="project-edit" className="resume-preview__project">
         <div className="resume-preview__project-header">
@@ -209,46 +216,62 @@ function ProjectBlock({
             onBlur={() => commit()}
             data-placeholder="Project title"
           />
-          <div className="resume-preview__project-dates-edit">
-            <div className="resume-preview__project-date-wrap">
-              <input
-                type="month"
-                className="resume-preview__project-date-input"
-                aria-label="Start (month and year)"
-                value={startMonth}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setStartMonth(v);
-                  emitDatesChange(v, endMonth);
-                }}
-                onBlur={() => commit()}
-              />
-              {!startMonth && (
-                <span className="resume-preview__project-date-placeholder" aria-hidden>
-                  Start
-                </span>
-              )}
+          <div className="resume-preview__project-header-right">
+            <div className="resume-preview__project-dates-edit">
+              <div className="resume-preview__project-date-wrap">
+                <input
+                  type="month"
+                  className="resume-preview__project-date-input"
+                  aria-label="Start (month and year)"
+                  value={startMonth}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setStartMonth(v);
+                    emitDatesChange(v, endMonth);
+                  }}
+                  onBlur={() => commit()}
+                />
+                {!startMonth && (
+                  <span className="resume-preview__project-date-placeholder" aria-hidden>
+                    Start
+                  </span>
+                )}
+              </div>
+              <span className="resume-preview__project-dates-sep"> – </span>
+              <div className="resume-preview__project-date-wrap">
+                <input
+                  type="month"
+                  className="resume-preview__project-date-input"
+                  aria-label="End (month and year)"
+                  value={endMonth}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setEndMonth(v);
+                    emitDatesChange(startMonth, v);
+                  }}
+                  onBlur={() => commit()}
+                />
+                {!endMonth && (
+                  <span className="resume-preview__project-date-placeholder" aria-hidden>
+                    End
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="resume-preview__project-dates-sep"> – </span>
-            <div className="resume-preview__project-date-wrap">
-              <input
-                type="month"
-                className="resume-preview__project-date-input"
-                aria-label="End (month and year)"
-                value={endMonth}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setEndMonth(v);
-                  emitDatesChange(startMonth, v);
+            {canDelete && (
+              <button
+                type="button"
+                className="resume-preview__project-delete-btn"
+                aria-label="Remove project from resume"
+                onClick={() => {
+                  if (window.confirm("Remove this project from the resume?")) {
+                    onDelete(project.project_id!);
+                  }
                 }}
-                onBlur={() => commit()}
-              />
-              {!endMonth && (
-                <span className="resume-preview__project-date-placeholder" aria-hidden>
-                  End
-                </span>
-              )}
-            </div>
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
         <p className="resume-preview__project-skills">

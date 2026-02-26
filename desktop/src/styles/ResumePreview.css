@@ -199,6 +199,42 @@
   flex-shrink: 0;
 }
 
+/* Project edit: dates + delete button group on the right */
+.resume-preview__project-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.resume-preview__project-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #666;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.resume-preview__project-delete-btn:hover {
+  background: #f5f5f5;
+  color: #c00;
+  border-color: #c00;
+}
+
+.resume-preview__project-delete-btn:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
 /* Project edit: month/year date pickers */
 .resume-preview__project-dates-edit {
   display: inline-flex;

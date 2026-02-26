@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { EducationSection } from '../src/pages/ResumeManager/ResumeSections/EducationSection';
 import { HeaderSection } from '../src/pages/ResumeManager/ResumeSections/HeaderSection';
 import { SkillsSection } from '../src/pages/ResumeManager/ResumeSections/SkillsSection';
@@ -330,5 +330,116 @@ describe('ProjectsSection', () => {
     expect(screen.getByLabelText('Start (month and year)')).toBeDefined();
     expect(screen.getByLabelText('End (month and year)')).toBeDefined();
     expect(screen.getByText('One bullet per line.')).toBeDefined();
+  });
+
+  test('in edit mode with onProjectDelete and project_id shows remove button', () => {
+    const projects: Project[] = [
+      {
+        project_id: 'proj-123',
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onProjectDelete = jest.fn();
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onProjectDelete={onProjectDelete}
+        projectStartIndex={0}
+      />
+    );
+
+    const removeButton = screen.getByRole('button', { name: 'Remove project from resume' });
+    expect(removeButton).toBeDefined();
+    expect(removeButton.textContent).toBe('×');
+  });
+
+  test('clicking remove project calls onProjectDelete after confirm', () => {
+    const projects: Project[] = [
+      {
+        project_id: 'proj-456',
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onProjectDelete = jest.fn();
+    window.confirm = jest.fn(() => true);
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onProjectDelete={onProjectDelete}
+        projectStartIndex={0}
+      />
+    );
+
+    const removeButton = screen.getByRole('button', { name: 'Remove project from resume' });
+    fireEvent.click(removeButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Remove this project from the resume?');
+    expect(onProjectDelete).toHaveBeenCalledWith('proj-456');
+  });
+
+  test('clicking remove project does not call onProjectDelete when user cancels confirm', () => {
+    const projects: Project[] = [
+      {
+        project_id: 'proj-789',
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onProjectDelete = jest.fn();
+    window.confirm = jest.fn(() => false);
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onProjectDelete={onProjectDelete}
+        projectStartIndex={0}
+      />
+    );
+
+    const removeButton = screen.getByRole('button', { name: 'Remove project from resume' });
+    fireEvent.click(removeButton);
+
+    expect(window.confirm).toHaveBeenCalledWith('Remove this project from the resume?');
+    expect(onProjectDelete).not.toHaveBeenCalled();
+  });
+
+  test('in edit mode without project_id does not show remove button', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onProjectDelete = jest.fn();
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onProjectDelete={onProjectDelete}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Remove project from resume' })).toBeNull();
   });
 });

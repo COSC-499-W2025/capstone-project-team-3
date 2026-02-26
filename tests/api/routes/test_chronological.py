@@ -55,6 +55,13 @@ def test_list_projects():
     assert r.status_code == 200
     assert any(p["project_signature"] == SIG1 for p in r.json())
 
+def test_list_projects_fields():
+    """Each project exposes the required date fields."""
+    r = client.get("/api/chronological/projects")
+    for p in r.json():
+        for field in ("project_signature", "name", "created_at", "last_modified"):
+            assert field in p
+
 
 # GET /api/chronological/projects/{signature}
 def test_get_project_found():
@@ -71,7 +78,9 @@ def test_update_project_dates():
     r = client.patch(f"/api/chronological/projects/{SIG1}/dates",
                      json={"created_at": "2023-03-01", "last_modified": "2024-07-15"})
     assert r.status_code == 200
-    assert r.json()["created_at"] == "2023-03-01"
+    data = r.json()
+    assert data["created_at"] == "2023-03-01"
+    assert data["last_modified"] == "2024-07-15"
 
 def test_update_project_dates_not_found():
     assert client.patch(f"/api/chronological/projects/{SIG_MISSING}/dates",
@@ -85,6 +94,13 @@ def test_get_project_skills():
     dates = [s["date"] for s in r.json()]
     assert dates == sorted(dates)
 
+def test_get_project_skills_fields():
+    """Each skill entry exposes id, skill, source, date."""
+    r = client.get(f"/api/chronological/projects/{SIG1}/skills")
+    for s in r.json():
+        for field in ("id", "skill", "source", "date"):
+            assert field in s
+
 def test_get_project_skills_not_found():
     assert client.get(f"/api/chronological/projects/{SIG_MISSING}/skills").status_code == 404
 
@@ -95,6 +111,17 @@ def test_add_skill():
                     json={"skill": "Docker", "source": "code", "date": "2024-04-01"})
     assert r.status_code == 201
     assert r.json()["skill"] == "Docker"
+
+def test_add_skill_persists():
+    """Newly added skill appears when fetching project skills."""
+    client.post(f"/api/chronological/projects/{SIG1}/skills",
+                json={"skill": "Redis", "source": "non-code", "date": "2024-05-01"})
+    names = [s["skill"] for s in client.get(f"/api/chronological/projects/{SIG1}/skills").json()]
+    assert "Redis" in names
+
+def test_add_skill_invalid_source():
+    assert client.post(f"/api/chronological/projects/{SIG1}/skills",
+                       json={"skill": "Go", "source": "invalid", "date": "2024-01-01"}).status_code == 400
 
 def test_add_skill_invalid():
     assert client.post(f"/api/chronological/projects/{SIG1}/skills",
@@ -124,6 +151,13 @@ def test_update_skill_name_empty():
 # DELETE /api/chronological/skills/{skill_id}
 def test_delete_skill():
     assert client.delete(f"/api/chronological/skills/{_skill_id('Flask')}").status_code == 204
+
+def test_delete_skill_removed_from_list():
+    """Deleted skill no longer appears in the project skills list."""
+    sid = _skill_id("Flask")
+    client.delete(f"/api/chronological/skills/{sid}")
+    names = [s["skill"] for s in client.get(f"/api/chronological/projects/{SIG1}/skills").json()]
+    assert "Flask" not in names
 
 def test_delete_skill_not_found():
     assert client.delete("/api/chronological/skills/999999").status_code == 404

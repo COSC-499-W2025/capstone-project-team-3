@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, remove_project_from_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel, Field
@@ -23,6 +23,10 @@ os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
     project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")
+
+
+class AddProjectsToResumeBody(BaseModel):
+    project_ids: list[str] = Field(..., description="List of project IDs to add to the resume")
 
 def tex_hash(tex: str) -> str:
     """Creates a unique hash of the LaTex source for futurer caching """
@@ -280,6 +284,34 @@ async def resume_pdf_export(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=resume.pdf"},
     )
+
+@router.post("/resume/{resume_id}/projects")
+def add_projects_to_resume_endpoint(resume_id: int, body: AddProjectsToResumeBody):
+    """
+    Add projects from the database to an existing resume.
+
+    Only adds projects that are not already on the resume. New projects are appended
+    in order by last_modified DESC (newest first). Does not modify the Master Resume (id=1).
+    """
+    if resume_id == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot add projects to the Master Resume",
+        )
+    try:
+        add_projects_to_resume(resume_id, body.project_ids)
+        return {
+            "success": True,
+            "message": f"Projects added to resume {resume_id}",
+            "resume_id": resume_id,
+        }
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ResumePersistenceError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.delete("/resume/{resume_id}/project/{project_id}")
 def delete_project_from_resume(resume_id: int, project_id: str):

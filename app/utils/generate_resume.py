@@ -532,6 +532,70 @@ def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
     conn.close()
 
 
+def add_projects_to_resume(resume_id: int, project_ids: list[str]) -> None:
+    """Append projects to an existing resume with display_order after current max.
+    Skips project_ids already on the resume (idempotent). New projects are ordered
+    by last_modified DESC (newest first).
+    Raises ResumeNotFoundError if the resume does not exist.
+    Raises ResumePersistenceError if resume_id is the master resume (1).
+    """
+    if resume_id == 1:
+        raise ResumePersistenceError("Cannot add projects to the Master Resume")
+    if not resume_exists(resume_id):
+        raise ResumeNotFoundError(f"Resume with ID {resume_id} not found")
+    if not project_ids:
+        return
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = ?",
+            (resume_id,),
+        )
+        existing = {row[0]: row[1] for row in cursor.fetchall()}
+        max_order = max(existing.values(), default=0)
+        new_ids = [pid for pid in project_ids if pid not in existing]
+        if not new_ids:
+            return
+
+        placeholders = ",".join(["?"] * len(new_ids))
+        cursor.execute(
+            f"""
+            SELECT project_signature, last_modified
+            FROM PROJECT
+            WHERE project_signature IN ({placeholders})
+            """,
+            new_ids,
+        )
+        date_map = {row[0]: row[1] for row in cursor.fetchall()}
+        ordered_ids = sorted(
+            new_ids,
+            key=lambda p: date_map.get(p) or "",
+            reverse=True,
+        )
+
+        for index, project_id in enumerate(ordered_ids):
+            cursor.execute(
+                """
+                INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order)
+                VALUES (?, ?, ?)
+                """,
+                (resume_id, project_id, max_order + 1 + index),
+            )
+        conn.commit()
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise ResumePersistenceError(
+            "One or more project IDs are invalid or already on this resume"
+        ) from e
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumeServiceError("Failed to add projects to resume") from e
+    finally:
+        conn.close()
+
+
 def remove_project_from_resume(resume_id: int, project_id: str) -> None:
     """Remove a project from a resume (delete from RESUME_PROJECT).
     Does not delete the project from PROJECT table.

@@ -427,6 +427,43 @@ def test_create_tailored_resume_missing_name(client):
     # Pydantic returns a list of validation errors
     assert any("name" in str(err) for err in detail)
 
+@patch("app.api.routes.resume.add_projects_to_resume")
+def test_add_projects_to_resume_endpoint_success(mock_add, client):
+    """POST /resume/{resume_id}/projects adds projects and returns 200."""
+    mock_add.return_value = None
+    response = client.post(
+        "/resume/2/projects",
+        json={"project_ids": ["p1", "p2"]},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["resume_id"] == 2
+    mock_add.assert_called_once_with(2, ["p1", "p2"])
+
+
+def test_add_projects_to_resume_endpoint_master_rejected(client):
+    """POST /resume/1/projects returns 400 (cannot add to Master Resume)."""
+    response = client.post(
+        "/resume/1/projects",
+        json={"project_ids": ["p2"]},
+    )
+    assert response.status_code == 400
+    assert "Master" in response.json()["detail"]
+
+
+@patch("app.api.routes.resume.add_projects_to_resume")
+def test_add_projects_to_resume_endpoint_not_found(mock_add, client):
+    """POST /resume/{id}/projects returns 404 when resume does not exist."""
+    mock_add.side_effect = ResumeNotFoundError("Resume with ID 99999 not found")
+    response = client.post(
+        "/resume/99999/projects",
+        json={"project_ids": ["p1"]},
+    )
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
 def test_create_tailored_resume_empty_name(client):
     """Verify that empty name returns 422 (min_length=1)."""
     response = client.post(

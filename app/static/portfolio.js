@@ -562,6 +562,19 @@ showError(message) {
             const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
             const metrics = project.metrics || {};
             const skills = project.skills || [];
+            const scoreOverrideExclusions = Array.isArray(project.score_override_exclusions)
+                ? project.score_override_exclusions.filter(metric => typeof metric === 'string' && metric.trim().length > 0)
+                : [];
+            const hasEquationOverride = project.score_overridden && scoreOverrideExclusions.length > 0;
+            const formattedExclusions = scoreOverrideExclusions.map(metric =>
+                metric
+                    .replace(/_/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .replace(/\b\w/g, letter => letter.toUpperCase())
+            );
+            const visibleExclusions = formattedExclusions.slice(0, 4);
+            const hiddenExclusionsCount = Math.max(0, formattedExclusions.length - visibleExclusions.length);
             const complexity = metrics.complexity_analysis || {};
             const commitPatterns = metrics.commit_patterns || {};
             const contributionActivity = metrics.contribution_activity || {};
@@ -592,9 +605,23 @@ showError(message) {
 
                     <div class="project-title editable-field" data-field="project_name" data-project="${project.id}"style="padding-right: 140px;">${project.title}</div>
              
-                    <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
-                        ${this.getDisplayScore(project).toFixed(2)}${project.score_overridden ? ' <span style="color: var(--warning); font-size: 0.8em;">(Override)</span>' : ''}
+                    <div class="project-score-row">
+                        <div class="project-score-main">
+                            <div class="project-score-display editable-field" data-field="rank" data-project="${project.id}">
+                                ${this.getDisplayScore(project).toFixed(2)}
+                            </div>
+                            ${project.score_overridden ? '<span class="project-score-badge">Overridden</span>' : ''}
+                        </div>
                     </div>
+                    ${hasEquationOverride ? `
+                        <div class="project-score-config-inline">
+                            <span class="score-config-label">Excluded Metrics:</span>
+                            <div class="score-exclusion-chips-inline">
+                                ${visibleExclusions.map(metric => `<span class="score-exclusion-chip">${metric}</span>`).join('')}
+                                ${hiddenExclusionsCount > 0 ? `<span class="score-exclusion-chip">+${hiddenExclusionsCount} more</span>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
                     <div class="project-dates editable-field" 
                          data-field="dates" 
                          data-project="${project.id}"

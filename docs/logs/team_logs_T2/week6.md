@@ -109,6 +109,6 @@ Design discussion and M2 progress.
 --- 
 ## Plan for Next Cycle
 
-* Continue work on remaining Milestone 2 features (e.g. merge PR #662, complete PR #669)
+* Continue work on remaining Milestone 2 features
 * Start with some Milestone 3 requirements
 * Monitor new API endpoints performance and usage patterns

@@ -20,7 +20,7 @@ Building on the previous weeks, I continued the resume feature work: backend (DB
   - Added frontend tests for Resume Builder flow: `ResumeBuilderPage.test.tsx` (fetch on mount, sidebar list, selection, toggle) and `ResumeSidebar.test.tsx` (title, names, onSelect, active class, onTailorNew, empty-name fallback, toggle, icon buttons). Closes #639.
 - **[PR #649 - Display Resume (UI)](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/649)** ✅ Merged
   - Introduced the resume display view: `ResumeSections` folder with section components, `ResumePreview.tsx`, `ResumeBuilderPage.tsx` as entry point, and CSS moved to styles folder. Tests added for resume sections and builder page.
-- **[PR #662 - Create Tailored Resume (Project Selection Page)](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/662)** Code Review
+- **[PR #662 - Create Tailored Resume (Project Selection Page)](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/662)** ✅ Merged
   - Project Selection Page for tailored resume: backend projects API includes `date_added`, frontend `projects.ts` API, `ProjectSelectionPage.tsx` with table and checkboxes, “Generate Resume” button, and Resume Builder “Tailor New Resume” to project selection. Closes #661.
 - **[PR #669 - UI/view tailored](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/669)** Code Review
   - UI for viewing tailored resume. Closes #607.
@@ -33,7 +33,7 @@ Building on the previous weeks, I continued the resume feature work: backend (DB
 | [#639](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/639) | Resume Sidebar / Resume Builder tests | ✅ Closed |
 | [#642](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/642) | (Resume sidebar related) | ✅ Closed |
 | [#610](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/610) | Display Resume (UI) | ✅ Closed |
-| [#661](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/661) | Create Tailored Resume – Project Selection Page | In Review (PR #662) |
+| [#661](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/661) | Create Tailored Resume – Project Selection Page | ✅ Closed |
 | [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored | In Review (PR #669 draft) |
 
 ---

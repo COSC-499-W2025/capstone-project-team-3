@@ -61,7 +61,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
 | [#552, #553, #571, #572, #602, #573] | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization | @kjassani |
-| [#639, #642, #610] | Resume Sidebar (GET /resume_names, sidebar UI, resume bullets fix); Display Resume (UI) – ResumeSections, ResumePreview, styles; Resume Builder & Sidebar frontend tests (ResumeBuilderPage, ResumeSidebar) | @dabby04 |
+| [#639, #642, #610, #661] | Resume Sidebar (GET /resume_names, sidebar UI, resume bullets fix); Display Resume (UI) – ResumeSections, ResumePreview, styles; Resume Builder & Sidebar frontend tests (ResumeBuilderPage, ResumeSidebar), Create Tailored Resume (Project Selection Page) | @dabby04 |
 
 ## In Progress Tasks
 
@@ -71,8 +71,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI | @kjassani |
-| [#661](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/661) | Create Tailored Resume (Project Selection Page). PR #662 in code review. | @dabby04 |
-| [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored. PR #669 (draft). | @dabby04 |
+| [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored. PR #669 | @dabby04 |
 
 ---
 

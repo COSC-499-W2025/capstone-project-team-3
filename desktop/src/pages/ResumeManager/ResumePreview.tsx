@@ -1,4 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { arrayMove } from "@dnd-kit/sortable";
 import { Resume, Skills, Project } from "../../api/resume_types";
 import { EducationSection } from "./ResumeSections/EducationSection";
 import { HeaderSection } from "./ResumeSections/HeaderSection";
@@ -62,6 +72,22 @@ export function ResumePreview({
       onSectionChange?.("projects", newProjects);
     }
   };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = Number(active.id);
+    const to = Number(over.id);
+    if (Number.isNaN(from) || Number.isNaN(to) || from < 0 || to < 0 || from >= projects.length || to >= projects.length) return;
+    const newProjects = arrayMove(projects, from, to);
+    onSectionChange?.("projects", newProjects);
+  };
+
+  const sortableProjectIds = projects.map((_, i) => i);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
 
   useLayoutEffect(() => {
     const refs = sectionRefs.current;
@@ -133,57 +159,117 @@ export function ResumePreview({
         ))}
 
         {sectionToPage.length > 0 &&
-          Array.from({ length: pageCount }, (_, pageIndex) => {
-            const sectionIndices = sectionToPage
-              .map((p, si) => (p === pageIndex ? si : -1))
-              .filter((si) => si >= 0);
-            if (sectionIndices.length === 0) return null;
-
-            const hasHeader = sectionIndices.includes(0);
-            const hasEducation = sectionIndices.includes(1);
-            const hasSkills = sectionIndices.includes(2);
-            const projectSectionIndices = sectionIndices.filter((si) => si >= 3);
-            const projectIndices = projectSectionIndices.map((si) => si - 3);
-            // Filter out invalid indices to prevent accessing undefined projects during state updates
-            const pageProjects = projectIndices
-              .filter(i => i >= 0 && i < projects.length)
-              .map((i) => projects[i]);
-
-            return (
-              <div
-                key={pageIndex}
-                className="resume-preview__page-content"
-                style={{
-                  top: pageIndex * (PAGE_HEIGHT_PX + PAGE_GAP_PX),
-                  height: PAGE_HEIGHT_PX,
-                }}
+          (isEditing ? (
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <SortableContext
+                items={sortableProjectIds}
+                strategy={verticalListSortingStrategy}
               >
-                <div className="resume-preview__content">
-                  {hasHeader && <HeaderSection resume={resume} />}
-                  {hasEducation && (
-                    <EducationSection education={resume.education} />
-                  )}
-                  {hasSkills && (
-                    <SkillsSection 
-                      skills={resume.skills}
-                      isEditing={isEditing}
-                      onChange={handleSkillsChange}
-                    />
-                  )}
-                  {pageProjects.length > 0 && (
-                    <ProjectsSection
-                      projects={pageProjects}
-                      showHeading={sectionIndices.includes(3)}
-                      isEditing={isEditing}
-                      onProjectChange={handleProjectChange}
-                      onProjectDelete={onProjectDelete}
-                      projectStartIndex={projectIndices[0]}
-                    />
-                  )}
+                {Array.from({ length: pageCount }, (_, pageIndex) => {
+                  const sectionIndices = sectionToPage
+                    .map((p, si) => (p === pageIndex ? si : -1))
+                    .filter((si) => si >= 0);
+                  if (sectionIndices.length === 0) return null;
+
+                  const hasHeader = sectionIndices.includes(0);
+                  const hasEducation = sectionIndices.includes(1);
+                  const hasSkills = sectionIndices.includes(2);
+                  const projectSectionIndices = sectionIndices.filter((si) => si >= 3);
+                  const projectIndices = projectSectionIndices.map((si) => si - 3);
+                  const pageProjects = projectIndices
+                    .filter((i) => i >= 0 && i < projects.length)
+                    .map((i) => projects[i]);
+
+                  return (
+                    <div
+                      key={pageIndex}
+                      className="resume-preview__page-content"
+                      style={{
+                        top: pageIndex * (PAGE_HEIGHT_PX + PAGE_GAP_PX),
+                        height: PAGE_HEIGHT_PX,
+                      }}
+                    >
+                      <div className="resume-preview__content">
+                        {hasHeader && <HeaderSection resume={resume} />}
+                        {hasEducation && (
+                          <EducationSection education={resume.education} />
+                        )}
+                        {hasSkills && (
+                          <SkillsSection
+                            skills={resume.skills}
+                            isEditing={isEditing}
+                            onChange={handleSkillsChange}
+                          />
+                        )}
+                        {pageProjects.length > 0 && (
+                          <ProjectsSection
+                            projects={pageProjects}
+                            showHeading={sectionIndices.includes(3)}
+                            isEditing={isEditing}
+                            onProjectChange={handleProjectChange}
+                            onProjectDelete={onProjectDelete}
+                            projectStartIndex={projectIndices[0]}
+                            enableSortable
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            Array.from({ length: pageCount }, (_, pageIndex) => {
+              const sectionIndices = sectionToPage
+                .map((p, si) => (p === pageIndex ? si : -1))
+                .filter((si) => si >= 0);
+              if (sectionIndices.length === 0) return null;
+
+              const hasHeader = sectionIndices.includes(0);
+              const hasEducation = sectionIndices.includes(1);
+              const hasSkills = sectionIndices.includes(2);
+              const projectSectionIndices = sectionIndices.filter((si) => si >= 3);
+              const projectIndices = projectSectionIndices.map((si) => si - 3);
+              const pageProjects = projectIndices
+                .filter((i) => i >= 0 && i < projects.length)
+                .map((i) => projects[i]);
+
+              return (
+                <div
+                  key={pageIndex}
+                  className="resume-preview__page-content"
+                  style={{
+                    top: pageIndex * (PAGE_HEIGHT_PX + PAGE_GAP_PX),
+                    height: PAGE_HEIGHT_PX,
+                  }}
+                >
+                  <div className="resume-preview__content">
+                    {hasHeader && <HeaderSection resume={resume} />}
+                    {hasEducation && (
+                      <EducationSection education={resume.education} />
+                    )}
+                    {hasSkills && (
+                      <SkillsSection
+                        skills={resume.skills}
+                        isEditing={isEditing}
+                        onChange={handleSkillsChange}
+                      />
+                    )}
+                    {pageProjects.length > 0 && (
+                      <ProjectsSection
+                        projects={pageProjects}
+                        showHeading={sectionIndices.includes(3)}
+                        isEditing={isEditing}
+                        onProjectChange={handleProjectChange}
+                        onProjectDelete={onProjectDelete}
+                        projectStartIndex={projectIndices[0]}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )) }
       </div>
     </main>
   );

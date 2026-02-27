@@ -74,7 +74,17 @@ jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumePreview', () => ({
-  ResumePreview: ({ resume, isEditing, onProjectDelete }: { resume: any; isEditing?: boolean; onProjectDelete?: (id: string) => void }) => {
+  ResumePreview: ({
+    resume,
+    isEditing,
+    onProjectDelete,
+    onSectionChange,
+  }: {
+    resume: any;
+    isEditing?: boolean;
+    onProjectDelete?: (id: string) => void;
+    onSectionChange?: (section: 'skills' | 'projects', data: any) => void;
+  }) => {
     const firstProjectWithId = resume?.projects?.find((p: any) => p.project_id);
     return (
       <div data-testid="resume-preview">

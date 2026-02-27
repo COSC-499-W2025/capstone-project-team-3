@@ -187,10 +187,34 @@
   margin-bottom: 1px;
 }
 
+.resume-preview__project-drag-handle {
+  flex-shrink: 0;
+  cursor: grab;
+  color: #666;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  margin-right: 4px;
+  border-radius: 2px;
+  user-select: none;
+  touch-action: none;
+}
+
+.resume-preview__project-drag-handle:hover {
+  color: #000;
+  background: #eee;
+}
+
+.resume-preview__project-drag-handle:active {
+  cursor: grabbing;
+}
+
 .resume-preview__project-title {
   font-weight: 700;
   font-size: 11pt;
   margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .resume-preview__project-dates {

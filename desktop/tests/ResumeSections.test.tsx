@@ -442,4 +442,77 @@ describe('ProjectsSection', () => {
 
     expect(screen.queryByRole('button', { name: 'Remove project from resume' })).toBeNull();
   });
+
+  test('in edit mode with enableSortable shows drag handle per project', () => {
+    const projects: Project[] = [
+      {
+        title: 'Project A',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet A']
+      },
+      {
+        title: 'Project B',
+        dates: 'Apr 2024 – Jun 2024',
+        skills: ['JavaScript'],
+        bullets: ['Bullet B']
+      }
+    ];
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        projectStartIndex={0}
+        enableSortable={true}
+      />
+    );
+
+    const dragHandles = screen.getAllByLabelText('Drag to reorder project');
+    expect(dragHandles.length).toBe(2);
+  });
+
+  test('in edit mode without enableSortable does not show drag handle', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.queryByLabelText('Drag to reorder project')).toBeNull();
+  });
+
+  test('when not editing enableSortable does not show drag handle', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        enableSortable={true}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.queryByLabelText('Drag to reorder project')).toBeNull();
+  });
 });

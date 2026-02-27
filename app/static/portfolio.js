@@ -562,6 +562,11 @@ showError(message) {
             const rank = ['🥇', '🥈', '🥉', '4th', '5th', '6th'][index] || `${index + 1}th`;
             const metrics = project.metrics || {};
             const skills = project.skills || [];
+            const roles = Array.isArray(metrics.roles)
+                ? metrics.roles.filter(role => typeof role === 'string' && role.trim().length > 0)
+                : [];
+            const visibleRoles = roles.slice(0, 3);
+            const hiddenRolesCount = Math.max(0, roles.length - visibleRoles.length);
             const scoreOverrideExclusions = Array.isArray(project.score_override_exclusions)
                 ? project.score_override_exclusions.filter(metric => typeof metric === 'string' && metric.trim().length > 0)
                 : [];
@@ -629,6 +634,16 @@ showError(message) {
                          data-last-modified="${project.last_modified || ''}">
                         ${project.dates}
                     </div>
+
+                    ${roles.length > 0 ? `
+                        <div class="project-role-strip">
+                            <span class="project-role-label">Roles</span>
+                            <div class="project-role-inline-tags">
+                                ${visibleRoles.map(role => `<span class="project-role-tag">${role}</span>`).join('')}
+                                ${hiddenRolesCount > 0 ? `<span class="project-role-tag">+${hiddenRolesCount}</span>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
                     
                     <!-- Thumbnail Image Display - Center -->
                     ${project.thumbnail_url ? `
@@ -706,7 +721,7 @@ showError(message) {
                             <p>${docTypesDisplay}</p>
                         </div>
                     ` : ''}
-                    
+
                     <div class="project-skills-display">
                         ${skills.slice(0, 8).map(skill => 
                             `<span class="project-skill-tag">${skill}</span>`

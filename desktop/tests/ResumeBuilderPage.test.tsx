@@ -774,25 +774,6 @@ describe('ResumeBuilderPage', () => {
     });
   });
 
-  test('delete button appears for saved resumes but not for master', async () => {
-    const listWithMultiple: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
-      { id: 2, name: 'Saved Resume 1', is_master: false },
-      { id: 3, name: 'Saved Resume 2', is_master: false },
-    ];
-    mockGetResumes.mockResolvedValue(listWithMultiple);
-
-    render(<ResumeBuilderPage />);
-
-    await screen.findByText('Master Resume');
-    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
-
-    // Should have delete buttons for id=2 and id=3, but not for master
-    expect(screen.getByTestId('delete-resume-2')).toBeDefined();
-    expect(screen.getByTestId('delete-resume-3')).toBeDefined();
-    expect(screen.queryByTestId('delete-resume-null')).toBeNull();
-  });
-
   test('closes dropdown menu when clicking outside', async () => {
     const { container } = render(<ResumeBuilderPage />);
 

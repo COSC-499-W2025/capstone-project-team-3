@@ -342,6 +342,7 @@ export function ResumeBuilderPage() {
                 >
                   Download as TeX
                 </button>
+
               </div>
             )}
           </div>

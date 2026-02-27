@@ -1,6 +1,9 @@
 
  # System Architecture Diagram
  ![System Architecture Diagram](../screenshots/System_Architecture_updated.png)
+ [View full‑size diagram as PDF](System_Architecture_updated.pdf)
+
+ _Note: Diagram is shown in the PDF for a clearer, high‑resolution view._
 
  ## Description of the diagram
 The explanation below links each functional requirement to the specific component in the system architecture where it is implemented. Data interactions such as “write to Database” or “retrieves from Database” indicate flow between components. Together, these mappings show how the system moves from user consent and file processing to project analysis, ranking, visualization, and storage.

@@ -88,6 +88,7 @@ export const ResumeSidebar = ({
                       <div className="resume-sidebar__dropdown">
                         <button
                           type="button"
+                          aria-label="Delete resume"
                           className="resume-sidebar__dropdown-item resume-sidebar__dropdown-item--danger"
                           onClick={(e) => {
                             e.stopPropagation();

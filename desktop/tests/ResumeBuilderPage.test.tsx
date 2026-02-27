@@ -550,6 +550,31 @@ describe('ResumeBuilderPage', () => {
     mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
     window.confirm = jest.fn(() => true);
 
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    // Select saved resume (activeIndex = 1)
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+
+    // Setup mock to return updated list after deletion
+    mockGetResumes.mockResolvedValueOnce(updatedList);
+
+    // Delete the active saved resume
+    const deleteButton = screen.getByTestId('delete-resume-2');
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith(2);
+    });
+
+    await waitFor(() => {
+      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+    });
   });
 
   // Download functionality tests
@@ -720,6 +745,9 @@ describe('ResumeBuilderPage', () => {
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
+    // Open dropdown
+    const downloadButton = screen.getByText('Download');
+    fireEvent.click(downloadButton);
     // Select the saved resume (index 1)
     const savedButton = screen.getByText('Saved Resume');
     fireEvent.click(savedButton);
@@ -734,17 +762,15 @@ describe('ResumeBuilderPage', () => {
     ];
     mockGetResumes.mockResolvedValueOnce(updatedList);
 
-    // Delete the active saved resume
-    const deleteButton = screen.getByTestId('delete-resume-2');
-    fireEvent.click(deleteButton);
+    expect(screen.getByText('Download as PDF')).toBeDefined();
 
-    await waitFor(() => {
-      expect(mockDeleteResume).toHaveBeenCalledWith(2);
-    });
+    // Click PDF option
+    const pdfOption = screen.getByText('Download as PDF');
+    fireEvent.click(pdfOption);
 
-    // Wait for list refresh
+    // Dropdown should close
     await waitFor(() => {
-      expect(mockGetResumes).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText('Download as PDF')).toBeNull();
     });
   });
 

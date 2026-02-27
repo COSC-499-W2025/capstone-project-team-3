@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS PROJECT (
     score REAL CHECK (score >= 0.0 AND score <= 1.0),
     score_overridden INTEGER DEFAULT 0,
     score_overridden_value REAL,
+    score_override_exclusions TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     summary TEXT,
@@ -151,10 +152,18 @@ def init_db():
     cursor.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_skills_resume_id ON RESUME_SKILLS(resume_id)"
     )
+    _ensure_project_override_exclusions_column(cursor)
     _ensure_project_score_constraint(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
+
+def _ensure_project_override_exclusions_column(cursor: sqlite3.Cursor) -> None:
+    """Ensure PROJECT has score_override_exclusions column on existing DBs."""
+    cursor.execute("PRAGMA table_info(PROJECT)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "score_override_exclusions" not in existing_columns:
+        cursor.execute("ALTER TABLE PROJECT ADD COLUMN score_override_exclusions TEXT")
 
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""

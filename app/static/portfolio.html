@@ -528,6 +528,71 @@
             letter-spacing: -0.02em;
         }
 
+        .project-score-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .project-score-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .project-score-main .project-score-display {
+            margin-bottom: 0;
+        }
+
+        .project-score-badge {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            background: var(--border-light);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .project-score-config-inline {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+
+        .score-exclusion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .score-exclusion-chips-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .score-exclusion-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--border-light);
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
         .project-dates {
             color: var(--text-muted);
             font-size: 0.9em;
@@ -967,6 +1032,6 @@
         </div>
     </div>
 
-    <script src="/api/static/portfolio.js?v=20260214c"></script>
+    <script src="/api/static/portfolio.js?v=20260225d"></script>
 </body>
 </html>

@@ -100,9 +100,12 @@ describe('ResumeSidebar', () => {
     fireEvent.click(screen.getAllByLabelText('Edit resume')[0]);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
 
-    const deleteButtons = screen.getAllByLabelText('Delete resume');
+    // Open the "More actions" dropdown first, then click delete
+    const moreActionsButtons = screen.getAllByLabelText('More actions');
+    fireEvent.click(moreActionsButtons[0]);
     window.confirm = jest.fn(() => false); // Cancel delete to avoid triggering onDelete
-    fireEvent.click(deleteButtons[0]);
+    const deleteButton = screen.getByLabelText('Delete resume');
+    fireEvent.click(deleteButton);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
   });
 
@@ -135,9 +138,10 @@ describe('ResumeSidebar', () => {
     const onDelete = jest.fn();
     renderSidebar({ onDelete });
 
-    const deleteButtons = screen.queryAllByLabelText('Delete resume');
-    // Should have 2 delete buttons (for id=2 and id=3, not for id=null)
-    expect(deleteButtons.length).toBe(2);
+    // Delete is accessed via "More actions" dropdown; count those buttons instead
+    const moreActionsButtons = screen.queryAllByLabelText('More actions');
+    // Should have 2 "More actions" buttons (for id=2 and id=3, not for id=null)
+    expect(moreActionsButtons.length).toBe(2);
   });
 
   test('master resume does not have delete button', () => {
@@ -158,8 +162,11 @@ describe('ResumeSidebar', () => {
     window.confirm = jest.fn(() => true);
     renderSidebar({ onDelete });
 
-    const deleteButtons = screen.getAllByLabelText('Delete resume');
-    fireEvent.click(deleteButtons[0]);
+    // Open the "More actions" dropdown first, then click delete
+    const moreActionsButtons = screen.getAllByLabelText('More actions');
+    fireEvent.click(moreActionsButtons[0]);
+    const deleteButton = screen.getByLabelText('Delete resume');
+    fireEvent.click(deleteButton);
 
     expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete "Software Engineer Resume"?');
   });
@@ -169,8 +176,11 @@ describe('ResumeSidebar', () => {
     window.confirm = jest.fn(() => true);
     renderSidebar({ onDelete });
 
-    const deleteButtons = screen.getAllByLabelText('Delete resume');
-    fireEvent.click(deleteButtons[0]); // Delete second resume (id=2)
+    // Open the "More actions" dropdown first, then click delete
+    const moreActionsButtons = screen.getAllByLabelText('More actions');
+    fireEvent.click(moreActionsButtons[0]); // Open menu for second resume (id=2)
+    const deleteButton = screen.getByLabelText('Delete resume');
+    fireEvent.click(deleteButton);
 
     expect(window.confirm).toHaveBeenCalled();
     expect(onDelete).toHaveBeenCalledWith(2);
@@ -181,8 +191,11 @@ describe('ResumeSidebar', () => {
     window.confirm = jest.fn(() => false);
     renderSidebar({ onDelete });
 
-    const deleteButtons = screen.getAllByLabelText('Delete resume');
-    fireEvent.click(deleteButtons[0]);
+    // Open the "More actions" dropdown first, then click delete
+    const moreActionsButtons = screen.getAllByLabelText('More actions');
+    fireEvent.click(moreActionsButtons[0]);
+    const deleteButton = screen.getByLabelText('Delete resume');
+    fireEvent.click(deleteButton);
 
     expect(window.confirm).toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
@@ -197,6 +210,9 @@ describe('ResumeSidebar', () => {
     window.confirm = jest.fn(() => false);
     renderSidebar({ resumeList: list, onDelete });
 
+    // Open the "More actions" dropdown first, then click delete
+    const moreActionsButton = screen.getByLabelText('More actions');
+    fireEvent.click(moreActionsButton);
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);
 

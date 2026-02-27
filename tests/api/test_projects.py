@@ -32,8 +32,8 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     with patch(
         "app.api.routes.projects.get_project_score_state_map",
         return_value={
-            "p1": {"score_overridden": False, "score_overridden_value": None},
-            "p2": {"score_overridden": True, "score_overridden_value": 0.95},
+            "p1": {"score_overridden": False, "score_overridden_value": None, "score_override_exclusions": []},
+            "p2": {"score_overridden": True, "score_overridden_value": 0.95, "score_override_exclusions": ["total_lines"]},
         }
     ):
         client = TestClient(app)
@@ -50,6 +50,7 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     assert data[0]["score_original"] == 1.0
     assert data[0]["score_overridden"] is False
     assert data[0]["score_overridden_value"] is None
+    assert data[0]["score_override_exclusions"] == []
     assert data[0]["date_added"] == "2020-01-01"
 
     assert data[1]["id"] == "p2"
@@ -59,6 +60,7 @@ def test_get_projects_returns_expected_structure(mock_load_skills, mock_load_pro
     assert data[1]["score_original"] == 2.0
     assert data[1]["score_overridden"] is True
     assert data[1]["score_overridden_value"] == 0.95
+    assert data[1]["score_override_exclusions"] == ["total_lines"]
     assert data[1]["date_added"] == "2021-01-01"
 
     # Ensure DB connection is closed
@@ -90,7 +92,7 @@ def test_get_projects_skills_limited_to_five(mock_load_skills, mock_load_project
 
     with patch(
         "app.api.routes.projects.get_project_score_state_map",
-        return_value={"p1": {"score_overridden": False, "score_overridden_value": None}},
+        return_value={"p1": {"score_overridden": False, "score_overridden_value": None, "score_override_exclusions": []}},
     ):
         client = TestClient(app)
         response = client.get("/projects")
@@ -116,7 +118,7 @@ def test_get_project_returns_single_project(mock_load_skills, mock_load_projects
 
     with patch(
         "app.api.routes.projects.get_project_score_state_map",
-        return_value={"sig-1": {"score_overridden": True, "score_overridden_value": 0.82}},
+        return_value={"sig-1": {"score_overridden": True, "score_overridden_value": 0.82, "score_override_exclusions": ["test_files_changed"]}},
     ):
         client = TestClient(app)
         response = client.get("/projects/sig-1")
@@ -130,6 +132,7 @@ def test_get_project_returns_single_project(mock_load_skills, mock_load_projects
     assert data["score_original"] == 0.65
     assert data["score_overridden"] is True
     assert data["score_overridden_value"] == 0.82
+    assert data["score_override_exclusions"] == ["test_files_changed"]
     mock_get_conn.return_value.close.assert_called_once()
 
 

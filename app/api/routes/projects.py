@@ -59,6 +59,7 @@ def get_projects():
             "score_original": score_fields["score_original"],
             "score_overridden": score_fields["score_overridden"],
             "score_overridden_value": score_fields["score_overridden_value"],
+            "score_override_exclusions": score_state.get("score_override_exclusions", []),
             "skills": top_skills,
             "date_added": created_at
         })
@@ -101,6 +102,7 @@ def get_project(signature: str):
         "score_original": score_fields["score_original"],
         "score_overridden": score_fields["score_overridden"],
         "score_overridden_value": score_fields["score_overridden_value"],
+        "score_override_exclusions": score_state.get("score_override_exclusions", []),
         "skills": top_skills,
     }
 

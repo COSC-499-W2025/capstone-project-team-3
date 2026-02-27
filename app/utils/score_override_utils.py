@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from typing import Any, Dict, Iterable, List, Optional
 
 from app.data.db import get_connection
@@ -74,17 +75,34 @@ def get_project_score_state_map(
         return {}
 
     placeholders = ",".join(["?"] * len(project_ids))
-    cursor.execute(
-        f"""
-        SELECT project_signature, score_overridden, score_overridden_value
-        FROM PROJECT
-        WHERE project_signature IN ({placeholders})
-        """,
-        project_ids,
-    )
+    try:
+        cursor.execute(
+            f"""
+            SELECT project_signature, score_overridden, score_overridden_value, score_override_exclusions
+            FROM PROJECT
+            WHERE project_signature IN ({placeholders})
+            """,
+            project_ids,
+        )
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        cursor.execute(
+            f"""
+            SELECT project_signature, score_overridden, score_overridden_value
+            FROM PROJECT
+            WHERE project_signature IN ({placeholders})
+            """,
+            project_ids,
+        )
+        rows = [(*row, None) for row in cursor.fetchall()]
 
     states: Dict[str, Dict[str, Any]] = {}
-    for project_signature, score_overridden, score_overridden_value in cursor.fetchall():
+    for (
+        project_signature,
+        score_overridden,
+        score_overridden_value,
+        score_override_exclusions,
+    ) in rows:
         states[project_signature] = {
             "score_overridden": _to_int(score_overridden, 0) == 1,
             "score_overridden_value": (
@@ -92,6 +110,7 @@ def get_project_score_state_map(
                 if score_overridden_value is not None
                 else None
             ),
+            "score_override_exclusions": _parse_exclusions(score_override_exclusions),
         }
     return states
 
@@ -108,28 +127,76 @@ def _parse_metric_value(metric_value: Any) -> Any:
         return metric_value
 
 
+def _parse_exclusions(raw_exclusions: Any) -> List[str]:
+    if not raw_exclusions:
+        return []
+    if isinstance(raw_exclusions, list):
+        return [
+            value.strip()
+            for value in raw_exclusions
+            if isinstance(value, str) and value.strip()
+        ]
+    if isinstance(raw_exclusions, str):
+        try:
+            parsed = json.loads(raw_exclusions)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return []
+        if isinstance(parsed, list):
+            return [
+                value.strip()
+                for value in parsed
+                if isinstance(value, str) and value.strip()
+            ]
+    return []
+
+
 def _load_project_and_metrics(project_signature: str) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            SELECT
-                project_signature,
-                name,
-                score,
-                score_overridden,
-                score_overridden_value
-            FROM PROJECT
-            WHERE project_signature = ?
-            """,
-            (project_signature,),
-        )
-        project_row = cursor.fetchone()
+        try:
+            cursor.execute(
+                """
+                SELECT
+                    project_signature,
+                    name,
+                    score,
+                    score_overridden,
+                    score_overridden_value,
+                    score_override_exclusions
+                FROM PROJECT
+                WHERE project_signature = ?
+                """,
+                (project_signature,),
+            )
+            project_row = cursor.fetchone()
+        except sqlite3.OperationalError:
+            cursor.execute(
+                """
+                SELECT
+                    project_signature,
+                    name,
+                    score,
+                    score_overridden,
+                    score_overridden_value
+                FROM PROJECT
+                WHERE project_signature = ?
+                """,
+                (project_signature,),
+            )
+            legacy_row = cursor.fetchone()
+            project_row = (*legacy_row, None) if legacy_row else None
         if not project_row:
             raise ProjectNotFoundError("Project not found")
 
-        signature, name, score, score_overridden, score_overridden_value = project_row
+        (
+            signature,
+            name,
+            score,
+            score_overridden,
+            score_overridden_value,
+            score_override_exclusions,
+        ) = project_row
 
         cursor.execute(
             """
@@ -149,6 +216,7 @@ def _load_project_and_metrics(project_signature: str) -> Dict[str, Any]:
             "score": score,
             "score_overridden": score_overridden,
             "score_overridden_value": score_overridden_value,
+            "exclude_metrics": _parse_exclusions(score_override_exclusions),
             "metrics": metrics,
         }
     finally:
@@ -238,6 +306,7 @@ def compute_project_breakdown(project_signature: str) -> Dict[str, Any]:
         "project_signature": project_data["project_signature"],
         "name": project_data["name"],
         **score_fields,
+        "exclude_metrics": project_data.get("exclude_metrics", []),
         "breakdown": breakdown,
     }
 
@@ -293,15 +362,27 @@ def apply_project_score_override(
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            UPDATE PROJECT
-            SET score_overridden = 1,
-                score_overridden_value = ?
-            WHERE project_signature = ?
-            """,
-            (new_score, project_signature),
-        )
+        try:
+            cursor.execute(
+                """
+                UPDATE PROJECT
+                SET score_overridden = 1,
+                    score_overridden_value = ?,
+                    score_override_exclusions = ?
+                WHERE project_signature = ?
+                """,
+                (new_score, json.dumps(preview["exclude_metrics"]), project_signature),
+            )
+        except sqlite3.OperationalError:
+            cursor.execute(
+                """
+                UPDATE PROJECT
+                SET score_overridden = 1,
+                    score_overridden_value = ?
+                WHERE project_signature = ?
+                """,
+                (new_score, project_signature),
+            )
         if cursor.rowcount <= 0:
             raise ProjectNotFoundError("Project not found")
         conn.commit()
@@ -343,15 +424,27 @@ def clear_project_score_override(project_signature: str) -> Dict[str, Any]:
             raise ProjectNotFoundError("Project not found")
         name, score = row
 
-        cursor.execute(
-            """
-            UPDATE PROJECT
-            SET score_overridden = 0,
-                score_overridden_value = NULL
-            WHERE project_signature = ?
-            """,
-            (project_signature,),
-        )
+        try:
+            cursor.execute(
+                """
+                UPDATE PROJECT
+                SET score_overridden = 0,
+                    score_overridden_value = NULL,
+                    score_override_exclusions = NULL
+                WHERE project_signature = ?
+                """,
+                (project_signature,),
+            )
+        except sqlite3.OperationalError:
+            cursor.execute(
+                """
+                UPDATE PROJECT
+                SET score_overridden = 0,
+                    score_overridden_value = NULL
+                WHERE project_signature = ?
+                """,
+                (project_signature,),
+            )
         conn.commit()
     finally:
         conn.close()
@@ -360,5 +453,6 @@ def clear_project_score_override(project_signature: str) -> Dict[str, Any]:
     return {
         "project_signature": project_signature,
         "name": name,
+        "exclude_metrics": [],
         **score_fields,
     }

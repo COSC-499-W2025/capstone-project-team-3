@@ -165,6 +165,46 @@
   display: block;
 }
 
+.resume-sidebar__menu-wrapper {
+  position: relative;
+}
+
+.resume-sidebar__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.resume-sidebar__dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.resume-sidebar__dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.resume-sidebar__dropdown-item--danger {
+  color: #dc2626;
+}
+
+.resume-sidebar__dropdown-item--danger:hover {
+  background: #fef2f2;
+}
+
 .resume-sidebar__tailor-btn {
   flex-shrink: 0;
   margin-left: var(--spacing-sm);

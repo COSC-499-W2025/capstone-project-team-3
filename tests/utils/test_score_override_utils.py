@@ -133,12 +133,13 @@ def test_apply_then_clear_override_persists_state(isolated_db):
     applied = apply_project_score_override(signature, ["test_files_changed"])
     assert applied["score_overridden"] is True
     assert applied["score_overridden_value"] == pytest.approx(applied["score"])
+    assert applied["exclude_metrics"] == ["test_files_changed"]
 
     conn = dbmod.get_connection()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT score_overridden, score_overridden_value
+        SELECT score_overridden, score_overridden_value, score_override_exclusions
         FROM PROJECT
         WHERE project_signature = ?
         """,
@@ -148,10 +149,12 @@ def test_apply_then_clear_override_persists_state(isolated_db):
     conn.close()
     assert row[0] == 1
     assert row[1] is not None
+    assert json.loads(row[2]) == ["test_files_changed"]
 
     cleared = clear_project_score_override(signature)
     assert cleared["score_overridden"] is False
     assert cleared["score_overridden_value"] is None
+    assert cleared["exclude_metrics"] == []
     assert cleared["score"] == pytest.approx(cleared["score_original"])
 
 

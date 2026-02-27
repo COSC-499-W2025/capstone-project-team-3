@@ -11,30 +11,50 @@ from app.utils.generate_resume import (
     limit_skills
 )
 
-def load_projects_with_override(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str, int, Optional[float]]]:
-    """Return projects with signature, name, score, created_at, last_modified, score_overridden, score_overridden_value.
+def load_projects_with_override(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str, int, Optional[float], Optional[str]]]:
+    """Return projects with signature, name, score, created_at, last_modified, score_overridden, score_overridden_value, score_override_exclusions.
     If project_ids are provided, return only those projects.
     """
     if project_ids:
         # Build a dynamic IN clause safely
         placeholders = ",".join(["?"] * len(project_ids))
-        query = f"""
-            SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
-            FROM PROJECT
-            WHERE project_signature IN ({placeholders})
-            ORDER BY score DESC
-        """
-        cursor.execute(query, project_ids)
-        return cursor.fetchall()
+        try:
+            query = f"""
+                SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value, score_override_exclusions
+                FROM PROJECT
+                WHERE project_signature IN ({placeholders})
+                ORDER BY score DESC
+            """
+            cursor.execute(query, project_ids)
+            return cursor.fetchall()
+        except sqlite3.OperationalError:
+            query = f"""
+                SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
+                FROM PROJECT
+                WHERE project_signature IN ({placeholders})
+                ORDER BY score DESC
+            """
+            cursor.execute(query, project_ids)
+            return [(*row, None) for row in cursor.fetchall()]
     else:
-        cursor.execute(
-            """
-            SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
-            FROM PROJECT
-            ORDER BY score DESC
-            """
-        )
-        return cursor.fetchall()
+        try:
+            cursor.execute(
+                """
+                SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value, score_override_exclusions
+                FROM PROJECT
+                ORDER BY score DESC
+                """
+            )
+            return cursor.fetchall()
+        except sqlite3.OperationalError:
+            cursor.execute(
+                """
+                SELECT project_signature, name, score, created_at, last_modified, score_overridden, score_overridden_value
+                FROM PROJECT
+                ORDER BY score DESC
+                """
+            )
+            return [(*row, None) for row in cursor.fetchall()]
 
 def load_project_metrics(cursor: sqlite3.Cursor) -> DefaultDict[str, Dict[str, Any]]:
     """Return mapping of project_id to metrics (lines of code, commits, etc)."""
@@ -408,10 +428,16 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     projects = []
     selected_ids = [pid for pid, *_ in projects_raw]
 
-    for pid, name, score, created_at, last_modified, score_overridden, score_overridden_value in projects_raw:
+    for pid, name, score, created_at, last_modified, score_overridden, score_overridden_value, score_override_exclusions in projects_raw:
         metrics = project_metrics.get(pid, {})
         project_skills = skills_map.get(pid, [])
         project_summary = project_summaries.get(pid, "")
+        try:
+            parsed_exclusions = json.loads(score_override_exclusions) if score_override_exclusions else []
+            if not isinstance(parsed_exclusions, list):
+                parsed_exclusions = []
+        except (json.JSONDecodeError, TypeError):
+            parsed_exclusions = []
         
         # Limit skills for display
         limited_skills = limit_skills(project_skills, max_count=10)
@@ -440,6 +466,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "rank": float(score) if score else 0,
             "score_overridden": bool(score_overridden),
             "score_overridden_value": float(score_overridden_value) if score_overridden_value is not None else None,
+            "score_override_exclusions": [m for m in parsed_exclusions if isinstance(m, str) and m.strip()],
             "dates": format_dates(created_at, last_modified),
             "created_at": created_at,
             "last_modified": last_modified,

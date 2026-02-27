@@ -23,6 +23,7 @@ jest.mock('../src/api/resume', () => ({
   getResumeById: jest.fn(),
   previewResume: jest.fn(),
   deleteResume: jest.fn(),
+  deleteProjectFromResume: jest.fn(),
   downloadResumePDF: jest.fn(),
   downloadResumeTeX: jest.fn(),
   saveNewResume: jest.fn(),
@@ -30,12 +31,13 @@ jest.mock('../src/api/resume', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
-  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, sidebarOpen, onToggleSidebar }: {
+  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, onEdit, sidebarOpen, onToggleSidebar }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];
     activeIndex: number;
     onSelect: (i: number) => void;
     onTailorNew?: () => void;
     onDelete?: (id: number) => void;
+    onEdit?: () => void;
     sidebarOpen: boolean;
     onToggleSidebar: () => void;
   }) => (
@@ -46,6 +48,11 @@ jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
           <button onClick={() => onSelect(i)} data-active={i === activeIndex}>
             {r.name}
           </button>
+          {!r.is_master && r.id != null && i === activeIndex && onEdit && (
+            <button type="button" aria-label="Edit resume" data-testid={`edit-resume-${r.id}`} onClick={() => onEdit()}>
+              Edit
+            </button>
+          )}
           {r.id !== null && r.id !== 1 && onDelete && (
             <button 
               data-testid={`delete-resume-${r.id}`}
@@ -67,12 +74,29 @@ jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumePreview', () => ({
-  ResumePreview: ({ resume }: { resume: any }) => (
-    <div data-testid="resume-preview">
-      <span data-testid="resume-name">{resume.name}</span>
-      <span data-testid="resume-email">{resume.email}</span>
-    </div>
-  ),
+  ResumePreview: ({ resume, isEditing, onProjectDelete }: { resume: any; isEditing?: boolean; onProjectDelete?: (id: string) => void }) => {
+    const firstProjectWithId = resume?.projects?.find((p: any) => p.project_id);
+    return (
+      <div data-testid="resume-preview">
+        <span data-testid="resume-name">{resume.name}</span>
+        <span data-testid="resume-email">{resume.email}</span>
+        {isEditing && onProjectDelete && firstProjectWithId && (
+          <button
+            type="button"
+            aria-label="Remove project from resume"
+            data-testid="remove-project-from-resume"
+            onClick={() => {
+              if (window.confirm('Remove this project from the resume?')) {
+                onProjectDelete(firstProjectWithId.project_id);
+              }
+            }}
+          >
+            Remove project
+          </button>
+        )}
+      </div>
+    );
+  },
 }));
 
 const mockGetResumes = resumeApi.getResumes as ReturnType<typeof jest.fn>;
@@ -80,6 +104,7 @@ const mockBuildResume = resumeApi.buildResume as ReturnType<typeof jest.fn>;
 const mockGetResumeById = resumeApi.getResumeById as ReturnType<typeof jest.fn>;
 const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
 const mockDeleteResume = resumeApi.deleteResume as ReturnType<typeof jest.fn>;
+const mockDeleteProjectFromResume = resumeApi.deleteProjectFromResume as ReturnType<typeof jest.fn>;
 const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
 const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
 const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
@@ -165,6 +190,7 @@ describe('ResumeBuilderPage', () => {
     mockDownloadResumeTeX.mockResolvedValue(undefined);
     mockSaveNewResume.mockResolvedValue({ id: 3 });
     mockUpdateResume.mockResolvedValue(undefined);
+    mockDeleteProjectFromResume.mockResolvedValue({ success: true, message: 'Project removed' });
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -474,6 +500,36 @@ describe('ResumeBuilderPage', () => {
     });
 
     consoleErrorMock.mockRestore();
+  });
+
+  test('removing a project from resume calls deleteProjectFromResume and refreshes content', async () => {
+    window.confirm = jest.fn(() => true);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+
+    const editButton = screen.getByTestId('edit-resume-2');
+    fireEvent.click(editButton);
+
+    const removeProjectButton = screen.getByTestId('remove-project-from-resume');
+    fireEvent.click(removeProjectButton);
+
+    await waitFor(() => {
+      expect(window.confirm).toHaveBeenCalledWith('Remove this project from the resume?');
+      expect(mockDeleteProjectFromResume).toHaveBeenCalledWith(2, 'proj-saved-1');
+    });
+
+    await waitFor(() => {
+      expect(mockGetResumeById).toHaveBeenCalledTimes(2);
+      expect(mockGetResumeById).toHaveBeenLastCalledWith(2);
+    });
   });
 
   test('deleting the active resume switches to first available resume', async () => {

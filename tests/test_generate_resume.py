@@ -18,8 +18,10 @@ from app.utils.generate_resume import (
     resume_exists,
     create_resume,
     attach_projects_to_resume,
+    remove_project_from_resume,
     list_resumes,
-    ResumeServiceError
+    ResumeServiceError,
+    ResumeNotFoundError,
 )
 import json
 
@@ -384,6 +386,42 @@ def test_attach_projects_to_resume(db_connection):
     assert rows[0][1] == 1
     assert rows[1][0] == "p2"
     assert rows[1][1] == 2
+
+
+def test_remove_project_from_resume(db_connection):
+    """
+    Tests that remove_project_from_resume deletes the RESUME_PROJECT row for the given resume and project.
+    Resume 1 has p1 attached in seed data.
+    """
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT COUNT(*) FROM RESUME_PROJECT WHERE resume_id = 1 AND project_id = 'p1'")
+    assert cursor.fetchone()[0] == 1
+
+    remove_project_from_resume(1, "p1")
+
+    cursor.execute("SELECT COUNT(*) FROM RESUME_PROJECT WHERE resume_id = 1 AND project_id = 'p1'")
+    assert cursor.fetchone()[0] == 0
+    # Project still exists in PROJECT table
+    cursor.execute("SELECT 1 FROM PROJECT WHERE project_signature = 'p1'")
+    assert cursor.fetchone() is not None
+
+
+def test_remove_project_from_resume_idempotent(db_connection):
+    """Removing a project that is not on the resume does not raise (idempotent)."""
+    # Resume 1 has only p1; p2 is not attached
+    remove_project_from_resume(1, "p2")
+    # No exception; RESUME_PROJECT for resume 1 unchanged
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT COUNT(*) FROM RESUME_PROJECT WHERE resume_id = 1")
+    assert cursor.fetchone()[0] == 1
+
+
+def test_remove_project_from_resume_not_found(db_connection):
+    """remove_project_from_resume raises ResumeNotFoundError when resume does not exist."""
+    with pytest.raises(ResumeNotFoundError) as exc_info:
+        remove_project_from_resume(99999, "p1")
+    assert "99999" in str(exc_info.value)
+    assert "not found" in str(exc_info.value).lower()
 
 
 def test_list_resumes_returns_all_resumes(db_connection):

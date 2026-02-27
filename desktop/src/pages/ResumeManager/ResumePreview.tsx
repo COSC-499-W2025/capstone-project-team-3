@@ -32,14 +32,17 @@ function assignSectionsToPages(sectionHeights: number[]): number[] {
   return out;
 }
 
-export function ResumePreview({ 
-  resume, 
-  isEditing = false, 
-  onSectionChange 
-}: { 
+export function ResumePreview({
+  resume,
+  isEditing = false,
+  onSectionChange,
+  onProjectDelete,
+}: {
   resume: Resume;
   isEditing?: boolean;
   onSectionChange?: OnSectionChange;
+  /** When provided, an X button is shown per project in edit mode to remove the project from the resume (saved resumes only). */
+  onProjectDelete?: (projectId: string) => void;
 }) {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [sectionHeights, setSectionHeights] = useState<number[]>([]);
@@ -173,6 +176,7 @@ export function ResumePreview({
                       showHeading={sectionIndices.includes(3)}
                       isEditing={isEditing}
                       onProjectChange={handleProjectChange}
+                      onProjectDelete={onProjectDelete}
                       projectStartIndex={projectIndices[0]}
                     />
                   )}

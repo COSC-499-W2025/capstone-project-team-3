@@ -81,11 +81,7 @@
 - Followed existing design system and brand guidelines
 
 #### M2 Presentation Video
-- Created comprehensive video demonstration for Milestone 2
-- Covered Feature-23: Chronological information management (CLI)
-- Covered Feature-24: [Feature details]
-- Covered Feature-26: Thumbnail functionality with GIF/SVG support
-- Covered Feature-33: API endpoints for chronological management
+- Created comprehensive video demonstration for Milestone 2 covering feature 23,24,26,33
 - Demonstrated end-to-end workflows and user interactions
 - Recorded clear explanations and technical details
 

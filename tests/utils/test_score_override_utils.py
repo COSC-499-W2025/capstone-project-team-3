@@ -112,6 +112,12 @@ def test_preview_override_excludes_metric(isolated_db):
     assert "total_lines" not in preview["breakdown"]["code"]["metrics"]
 
 
+def test_preview_override_rejects_unknown_metric(isolated_db):
+    signature = _insert_non_git_project()
+    with pytest.raises(OverrideValidationError, match="Unknown code metric exclusions"):
+        preview_project_score_override(signature, ["unknown_metric"])
+
+
 def test_preview_override_rejects_excluding_all_code_metrics(isolated_db):
     signature = _insert_non_git_project()
     with pytest.raises(OverrideValidationError):
@@ -156,6 +162,30 @@ def test_apply_then_clear_override_persists_state(isolated_db):
     assert cleared["score_overridden_value"] is None
     assert cleared["exclude_metrics"] == []
     assert cleared["score"] == pytest.approx(cleared["score_original"])
+
+
+def test_apply_override_rejects_unknown_metric_without_persisting(isolated_db):
+    signature = _insert_non_git_project()
+
+    with pytest.raises(OverrideValidationError, match="Unknown code metric exclusions"):
+        apply_project_score_override(signature, ["unknown_metric"])
+
+    conn = dbmod.get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT score_overridden, score_overridden_value, score_override_exclusions
+        FROM PROJECT
+        WHERE project_signature = ?
+        """,
+        (signature,),
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    assert row[0] == 0
+    assert row[1] is None
+    assert row[2] is None
 
 
 def test_compute_project_breakdown_not_found():

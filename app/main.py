@@ -11,6 +11,7 @@ from app.cli.consent_manager import ConsentManager
 from app.cli.user_preference_cli import UserPreferences
 from app.cli.file_input import main as file_input_main
 from app.cli.chronological_manager import ChronologicalCLI
+from app.cli.delete_insights import main as delete_insights_main
 from app.api.routes.upload_page import router as upload_page_router
 
 from app.api.routes.privacy_consent import router as privacy_consent_router 
@@ -121,6 +122,14 @@ def _open_ranking_manager(project_signatures) -> None:
         return
     run_project_score_override_cli(signatures, require_confirmation=False)
 
+
+def _open_delete_manager() -> None:
+    print("\n🗑️  Opening Delete Manager...")
+    try:
+        delete_insights_main()
+    except Exception as e:
+        print(f"❌ Error in delete manager: {e}")
+
 # Database Entry Point
 def main():
     init_db()  # creates the SQLite DB + tables
@@ -182,9 +191,10 @@ def main():
                         "\nWould you like to:\n"
                         "  📅 'corrections' - Update chronology (dates), add/edit skills\n"
                         "  🏆 'ranking'     - Inspect/update project score\n"
+                        "  ❌ 'delete'      - Delete a project's insights\n"
                         "  🔄 'continue'    - Analyze another project\n"
                         "  🚪 'exit'        - Exit the application\n"
-                        "Choice (corrections/ranking/continue/exit): "
+                        "Choice (corrections/ranking/delete/continue/exit): "
                     ).lower().strip()
 
                     if correction_choice in ['corrections', 'correct', 'update', 'chronology', 'edit', 'dates', 'date']:
@@ -193,6 +203,9 @@ def main():
                     elif correction_choice in ['ranking', 'rank', 'score', 'scores', 'override']:
                         _open_ranking_manager(existing_signatures)
                         continue
+                    elif correction_choice in ['delete', 'del', 'remove']:
+                        _open_delete_manager()
+                        continue
                     elif correction_choice in ['continue', 'c', 'skip', 'next']:
                         print("\n⏭️ Continuing to file upload...")
                         break
@@ -200,7 +213,7 @@ def main():
                         print("👋 Exiting Project Insights. Thank you for using our service!")
                         break
                     else:
-                        print("❌ Please enter 'corrections', 'ranking', 'continue', or 'exit'")
+                        print("❌ Please enter 'corrections', 'ranking', 'delete', 'continue', or 'exit'")
 
                 if correction_choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
                     break
@@ -562,11 +575,12 @@ def main():
             while True:
                 choice = input(
                     "\nWould you like to:\n"
-                    "  📅 'corrections' - Update chronology (dates), add/edit skills\n"
+                    "  📅 'corrections' - Update chronology (dates), add/edit skills, delete projects\n"
                     "  🏆 'ranking'     - Inspect/update project score\n"
+                    "  ❌ 'delete'      - Delete a project's insights\n"
                     "  🔄 'continue'    - Analyze another project\n"
                     "  🚪 'exit'        - Exit the application\n\n"
-                    "Choice (corrections/ranking/continue/exit): "
+                    "Choice (corrections/ranking/delete/continue/exit): "
                 ).lower().strip()
                 
                 if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:
@@ -579,11 +593,14 @@ def main():
                 elif choice in ['ranking', 'rank', 'score', 'scores', 'override']:
                     _open_ranking_manager(project_signatures)
                     continue
+                elif choice in ['delete', 'del', 'remove']:
+                    _open_delete_manager()
+                    continue
                 elif choice in ['continue', 'c', 'again', 'y', 'yes', 'more']:
                     print("🔄 Starting new analysis session...")
                     break
                 else:
-                    print("❌ Please enter 'corrections', 'ranking', 'continue', or 'exit'")
+                    print("❌ Please enter 'corrections', 'ranking', 'delete', 'continue', or 'exit'")
             
             # Break out of the main while loop if user chose exit
             if choice in ['exit', 'e', 'quit', 'q', 'done', 'finish']:

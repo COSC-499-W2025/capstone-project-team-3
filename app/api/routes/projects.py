@@ -13,6 +13,10 @@ from app.utils.score_override_utils import (
     preview_project_score_override,
     resolve_effective_score,
 )
+from app.utils.delete_insights_utils import (
+    get_projects as get_all_projects,
+    delete_project_by_signature,
+)
 
 router = APIRouter()
 
@@ -151,3 +155,29 @@ def clear_project_override(signature: str):
         return clear_project_score_override(project_signature=signature)
     except ProjectNotFoundError:
         raise HTTPException(status_code=404, detail="Project not found")
+
+
+@router.delete("/projects/{signature}", response_model=Dict[str, Any])
+def delete_project(signature: str):
+    """
+    Delete all insights for a project by its signature.
+
+    Returns 404 if no project with that signature exists.
+    """
+    # Verify the project exists before attempting deletion
+    all_projects = get_all_projects()
+    match = next(
+        (p for p in all_projects if p["project_signature"] == signature), None
+    )
+    if match is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    deleted = delete_project_by_signature(signature)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Deletion failed unexpectedly")
+
+    return {
+        "status": "ok",
+        "message": f"Project '{match['name']}' deleted successfully",
+        "project_signature": signature,
+    }

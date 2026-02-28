@@ -332,7 +332,7 @@ For context each test file contains the following projects ***(M2 Requirement 33
 
 
   ``test_feat_33_past.zip` 
-       ``capstone_team-3_dec_2026`` Historic github project
+       ``capstone_team-3_dec_2025`` Historic github project
 
   ``test_feat_33_future.zip`
       ``capstone_team-3_feb_2026`` Recently updated github code project

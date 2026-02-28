@@ -4,6 +4,7 @@
 
 ## Week-8, Entry for Feb 23 → Mar 1, 2026
 
+![Personal Log](../../../screenshots/Vanshika_week8.png)
 ---
 
 ### Connection to Previous Week

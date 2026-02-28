@@ -21,6 +21,13 @@
   - Delete a project on the resume – #721
   - Edit display order of projects on a resume – #722
   - Add endpoint that adds project to a resume – #727
+  - Update resume deletion UI to include dropdown – #712
+  - API endpoints to list and retrieve chronological projects – #715
+  - API endpoint to update project dates – #716
+  - API endpoints to list and add skills for a project – #717
+  - API endpoints to update skill date and name – #718
+  - API endpoint to delete a skill – #719
+  - Complete API Endpoints for Chronological Management – #720
 
 ---
 
@@ -55,7 +62,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                    | Title                                                                                                                                                                                                                                                                                         | Username       |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| [#548, #549, #551, #578, #590, #591, #592]       | CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths; DELETE endpoint for edited resumes                                                                                                                         | @6s-1          |
+| [#712, #715, #716, #717, #718, #719, #720]       | Enhanced resume deletion UI with dropdown (PR #711); Added comprehensive API endpoints for chronological management - projects list/retrieve, update dates, skills CRUD operations (PR #714); Created Figma UI design for chronological management; Recorded M2 presentation video covering Features 23, 24, 26, 33 | @6s-1          |
 | [#731, #732]       | Refactor non-code pdf, readme, text parsing to full parse for collaborative files (PR #733); Fix analysis of collaborative non-code files not happening | @PaintedW0lf   |
 | [#584, #585, #604, #461, #463]                   | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization                                                     | @abstractafua  |
 | [#555, #569]                                     | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering                                                                                                                                                 | @KarimKhalil33 |
@@ -68,7 +75,6 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                                                | Title                                                                                                                     | Username     |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project-UI, working on UI for thumbnail addition and front page. | @6s-1        |
 | [#735](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/735) | Add testing for consent management in desktop/Test                                                                    | @PaintedW0lf |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking                                                                                    | @kjassani    |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI                                                                                              | @kjassani    |

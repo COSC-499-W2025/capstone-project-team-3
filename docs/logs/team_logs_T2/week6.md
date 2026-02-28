@@ -24,6 +24,18 @@
   - Resume Builder & Sidebar tests - #639
   - Create Tailored Resume (Project Selection Page) - #661
   - UI/view tailored - #607
+  - Welcome page UI - #625
+  - Upload page base layout - #627
+  - Global CSS for UI development - #629
+  - Welcome page responsive design - #630
+  - Upload page responsive design - #631
+  - Chronological Management CLI for skill dates - #646
+  - Chronological Management CLI for project dates - #647
+  - Date extraction logic for chronological skills - #648
+  - Thumbnail upload flow in UI - #581
+  - GET API for serving thumbnails - #656
+  - Thumbnail cache-busting - #657
+  - Thumbnail extension validation - #658
 
 
 ---
@@ -56,7 +68,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
-| [#548, #549, #551, #578, #590, #591, #592] |  CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths;  DELETE endpoint for edited resumes | @6s-1 | 
+| [#625, #627, #629, #630, #631, #646, #647, #648, #581, #656, #657, #658] | Welcome page & upload page UI with global CSS and responsive styling (PR #623); Chronological skill/project managing to CLI with updated date extraction logic (PR #643); Thumbnail integration with Portfolio UI including GET API, cache-busting, and extension validation (PR #653) | @6s-1 | 
 | [#600, #635, #636, #637, #614, #615, #651, #652, #654] | User-editable threshold for incremental load (PR #634); Integrate update folder user requirement in CLI; Refactor incremental load to interactive mode; Testing for update project CLI; Testing for author key; Add author key in non-code stream bugfix; Get API endpoint for consent text for UI (PR #655); Test consent text API endpoint; Add notification CSS for popups | @PaintedW0lf | 
 | [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
@@ -67,7 +79,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project-UI, working on UI for thumbnail addition and front page. | @6s-1 |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI | @kjassani |
 | [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored. PR #669 | @dabby04 |

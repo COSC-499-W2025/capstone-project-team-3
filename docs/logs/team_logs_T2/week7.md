@@ -22,6 +22,16 @@
   - Fully implemented download + header for resume – #668, #688
   - Save and loading tailored resume – #609, #689
   - Edit Resume (UI) – enable editing for tailored resumes – #608
+  - API documentation for project, skills, user preferences, health, institutions – #672
+  - API documentation for thumbnail, project, resume, portfolio – #673
+  - Complete API endpoint documentation (Feature-36) – #671
+  - End-to-end thumbnail functionality – #434
+  - GIF/SVG thumbnail support (unique feature) – #682
+  - Delete Resume UI implementation – #611
+  - Add skills with dates in CLI – #692
+  - Edit/rename skills in CLI – #694
+  - Restructure chronological menu – #695
+  - Complete chronological information management (Feature-23) – #547
 
 ---
 
@@ -56,7 +66,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                    | Title                                                                                                                                                                                                                                                                                         | Username       |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| [#548, #549, #551, #578, #590, #591, #592]       | CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths; DELETE endpoint for edited resumes                                                                                                                         | @6s-1          |
+| [#672, #673, #671, #434, #682, #611, #692, #694, #695, #547] | API documentation for all endpoints (PR #670, #675); GIF/SVG thumbnail support - unique feature (PR #681); Delete Resume UI implementation (PR #691); Add skills+dates, edit skill names, restructured chronological menu (PR #693) | @6s-1          |
 | [#683, #684, #685, #686, #687, #708, #696, #697] | Implement Consent Page UI (PR #687); Add notification popup system; Integrate consent page with backend API; Style consent page with CSS; Add revoke consent UI (PR #698); Add endpoint documentation for consent management; Add missing endpoint documentation for resume and project | @PaintedW0lf   |
 | [#584, #585, #604, #461, #463]                   | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization                                                     | @abstractafua  |
 | [#555, #569]                                     | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering                                                                                                                                                 | @KarimKhalil33 |
@@ -69,7 +79,6 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                                                | Title                                                                                                                     | Username     |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project-UI, working on UI for thumbnail addition and front page. | @6s-1        |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking                                                                                    | @kjassani    |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI                                                                                              | @kjassani    |
 

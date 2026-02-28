@@ -66,7 +66,7 @@ How It Works:
 
   All SQL scripts and schema definitions should be stored inside the app/data/ directory to maintain consistency.
 
- # Local Development #
+Local Development 
   First time use : 
   From the project root (where compose.yaml lives):
     `docker compose up --build`
@@ -80,13 +80,13 @@ How It Works:
   
   * If you modify the database schema or add new tables:
 
-  # Stop any running containers
+Stop any running containers
   `docker compose down`
 
-  # Remove the old SQLite DB
+Remove the old SQLite DB
   `rm app/data/app.sqlite3`
 
-  # Rebuild and restart the containers
+Rebuild and restart the containers
   `docker compose up --build`
 
 
@@ -254,3 +254,35 @@ Install dependencies:
 ```bash
 pip install requirements.txt
 ```
+
+### 🖥️ Launching the Desktop App
+
+The desktop application is built with **Electron + React (Vite)**.
+
+In order to start it ensure ***node.js*** is installed and run : 
+
+```bash
+cd desktop
+npm install       # First time only
+npm run dev       # Starts the Vite dev server + Electron window
+```
+
+> **Note:** The desktop app connects to the backend server. Make sure the Docker backend is running (`docker compose up --build`) before launching the desktop app. See `docs/frontend.md` for comprehensive overview.
+
+---
+## 🗂️ Zipped Test Files for the App
+
+Pre-prepared zip files are provided for testing the upload and analysis features of the app without needing a real project repository.
+
+These test zips can be found at:
+
+```
+app/tests/files/test_data/
+```
+
+They contain sample project files across various languages and structures, and can be used for manual QA of the upload pipeline.
+
+**How to use them:**
+1. Once the desktop app is launched, navigate to the Upload page.
+2. Select **"Upload a ZIP"** and choose one of the files from `app/tests/files/test_data/`.
+3. Proceed through the app as to view project analysis, scoring, and resume & portfolio generation.

@@ -270,19 +270,58 @@ npm run dev       # Starts the Vite dev server + Electron window
 > **Note:** The desktop app connects to the backend server. Make sure the Docker backend is running (`docker compose up --build`) before launching the desktop app. See `docs/frontend.md` for comprehensive overview.
 
 ---
+
 ## 🗂️ Zipped Test Files for the App
 
 Pre-prepared zip files are provided for testing the upload and analysis features of the app without needing a real project repository.
 
-These test zips can be found at:
+Place your test zip files in:
 
 ```
-app/tests/files/test_data/
+tests/files/test_data/
 ```
 
-They contain sample project files across various languages and structures, and can be used for manual QA of the upload pipeline.
+They should contain sample project files across various languages and structures, and can be used for manual QA of the full upload and analysis pipeline.
 
 **How to use them:**
-1. Once the desktop app is launched, navigate to the Upload page.
-2. Select **"Upload a ZIP"** and choose one of the files from `app/tests/files/test_data/`.
-3. Proceed through the app as to view project analysis, scoring, and resume & portfolio generation.
+
+**1. Start the backend**
+
+In a terminal, from the project root:
+```bash
+docker compose up --build
+```
+
+In a second terminal, launch the interactive server:
+```bash
+docker compose run --rm -it --service-ports server python -m app.main
+```
+
+**2. Launch the desktop front-end**
+
+In a third terminal:
+```bash
+cd desktop
+npm install       # First time only
+npm run dev
+```
+
+**3. Upload a zip file**
+
+- In the desktop app, navigate to the **Upload** page
+- Select a `.zip` file from `tests/files/test_data/` and upload it
+- You can also upload directly via the web UI at: http://localhost:8000/upload-file
+
+**4. Run analysis**
+
+- Go to http://localhost:8000/static/analysis_runner.html
+- Copy and paste the `upload_id` returned after your upload, then click **Load Projects**
+- Select an **Analysis Type** for each project (`local` or `ai`)
+- Click **Run Analysis**
+
+**5. View results**
+
+Once analysis is complete, proceed through the desktop app to view:
+- Project analysis and scoring
+- Resume generation
+- Portfolio generation

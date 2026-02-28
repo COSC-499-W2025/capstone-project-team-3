@@ -251,9 +251,9 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 11. Edit Portfolio Projects (Batch)
+### 11. Edit Portfolio Projects 
 
-**What it does:** Updates multiple projects in a single request.
+**What it does:** Updates one to many projects in a single request.
 
 **URL:** `POST /api/portfolio/edit`
 
@@ -580,6 +580,30 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
+### 26. Delete Project
+
+**What it does:** Permanently deletes all stored insights for a project identified by its signature.
+
+**URL:** `DELETE /api/projects/{signature}`
+
+**URL Parameters:**
+- `signature` — The unique project signature (visible on the project card or via `GET /api/projects`)
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Project 'My Project' deleted successfully",
+  "project_signature": "abc123"
+}
+```
+
+**Notes:**
+- Deletion is permanent and cannot be undone.
+- All associated data (skills, scores, resume bullets) linked to the project is removed via cascading database constraints.
+
+---
+
 ### 26. Record Privacy Consent
 
 **What it does:** Records user consent decision for privacy.
@@ -736,9 +760,13 @@ fetch(`${API_BASE}/api/resume/123`, {
 
 **Data Retrieval:**
 - Projects: `/api/projects`
+- Single Project: `GET /api/projects/{signature}`
 - Skills: `/api/skills`
 - Portfolio: `/api/portfolio`
 - Preferences: `/api/user-preferences`
+
+**Project Management:**
+- Delete Project: `DELETE /api/projects/{signature}`
 
 **Portfolio & Thumbnails:**
 - Dashboard: `/api/portfolio-dashboard`
@@ -781,6 +809,6 @@ fetch(`${API_BASE}/api/resume/123`, {
 ```
 
 ---
-**Last Updated:** February 20, 2026  
-**Total Endpoints Documented:** 30  
+**Last Updated:** February 28, 2026  
+**Total Endpoints Documented:** 31  
 **Questions?** Contact development team

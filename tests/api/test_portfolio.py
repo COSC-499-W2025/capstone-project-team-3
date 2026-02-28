@@ -42,7 +42,8 @@ def mock_portfolio_data():
                     "total_commits": 25, 
                     "total_lines": 2000,
                     "technical_keywords": ["API", "testing"],
-                    "languages": ["Python", "JavaScript"]
+                    "languages": ["Python", "JavaScript"],
+                    "roles": ["Backend Developer", "API Engineer"]
                 },
                 "skills": ["Python", "FastAPI", "Problem Solving"]
             }
@@ -91,6 +92,9 @@ class TestPortfolioEndpoints:
             assert "project_type_analysis" in data
             assert "graphs" in data
             assert "metadata" in data
+
+            # Ensure roles are exposed in project metrics payload
+            assert data["projects"][0]["metrics"]["roles"] == ["Backend Developer", "API Engineer"]
             
             # Check metadata for no filtering
             assert data["metadata"]["total_projects"] == 3

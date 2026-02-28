@@ -231,6 +231,20 @@ def test_apply_score_override_endpoint(mock_apply):
     )
 
 
+@patch(
+    "app.api.routes.projects.apply_project_score_override",
+    side_effect=OverrideValidationError("Unknown code metric exclusions: unknown_metric"),
+)
+def test_apply_score_override_validation_error(mock_apply):
+    client = TestClient(app)
+    response = client.post(
+        "/projects/sig-1/score-override",
+        json={"exclude_metrics": ["unknown_metric"]},
+    )
+    assert response.status_code == 400
+    assert "Unknown code metric exclusions" in response.json()["detail"]
+
+
 @patch("app.api.routes.projects.clear_project_score_override")
 def test_clear_score_override_endpoint(mock_clear):
     mock_clear.return_value = {

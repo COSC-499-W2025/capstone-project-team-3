@@ -324,18 +324,18 @@ In order to see git detection for project analysis use one of the following user
 
 For context each test file contains the following projects ***(M2 Requirement 33 & 34)*** : 
 
-``test_data_feat_34.zip``  
+``test_feat_34_collab_indiv.zip``  
   ``non_code_collab_proj`` collaborative non-code project
   ``code_collab_proj`` collaborative code project 
   ``non_code_indiv_proj`` individual non-code project
   ``code_indiv_proj`` individual code project 
 
 
-  ``test_data_feat_33_past.zip` 
-       ``code_project`` Historic github code project
+  ``test_feat_33_past.zip` 
+       ``capstone_team-3_dec_2026`` Historic github project
 
-  ``test_data_feat_33_future.zip`
-      ``code_project`` Recently updated github code project
+  ``test_feat_33_future.zip`
+      ``capstone_team-3_feb_2026`` Recently updated github code project
 
 
 **5. Run analysis**

@@ -4,9 +4,7 @@
 
 ## Week-8, Entry for Feb 23 → Mar 1, 2026
 
-![Personal Log](../../../screenshots/Week%205%20Personal%20Log%20T2-%20Oluwadabira.png)
-
-**Note**: missing updated personal log image as peer eval not yet open
+![Personal Log](../../../screenshots/Week%208%20Personal%20Log%20T2-%20Oluwadabira.png)
 
 ---
 

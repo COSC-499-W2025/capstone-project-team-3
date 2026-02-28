@@ -306,20 +306,46 @@ npm install       # First time only
 npm run dev
 ```
 
-**3. Upload a zip file**
+**3. Git Detection Config**
+
+In order to see git detection for project analysis use one of the following usernames when inputing your user preferences:
+
+`abstractafua`
+`dabby04`
+`PaintedW0lf`
+`6s-1`
+`KarimKhalil33`
+`kjassani`
+
+**4. Upload a zip file**
 
 - In the desktop app, navigate to the **Upload** page
 - Select a `.zip` file from `tests/files/test_data/` and upload it
-- You can also upload directly via the web UI at: http://localhost:8000/upload-file
 
-**4. Run analysis**
+For context each test file contains the following projects ***(M2 Requirement 33 & 34)*** : 
+
+``test_data_feat_34.zip``  
+  ``non_code_collab_proj`` collaborative non-code project
+  ``code_collab_proj`` collaborative code project 
+  ``non_code_indiv_proj`` individual non-code project
+  ``code_indiv_proj`` individual code project 
+
+
+  ``test_data_feat_33_past.zip` 
+       ``code_project`` Historic github code project
+
+  ``test_data_feat_33_future.zip`
+      ``code_project`` Recently updated github code project
+
+
+**5. Run analysis**
 
 - Go to http://localhost:8000/static/analysis_runner.html
 - Copy and paste the `upload_id` returned after your upload, then click **Load Projects**
 - Select an **Analysis Type** for each project (`local` or `ai`)
 - Click **Run Analysis**
 
-**5. View results**
+**6. View results**
 
 Once analysis is complete, proceed through the desktop app to view:
 - Project analysis and scoring

@@ -57,7 +57,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title                  | Username        |
 |---------------|------------------------|-----------------|
 | [#548, #549, #551, #578, #590, #591, #592] |  CLI tool for editing project/skills chronological dates with database utility manager; POST API endpoint for thumbnail file paths;  DELETE endpoint for edited resumes | @6s-1 | 
-| [#525, #561, #563, #564, #587, #598, #599] | Feature 21: Incremental load feature and updated logic; Bugfix collaboration score and correct username detection; Create similarity score logic for projects; Update DB with similar projects; Dynamic threshold setting for incremental load; Automated dynamic threshold logic and testing | @PaintedW0lf | 
+| [#600, #635, #636, #637, #614, #615, #651, #652, #654] | User-editable threshold for incremental load (PR #634); Integrate update folder user requirement in CLI; Refactor incremental load to interactive mode; Testing for update project CLI; Testing for author key; Add author key in non-code stream bugfix; Get API endpoint for consent text for UI (PR #655); Test consent text API endpoint; Add notification CSS for popups | @PaintedW0lf | 
 | [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#555, #569] | Portfolio API endpoints implementation; Portfolio Dashboard JavaScript foundation with Chart.js visualizations and advanced project rendering | @KarimKhalil33 |
 | [#552, #553, #571, #572, #602, #573] | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization | @kjassani |
@@ -68,7 +68,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | [#434](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/434) | Implement end-to-end functionality to add thumbnails per project-UI, working on UI for thumbnail addition and front page. | @6s-1 |
-| [#600](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/600) | Allows user to edit the threshold for incremental load | @PaintedW0lf |
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
 | [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI | @kjassani |
 | [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored. PR #669 | @dabby04 |

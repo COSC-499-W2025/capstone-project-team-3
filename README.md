@@ -308,14 +308,14 @@ npm run dev
 
 **3. Git Detection Config**
 
-In order to see git detection for project analysis use one of the following usernames when inputing your user preferences:
+In order to see git detection for project analysis use one of the following usernames & emails respectively, when inputing your user preferences:
 
-`abstractafua`
-`dabby04`
-`PaintedW0lf`
-`6s-1`
-`KarimKhalil33`
-`kjassani`
+`abstractafua` |  afuaf2@gmail.com
+`dabby04` |
+`PaintedW0lf` | vanshi05@student.ubc.ca
+`6s-1` |  shreya.saxena@gmail.com
+`KarimKhalil33`  | karim.waleid@gmail.com
+`kjassani` | jassanikarim8@gmail.com
 
 **4. Upload a zip file**
 

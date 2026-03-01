@@ -355,6 +355,7 @@ In order to run the analysis within the CLI :
 -  Upload any of the provided zip files and copy the resulting `upload_id`
 - Paste the `upload_id` in the terminal when prompted and hit **Enter**
 - User will be able to see similarity score and other metrics used to detect if a project has been previously analyzed.  
+- User will prompted to select an Analysis Type for each project (local or ai)
 
 **Note** : Both methods follow and use the same analysis process, however in order to see feedback on whether or not a project was previously analyzed the user should refer to the CLI.
 

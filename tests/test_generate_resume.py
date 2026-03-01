@@ -18,10 +18,12 @@ from app.utils.generate_resume import (
     resume_exists,
     create_resume,
     attach_projects_to_resume,
+    add_projects_to_resume,
     remove_project_from_resume,
     list_resumes,
     ResumeServiceError,
     ResumeNotFoundError,
+    ResumePersistenceError,
 )
 import json
 
@@ -386,6 +388,97 @@ def test_attach_projects_to_resume(db_connection):
     assert rows[0][1] == 1
     assert rows[1][0] == "p2"
     assert rows[1][1] == 2
+
+
+def test_add_projects_to_resume(db_connection):
+    """
+    add_projects_to_resume appends projects with display_order after current max.
+    Use resume 2 (non-master); add p2 after p1.
+    """
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+    add_projects_to_resume(2, ["p2"])
+    cursor.execute(
+        "SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = 2 ORDER BY display_order"
+    )
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert rows[0][0] == "p1"
+    assert rows[0][1] == 1
+    assert rows[1][0] == "p2"
+    assert rows[1][1] == 2
+
+
+def test_add_projects_to_resume_skips_existing(db_connection):
+    """Adding project_ids that are already on the resume skips them (idempotent)."""
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+    add_projects_to_resume(2, ["p1", "p2"])  # p1 already on resume 2
+    cursor.execute(
+        "SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = 2 ORDER BY display_order"
+    )
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert rows[0][0] == "p1"
+    assert rows[0][1] == 1
+    assert rows[1][0] == "p2"
+    assert rows[1][1] == 2
+
+
+def test_add_projects_to_resume_master_raises(db_connection):
+    """add_projects_to_resume raises ResumePersistenceError for master resume (id=1)."""
+    with pytest.raises(ResumePersistenceError) as exc_info:
+        add_projects_to_resume(1, ["p2"])
+    assert "Master" in str(exc_info.value)
+
+
+def test_add_projects_to_resume_non_master(db_connection):
+    """add_projects_to_resume works for non-master resume (e.g. id=2)."""
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+    add_projects_to_resume(2, ["p2"])
+    cursor.execute(
+        "SELECT project_id, display_order FROM RESUME_PROJECT WHERE resume_id = 2 ORDER BY display_order"
+    )
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert rows[0][0] == "p1"
+    assert rows[0][1] == 1
+    assert rows[1][0] == "p2"
+    assert rows[1][1] == 2
+
+
+def test_add_projects_to_resume_not_found(db_connection):
+    """add_projects_to_resume raises ResumeNotFoundError when resume does not exist."""
+    with pytest.raises(ResumeNotFoundError):
+        add_projects_to_resume(99999, ["p1"])
+
+
+def test_add_projects_to_resume_empty_list(db_connection):
+    """add_projects_to_resume with empty list is a no-op (use non-master resume)."""
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+    cursor.execute("SELECT COUNT(*) FROM RESUME_PROJECT WHERE resume_id = 2")
+    before = cursor.fetchone()[0]
+    add_projects_to_resume(2, [])
+    cursor.execute("SELECT COUNT(*) FROM RESUME_PROJECT WHERE resume_id = 2")
+    assert cursor.fetchone()[0] == before
 
 
 def test_remove_project_from_resume(db_connection):

@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 from fastapi import Query, APIRouter, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse, Response
 from app.utils.generate_portfolio import build_portfolio_model
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field
 from app.data.db import get_connection
 from datetime import datetime
 import logging
@@ -19,6 +19,7 @@ class ProjectEdit(BaseModel):
     project_summary: Optional[str] = None # TBD Project Summary length limit
     created_at: Optional[datetime] = None
     last_modified: Optional[datetime] = None
+    score_overridden_value: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 class BatchEditPayload(BaseModel):
     edits: List[ProjectEdit] 
@@ -98,8 +99,14 @@ def edit_portfolio(payload: BatchEditPayload):
     if not payload.edits:
         raise HTTPException(status_code=400, detail="No edits provided")
     
-    ALLOWED_FIELDS = {"project_name", "project_summary", "created_at", "last_modified"}
-    field_map = {"project_name": "name", "project_summary": "summary", "created_at": "created_at", "last_modified": "last_modified"}
+    ALLOWED_FIELDS = {"project_name", "project_summary", "created_at", "last_modified", "score_overridden_value"}
+    field_map = {
+        "project_name": "name",
+        "project_summary": "summary",
+        "created_at": "created_at",
+        "last_modified": "last_modified",
+        "score_overridden_value": "score_overridden_value",
+    }
     
     conn, cur = None, None
 
@@ -131,6 +138,11 @@ def edit_portfolio(payload: BatchEditPayload):
                 if column not in field_updates:
                     field_updates[column] = {}
                 field_updates[column][project_sig] = value
+
+                if key == "score_overridden_value":
+                    if "score_overridden" not in field_updates:
+                        field_updates["score_overridden"] = {}
+                    field_updates["score_overridden"][project_sig] = 1
         
         # Build SQL CASE statements for each column
         set_clauses = []

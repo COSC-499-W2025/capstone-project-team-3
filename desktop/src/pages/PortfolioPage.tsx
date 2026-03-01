@@ -364,6 +364,9 @@ function ProjectCard({
   const developmentIntensity =
     metrics.commit_patterns?.commit_frequency?.development_intensity || "N/A";
   const docTypes = metrics.contribution_activity?.doc_type_counts || {};
+  const isGithubProject =
+    (project.type || "").toLowerCase() === "github" ||
+    (metrics.total_commits || 0) > 0;
   const docTypesDisplay =
     Object.entries(docTypes)
       .map(([type, count]) => `${type}: ${count}`)
@@ -505,14 +508,18 @@ function ProjectCard({
             {metrics.test_files_changed || 0}
           </span>
         </div>
-        <div className="metric-item">
-          <span className="metric-label">Functions:</span>
-          <span className="metric-value">{metrics.functions || 0}</span>
-        </div>
-        <div className="metric-item">
-          <span className="metric-label">Classes:</span>
-          <span className="metric-value">{metrics.classes || 0}</span>
-        </div>
+        {!isGithubProject ? (
+          <>
+            <div className="metric-item">
+              <span className="metric-label">Functions:</span>
+              <span className="metric-value">{metrics.functions || 0}</span>
+            </div>
+            <div className="metric-item">
+              <span className="metric-label">Classes:</span>
+              <span className="metric-value">{metrics.classes || 0}</span>
+            </div>
+          </>
+        ) : null}
         <div className="metric-item">
           <span className="metric-label">Maintainability:</span>
           <span className="metric-value">{maintainabilityScore}</span>

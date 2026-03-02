@@ -515,6 +515,7 @@ def test_main_passes_repo_path_for_git_repos():
          patch('app.main.run_scan_flow') as mock_scan, \
          patch('app.main.classify_non_code_files_with_user_verification') as mock_classify, \
          patch('app.main.parsed_input_text') as mock_parse, \
+         patch('app.main.detect_git', return_value=True), \
          patch('app.main.display_startup_info'), \
          patch('builtins.input', return_value='exit'), \
          patch.dict(os.environ, {'PROMPT_ROOT': '1'}):
@@ -538,7 +539,7 @@ def test_main_passes_repo_path_for_git_repos():
         
         call_args = mock_parse.call_args
         assert call_args[1]['repo_path'] == "/tmp/git_project"
-        assert call_args[1]['author'] == 'test@example.com'
+        assert call_args[1]['author'] == ['test@example.com']
 
 
 def test_main_passes_none_repo_path_for_non_git():

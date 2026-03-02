@@ -294,13 +294,20 @@ def main():
                         # --- Parsing integration ---
                         print("📄 Parsing non-code files...")
                         try:
+                            # Pass both email and username for better author matching
+                            author_identifiers = []
+                            if non_code_result['user_identity'].get('email'):
+                                author_identifiers.append(non_code_result['user_identity']['email'])
+                            if non_code_result['user_identity'].get('name'):
+                                author_identifiers.append(non_code_result['user_identity']['name'])
+                            
                             parsed_non_code = parsed_input_text(
                                 file_paths_dict={
                                     'collaborative': non_code_result['collaborative'],
                                     'non_collaborative': non_code_result['non_collaborative']
                                 },
-                                repo_path=project_path if non_code_result['is_git_repo'] else None,
-                                author=non_code_result['user_identity'].get('email')
+                                repo_path=project_path if detect_git(project_path) else None,
+                                author=author_identifiers if author_identifiers else None
                             )
                             print(f"✅ Parsed {len(parsed_non_code.get('parsed_files', []))} non-code files")
                         except Exception as e:

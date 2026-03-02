@@ -42,7 +42,10 @@ def test_collaborative_parsing():
     
     # Parse with author extraction
     print(f"\n3. Parsing files (collaborative files will extract git diffs)...")
-    parsed = parsed_input_text(classified, repo_path, user_email)
+    author_identifiers = [user_email]
+    if user_identity.get('name'):
+        author_identifiers.append(user_identity['name'])
+    parsed = parsed_input_text(classified, repo_path, author_identifiers)
     
     if parsed.get("parsed_files"):
         total = len(parsed["parsed_files"])

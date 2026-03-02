@@ -36,7 +36,10 @@ def test_readme_full_content():
     
     # Parse files
     print("\n2. Parsing files...")
-    parsed = parsed_input_text(classified, repo_path, user_email)
+    author_identifiers = [user_email]
+    if user_identity.get('name'):
+        author_identifiers.append(user_identity['name'])
+    parsed = parsed_input_text(classified, repo_path, author_identifiers)
     
     # Check README files in parsed results
     readme_parsed = [f for f in parsed.get("parsed_files", []) if Path(f["path"]).name.lower().startswith("readme")]

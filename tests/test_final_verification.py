@@ -44,7 +44,10 @@ def main():
     print("STEP 3: Execute Parsing")
     print("-" * 70)
     
-    parsed = parsed_input_text(classified, repo_path, user_email)
+    author_identifiers = [user_email]
+    if user_identity.get('name'):
+        author_identifiers.append(user_identity['name'])
+    parsed = parsed_input_text(classified, repo_path, author_identifiers)
     
     total = len(parsed.get("parsed_files", []))
     

@@ -66,7 +66,7 @@ How It Works:
 
   All SQL scripts and schema definitions should be stored inside the app/data/ directory to maintain consistency.
 
- # Local Development #
+Local Development 
   First time use : 
   From the project root (where compose.yaml lives):
     `docker compose up --build`
@@ -80,13 +80,13 @@ How It Works:
   
   * If you modify the database schema or add new tables:
 
-  # Stop any running containers
+Stop any running containers
   `docker compose down`
 
-  # Remove the old SQLite DB
+Remove the old SQLite DB
   `rm app/data/app.sqlite3`
 
-  # Rebuild and restart the containers
+Rebuild and restart the containers
   `docker compose up --build`
 
 
@@ -254,3 +254,112 @@ Install dependencies:
 ```bash
 pip install requirements.txt
 ```
+
+### 🖥️ Launching the Desktop App
+
+The desktop application is built with **Electron + React (Vite)**.
+
+In order to start it ensure ***node.js*** is installed and run : 
+
+```bash
+cd desktop
+npm install       # First time only
+npm run dev       # Starts the Vite dev server + Electron window
+```
+
+> **Note:** The desktop app connects to the backend server. Make sure the Docker backend is running (`docker compose up --build`) before launching the desktop app. See `docs/frontend.md` for comprehensive overview.
+
+---
+
+## 🗂️ Zipped Test Files for the App
+
+Pre-prepared zip files are provided for testing the upload and analysis features of the app without needing a real project repository.
+
+```
+tests/files/test_data/
+```
+
+They should contain sample project files across various languages and structures, and can be used for manual QA of the full upload and analysis pipeline.
+
+**How to use them:**
+
+**1. Start the backend**
+
+In a terminal, from the project root:
+```bash
+docker compose up --build
+```
+
+In a second terminal, launch the interactive server:
+```bash
+docker compose run --rm -it --service-ports server python -m app.main
+```
+
+**2. Launch the desktop front-end**
+
+In a third terminal:
+```bash
+cd desktop
+npm install       # First time only
+npm run dev
+```
+
+**3. Git Detection Config**
+
+In order to see git detection for project analysis use one of the following usernames & emails respectively, when inputing your user preferences:
+
+`abstractafua` |  afuaf2@gmail.com
+`dabby04` | dabbyomotoso@gmail.com
+`PaintedW0lf` | vanshi05@student.ubc.ca
+`6s-1` |  shreya.saxena@gmail.com
+`KarimKhalil33`  | karim.waleid@gmail.com
+`kjassani` | jassanikarim8@gmail.com
+
+**4. Upload a zip file**
+
+- In the desktop app, navigate to the **Upload** page
+- Select a `.zip` file from `tests/files/test_data/` and upload it
+
+For context each test file contains the following projects ***(M2 Requirement 33 & 34)*** : 
+
+``test_feat_34_collab_indiv.zip``  
+  ``non_code_collab_proj`` collaborative non-code project
+  ``code_collab_proj`` collaborative code project 
+  ``non_code_indiv_proj`` individual non-code project
+  ``code_indiv_proj`` individual code project 
+
+
+  ``test_feat_33_past.zip` 
+       ``capstone_team-3_dec_2025`` Historic github project
+
+  ``test_feat_33_future.zip`
+      ``capstone_team-3_feb_2026`` Recently updated github code project
+
+
+**5. Run analysis**
+
+Analysis can be run either through the CLI or using our analysis runner.
+
+In order to run the analysis with a front-end view : 
+- Go to http://localhost:8000/upload-file
+- Upload any of the provided zip files and copy the resulting `upload_id`
+- Go to http://localhost:8000/static/analysis_runner.html
+- Paste the `upload_id` returned after your upload, then click **Load Projects**
+- Select an **Analysis Type** for each project (`local` or `ai`)
+- Click **Run Analysis**
+
+In order to run the analysis within the CLI : 
+- Go to http://localhost:8000/upload-file
+-  Upload any of the provided zip files and copy the resulting `upload_id`
+- Paste the `upload_id` in the terminal when prompted and hit **Enter**
+- User will be able to see similarity score and other metrics used to detect if a project has been previously analyzed.  
+- User will prompted to select an Analysis Type for each project (local or ai)
+
+**Note** : Both methods follow and use the same analysis process, however in order to see feedback on whether or not a project was previously analyzed the user should refer to the CLI.
+
+**6. View results**
+
+Once analysis is complete, proceed through the desktop app to view:
+- Project analysis and scoring
+- Resume generation
+- Portfolio generation

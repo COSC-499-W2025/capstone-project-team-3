@@ -6,25 +6,31 @@
  _Note: Diagram is shown in the PDF for a clearer, high‑resolution view._
 
  ## Description of the diagram
-The explanation below links each functional requirement to the specific component in the system architecture where it is implemented. Data interactions such as “write to Database” or “retrieves from Database” indicate flow between components. Together, these mappings show how the system moves from user consent and file processing to project analysis, ranking, visualization, and storage.
+The system architecture is organized into three layers: the User Interface layer, the Core Processing layer, and the Data Storage layer. Together, these layers support the end-to-end workflow of transforming a user’s raw project data into structured, customizable portfolio and résumé outputs.
 
-1. **Require consent before proceeding** → Consent Form (UI layer) gates the whole pipeline.  
-2. **Parse a zipped folder (nested)** → Decompress Engine unzips; File Scanner walks contents.  
-3. **Error on wrong format** → Decompress Engine validates and calls Alert User.  
-4. **Permission + privacy for external services (LLM)** → External Services Consent Form (Core); gates all external calls.  
-5. **Alternative analyses if externals not permitted** → Content Analyzer and Git Analysis Engine run local-only path (no data egress).  
-6. **Store user configurations** → Write to User Configuration Storage.  
-7. **Distinguish individual vs collaborative** → Git Analysis Engine (coding projects); Content Analyzer (non-coding projects).  
-8. **Identify language & framework (coding)** → Content Analyzer (language/framework detectors).  
-9. **Extrapolate individual contributions** → Git Analysis Engine (coding projects); Content Analyzer (non-coding projects).  
-10. **Extract key contribution metrics (duration, activity mix, etc.)** → Metadata Extractor computes signals; Content Analyzer aggregates.  
-11. **Extract key skills** → Content Analyzer (skill mining).  
-12. **Output all key info for a project** → Content Analyzer identifies and analyzes key info for a project.  
-13. **Store project info into Database** → Write from Content Analyzer to Database.  
-14. **Retrieve previously generated portfolio info** → Content Analyzer reads from Database.  
-15. **Retrieve previously generated résumé item** → Content Analyzer reads from Database.  
-16. **Rank projects by user’s contributions** → Content Analyzer (ranking module).  
-17. **Summarize top-ranked projects** → Content Analyzer (summaries) and Visualization Engine renders.  
-18. **Delete insights without breaking shared files** → Dashboard Interface issues scoped deletes; write from Dashboard Interface to Database.  
-19. **Chronological list of projects** → Retrieves from Database to Content Analyzer; produces chronological list and writes to Database.  
-20. **Chronological list of skills exercised** → Retrieves from Database to Content Analyzer; produces chronological list and writes to Database.
+## 1. User Interface Layer
+
+The entry point for all user interactions, built as a **Desktop Application**.
+
+- **Security & Consent:** A "hard gate" consent mechanism ensures no data analysis occurs without explicit user authorization.
+- **Data Ingestion:** Users upload project ZIP files directly into the UI for processing.
+- **Visualization:** The **Portfolio UI** and **Resume** views render the final analysis, scores, and generated metrics.
+
+## 2. Core Processing Layer (FastAPI Backend)
+
+The "engine" of the system, orchestrated by a **FastAPI** backend that manages data transformation and analysis logic.
+
+- **Pre-Processing:** Raw uploads are handled by a **Decompress Engine** and **File Scanner**. Each project is assigned a unique signature to prevent redundant analysis and ensure data integrity.
+- **Dual-Track Pipeline:**
+  - **Code Pipeline:** Analyzes source files and utilizes a **Git Analysis Engine** to extract repository-level signals and contribution data.
+  - **Non-Code Pipeline:** Parses documentation and project metadata to classify individual versus collaborative contributions.
+- **Hybrid Analysis Mode:** The system features an **Analysis Choice** logic. It can operate in **Local-only** mode for maximum privacy or **AI-enhanced** mode (via **Gemini**) to generate enriched resume bullets and professional summaries.
+- **The Merger:** Final outputs from both pipelines are synthesized into a unified project profile, including skills, scores, and dashboard metrics.
+
+## 3. Data Storage Layer
+
+Ensures persistence and provides the source of truth for the application state.
+
+- **Metadata & Analysis:** An **SQLite** database stores user configurations, consent logs, project metadata, and generated metrics.
+- **File Persistence:** The **Local File System** manages raw uploads, thumbnails, and temporary processing artifacts.
+- **Export Engine:** Finalized results are funneled into **Export Storage**, allowing users to download their professional assets in **TeX** or **PDF** formats.

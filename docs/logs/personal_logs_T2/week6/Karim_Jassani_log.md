@@ -1,4 +1,4 @@
-# Personal Log – Karim Khalil
+# Personal Log – Karim Jassani
 
 ---
 
@@ -18,7 +18,7 @@ Last week I had setip the foundations for the Project Score Override funcitonali
   - Implemented override lifecycle: preview (non-persistent), apply (persistent), and clear/reset endpoints. 
   - Added focused unit tests covering override behavior, validation logic, and edge cases to prevent scoring regressions.
 
-- **[PR #641 - API Integration Project Score Override](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/666)** ✅ Merged
+- **[PR #641 - API Integration Project Score Override](https://github.com/COSC-499-W2025/capstone-project-team-3/pull/666)** 
   - Made existing GET /api/projects and GET /api/projects/{signature} override-aware by returning score, score_original, score_overridden, score_overridden_value, and display_score.
   - Added new override-related endpoints: score breakdown, preview, apply, and clear to support full override workflow. 
   - Updated retrieval layer (get_portfolio_resume_insights() and get_projects_by_signatures()) to include effective score columns from PROJECT, ensuring consistency across portfolio and resume flows.

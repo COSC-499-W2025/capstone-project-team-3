@@ -30,6 +30,9 @@
   - Complete API Endpoints for Chronological Management – #720
   - Update Read ME #757 
   - DELETE Project Insights API # 758
+  - Add validation logic for list of excluded metrics - #739
+  - M2: System Architecture Diagram Description - #750
+  - M2: Final API Documentation - #752
 
 ---
 
@@ -68,7 +71,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 | [#731, #732]       | Refactor non-code pdf, readme, text parsing to full parse for collaborative files (PR #733); Fix analysis of collaborative non-code files not happening | @PaintedW0lf   |
 | [#757, #758]                   | Update READ ME & Test files, API Delete Projects    | @abstractafua  |
 | [#745, #746, #747, #748, #734]                  | Completed project score overrides in portfolio (PR #713); Added API-driven main analysis flow and draft runner UI for migration testing (PR #723); Displayed portfolio role tags on project cards (PR #729); Fixed score editing, removed Functions/Classes from GitHub cards, and fixed thumbnail rendering in interactive HTML export (PR #744); Assisted with updated system architecture review/support (PR #734); Prepared portfolio video demo, presented live with team, and provided peer presentation feedback | @KarimKhalil33 |
-| [#552, #553, #571, #572, #602, #573]             | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization                                                  | @kjassani      |
+| [#739, #750, #752]             | Add validation logic for list of excluded metrics,  M2: System Architecture Diagram Description, M2: Final API Documentation| @kjassani      |
 | [#709, #721, #722, #727]                   | Fix download for saved resumes and resume ordering; Delete projects from a saved resume; Drag-and-drop project ordering for resumes; Add backend endpoint to attach projects to an existing resume | @dabby04       |
 
 

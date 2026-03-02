@@ -309,13 +309,13 @@ This document explains all API endpoints in Project Insights.
       "project_summary": "New summary",
       "created_at": "2024-01-15",
       "last_modified": "2024-06-10",
-      "score_overridden_value": 0.8
+      "score": 0.8
     }
   ]
 }
 ```
 
-**Supported fields:** `project_name`, `project_summary`, `created_at`, `last_modified`, `score_overridden_value` (0.0-1.0)
+**Supported fields:** `project_name`, `project_summary`, `created_at`, `last_modified`, `score` (0.0-1.0)
 
 **Response:**
 ```json

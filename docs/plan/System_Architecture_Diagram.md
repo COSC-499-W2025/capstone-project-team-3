@@ -27,3 +27,10 @@ The "engine" of the system, orchestrated by a **FastAPI** backend that manages d
 - **Hybrid Analysis Mode:** The system features an **Analysis Choice** logic. It can operate in **Local-only** mode for maximum privacy or **AI-enhanced** mode (via **Gemini**) to generate enriched resume bullets and professional summaries.
 - **The Merger:** Final outputs from both pipelines are synthesized into a unified project profile, including skills, scores, and dashboard metrics.
 
+## 3. Data Storage Layer
+
+Ensures persistence and provides the source of truth for the application state.
+
+- **Metadata & Analysis:** An **SQLite** database stores user configurations, consent logs, project metadata, and generated metrics.
+- **File Persistence:** The **Local File System** manages raw uploads, thumbnails, and temporary processing artifacts.
+- **Export Engine:** Finalized results are funneled into **Export Storage**, allowing users to download their professional assets in **TeX** or **PDF** formats.

@@ -302,6 +302,8 @@ def compute_project_breakdown(project_signature: str) -> Dict[str, Any]:
     )
     scoring_inputs = _build_scoring_inputs(project_data["metrics"])
     breakdown = compute_project_score_breakdown(**scoring_inputs)
+
+
     return {
         "project_signature": project_data["project_signature"],
         "name": project_data["name"],

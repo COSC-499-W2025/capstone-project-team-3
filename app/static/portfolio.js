@@ -594,6 +594,9 @@ showError(message) {
             const docTypes = contributionActivity.doc_type_counts || {};
             const docTypesDisplay = Object.entries(docTypes).map(([type, count]) => 
                 `${type}: ${count}`).join(', ') || 'N/A';
+            const isGithubProject =
+                String(project.type || '').toLowerCase() === 'github' ||
+                (metrics.total_commits || 0) > 0;
             
             return `
                 <div class="project-card" style="position: relative;">
@@ -687,14 +690,16 @@ showError(message) {
                             <span class="metric-label">Test Files:</span>
                             <span class="metric-value">${metrics.test_files_changed || 0}</span>
                         </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Functions:</span>
-                            <span class="metric-value">${metrics.functions || 0}</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Classes:</span>
-                            <span class="metric-value">${metrics.classes || 0}</span>
-                        </div>
+                        ${!isGithubProject ? `
+                            <div class="metric-item">
+                                <span class="metric-label">Functions:</span>
+                                <span class="metric-value">${metrics.functions || 0}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Classes:</span>
+                                <span class="metric-value">${metrics.classes || 0}</span>
+                            </div>
+                        ` : ''}
                         <div class="metric-item">
                             <span class="metric-label">Maintainability:</span>
                             <span class="metric-value">${maintainabilityScore}</span>
@@ -944,7 +949,42 @@ showError(message) {
         alert(`Error: ${message}`);
     }
 
-    downloadPortfolioInteractiveHTML() {
+    async _blobToDataUrl(blob) {
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Failed to read thumbnail data'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    async _inlineThumbnailsForExport(mainClone) {
+        const thumbnailImages = Array.from(mainClone.querySelectorAll('img.project-thumbnail'));
+        if (!thumbnailImages.length) return;
+
+        await Promise.allSettled(
+            thumbnailImages.map(async (img) => {
+                const src = (img.getAttribute('src') || '').trim();
+                if (!src || src.startsWith('data:')) return;
+
+                try {
+                    const response = await fetch(src, {
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+                    if (!response.ok) return;
+                    const blob = await response.blob();
+                    const dataUrl = await this._blobToDataUrl(blob);
+                    img.setAttribute('src', dataUrl);
+                    img.removeAttribute('crossorigin');
+                } catch (error) {
+                    console.warn('Skipping thumbnail inline for export:', src, error);
+                }
+            })
+        );
+    }
+
+    async downloadPortfolioInteractiveHTML() {
         try {
             const mainContent = document.querySelector('.main-content');
             if (!mainContent) {
@@ -957,6 +997,7 @@ showError(message) {
 
             const mainClone = mainContent.cloneNode(true);
             mainClone.querySelectorAll('.dashboard-actions').forEach(el => el.remove());
+            await this._inlineThumbnailsForExport(mainClone);
 
             const styleTag = document.querySelector('style');
             const baseCss = styleTag ? styleTag.textContent : '';
@@ -1335,6 +1376,14 @@ ${mainClone.outerHTML}
                 const lastModified = document.getElementById('last_modified_input').value;
                 if (createdAt) editData.created_at = createdAt;
                 if (lastModified) editData.last_modified = lastModified;
+            } else if (field === 'rank') {
+                const parsed = Number(inputElement.value);
+                if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
+                    alert('Score must be a number between 0 and 1.');
+                    inputElement.focus();
+                    return;
+                }
+                editData.score_overridden_value = parsed;
             }
             
             await this.saveFieldEdit(editData, element, originalContent);

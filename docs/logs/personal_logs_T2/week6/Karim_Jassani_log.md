@@ -6,6 +6,8 @@
 
 ---
 
+![Personal Log](../../../screenshots/T2-Week8-Karim-Jassani.png)
+
 ### Connection to Previous Week
 
 Last week I had setip the foundations for the Project Score Override funcitonality so this week I completed the utils functions along with test cases for, and the API Integration.

@@ -275,8 +275,6 @@ npm run dev       # Starts the Vite dev server + Electron window
 
 Pre-prepared zip files are provided for testing the upload and analysis features of the app without needing a real project repository.
 
-Place your test zip files in:
-
 ```
 tests/files/test_data/
 ```
@@ -311,7 +309,7 @@ npm run dev
 In order to see git detection for project analysis use one of the following usernames & emails respectively, when inputing your user preferences:
 
 `abstractafua` |  afuaf2@gmail.com
-`dabby04` |
+`dabby04` | dabbyomotoso@gmail.com
 `PaintedW0lf` | vanshi05@student.ubc.ca
 `6s-1` |  shreya.saxena@gmail.com
 `KarimKhalil33`  | karim.waleid@gmail.com

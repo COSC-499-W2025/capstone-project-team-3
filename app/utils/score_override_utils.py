@@ -150,6 +150,40 @@ def _parse_exclusions(raw_exclusions: Any) -> List[str]:
     return []
 
 
+def _normalize_exclusions(
+    exclude_metrics: Optional[List[str]],
+    allowed_metrics: Iterable[str],
+) -> List[str]:
+    exclusions: List[str] = []
+    for metric_name in exclude_metrics or []:
+        if not isinstance(metric_name, str):
+            continue
+        cleaned = metric_name.strip()
+        if not cleaned:
+            continue
+        if cleaned not in exclusions:
+            exclusions.append(cleaned)
+
+    allowed = {
+        metric_name
+        for metric_name in allowed_metrics
+        if isinstance(metric_name, str) and metric_name.strip()
+    }
+    if not allowed and exclusions:
+        raise OverrideValidationError("No code metrics available for override")
+
+    unknown = [metric_name for metric_name in exclusions if metric_name not in allowed]
+    if unknown:
+        unknown_text = ", ".join(unknown)
+        allowed_text = ", ".join(sorted(allowed))
+        raise OverrideValidationError(
+            f"Unknown code metric exclusions: {unknown_text}. "
+            f"Allowed metrics: {allowed_text}"
+        )
+
+    return exclusions
+
+
 def _load_project_and_metrics(project_signature: str) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
@@ -322,7 +356,11 @@ def preview_project_score_override(
     """
     project_data = _load_project_and_metrics(project_signature)
     scoring_inputs = _build_scoring_inputs(project_data["metrics"])
-    exclusions = [m.strip() for m in (exclude_metrics or []) if isinstance(m, str) and m.strip()]
+    base_breakdown = compute_project_score_breakdown(**scoring_inputs)
+    available_code_metrics = list(
+        base_breakdown.get("code", {}).get("metrics", {}).keys()
+    )
+    exclusions = _normalize_exclusions(exclude_metrics, available_code_metrics)
 
     try:
         breakdown = compute_project_score_override(

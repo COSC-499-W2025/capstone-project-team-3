@@ -1430,6 +1430,6 @@ fetch(`${API_BASE}/resume/123`, {
 ```
 
 ---
-**Last Updated:** March 2, 2026  
+**Last Updated:** March 1, 2026  
 **Total Endpoints Documented:** 49  
 **Questions?** Contact development team

@@ -246,3 +246,45 @@ def test_clear_score_override_endpoint(mock_clear):
     assert response.json()["score"] == 0.7
     assert response.json()["score_overridden"] is False
     mock_clear.assert_called_once_with(project_signature="sig-1")
+
+
+@patch("app.api.routes.projects.delete_project_by_signature", return_value=True)
+@patch(
+    "app.api.routes.projects.get_all_projects",
+    return_value=[{"name": "Project One", "project_signature": "sig-1"}],
+)
+def test_delete_project_success(mock_get_all, mock_delete):
+    """DELETE /projects/{signature} returns 200 and confirmation payload."""
+    client = TestClient(app)
+    response = client.delete("/projects/sig-1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["project_signature"] == "sig-1"
+    assert "Project One" in data["message"]
+    mock_delete.assert_called_once_with("sig-1")
+
+
+@patch(
+    "app.api.routes.projects.get_all_projects",
+    return_value=[],
+)
+def test_delete_project_not_found(mock_get_all):
+    """DELETE /projects/{signature} returns 404 when project does not exist."""
+    client = TestClient(app)
+    response = client.delete("/projects/nonexistent")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Project not found"
+
+
+@patch("app.api.routes.projects.delete_project_by_signature", return_value=False)
+@patch(
+    "app.api.routes.projects.get_all_projects",
+    return_value=[{"name": "Project One", "project_signature": "sig-1"}],
+)
+def test_delete_project_unexpected_failure(mock_get_all, mock_delete):
+    """DELETE /projects/{signature} returns 500 when deletion fails unexpectedly."""
+    client = TestClient(app)
+    response = client.delete("/projects/sig-1")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Deletion failed unexpectedly"

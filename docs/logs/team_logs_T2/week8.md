@@ -28,6 +28,8 @@
   - API endpoints to update skill date and name – #718
   - API endpoint to delete a skill – #719
   - Complete API Endpoints for Chronological Management – #720
+  - Update Read ME #757 
+  - DELETE Project Insights API # 758
 
 ---
 
@@ -64,7 +66,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | [#712, #715, #716, #717, #718, #719, #720]       | Enhanced resume deletion UI with dropdown (PR #711); Added comprehensive API endpoints for chronological management - projects list/retrieve, update dates, skills CRUD operations (PR #714); Created Figma UI design for chronological management; Recorded M2 presentation video covering Features 23, 24, 26, 33 | @6s-1          |
 | [#731, #732]       | Refactor non-code pdf, readme, text parsing to full parse for collaborative files (PR #733); Fix analysis of collaborative non-code files not happening | @PaintedW0lf   |
-| [#584, #585, #604, #461, #463]                   | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization                                                     | @abstractafua  |
+| [#757, #758]                   | Update READ ME & Test files, API Delete Projects    | @abstractafua  |
 | [#745, #746, #747, #748, #734]                  | Completed project score overrides in portfolio (PR #713); Added API-driven main analysis flow and draft runner UI for migration testing (PR #723); Displayed portfolio role tags on project cards (PR #729); Fixed score editing, removed Functions/Classes from GitHub cards, and fixed thumbnail rendering in interactive HTML export (PR #744); Assisted with updated system architecture review/support (PR #734); Prepared portfolio video demo, presented live with team, and provided peer presentation feedback | @KarimKhalil33 |
 | [#552, #553, #571, #572, #602, #573]             | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization                                                  | @kjassani      |
 | [#709, #721, #722, #727]                   | Fix download for saved resumes and resume ordering; Delete projects from a saved resume; Drag-and-drop project ordering for resumes; Add backend endpoint to attach projects to an existing resume | @dabby04       |

@@ -80,8 +80,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                                                | Title                                                                                                                     | Username     |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking                                                                                    | @kjassani    |
-| [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI                                                                                              | @kjassani    |
+
 
 
 ---

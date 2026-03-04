@@ -47,11 +47,12 @@
 
 ### Reflection
 **What Went Well:**
+Able to get insight on what valuable metrics and skills are best to showcase from our guest lecturer. 
 
 
 **What Could Be Improved:**
-
+N/A
 
 ### Plan for Next Cycle
-
+Reading Week
 ---

@@ -36,6 +36,9 @@
   - GET API for serving thumbnails - #656
   - Thumbnail cache-busting - #657
   - Thumbnail extension validation - #658
+  - Add Core Score Override Utility - #663
+  - Score Override into Projects API - #665
+  - Update retrieval insights + retrieval tests - #667
 
 
 ---
@@ -72,7 +75,7 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | [#600, #635, #636, #637, #614, #615, #651, #652, #654] | User-editable threshold for incremental load (PR #634); Integrate update folder user requirement in CLI; Refactor incremental load to interactive mode; Testing for update project CLI; Testing for author key; Add author key in non-code stream bugfix; Get API endpoint for consent text for UI (PR #655); Test consent text API endpoint; Add notification CSS for popups | @PaintedW0lf | 
 | [#584, #585, #604, #461, #463] | Update Existing User preference API endpoints, Outline Eduction model for DB storage, Create Institution API Endpoints, Define Editable Portfolio Fields, API Endpoint: Edit Portfolio Project, Backend Model for Portfolio Customization| @abstractafua | 
 | [#632, #641, #707] | Portfolio Dashboard HTML Part 1 – base layout, sidebar/main structure, Chart.js/static wiring (PR #632); Completed interactive portfolio UI with charts/graphs, summary UX updates, and CI Docker workflow disk-space fix (PR #641); Closed portfolio UI enhancement scope for interactive graphs (#707) | @KarimKhalil33 |
-| [#552, #553, #571, #572, #602, #573] | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization | @kjassani |
+| [#665, #663, #667] | Add Core Score Override Utility, Integrate Score Override into Projects API, Update retrieval insights + retrieval tests | @kjassani |
 | [#639, #642, #610, #661] | Resume Sidebar (GET /resume_names, sidebar UI, resume bullets fix); Display Resume (UI) – ResumeSections, ResumePreview, styles; Resume Builder & Sidebar frontend tests (ResumeBuilderPage, ResumeSidebar), Create Tailored Resume (Project Selection Page) | @dabby04 |
 
 ## In Progress Tasks
@@ -80,7 +83,6 @@ Status Burnup: https://github.com/orgs/COSC-499-W2025/projects/45/insights/2
 | Task/Issue ID | Title            | Username |
 |---------------|------------------|----------|
 | [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking | @kjassani |
-| [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI | @kjassani |
 | [#607](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/607) | UI/view tailored. PR #669 | @dabby04 |
 
 ---

@@ -36,6 +36,7 @@
   - Load Portfolio View with Applied customizations #584
   - Create Front-End View of User Profile #604
   - Update existing Resume Endpoints #461
+  - Wire override into API + CLI - #574
 
 ---
 
@@ -74,7 +75,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 | [#683, #684, #685, #686, #687, #708, #696, #697] | Implement Consent Page UI (PR #687); Add notification popup system; Integrate consent page with backend API; Style consent page with CSS; Add revoke consent UI (PR #698); Add endpoint documentation for consent management; Add missing endpoint documentation for resume and project | @PaintedW0lf   |
 | [  #585,#584, #604, #461]  | Load Portfolio View with Applied customizations, Create Front-End View of User Profile, Update existing Resume Endpoints, Portfolio Customization UI      | @abstractafua  |
 | [#676, #701, #702, #706, #705, #704]            | Added score breakdown + overridden score display transparency in portfolio (PR #676); Started portfolio migration from static to desktop React/TSX (PR #701); Added interactive portfolio HTML download/export flow with tests (PR #702); Completed related issue scopes for score transparency, desktop migration, and export functionality (#706, #705, #704); Prepared for live in-class team presentation | @KarimKhalil33 |
-| [#552, #553, #571, #572, #602, #573]             | Resolve project score vs rank confusion, Rename project scan score, Add score override fields + reset on reanalysis, Implement score breakdown builder, Update Is_collaborative function, Implement override recalculation + renormalization                                                  | @kjassani      |
+| [#574]             | Wire override into API + CLI  | @kjassani      |
 | [#607, #677, #678, #668, #688, #609, #689, #608] | Tailored resume preview (UI); Download & export logic for resumes (backend + header UI); Save and load tailored resumes; Edit tailored resumes (Skills + Projects)                                                                                                                            | @dabby04       |
 
 
@@ -83,8 +84,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                                                                | Title                                                                                                                     | Username     |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| [#492](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/492) | Allow User to Override Project Ranking                                                                                    | @kjassani    |
-| [#574](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/574) | Wire override into API + CLI                                                                                              | @kjassani    |
+
 
 
 ---

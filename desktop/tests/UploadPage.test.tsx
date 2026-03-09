@@ -96,7 +96,7 @@ test('selecting non-zip file shows error', () => {
   const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(fileInput, { target: { files: [file] } });
 
-  expect(screen.getByText(/Please select a ZIP file/i)).toBeInTheDocument();
+  expect(screen.getByText(/Please upload a ZIP file/i)).toBeInTheDocument();
 });
 
 test('selecting zip file auto-uploads and shows success', async () => {

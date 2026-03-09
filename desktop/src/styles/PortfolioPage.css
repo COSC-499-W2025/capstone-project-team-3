@@ -143,6 +143,41 @@
 
         .dashboard-header {
             margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .dashboard-header-text {
+            min-width: 0;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .download-html-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .download-html-btn:hover {
+            background: var(--accent-secondary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
         }
 
         .dashboard-header h1 {
@@ -470,6 +505,72 @@
             font-weight: 700;
             margin-bottom: 12px;
             letter-spacing: -0.02em;
+            cursor: pointer;
+        }
+
+        .project-score-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .project-score-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .project-score-main .project-score-display {
+            margin-bottom: 0;
+        }
+
+        .project-score-badge {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            background: var(--border-light);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .project-score-config-inline {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+
+        .score-config-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .score-exclusion-chips-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .score-exclusion-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--border-light);
+            color: var(--text-primary);
+            line-height: 1.2;
+            font-size: 11px;
         }
 
         .project-dates {
@@ -506,6 +607,118 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+        }
+
+        .project-role-strip {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 0 0 14px;
+        }
+
+        .project-role-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 10px;
+            font-weight: 700;
+            margin-right: 2px;
+        }
+
+        .project-role-inline-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .project-role-tag {
+            background: var(--border-light);
+            color: var(--text-secondary);
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            line-height: 1.2;
+        }
+
+        .upload-thumbnail-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .upload-thumbnail-btn:hover {
+            background: var(--accent-secondary);
+            transform: translateY(-1px);
+        }
+
+        .project-thumbnail {
+            max-width: 100%;
+            height: auto;
+            max-height: 200px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .save-edit-btn {
+            flex: 1;
+            padding: 6px 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .save-edit-btn:hover:not(:disabled) {
+            background: var(--accent-secondary);
+        }
+
+        .save-edit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .cancel-edit-btn {
+            flex: 1;
+            padding: 6px 12px;
+            background: var(--text-muted);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .cancel-edit-btn:hover:not(:disabled) {
+            background: var(--text-secondary);
+        }
+
+        .cancel-edit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .editable-field.active {
+            background: rgba(45, 55, 72, 0.05);
+            border: 1px dashed var(--accent-secondary);
+            border-radius: 4px;
+            padding: 8px;
         }
 
         .project-skill-tag {
@@ -750,5 +963,18 @@
 
             .top-projects {
                 grid-template-columns: 1fr;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .dashboard-actions {
+                width: 100%;
+            }
+
+            .download-html-btn {
+                width: 100%;
             }
         }

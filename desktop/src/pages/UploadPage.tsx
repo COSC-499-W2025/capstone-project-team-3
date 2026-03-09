@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
+import { runAnalysis } from "../api/analysis";
 import "../styles/UploadPage.css";
 
 /**
  * Upload Page - Project upload interface
- * Select or drop a ZIP file to auto-upload. File is stored in app/uploads.
+ * Select or drop a ZIP file to auto-upload. Runs analysis so projects appear in Data Management.
  */
 export function UploadPage() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export function UploadPage() {
   const [success, setSuccess] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -20,21 +22,29 @@ export function UploadPage() {
     setError(null);
     setSuccess(false);
     setUploadedFileName(null);
+    setAnalyzing(false);
 
     try {
-      const result = await uploadZipFile(file);
+      const { upload_id } = await uploadZipFile(file);
+      setAnalyzing(true);
+      await runAnalysis({
+        upload_id,
+        default_analysis_type: "local",
+        similarity_action: "create_new",
+      });
       setSuccess(true);
       setUploadedFileName(file.name);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       navigate("/analysisrunnerpage", {
-        state: { uploadId: result.upload_id },
+        state: { uploadId: upload_id },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setLoading(false);
+      setAnalyzing(false);
     }
   };
 
@@ -129,7 +139,9 @@ export function UploadPage() {
           ) : (
             <p className="upload-hint">
               {loading
-                ? "Uploading…"
+                ? analyzing
+                  ? "Analyzing project…"
+                  : "Uploading…"
                 : "Drop your ZIP file here or click to browse"}
             </p>
           )}

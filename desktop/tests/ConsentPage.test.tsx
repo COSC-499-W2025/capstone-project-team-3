@@ -311,3 +311,215 @@ test('Revoke button is clickable when consent exists', async () => {
   const revokeButton = screen.getByText(/Revoke Consent/i);
   fireEvent.click(revokeButton);
 });
+
+// --- Negative / Error-case tests ---
+
+test('buttons remain disabled when consent status fetch fails', async () => {
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  
+  mockFetch.mockImplementation(() => {
+    return Promise.resolve({
+      ok: false,
+      text: () => Promise.resolve('Internal Server Error'),
+    } as Response);
+  });
+
+  render(
+    <BrowserRouter>
+      <ConsentPage />
+    </BrowserRouter>
+  );
+
+  // Wait for the failed fetch to complete
+  await waitFor(() => {
+    expect(consoleSpy).toHaveBeenCalled();
+  });
+
+  // Buttons should be disabled since messages never loaded
+  const buttons = screen.getAllByRole('button');
+  buttons.forEach((button) => {
+    expect(button.getAttribute('disabled')).toBe('');
+  });
+
+  consoleSpy.mockRestore();
+});
+
+test('buttons remain disabled when consent text fetch fails', async () => {
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  
+  mockFetch.mockImplementation((...args: unknown[]) => {
+    const url = args[0] as string;
+    const urlString = url.toString();
+    // Status endpoint succeeds
+    if (urlString.includes('/api/privacy-consent/text')) {
+      return Promise.resolve({
+        ok: false,
+        text: () => Promise.resolve('Text endpoint error'),
+      } as Response);
+    }
+    if (urlString.includes('/api/privacy-consent')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConsentStatusNoConsent),
+        text: () => Promise.resolve(JSON.stringify(mockConsentStatusNoConsent)),
+      } as Response);
+    }
+    return Promise.reject(new Error('Unknown URL'));
+  });
+
+  render(
+    <BrowserRouter>
+      <ConsentPage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(consoleSpy).toHaveBeenCalled();
+  });
+
+  // Buttons should be disabled since messages never loaded
+  const buttons = screen.getAllByRole('button');
+  buttons.forEach((button) => {
+    expect(button.getAttribute('disabled')).toBe('');
+  });
+
+  consoleSpy.mockRestore();
+});
+
+test('network error on initial fetch keeps buttons disabled', async () => {
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  
+  mockFetch.mockImplementation(() => {
+    return Promise.reject(new Error('Network error'));
+  });
+
+  render(
+    <BrowserRouter>
+      <ConsentPage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(consoleSpy).toHaveBeenCalled();
+  });
+
+  const buttons = screen.getAllByRole('button');
+  buttons.forEach((button) => {
+    expect(button.getAttribute('disabled')).toBe('');
+  });
+
+  consoleSpy.mockRestore();
+});
+
+test('no notification shown when accept POST fails', async () => {
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+  mockFetch.mockImplementation((...args: unknown[]) => {
+    const url = args[0] as string;
+    const options = args[1] as RequestInit | undefined;
+    const urlString = url.toString();
+    if (urlString.includes('/api/privacy-consent') && options?.method === 'POST') {
+      return Promise.resolve({
+        ok: false,
+        text: () => Promise.resolve('Submit failed'),
+      } as Response);
+    }
+    if (urlString.includes('/api/privacy-consent/text')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConsentTextResponse),
+        text: () => Promise.resolve(JSON.stringify(mockConsentTextResponse)),
+      } as Response);
+    }
+    if (urlString.includes('/api/privacy-consent')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConsentStatusNoConsent),
+        text: () => Promise.resolve(JSON.stringify(mockConsentStatusNoConsent)),
+      } as Response);
+    }
+    return Promise.reject(new Error('Unknown URL'));
+  });
+
+  const { container } = render(
+    <BrowserRouter>
+      <ConsentPage />
+    </BrowserRouter>
+  );
+
+  // Wait for messages to load so buttons become enabled
+  await waitFor(() => {
+    const acceptBtn = screen.getByText(/Accept/i);
+    expect(acceptBtn.getAttribute('disabled')).toBeNull();
+  });
+
+  fireEvent.click(screen.getByText(/Accept/i));
+
+  // Wait for the POST error to be logged
+  await waitFor(() => {
+    const errorCalls = consoleSpy.mock.calls.map((call) => call[0]);
+    expect(errorCalls).toContain('Failed to submit consent:');
+  });
+
+  // No notification should appear on error
+  const notification = container.querySelector('.notification');
+  expect(notification).toBeNull();
+
+  consoleSpy.mockRestore();
+  consoleLogSpy.mockRestore();
+});
+
+test('no notification shown when revoke DELETE fails', async () => {
+  const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+  mockFetch.mockImplementation((...args: unknown[]) => {
+    const url = args[0] as string;
+    const options = args[1] as RequestInit | undefined;
+    const urlString = url.toString();
+    if (urlString.includes('/api/privacy-consent') && options?.method === 'DELETE') {
+      return Promise.resolve({
+        ok: false,
+        text: () => Promise.resolve('Delete failed'),
+      } as Response);
+    }
+    if (urlString.includes('/api/privacy-consent/text')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConsentTextResponse),
+        text: () => Promise.resolve(JSON.stringify(mockConsentTextResponse)),
+      } as Response);
+    }
+    if (urlString.includes('/api/privacy-consent')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockConsentStatusWithConsent),
+        text: () => Promise.resolve(JSON.stringify(mockConsentStatusWithConsent)),
+      } as Response);
+    }
+    return Promise.reject(new Error('Unknown URL'));
+  });
+
+  const { container } = render(
+    <BrowserRouter>
+      <ConsentPage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText(/Revoke Consent/i)).toBeDefined();
+  });
+
+  fireEvent.click(screen.getByText(/Revoke Consent/i));
+
+  await waitFor(() => {
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to revoke consent:', expect.anything());
+  });
+
+  // No notification should appear on error
+  const notification = container.querySelector('.notification');
+  expect(notification).toBeNull();
+
+  consoleSpy.mockRestore();
+});
+

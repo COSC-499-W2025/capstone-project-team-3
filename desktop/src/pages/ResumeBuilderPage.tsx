@@ -522,8 +522,8 @@ export function ResumeBuilderPage() {
                             </label>
                           </td>
                           <td>
-                            {project.skills.slice(0, 3).join(", ")}
-                            {project.skills.length > 3 && ", ..."}
+                            {(project.skills ?? []).slice(0, 3).join(", ")}
+                            {(project.skills ?? []).length > 3 && ", ..."}
                           </td>
                           <td>
                             {new Date(project.date_added).toLocaleDateString("en-GB", {

@@ -24,6 +24,7 @@ jest.mock('../src/api/resume', () => ({
   previewResume: jest.fn(),
   deleteResume: jest.fn(),
   deleteProjectFromResume: jest.fn(),
+  addProjectsToResume: jest.fn(),
   downloadResumePDF: jest.fn(),
   downloadResumeTeX: jest.fn(),
   saveNewResume: jest.fn(),
@@ -83,11 +84,13 @@ jest.mock('../src/pages/ResumeManager/ResumePreview', () => ({
     isEditing,
     onProjectDelete,
     onSectionChange,
+    onAddProjectClick,
   }: {
     resume: any;
     isEditing?: boolean;
     onProjectDelete?: (id: string) => void;
     onSectionChange?: (section: 'skills' | 'projects', data: any) => void;
+    onAddProjectClick?: () => void;
   }) => {
     const firstProjectWithId = resume?.projects?.find((p: any) => p.project_id);
     return (
@@ -108,6 +111,11 @@ jest.mock('../src/pages/ResumeManager/ResumePreview', () => ({
             Remove project
           </button>
         )}
+        {isEditing && onAddProjectClick && (
+          <button type="button" data-testid="add-project-button" onClick={onAddProjectClick}>
+            Add a project
+          </button>
+        )}
       </div>
     );
   },
@@ -119,6 +127,7 @@ const mockGetResumeById = resumeApi.getResumeById as ReturnType<typeof jest.fn>;
 const mockPreviewResume = resumeApi.previewResume as ReturnType<typeof jest.fn>;
 const mockDeleteResume = resumeApi.deleteResume as ReturnType<typeof jest.fn>;
 const mockDeleteProjectFromResume = resumeApi.deleteProjectFromResume as ReturnType<typeof jest.fn>;
+const mockAddProjectsToResume = resumeApi.addProjectsToResume as ReturnType<typeof jest.fn>;
 const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof jest.fn>;
 const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
 const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
@@ -205,6 +214,7 @@ describe('ResumeBuilderPage', () => {
     mockSaveNewResume.mockResolvedValue({ id: 3 });
     mockUpdateResume.mockResolvedValue(undefined);
     mockDeleteProjectFromResume.mockResolvedValue({ success: true, message: 'Project removed' });
+    mockAddProjectsToResume.mockResolvedValue({ message: 'Projects added to resume 2' });
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -1075,5 +1085,175 @@ describe('ResumeBuilderPage', () => {
     expect(mockSaveNewResume).not.toHaveBeenCalled();
 
     alertMock.mockRestore();
+  });
+
+  // Add Project modal tests
+  test('when editing saved resume, Add a project button is shown and opens modal', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    const savedButton = screen.getByText('Saved Resume');
+    fireEvent.click(savedButton);
+
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+
+    const editButton = screen.getByTestId('edit-resume-2');
+    fireEvent.click(editButton);
+
+    const addProjectButton = screen.getByTestId('add-project-button');
+    expect(addProjectButton).toBeDefined();
+    expect(addProjectButton.textContent).toBe('Add a project');
+
+    fireEvent.click(addProjectButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Add a project' })).toBeDefined();
+      expect(screen.getByText('Choose which projects to add to this resume.')).toBeDefined();
+    });
+  });
+
+  test('Add Project modal loads projects and shows those not on resume', async () => {
+    const { getProjects } = await import('../src/api/projects');
+    const mockGetProjects = getProjects as jest.MockedFunction<typeof getProjects>;
+    mockGetProjects.mockResolvedValue([
+      { id: '1', name: 'Test Project', skills: ['React'], date_added: '2024-01-01', score: 80 },
+      { id: 'proj-saved-1', name: 'Saved Project', skills: ['Node'], date_added: '2024-02-01', score: 70 },
+    ]);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    fireEvent.click(screen.getByText('Saved Resume'));
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+    fireEvent.click(screen.getByTestId('edit-resume-2'));
+    fireEvent.click(screen.getByTestId('add-project-button'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Add a project' })).toBeDefined();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Project')).toBeDefined();
+    });
+
+    // Saved Project is already on resume so may not appear in "available" list
+    expect(mockGetProjects).toHaveBeenCalled();
+  });
+
+  test('Add Project modal Add to resume calls addProjectsToResume and refreshes content', async () => {
+    const { getProjects } = await import('../src/api/projects');
+    const mockGetProjects = getProjects as jest.MockedFunction<typeof getProjects>;
+    mockGetProjects.mockResolvedValue([
+      { id: 'p2', name: 'Other Project', skills: ['Python'], date_added: '2024-03-01', score: 75 },
+    ]);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    fireEvent.click(screen.getByText('Saved Resume'));
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+    fireEvent.click(screen.getByTestId('edit-resume-2'));
+    fireEvent.click(screen.getByTestId('add-project-button'));
+
+    await waitFor(() => screen.getByText('Other Project'));
+
+    const row = screen.getByText('Other Project').closest('tr');
+    expect(row).toBeTruthy();
+    fireEvent.click(row!);
+
+    await waitFor(() => {
+      const addToResumeButton = screen.getByRole('button', { name: 'Add to resume' });
+      expect(addToResumeButton.hasAttribute('disabled')).toBe(false);
+    });
+
+    const addToResumeButton = screen.getByRole('button', { name: 'Add to resume' });
+    fireEvent.click(addToResumeButton);
+
+    await waitFor(() => {
+      expect(mockAddProjectsToResume).toHaveBeenCalledWith(2, ['p2']);
+    });
+
+    await waitFor(() => {
+      expect(mockGetResumeById).toHaveBeenCalledTimes(2);
+      expect(mockGetResumeById).toHaveBeenLastCalledWith(2);
+    });
+  });
+
+  test('Add Project modal Cancel closes modal', async () => {
+    const { getProjects } = await import('../src/api/projects');
+    (getProjects as jest.MockedFunction<typeof getProjects>).mockResolvedValue([]);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    fireEvent.click(screen.getByText('Saved Resume'));
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+    fireEvent.click(screen.getByTestId('edit-resume-2'));
+    fireEvent.click(screen.getByTestId('add-project-button'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Add a project' })).toBeDefined();
+    });
+
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Add a project' })).toBeNull();
+    });
+  });
+
+  test('Add Project modal Add to resume button is disabled when none selected', async () => {
+    const { getProjects } = await import('../src/api/projects');
+    (getProjects as jest.MockedFunction<typeof getProjects>).mockResolvedValue([
+      { id: 'p2', name: 'Other Project', skills: [], date_added: '2024-01-01', score: 0 },
+    ]);
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    fireEvent.click(screen.getByText('Saved Resume'));
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+    fireEvent.click(screen.getByTestId('edit-resume-2'));
+    fireEvent.click(screen.getByTestId('add-project-button'));
+
+    await waitFor(() => screen.getByText('Other Project'));
+
+    const addToResumeButton = screen.getByRole('button', { name: 'Add to resume' });
+    expect(addToResumeButton.hasAttribute('disabled')).toBe(true);
+  });
+
+  test('Add Project modal shows error when addProjectsToResume fails', async () => {
+    const { getProjects } = await import('../src/api/projects');
+    (getProjects as jest.MockedFunction<typeof getProjects>).mockResolvedValue([
+      { id: 'p2', name: 'Other Project', skills: [], date_added: '2024-01-01', score: 0 },
+    ]);
+    mockAddProjectsToResume.mockRejectedValue(new Error('Server error'));
+
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Saved Resume');
+    fireEvent.click(screen.getByText('Saved Resume'));
+    await waitFor(() => expect(mockGetResumeById).toHaveBeenCalledWith(2));
+    fireEvent.click(screen.getByTestId('edit-resume-2'));
+    fireEvent.click(screen.getByTestId('add-project-button'));
+
+    await waitFor(() => screen.getByText('Other Project'));
+
+    const row = screen.getByText('Other Project').closest('tr');
+    fireEvent.click(row!);
+
+    await waitFor(() => {
+      const addToResumeButton = screen.getByRole('button', { name: 'Add to resume' });
+      expect(addToResumeButton.hasAttribute('disabled')).toBe(false);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to resume' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Server error')).toBeDefined();
+    });
   });
 });

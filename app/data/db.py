@@ -108,22 +108,21 @@ CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
 );
 
---Table to edited resume details --
+--Table to edited resume details. project_id has no FK to PROJECT so we snapshot on delete and keep rows.
 CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     resume_id INTEGER NOT NULL,
     project_id TEXT NOT NULL,
 
-    project_name TEXT,     -- optional override
-    start_date DATETIME,       -- optional override
-    end_date DATETIME,         -- optional override
+    project_name TEXT,     -- optional override / snapshot when project deleted
+    start_date DATETIME,
+    end_date DATETIME,
     skills JSON,
-    bullets JSON,          -- optional edited bullets for this resume
+    bullets JSON,
 
     display_order INTEGER,
 
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE,
-    FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE,
     UNIQUE (resume_id, project_id)
 );
 

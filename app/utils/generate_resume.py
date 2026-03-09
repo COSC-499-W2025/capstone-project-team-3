@@ -199,8 +199,8 @@ def limit_skills(skills: List[str], max_count: int = 5) -> List[str]:
 
     return limited
 
-def load_resume_projects(cursor: sqlite3.Cursor, resume_id:int) -> List[Tuple[int, Optional[str],Optional[str],Optional[str],Optional[str],int,str,str,str]]:
-    """Get all projects associated with the given resume_id"""
+def load_resume_projects(cursor: sqlite3.Cursor, resume_id: int) -> List[Tuple[str, Optional[str], Optional[str], Optional[str], Optional[str], int, Optional[str], Optional[str], Optional[str]]]:
+    """Get all projects associated with the given resume_id. Uses LEFT JOIN so rows remain when PROJECT is deleted (snapshot)."""
     cursor.execute("""
         SELECT
             rp.project_id,
@@ -214,11 +214,10 @@ def load_resume_projects(cursor: sqlite3.Cursor, resume_id:int) -> List[Tuple[in
             p.created_at,
             p.last_modified
         FROM RESUME_PROJECT rp
-        JOIN PROJECT p ON p.project_signature = rp.project_id
+        LEFT JOIN PROJECT p ON p.project_signature = rp.project_id
         WHERE rp.resume_id = ?
         ORDER BY rp.display_order
     """, (resume_id,))
-    
     return cursor.fetchall()
 
 def load_edited_skills(cursor: sqlite3.Cursor, resume_id:int) -> Optional[Tuple[str]]:
@@ -264,24 +263,16 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
 
         row = load_edited_skills(cursor,resume_id)
         if row and row[0]:
-        # skills stored as JSON
             all_skills = json.loads(row[0])
-        else: #Return to original skills shown
-            # Aggregate all skills from projects
+        else:
+            # Aggregate skills from live projects and from snapshot (override_skills) for deleted projects
             union = set()
-            for pid in project_ids:
+            for (pid, _, _, _, override_skills, *_rest) in rows:
                 union.update(skills_map.get(pid, []))
+                if override_skills:
+                    parsed = json.loads(override_skills) if isinstance(override_skills, str) else (override_skills or [])
+                    union.update(parsed)
             all_skills = sorted(union)
-            row = load_edited_skills(cursor,resume_id)
-            if row and row[0]:
-                # Use edited all skills
-                all_skills = [s.strip() for s in row[0].split(",") if s.strip()]
-            else: #Return to original skills shown
-                # Aggregate all skills from projects
-                union = set()
-                for pid in project_ids:
-                    union.update(skills_map.get(pid, []))
-                all_skills = sorted(union)
 
         projects = []
         for (
@@ -294,11 +285,10 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             _order,
             base_name,
             created_at,
-            last_modified
+            last_modified,
         ) in rows:
-            # Parse skills: override_skills if present, else fallback to skills_map
             if override_skills:
-                skills = json.loads(override_skills)
+                skills = json.loads(override_skills) if isinstance(override_skills, str) else (override_skills or [])
             else:
                 skills = skills_map.get(pid, [])
             # Limit to 5 for display
@@ -306,19 +296,19 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
 
             # Parse bullets: stored as JSON in DB, so decode if string
             if override_bullets:
-                bullets_list = json.loads(override_bullets) if isinstance(override_bullets, str) else override_bullets
+                bullets_list = json.loads(override_bullets) if isinstance(override_bullets, str) else (override_bullets or [])
             else:
                 bullets_list = bullets_map.get(pid, [])
 
+            title = override_name or base_name or "(Removed project)"
+            start_val = start or created_at or ""
+            end_val = end or last_modified or ""
             projects.append({
                 "project_id": pid,
-                "title": override_name or base_name,
-                "dates": format_dates(
-                    start or created_at,
-                    end or last_modified
-                ),
+                "title": title,
+                "dates": format_dates(start_val, end_val) if start_val and end_val else "",
                 "skills": limited_skills,
-                "bullets": bullets_list
+                "bullets": bullets_list,
             })
         
         # Parse education details
@@ -510,6 +500,42 @@ def save_resume_edits(resume_id: int, payload: dict):
         raise ResumePersistenceError("Failed to save resume edits") from e
     finally:
         conn.close()
+
+
+def snapshot_project_into_resume_rows(cursor: sqlite3.Cursor, project_signature: str) -> None:
+    """Snapshot project data into all RESUME_PROJECT rows that reference this project.
+    Call this before deleting the project so tailored resumes keep the project's data."""
+    cursor.execute(
+        "SELECT name, created_at, last_modified FROM PROJECT WHERE project_signature = ?",
+        (project_signature,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return
+    name, created_at, last_modified = row
+    cursor.execute("SELECT summary_text FROM RESUME_SUMMARY WHERE project_id = ?", (project_signature,))
+    bullets_raw = cursor.fetchall()
+    bullets_list: List[str] = []
+    for (text,) in bullets_raw:
+        try:
+            parsed = json.loads(text) if isinstance(text, str) and text.strip().startswith("[") else [text]
+            bullets_list.extend(parsed)
+        except (json.JSONDecodeError, TypeError):
+            if text:
+                bullets_list.append(str(text))
+    bullets_json = json.dumps(bullets_list) if bullets_list else None
+    cursor.execute("SELECT skill FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))
+    skills = [r[0] for r in cursor.fetchall()]
+    skills_json = json.dumps(skills) if skills else None
+    cursor.execute(
+        """
+        UPDATE RESUME_PROJECT
+        SET project_name = ?, start_date = ?, end_date = ?, skills = ?, bullets = ?
+        WHERE project_id = ?
+        """,
+        (name, created_at, last_modified, skills_json, bullets_json, project_signature),
+    )
+
 
 def attach_projects_to_resume(resume_id: int, project_ids: list[str]):
     """Attach projects to a resume with display_order set by last_modified DESC (newest first)."""

@@ -34,6 +34,15 @@
   background: var(--color-blue-medium);
 }
 
+.upload-frame--loading {
+  cursor: wait;
+  pointer-events: none;
+}
+
+.upload-frame--loading:hover {
+  background: var(--color-blue-light);
+}
+
 .upload-content {
   display: flex;
   flex-direction: column;

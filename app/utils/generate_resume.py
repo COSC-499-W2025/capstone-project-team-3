@@ -75,26 +75,49 @@ def parse_education_details(education_details_json: Optional[str], fallback_educ
 def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
     try:
-        cursor.execute(
-            """
-            SELECT name, email, github_user, education, job_title, education_details
-            FROM USER_PREFERENCES
-            ORDER BY updated_at
-            DESC LIMIT 1
-            """
-        )
+        try:
+            # Extended query — includes industry & personal_summary (added in later schema versions)
+            cursor.execute(
+                """
+                SELECT name, email, github_user, education, job_title, education_details,
+                       industry, personal_summary
+                FROM USER_PREFERENCES
+                ORDER BY updated_at DESC LIMIT 1
+                """
+            )
+        except sqlite3.OperationalError:
+            # Fallback for older DB schemas that do not yet have these columns
+            cursor.execute(
+                """
+                SELECT name, email, github_user, education, job_title, education_details
+                FROM USER_PREFERENCES
+                ORDER BY updated_at DESC LIMIT 1
+                """
+            )
         row = cursor.fetchone()
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading user") from e
 
-    links = [] #Placeholder for if we want to incorporate more links like LinkedIn, Portfolio,...
+    if row is None:
+        return {
+            "name": "",
+            "email": "",
+            "links": [],
+            "education": "",
+            "job_title": "",
+            "education_details": None,
+            "github_user": None,
+            "industry": None,
+            "personal_summary": None,
+        }
+
+    links = []  # Placeholder for if we want to incorporate more links like LinkedIn, Portfolio,...
 
     if row[2]:  # github_user
         links.append({
             "label": "GitHub",
             "url": f"https://github.com/{row[2]}"
         })
-        
 
     return {
         "name": row[0],
@@ -103,6 +126,9 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "education": row[3],
         "job_title": row[4],
         "education_details": row[5],  # JSON string or None
+        "github_user": row[2],
+        "industry": row[6] if len(row) > 6 else None,
+        "personal_summary": row[7] if len(row) > 7 else None,
     }
 
 def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:

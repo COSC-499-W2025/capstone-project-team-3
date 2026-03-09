@@ -398,3 +398,123 @@ describe("PortfolioPage – analysis section", () => {
     });
   });
 });
+
+describe("PortfolioPage – user profile card", () => {
+  beforeEach(() => {
+    setupFetchMock();
+  });
+
+  test("renders the user's full name", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getAllByText("Jane Dev").length).toBeGreaterThan(0);
+    });
+  });
+
+  test("renders avatar initials derived from the user name", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      // "Jane Dev" → initials "JD"
+      expect(screen.getByText("JD")).toBeDefined();
+    });
+  });
+
+  test("renders job title", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Software Engineer")).toBeDefined();
+    });
+  });
+
+  test("renders education string", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/UBC Computer Science/i)).toBeDefined();
+    });
+  });
+
+  test("renders email as a mailto link", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const link = document.querySelector(
+        'a[href="mailto:jane@example.com"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain("jane@example.com");
+    });
+  });
+
+  test("renders GitHub contact link", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const link = document.querySelector(
+        'a[href="https://github.com/janedev"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+    });
+  });
+
+  test("falls back to 'Portfolio Owner' when name is empty", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: { ...MOCK_PORTFOLIO.user, name: "" },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Portfolio Owner")).toBeDefined();
+    });
+  });
+
+  test("hides contacts section when no email and no GitHub link", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: { ...MOCK_PORTFOLIO.user, email: "", links: [] },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(document.querySelector(".profile-contacts")).toBeNull();
+    });
+  });
+
+  test("parses education_details JSON and prefers it over plain education", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: {
+          ...MOCK_PORTFOLIO.user,
+          education: "Ignored plain string",
+          education_details: JSON.stringify([
+            { degree: "BSc Computer Science", institution: "UBC" },
+          ]),
+        },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/BSc Computer Science/i)).toBeDefined();
+      expect(screen.queryByText(/Ignored plain string/i)).toBeNull();
+    });
+  });
+
+  test("renders personal summary when provided", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: {
+          ...MOCK_PORTFOLIO.user,
+          personal_summary: "Passionate about building great software.",
+        },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Passionate about building great software/i),
+      ).toBeDefined();
+    });
+  });
+});

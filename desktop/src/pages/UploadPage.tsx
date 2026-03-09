@@ -43,12 +43,14 @@ export function UploadPage() {
     }
   };
 
+  const ZIP_ERROR = "Please upload a ZIP file. Only .zip files are allowed.";
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".zip")) {
-      setError("Please select a ZIP file. Only .zip files are allowed.");
+      setError(ZIP_ERROR);
       e.target.value = "";
       return;
     }
@@ -58,30 +60,36 @@ export function UploadPage() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    if (loading) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
       setError(null);
       uploadFile(file);
     } else if (file) {
-      setError("Please upload a ZIP file. Only .zip files are allowed.");
+      setError(ZIP_ERROR);
     }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = loading ? "none" : "copy";
+  };
+
+  const handleZoneClick = () => {
+    if (!loading) fileInputRef.current?.click();
   };
 
   return (
     <div className="upload-container">
       <h1 className="upload-title">Upload Project to analyse</h1>
       <div
-        className="upload-frame"
+        className={`upload-frame${loading ? " upload-frame--loading" : ""}`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleZoneClick}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+        onKeyDown={(e) => e.key === "Enter" && !loading && fileInputRef.current?.click()}
         aria-label="Drop or click to select ZIP file"
       >
         <div className="upload-content">

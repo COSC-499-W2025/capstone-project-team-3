@@ -50,6 +50,7 @@ export function ProjectsSection({
   isEditing = false,
   onProjectChange,
   onProjectDelete,
+  onAddProjectClick,
   projectStartIndex = 0,
   enableSortable = false,
 }: {
@@ -60,6 +61,8 @@ export function ProjectsSection({
   onProjectChange?: (globalIndex: number, project: Project) => void;
   /** Called with project_id when user removes the project from the resume (saved resumes only). */
   onProjectDelete?: (projectId: string) => void;
+  /** When in edit mode, called when user clicks "Add a project" (saved resumes only). */
+  onAddProjectClick?: () => void;
   /** Index of the first project in this section within resume.projects (for multi-page). */
   projectStartIndex?: number;
   /** When true and isEditing, each project shows a drag handle for reordering. */
@@ -72,9 +75,20 @@ export function ProjectsSection({
   return (
     <section className="resume-preview__section">
       {showHeading && (
-        <h2 className="resume-preview__heading resume-preview__heading--projects">
-          Projects / Experience
-        </h2>
+        <div className="resume-preview__heading-row resume-preview__heading-row--projects">
+          <h2 className="resume-preview__heading resume-preview__heading--projects">
+            Projects / Experience
+          </h2>
+          {isEditing && onAddProjectClick && (
+            <button
+              type="button"
+              className="resume-preview__add-project-btn"
+              onClick={onAddProjectClick}
+            >
+              Add a project
+            </button>
+          )}
+        </div>
       )}
       {projects.map((p, i) => {
         const skills = projectSkills(p);

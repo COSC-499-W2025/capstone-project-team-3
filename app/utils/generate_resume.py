@@ -504,7 +504,9 @@ def save_resume_edits(resume_id: int, payload: dict):
 
 def snapshot_project_into_resume_rows(cursor: sqlite3.Cursor, project_signature: str) -> None:
     """Snapshot project data into all RESUME_PROJECT rows that reference this project.
-    Call this before deleting the project so tailored resumes keep the project's data."""
+    Call this before deleting the project so tailored resumes keep the project's data.
+    Only fills columns that are currently NULL, so existing user edits on the tailored
+    resume are preserved."""
     cursor.execute(
         "SELECT name, created_at, last_modified FROM PROJECT WHERE project_signature = ?",
         (project_signature,),
@@ -530,7 +532,11 @@ def snapshot_project_into_resume_rows(cursor: sqlite3.Cursor, project_signature:
     cursor.execute(
         """
         UPDATE RESUME_PROJECT
-        SET project_name = ?, start_date = ?, end_date = ?, skills = ?, bullets = ?
+        SET project_name = COALESCE(project_name, ?),
+            start_date = COALESCE(start_date, ?),
+            end_date = COALESCE(end_date, ?),
+            skills = COALESCE(skills, ?),
+            bullets = COALESCE(bullets, ?)
         WHERE project_id = ?
         """,
         (name, created_at, last_modified, skills_json, bullets_json, project_signature),

@@ -56,6 +56,20 @@ export async function deleteProjectFromResume(
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json();
 }
+
+/** Add projects to an existing saved resume (only non-master resumes). */
+export async function addProjectsToResume(
+  resumeId: number,
+  projectIds: string[]
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/resume/${resumeId}/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project_ids: projectIds }),
+  });
+  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  return res.json();
+}
 // Save new resume with selected projects
 export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {

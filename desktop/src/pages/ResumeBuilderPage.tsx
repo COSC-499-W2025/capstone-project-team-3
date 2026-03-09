@@ -63,6 +63,17 @@ export function ResumeBuilderPage() {
     : resumeList.filter((r) => !(r.is_master || r.id === 1));
   const showEmptyState = visibleResumeList.length === 0;
 
+  // When master is hidden (no projects), default selection to the first resume in the sidebar
+  useEffect(() => {
+    if (hasProjects || visibleResumeList.length === 0) return;
+    const selected = resumeList[activeIndex];
+    const isSelectedMaster = selected?.is_master || selected?.id === 1;
+    if (isSelectedMaster) {
+      const firstVisibleIndex = resumeList.findIndex((r) => !(r.is_master || r.id === 1));
+      if (firstVisibleIndex >= 0) setActiveIndex(firstVisibleIndex);
+    }
+  }, [hasProjects, visibleResumeList.length, resumeList, activeIndex]);
+
   // Load sidebar items
   useEffect(() => {
     getResumes().then(setBaseResumeList);

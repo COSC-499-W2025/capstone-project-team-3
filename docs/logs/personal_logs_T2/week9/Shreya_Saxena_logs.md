@@ -84,7 +84,7 @@
 - Consistent UX with loading guards and normalized validation errors
 
 **What Could Be Improved:**
-- More commits per pr for better tracking. 
+- Could add more comprehensive tests for edge cases
 
 ---
 

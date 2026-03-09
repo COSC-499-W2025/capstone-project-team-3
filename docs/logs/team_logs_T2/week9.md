@@ -57,6 +57,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 | Task/Issue ID                                    | Title                                                                                                                                                         | Username       |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | [#628, #626, #761, #762, #765, #766]             | End-to-end upload functionality for zipped files (PR #760): connect upload to backend, Remove button, drag-and-drop, UI; Base UI and API module for Data Management (PR #763) | @6s-1          |
+| [#735, #769, #770]                               | ConsentPage Testing for UI (PR #764): 20+ unit tests for consent management, positive and negative testing for revoke functionality, manual testing of consent manager and revoke system | @PaintedW0lf   |
 
 
 ## In Progress Tasks
@@ -82,6 +83,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 - **Summary:**  
   - Upload page tests: auto-upload, Remove button, loading guards, ZIP validation
   - Data Management page tests
+  - ConsentPage tests: 20+ unit tests covering positive and negative flows, consent/revoke UI, navigation, and error handling
   - All test suites passing
 
 ---

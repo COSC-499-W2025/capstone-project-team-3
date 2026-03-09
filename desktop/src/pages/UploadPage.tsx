@@ -1,16 +1,18 @@
 import { useState, useRef } from "react";
 import { uploadZipFile } from "../api/upload";
+import { runAnalysis } from "../api/analysis";
 import "../styles/UploadPage.css";
 
 /**
  * Upload Page - Project upload interface
- * Select or drop a ZIP file to auto-upload. File is stored in app/uploads.
+ * Select or drop a ZIP file to auto-upload. Runs analysis so projects appear in Data Management.
  */
 export function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -18,9 +20,16 @@ export function UploadPage() {
     setError(null);
     setSuccess(false);
     setUploadedFileName(null);
+    setAnalyzing(false);
 
     try {
-      await uploadZipFile(file);
+      const { upload_id } = await uploadZipFile(file);
+      setAnalyzing(true);
+      await runAnalysis({
+        upload_id,
+        default_analysis_type: "local",
+        similarity_action: "create_new",
+      });
       setSuccess(true);
       setUploadedFileName(file.name);
       if (fileInputRef.current) {
@@ -30,6 +39,7 @@ export function UploadPage() {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setLoading(false);
+      setAnalyzing(false);
     }
   };
 
@@ -114,7 +124,11 @@ export function UploadPage() {
             </>
           ) : (
             <p className="upload-hint">
-              {loading ? "Uploading…" : "Drop your ZIP file here or click to browse"}
+              {loading
+                ? analyzing
+                  ? "Analyzing project…"
+                  : "Uploading…"
+                : "Drop your ZIP file here or click to browse"}
             </p>
           )}
           <input

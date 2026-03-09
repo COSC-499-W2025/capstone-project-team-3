@@ -42,7 +42,20 @@ interface Project {
   };
 }
 
+interface UserInfo {
+  name?: string;
+  email?: string;
+  links?: Array<{ label: string; url: string }>;
+  education?: string;
+  job_title?: string;
+  education_details?: string | null;
+  github_user?: string | null;
+  industry?: string | null;
+  personal_summary?: string | null;
+}
+
 interface PortfolioData {
+  user?: UserInfo;
   overview?: {
     total_projects?: number;
     avg_score?: number;
@@ -88,6 +101,123 @@ const shouldTruncateSummary = (summary: string): boolean => {
   const charCount = summary.length;
   return wordCount > 25 || charCount > 150;
 };
+
+// ── Profile hero helpers ─────────────────────────────────────────
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2)
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return (parts[0]?.[0] || "?").toUpperCase();
+}
+
+function getAvatarBackground(name: string): string {
+  let hash = 0;
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
+  const h1 = hash % 360;
+  const h2 = (h1 + 48) % 360;
+  return `linear-gradient(135deg, hsl(${h1},52%,32%), hsl(${h2},52%,26%))`;
+}
+
+function UserProfileCard({ user }: { user: UserInfo }) {
+  const name = user.name || "Portfolio Owner";
+  const initials = getInitials(name);
+  const avatarBg = getAvatarBackground(name);
+
+  // education_details arrives as a JSON string from the API
+  let bestEdu: { institution?: string; degree?: string } | null = null;
+  if (user.education_details) {
+    try {
+      const parsed = JSON.parse(user.education_details as string) as Array<{
+        institution?: string;
+        degree?: string;
+      }>;
+      if (Array.isArray(parsed) && parsed.length > 0)
+        bestEdu = parsed[parsed.length - 1];
+    } catch {
+      /* fall back to plain education string */
+    }
+  }
+
+  const educationLine = bestEdu
+    ? [bestEdu.degree, bestEdu.institution ? `— ${bestEdu.institution}` : ""]
+        .filter(Boolean)
+        .join(" ")
+    : user.education || "";
+
+  const githubLink = user.links?.find((l) => l.label === "GitHub");
+  const hasContacts = !!(githubLink || user.email);
+
+  return (
+    <div className="profile-hero">
+      <div className="profile-avatar" style={{ background: avatarBg }}>
+        {initials}
+      </div>
+
+      <div className="profile-info">
+        <div className="profile-name">{name}</div>
+        <div className="profile-title-row">
+          {user.job_title && (
+            <span className="profile-job-title">{user.job_title}</span>
+          )}
+          {user.job_title && user.industry && (
+            <span className="profile-title-sep">·</span>
+          )}
+          {user.industry && (
+            <span className="profile-industry-chip">{user.industry}</span>
+          )}
+        </div>
+        {educationLine && (
+          <div className="profile-education">
+            <span className="profile-edu-icon">🎓</span>
+            {educationLine}
+          </div>
+        )}
+        {user.personal_summary && (
+          <p className="profile-personal-summary">{user.personal_summary}</p>
+        )}
+      </div>
+
+      {hasContacts && (
+        <div className="profile-contacts">
+          {githubLink && (
+            <a
+              href={githubLink.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="profile-contact-link"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.74-1.33-1.74-1.08-.74.08-.73.08-.73 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4 11.5 11.5 0 0 1 3 .4c2.28-1.55 3.29-1.23 3.29-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              {user.github_user || "GitHub"}
+            </a>
+          )}
+          {user.email && (
+            <a href={`mailto:${user.email}`} className="profile-contact-link">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <polyline points="2,4 12,13 22,4" />
+              </svg>
+              {user.email}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PieChart({
   data,
@@ -1269,6 +1399,9 @@ ${mainClone.outerHTML}
             </button>
           </div>
         </div>
+
+        {portfolio?.user && <UserProfileCard user={portfolio.user} />}
+
         <div className="overview-cards" id="overviewCards">
           <div className="overview-card">
             <div className="overview-card-value">

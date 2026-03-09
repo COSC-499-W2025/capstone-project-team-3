@@ -193,6 +193,145 @@
             font-size: 1.1em;
         }
 
+        /* ── Profile Hero Card ── */
+        .profile-hero {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            border-radius: 16px 16px 0 0;
+        }
+
+        .profile-avatar {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 23px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+            letter-spacing: -0.02em;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+
+        .profile-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .profile-name {
+            font-size: 21px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+        }
+
+        .profile-title-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .profile-job-title {
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .profile-title-sep {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .profile-industry-chip {
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+
+        .profile-education {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .profile-edu-icon {
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .profile-personal-summary {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .profile-contacts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        .profile-contact-link {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 13px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary, var(--card));
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            min-width: 130px;
+        }
+
+        .profile-contact-link:hover {
+            background: var(--border-light);
+            color: var(--text-primary);
+            border-color: var(--accent);
+            transform: translateX(-2px);
+        }
+
         /* Overview Cards */
         .overview-cards {
             display: grid;
@@ -975,6 +1114,22 @@
             }
 
             .download-html-btn {
+                width: 100%;
+            }
+
+            .profile-hero {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 20px 18px;
+                gap: 16px;
+            }
+
+            .profile-contacts {
+                width: 100%;
+            }
+
+            .profile-contact-link {
+                min-width: unset;
                 width: 100%;
             }
         }

@@ -134,3 +134,56 @@ def test_delete_one_of_duplicate_names_preserve_other():
 	assert after2["resume"] >= 1
 
 
+def test_delete_project_snapshots_into_resume_rows():
+	"""When a project is deleted, RESUME_PROJECT rows that referenced it are kept and filled with snapshot data."""
+	sig = "sig_snapshot_test"
+	name = "Project To Delete"
+	_insert_project(sig, name)
+
+	conn = get_connection()
+	cur = conn.cursor()
+	cur.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Test Resume')")
+	cur.execute(
+		"INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, ?, 1)",
+		(sig,),
+	)
+	conn.commit()
+	conn.close()
+
+	# Before delete: RESUME_PROJECT row has no snapshot (project_name etc. are NULL)
+	conn = get_connection()
+	cur = conn.cursor()
+	cur.execute(
+		"SELECT project_name, start_date, end_date, skills, bullets FROM RESUME_PROJECT WHERE resume_id = 2 AND project_id = ?",
+		(sig,),
+	)
+	row_before = cur.fetchone()
+	conn.close()
+	assert row_before is not None
+	assert row_before[0] is None  # project_name not set yet
+
+	# Delete project (should snapshot into RESUME_PROJECT first)
+	assert delete_project_by_signature(sig) is True
+
+	# Project is gone from PROJECT and related tables
+	after = _count_rows_for_project(sig)
+	assert after["project"] == 0
+	assert after["resume"] == 0  # RESUME_SUMMARY cascade
+
+	# RESUME_PROJECT row still exists and has snapshot data
+	conn = get_connection()
+	cur = conn.cursor()
+	cur.execute(
+		"SELECT project_name, start_date, end_date, skills, bullets FROM RESUME_PROJECT WHERE resume_id = 2 AND project_id = ?",
+		(sig,),
+	)
+	row_after = cur.fetchone()
+	conn.close()
+	assert row_after is not None
+	assert row_after[0] == name
+	assert row_after[1] is not None  # start_date (created_at)
+	assert row_after[2] is not None  # end_date (last_modified)
+	assert row_after[3] is not None  # skills JSON (e.g. ["Python"])
+	assert row_after[4] is not None  # bullets JSON (e.g. ["summary"])
+
+

@@ -11,13 +11,14 @@ import {
   previewResume,
   deleteResume,
   deleteProjectFromResume,
+  addProjectsToResume,
   downloadResumePDF,
   downloadResumeTeX,
   saveNewResume,
   updateResume,
   type ResumeListItem,
 } from "../api/resume";
-import { getProjects } from "../api/projects";
+import { getProjects, type Project as ApiProject } from "../api/projects";
 
 /** Convert YYYY-MM to YYYY-MM-01 for backend fromisoformat. */
 function toISOStartOfMonth(ym: string): string {
@@ -42,6 +43,12 @@ export function ResumeBuilderPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSections, setEditedSections] = useState<Set<string>>(new Set());
   const [hasProjects, setHasProjects] = useState(true); // assume true until we fetch
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [addProjectModalProjects, setAddProjectModalProjects] = useState<ApiProject[]>([]);
+  const [addProjectModalSelected, setAddProjectModalSelected] = useState<Set<string>>(new Set());
+  const [addProjectModalLoading, setAddProjectModalLoading] = useState(false);
+  const [addProjectModalSubmitting, setAddProjectModalSubmitting] = useState(false);
+  const [addProjectModalError, setAddProjectModalError] = useState<string | null>(null);
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -97,6 +104,18 @@ export function ResumeBuilderPage() {
       setPreviewProjectIds([]);
     }
   }, [searchParams]);
+
+  // Load projects when Add Project modal opens
+  useEffect(() => {
+    if (!showAddProjectModal) return;
+    setAddProjectModalError(null);
+    setAddProjectModalSelected(new Set());
+    setAddProjectModalLoading(true);
+    getProjects()
+      .then(setAddProjectModalProjects)
+      .catch((err) => setAddProjectModalError(err instanceof Error ? err.message : "Failed to load projects"))
+      .finally(() => setAddProjectModalLoading(false));
+  }, [showAddProjectModal]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -335,6 +354,48 @@ export function ResumeBuilderPage() {
     setSaveResumeName("");
   };
 
+  const handleCloseAddProjectModal = () => {
+    setShowAddProjectModal(false);
+    setAddProjectModalError(null);
+    setAddProjectModalSelected(new Set());
+  };
+
+  const toggleAddProjectSelection = (projectId: string) => {
+    setAddProjectModalSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  };
+
+  const handleAddProjectsToResume = async () => {
+    const resumeId = currentResume?.id;
+    if (resumeId == null || isMasterResume) return;
+    const ids = Array.from(addProjectModalSelected);
+    if (ids.length === 0) return;
+    try {
+      setAddProjectModalSubmitting(true);
+      setAddProjectModalError(null);
+      await addProjectsToResume(resumeId, ids);
+      const updated = await getResumeById(resumeId);
+      setActiveContent(updated);
+      setEditedSections((prev) => new Set(prev).add("projects"));
+      handleCloseAddProjectModal();
+    } catch (error) {
+      setAddProjectModalError(error instanceof Error ? error.message : "Failed to add projects");
+    } finally {
+      setAddProjectModalSubmitting(false);
+    }
+  };
+
+  const currentResumeProjectIds = new Set(
+    (activeContent?.projects ?? []).map((p) => p.project_id).filter(Boolean) as string[]
+  );
+  const addProjectModalAvailable = addProjectModalProjects.filter(
+    (p) => !currentResumeProjectIds.has(p.id)
+  );
+
   return (
     <div className="page page--resume-builder">
       {/* Header with download button */}
@@ -413,6 +474,95 @@ export function ResumeBuilderPage() {
         </div>
       )}
 
+      {/* Add Project Modal */}
+      {showAddProjectModal && (
+        <div className="modal-overlay" onClick={handleCloseAddProjectModal}>
+          <div
+            className="modal-content modal-content--add-project"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="modal-title">Add a project</h2>
+            <p className="modal-subtitle">
+              Choose which projects to add to this resume.
+            </p>
+            {addProjectModalError && (
+              <p className="modal-error" role="alert">
+                {addProjectModalError}
+              </p>
+            )}
+            {addProjectModalLoading ? (
+              <p className="modal-loading">Loading projects...</p>
+            ) : (
+              <>
+                <div className="modal-table-wrap">
+                  <table className="projects-table modal-projects-table">
+                    <thead>
+                      <tr className="table-header">
+                        <th>Project Name</th>
+                        <th>Skills</th>
+                        <th>Date Added</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {addProjectModalAvailable.map((project) => (
+                        <tr
+                          key={project.id}
+                          className="project-row"
+                          onClick={() => toggleAddProjectSelection(project.id)}
+                        >
+                          <td>
+                            <label className="project-checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={addProjectModalSelected.has(project.id)}
+                                onChange={() => toggleAddProjectSelection(project.id)}
+                                className="project-checkbox"
+                              />
+                              <span>{project.name}</span>
+                            </label>
+                          </td>
+                          <td>
+                            {project.skills.slice(0, 3).join(", ")}
+                            {project.skills.length > 3 && ", ..."}
+                          </td>
+                          <td>
+                            {new Date(project.date_added).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }).replace(/\//g, "-")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {addProjectModalAvailable.length === 0 && !addProjectModalLoading && (
+                  <p className="modal-empty">No other projects to add. All your projects are already on this resume.</p>
+                )}
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={handleCloseAddProjectModal}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    onClick={handleAddProjectsToResume}
+                    disabled={addProjectModalSubmitting || addProjectModalSelected.size === 0}
+                  >
+                    {addProjectModalSubmitting ? "Adding..." : "Add to resume"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="resume-builder__content">
         <div className="card card--sidebar">
           <ResumeSidebar
@@ -444,6 +594,11 @@ export function ResumeBuilderPage() {
                     isEditing={isEditing}
                     onSectionChange={handleSectionChange}
                     onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
+                    onAddProjectClick={
+                      isEditing && !isMasterResume && currentResume?.id != null
+                        ? () => setShowAddProjectModal(true)
+                        : undefined
+                    }
                   />
                 )
               )}

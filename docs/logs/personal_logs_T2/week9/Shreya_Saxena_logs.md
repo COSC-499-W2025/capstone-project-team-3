@@ -4,7 +4,8 @@
 
 ## Week-9, Entry for Mar 2 → Mar 8, 2026
 
----
+![Personal Log](../../../screenshots/Shreya_Saxena_week-9T2.png)
+
 
 ### Pull Requests Worked On
 

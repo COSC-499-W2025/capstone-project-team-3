@@ -24,6 +24,8 @@
   - Add all API module for Data Management – #766
   - Desktop score-override API integration #771
   - Functional Score Override management page in desktop app #773
+  - Migrate portfolio dashboard to desktop React frontend – #767
+  - Add user profile card to portfolio page – #777
 
 ---
 
@@ -61,6 +63,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 | [#628, #626, #761, #762, #765, #766]             | End-to-end upload functionality for zipped files (PR #760): connect upload to backend, Remove button, drag-and-drop, UI; Base UI and API module for Data Management (PR #763) | @6s-1          |
 | [#735, #769, #770]                               | ConsentPage Testing for UI (PR #764): 20+ unit tests for consent management, positive and negative testing for revoke functionality, manual testing of consent manager and revoke system | @PaintedW0lf   |
 | [#771, #773]                               | Desktop score-override API integration, Functional Score Override management page in desktop app  | @kjassani   |
+| [#767, #777]                               | Migrate full portfolio dashboard to desktop React frontend (PR #767): charts, inline editing, HTML export, thumbnail fix, canvas export fix, 22 tests; Add user profile card to portfolio (PR #777): UserProfileCard component, extend load_user() API, CSS, 10 tests | @KarimKhalil33 |
 
 
 
@@ -88,6 +91,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
   - Upload page tests: auto-upload, Remove button, loading guards, ZIP validation
   - Data Management page tests
   - ConsentPage tests: 20+ unit tests covering positive and negative flows, consent/revoke UI, navigation, and error handling
+  - Portfolio page tests: 32 Jest/RTL tests (loading/error states, project cards, project selection, charts, analysis section, user profile card)
   - All test suites passing
 
 ---

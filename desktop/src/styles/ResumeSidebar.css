@@ -240,6 +240,21 @@
   outline-offset: 2px;
 }
 
+.resume-sidebar__tailor-btn--disabled,
+.resume-sidebar__tailor-btn:disabled {
+  background-color: #9ca3af;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.resume-sidebar__tailor-btn--disabled:hover,
+.resume-sidebar__tailor-btn:disabled:hover {
+  background-color: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Responsive: fit narrow viewports */
 @media (max-width: 600px) {
   .resume-sidebar {

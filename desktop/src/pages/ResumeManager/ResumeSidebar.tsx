@@ -2,6 +2,10 @@ import { useState } from "react";
 import { ResumeListItem } from "../../api/resume";
 import "../../styles/ResumeSidebar.css";
 
+function isMasterItem(r: ResumeListItem): boolean {
+  return Boolean(r.is_master || r.id === 1);
+}
+
 export const ResumeSidebar = ({
   resumeList,
   activeIndex,
@@ -10,7 +14,8 @@ export const ResumeSidebar = ({
   onDelete,
   sidebarOpen = true,
   onToggleSidebar,
-  onEdit
+  onEdit,
+  hasProjects = true
 }: {
   resumeList: ResumeListItem[];
   activeIndex: number;
@@ -20,8 +25,16 @@ export const ResumeSidebar = ({
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onEdit?: () => void;
+  hasProjects?: boolean;
 }) => {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+
+  // When there are no projects, hide the master resume from the sidebar
+  const displayIndices = hasProjects
+    ? resumeList.map((_, i) => i)
+    : resumeList.map((_, i) => i).filter((i) => !isMasterItem(resumeList[i]));
+  const displayList = displayIndices.map((i) => resumeList[i]);
+  const activeDisplayIndex = displayIndices.indexOf(activeIndex);
 
   return (
     <aside className={`resume-sidebar ${sidebarOpen ? "resume-sidebar--open" : "resume-sidebar--closed"}`}>
@@ -40,21 +53,23 @@ export const ResumeSidebar = ({
 
       <div className="resume-sidebar__content">
         <ul className="resume-sidebar__list">
-        {resumeList.map((r, i) => (
-          <li key={i}>
+        {displayList.map((r, displayI) => {
+          const fullIndex = displayIndices[displayI];
+          return (
+          <li key={fullIndex}>
             <div
               role="button"
               tabIndex={0}
-              onClick={() => onSelect(i)}
+              onClick={() => onSelect(fullIndex)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  onSelect(i);
+                  onSelect(fullIndex);
                 }
               }}
-              className={`resume-sidebar__item ${i === activeIndex ? "resume-sidebar__item--active" : ""}`}
+              className={`resume-sidebar__item ${displayI === activeDisplayIndex ? "resume-sidebar__item--active" : ""}`}
             >
-              <span className="resume-sidebar__item-label">{r.name || `Resume - ${i + 1}`}</span>
+              <span className="resume-sidebar__item-label">{r.name || `Resume - ${displayI + 1}`}</span>
               <span className="resume-sidebar__actions">
                 {!r.is_master && r.id != null && (
                   <button 
@@ -63,7 +78,7 @@ export const ResumeSidebar = ({
                     aria-label="Edit resume" 
                     onClick={(e) => { 
                       e.stopPropagation();
-                      if (i === activeIndex && onEdit) {
+                      if (fullIndex === activeIndex && onEdit) {
                         onEdit();
                       }
                     }}
@@ -79,12 +94,12 @@ export const ResumeSidebar = ({
                       aria-label="More actions" 
                       onClick={(e) => { 
                         e.stopPropagation();
-                        setOpenMenuIndex(openMenuIndex === i ? null : i);
+                        setOpenMenuIndex(openMenuIndex === fullIndex ? null : fullIndex);
                       }}
                     >
                       <img src="/more_icon.svg" alt="" width={18} height={18} />
                     </button>
-                    {openMenuIndex === i && (
+                    {openMenuIndex === fullIndex && (
                       <div className="resume-sidebar__dropdown">
                         <button
                           type="button"
@@ -107,10 +122,17 @@ export const ResumeSidebar = ({
               </span>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
-        <button type="button" className="resume-sidebar__tailor-btn" onClick={onTailorNew}>
+        <button
+          type="button"
+          className={`resume-sidebar__tailor-btn ${!hasProjects ? "resume-sidebar__tailor-btn--disabled" : ""}`}
+          onClick={hasProjects ? onTailorNew : undefined}
+          title={!hasProjects ? "You need to upload a project" : undefined}
+          disabled={!hasProjects}
+        >
           Tailor New Resume
         </button>
       </div>

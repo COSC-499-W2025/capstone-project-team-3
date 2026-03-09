@@ -3,11 +3,13 @@ import path from 'node:path'
 import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 
+const isWebOnly = process.env.VITE_WEB_ONLY === 'true'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    electron({
+    ...(isWebOnly ? [] : [electron({
       main: {
         // Shortcut of `build.lib.entry`.
         entry: 'electron/main.ts',
@@ -24,6 +26,6 @@ export default defineConfig({
         // https://github.com/electron-vite/vite-plugin-electron-renderer/issues/78#issuecomment-2053600808
         ? undefined
         : {},
-    }),
+    })]),
   ],
 })

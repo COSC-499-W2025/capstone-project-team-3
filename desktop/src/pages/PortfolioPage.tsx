@@ -11,9 +11,12 @@ interface Project {
   rank?: number;
   score_overridden?: boolean;
   score_overridden_value?: number;
+  score_override_exclusions?: string[];
   dates?: string;
   start_date?: string;
   end_date?: string;
+  created_at?: string;
+  last_modified?: string;
   type?: string;
   summary?: string;
   thumbnail_url?: string;
@@ -28,6 +31,7 @@ interface Project {
     components?: number;
     completeness_score?: number;
     word_count?: number;
+    roles?: string[];
     development_patterns?: { project_evolution?: string[] };
     technical_keywords?: string[];
     complexity_analysis?: {
@@ -85,7 +89,13 @@ const shouldTruncateSummary = (summary: string): boolean => {
   return wordCount > 25 || charCount > 150;
 };
 
-function PieChart({ data }: { data?: Record<string, number> }) {
+function PieChart({
+  data,
+  canvasId,
+}: {
+  data?: Record<string, number>;
+  canvasId?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const labels = Object.keys(data || {});
@@ -150,10 +160,16 @@ function PieChart({ data }: { data?: Record<string, number> }) {
   }, [JSON.stringify(data || {})]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
-  return <canvas ref={canvasRef} />;
+  return <canvas ref={canvasRef} id={canvasId} />;
 }
 
-function BarChart({ data }: { data?: Record<string, number> }) {
+function BarChart({
+  data,
+  canvasId,
+}: {
+  data?: Record<string, number>;
+  canvasId?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const labels = Object.keys(data || {});
@@ -206,10 +222,16 @@ function BarChart({ data }: { data?: Record<string, number> }) {
   }, [JSON.stringify(data || {})]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
-  return <canvas ref={canvasRef} />;
+  return <canvas ref={canvasRef} id={canvasId} />;
 }
 
-function HorizontalBarChart({ data }: { data?: Record<string, number> }) {
+function HorizontalBarChart({
+  data,
+  canvasId,
+}: {
+  data?: Record<string, number>;
+  canvasId?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const ordered = Object.entries(data || {}).slice(0, 8);
@@ -264,10 +286,16 @@ function HorizontalBarChart({ data }: { data?: Record<string, number> }) {
   }, [JSON.stringify(data || {})]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
-  return <canvas ref={canvasRef} />;
+  return <canvas ref={canvasRef} id={canvasId} />;
 }
 
-function LineChart({ data }: { data?: Record<string, number> }) {
+function LineChart({
+  data,
+  canvasId,
+}: {
+  data?: Record<string, number>;
+  canvasId?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const sortedData = Object.entries(data || {}).sort((a, b) =>
@@ -335,7 +363,14 @@ function LineChart({ data }: { data?: Record<string, number> }) {
   }, [JSON.stringify(data || {})]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
-  return <canvas ref={canvasRef} />;
+  return <canvas ref={canvasRef} id={canvasId} />;
+}
+
+interface EditState {
+  field: "name" | "score" | "dates" | "summary";
+  value: string;
+  createdAt?: string;
+  lastModified?: string;
 }
 
 function ProjectCard({
@@ -348,13 +383,46 @@ function ProjectCard({
   onReload: () => Promise<void>;
 }) {
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [editing, setEditing] = useState<EditState | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const summary = project.summary || "";
   const title = projectName(project);
   const dates = projectDates(project);
-  const score = getDisplayScore(project).toFixed(2);
 
   const skills = project.skills || project.technical_keywords || [];
   const metrics = project.metrics || {};
+
+  const roles = Array.isArray(metrics.roles)
+    ? (metrics.roles as string[]).filter(
+        (r) => typeof r === "string" && r.trim().length > 0,
+      )
+    : [];
+  const visibleRoles = roles.slice(0, 3);
+  const hiddenRolesCount = Math.max(0, roles.length - visibleRoles.length);
+
+  const scoreOverrideExclusions = Array.isArray(
+    project.score_override_exclusions,
+  )
+    ? project.score_override_exclusions.filter(
+        (m) => typeof m === "string" && m.trim().length > 0,
+      )
+    : [];
+  const hasEquationOverride =
+    project.score_overridden && scoreOverrideExclusions.length > 0;
+  const formattedExclusions = scoreOverrideExclusions.map((m) =>
+    m
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (l) => l.toUpperCase()),
+  );
+  const visibleExclusions = formattedExclusions.slice(0, 4);
+  const hiddenExclusionsCount = Math.max(
+    0,
+    formattedExclusions.length - visibleExclusions.length,
+  );
+
   const rankLabel =
     ["🥇", "🥈", "🥉", "4th", "5th", "6th"][rank - 1] || `${rank}th`;
   const maintainabilityScore = metrics.complexity_analysis
@@ -414,9 +482,92 @@ function ProjectCard({
     input.click();
   };
 
-  const notifyEditableField = () => {
-    alert("This will be implemented.");
+  const startEdit = (field: EditState["field"]) => {
+    if (field === "summary") {
+      setEditing({ field, value: summary });
+    } else if (field === "name") {
+      setEditing({ field, value: title });
+    } else if (field === "score") {
+      setEditing({ field, value: getDisplayScore(project).toFixed(2) });
+    } else if (field === "dates") {
+      setEditing({
+        field,
+        value: "",
+        createdAt: project.created_at || "",
+        lastModified: project.last_modified || "",
+      });
+    }
   };
+
+  const cancelEdit = () => setEditing(null);
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      const editData: Record<string, unknown> = {
+        project_signature: project.id,
+      };
+      if (editing.field === "summary") {
+        editData.project_summary = editing.value;
+      } else if (editing.field === "name") {
+        if (!editing.value.trim()) {
+          alert("Project name cannot be empty!");
+          setSaving(false);
+          return;
+        }
+        editData.project_name = editing.value.trim();
+      } else if (editing.field === "score") {
+        const parsed = Number(editing.value);
+        if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
+          alert("Score must be a number between 0 and 1.");
+          setSaving(false);
+          return;
+        }
+        editData.score_overridden_value = parsed;
+      } else if (editing.field === "dates") {
+        if (editing.createdAt) editData.created_at = editing.createdAt;
+        if (editing.lastModified) editData.last_modified = editing.lastModified;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/portfolio/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ edits: [editData] }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { detail?: string };
+        throw new Error(err.detail || "Failed to save edit");
+      }
+      setEditing(null);
+      await onReload();
+    } catch (e) {
+      alert(
+        `Failed to save: ${e instanceof Error ? e.message : "Unknown error"}`,
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const EditButtons = () => (
+    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+      <button
+        className="save-edit-btn"
+        onClick={() => void saveEdit()}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save"}
+      </button>
+      <button
+        className="cancel-edit-btn"
+        onClick={cancelEdit}
+        disabled={saving}
+      >
+        Cancel
+      </button>
+    </div>
+  );
 
   return (
     <div className="project-card" style={{ position: "relative" }}>
@@ -428,65 +579,241 @@ function ProjectCard({
           {project.thumbnail_url ? "Change Thumbnail" : "Add Thumbnail"}
         </button>
       </div>
+
       <div className="project-rank">{rankLabel} Place</div>
-      <div
-        className="project-title editable-field"
-        style={{ paddingRight: 140 }}
-        onClick={notifyEditableField}
-      >
-        {title}
-      </div>
-      <div
-        className="project-score-display editable-field"
-        onClick={notifyEditableField}
-      >
-        <>
-          {Number(score).toFixed(2)}
+
+      {/* Project title — editable */}
+      {editing?.field === "name" ? (
+        <div
+          className="editable-field active"
+          style={{ marginBottom: 12, paddingRight: 140 }}
+        >
+          <input
+            type="text"
+            value={editing.value}
+            autoFocus
+            onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void saveEdit();
+              if (e.key === "Escape") cancelEdit();
+            }}
+            style={{
+              width: "100%",
+              padding: "6px",
+              border: "2px solid var(--accent)",
+              borderRadius: 4,
+              fontFamily: "inherit",
+              fontSize: "inherit",
+            }}
+          />
+          <EditButtons />
+        </div>
+      ) : (
+        <div
+          className="project-title editable-field"
+          style={{ paddingRight: 140 }}
+          onClick={() => startEdit("name")}
+          title="Click to edit"
+        >
+          {title}
+        </div>
+      )}
+
+      {/* Score row — editable */}
+      <div className="project-score-row">
+        <div className="project-score-main">
+          {editing?.field === "score" ? (
+            <div className="editable-field active">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={editing.value}
+                autoFocus
+                onChange={(e) =>
+                  setEditing({ ...editing, value: e.target.value })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void saveEdit();
+                  if (e.key === "Escape") cancelEdit();
+                }}
+                style={{
+                  width: 110,
+                  padding: "4px 6px",
+                  border: "2px solid var(--accent)",
+                  borderRadius: 4,
+                  fontSize: "1.4em",
+                  fontWeight: 700,
+                }}
+              />
+              <EditButtons />
+            </div>
+          ) : (
+            <div
+              className="project-score-display editable-field"
+              onClick={() => startEdit("score")}
+              title="Click to edit score"
+            >
+              {getDisplayScore(project).toFixed(2)}
+            </div>
+          )}
           {project.score_overridden ? (
-            <span style={{ color: "var(--warning)", fontSize: "0.8em" }}>
-              {" "}
-              (Override)
-            </span>
+            <span className="project-score-badge">Overridden</span>
           ) : null}
-        </>
+        </div>
       </div>
-      <div
-        className="project-dates editable-field"
-        onClick={notifyEditableField}
-      >
-        {dates}
-      </div>
+
+      {/* Score exclusion chips */}
+      {hasEquationOverride ? (
+        <div className="project-score-config-inline">
+          <span className="score-config-label">Excluded Metrics:</span>
+          <div className="score-exclusion-chips-inline">
+            {visibleExclusions.map((m) => (
+              <span key={m} className="score-exclusion-chip">
+                {m}
+              </span>
+            ))}
+            {hiddenExclusionsCount > 0 ? (
+              <span className="score-exclusion-chip">
+                +{hiddenExclusionsCount} more
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Dates — editable */}
+      {editing?.field === "dates" ? (
+        <div className="editable-field active" style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+              Created:
+            </label>
+            <input
+              type="date"
+              value={editing.createdAt || ""}
+              onChange={(e) =>
+                setEditing({ ...editing, createdAt: e.target.value })
+              }
+              style={{
+                padding: "6px",
+                border: "2px solid var(--accent)",
+                borderRadius: 4,
+              }}
+            />
+            <label style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+              Last Modified:
+            </label>
+            <input
+              type="date"
+              value={editing.lastModified || ""}
+              onChange={(e) =>
+                setEditing({ ...editing, lastModified: e.target.value })
+              }
+              style={{
+                padding: "6px",
+                border: "2px solid var(--accent)",
+                borderRadius: 4,
+              }}
+            />
+          </div>
+          <EditButtons />
+        </div>
+      ) : (
+        <div
+          className="project-dates editable-field"
+          onClick={() => startEdit("dates")}
+          title="Click to edit dates"
+        >
+          {dates}
+        </div>
+      )}
+
+      {/* Roles strip */}
+      {roles.length > 0 ? (
+        <div className="project-role-strip">
+          <span className="project-role-label">Roles</span>
+          <div className="project-role-inline-tags">
+            {visibleRoles.map((role) => (
+              <span key={role} className="project-role-tag">
+                {role}
+              </span>
+            ))}
+            {hiddenRolesCount > 0 ? (
+              <span className="project-role-tag">+{hiddenRolesCount}</span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Thumbnail image */}
       {project.thumbnail_url && (
         <div
           className="thumbnail-display"
           style={{ margin: "16px 0", textAlign: "center" }}
         >
           <img
-            src={`${project.thumbnail_url}?cb=${Date.now()}`}
+            src={`${API_BASE_URL}${project.thumbnail_url}?cb=${Date.now()}`}
             alt="Project thumbnail"
             className="project-thumbnail"
+            crossOrigin="anonymous"
           />
         </div>
       )}
+
+      {/* Summary — editable */}
       <div className="project-summary">
         <h4>📝 Project Summary</h4>
         <div className="summary-content">
-          <p
-            className={`summary-text ${!showFullSummary && shouldTruncateSummary(summary) ? "truncated" : ""} editable-field`}
-            onClick={notifyEditableField}
-          >
-            {summary}
-          </p>
-          {shouldTruncateSummary(summary) && (
-            <button
-              className="show-more-btn"
-              onClick={() => setShowFullSummary((v) => !v)}
-            >
-              {showFullSummary ? "Show Less" : "Show More"}
-            </button>
+          {editing?.field === "summary" ? (
+            <div>
+              <textarea
+                value={editing.value}
+                autoFocus
+                onChange={(e) =>
+                  setEditing({ ...editing, value: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  minHeight: 100,
+                  padding: 8,
+                  border: "2px solid var(--accent)",
+                  borderRadius: 4,
+                  fontFamily: "inherit",
+                  fontSize: "inherit",
+                  resize: "vertical",
+                }}
+              />
+              <EditButtons />
+            </div>
+          ) : (
+            <>
+              <p
+                className={`summary-text ${!showFullSummary && shouldTruncateSummary(summary) ? "truncated" : ""} editable-field`}
+                onClick={() => startEdit("summary")}
+                title="Click to edit"
+                style={
+                  !summary
+                    ? { color: "var(--text-muted)", fontStyle: "italic" }
+                    : {}
+                }
+              >
+                {summary || "Click to add a project summary..."}
+              </p>
+              {shouldTruncateSummary(summary) && (
+                <button
+                  className="show-more-btn"
+                  onClick={() => setShowFullSummary((v) => !v)}
+                >
+                  {showFullSummary ? "Show Less" : "Show More"}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
+
       <div className="project-metrics">
         <div className="metric-item">
           <span className="metric-label">Lines of Code:</span>
@@ -543,12 +870,14 @@ function ProjectCard({
           </div>
         ) : null}
       </div>
+
       {docTypesDisplay !== "N/A" ? (
         <div className="contribution-details">
           <h4>📊 Document Types</h4>
           <p>{docTypesDisplay}</p>
         </div>
       ) : null}
+
       <div className="project-skills-display">
         {skills.slice(0, 8).map((s) => (
           <span key={s} className="project-skill-tag">
@@ -606,6 +935,145 @@ const PortfolioPage: React.FC = () => {
   useEffect(() => {
     void loadAll();
   }, []);
+
+  const downloadPortfolioInteractiveHTML = async () => {
+    try {
+      const mainContent = document.querySelector(".main-content");
+      if (!mainContent) throw new Error("Main content not found");
+      if (!portfolio) throw new Error("Portfolio data is not loaded yet");
+
+      const mainClone = mainContent.cloneNode(true) as HTMLElement;
+      mainClone
+        .querySelectorAll(".dashboard-actions")
+        .forEach((el) => el.remove());
+
+      // Inline thumbnails as data URLs for offline export
+      const thumbnailImages = Array.from(
+        mainClone.querySelectorAll("img.project-thumbnail"),
+      ) as HTMLImageElement[];
+      await Promise.allSettled(
+        thumbnailImages.map(async (img) => {
+          const src = (img.getAttribute("src") || "").split("?")[0];
+          if (!src || src.startsWith("data:")) return;
+          try {
+            const response = await fetch(src, {
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (!response.ok) return;
+            const blob = await response.blob();
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = () =>
+                reject(new Error("Failed to read thumbnail"));
+              reader.readAsDataURL(blob);
+            });
+            img.setAttribute("src", dataUrl);
+            img.removeAttribute("crossorigin");
+          } catch (_) {
+            // skip thumbnail if fetch fails
+          }
+        }),
+      );
+
+      // Extract all CSS from loaded stylesheets
+      let baseCss = "";
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          for (const rule of Array.from(sheet.cssRules || [])) {
+            baseCss += rule.cssText + "\n";
+          }
+        } catch (_) {
+          // cross-origin stylesheets are skipped
+        }
+      }
+
+      const exportCss = `
+        body { background: var(--primary-bg) !important; margin: 0 !important; }
+        .container, .portfolio-layout { display: block !important; height: auto !important; background: transparent !important; }
+        .main-content { max-width: 1500px; margin: 0 auto; padding: 32px; overflow: visible !important; }
+        .graph-card, .overview-card, .project-card, .analysis-card, .formula-card { break-inside: avoid; }
+      `;
+
+      const exportData = JSON.stringify(portfolio).replace(/<\//g, "<\\/");
+
+      const interactiveScript = `
+(function() {
+  var data = window.__PORTFOLIO_EXPORT_DATA;
+  if (!data || typeof Chart === 'undefined') return;
+
+  window.toggleSummary = function(button) {
+    var sc = button.closest('.summary-content');
+    if (!sc) return;
+    var st = sc.querySelector('.summary-text');
+    if (!st) return;
+    if (!st.classList.contains('truncated')) { st.classList.add('truncated'); button.textContent = 'Show More'; }
+    else { st.classList.remove('truncated'); button.textContent = 'Show Less'; }
+  };
+
+  function pie(id, d) {
+    var c = document.getElementById(id); if (!c) return;
+    new Chart(c.getContext('2d'), { type: 'pie', data: { labels: Object.keys(d||{}), datasets: [{ data: Object.values(d||{}), backgroundColor: ['#2d3748','#4a5568','#718096','#a0aec0','#48bb78','#ed8936','#667eea','#764ba2','#f687b3','#9f7aea','#38b2ac','#68d391'], borderColor: '#fff', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#4a5568', font: { size: 12 }, padding: 15, usePointStyle: true } } } } });
+  }
+  function bar(id, d) {
+    var c = document.getElementById(id); if (!c) return;
+    new Chart(c.getContext('2d'), { type: 'bar', data: { labels: Object.keys(d||{}), datasets: [{ data: Object.values(d||{}), backgroundColor: '#2d3748', borderColor: '#4a5568', borderWidth: 1, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }, x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } } } } });
+  }
+  function hbar(id, d) {
+    var c = document.getElementById(id); if (!c) return;
+    new Chart(c.getContext('2d'), { type: 'bar', data: { labels: Object.keys(d||{}), datasets: [{ data: Object.values(d||{}), backgroundColor: '#4a5568', borderColor: '#2d3748', borderWidth: 1, borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } }, y: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } } } } });
+  }
+  function line(id, d) {
+    var c = document.getElementById(id); if (!c) return;
+    var s = Object.entries(d||{}).sort(); new Chart(c.getContext('2d'), { type: 'line', data: { labels: s.map(function(e){return e[0];}), datasets: [{ label: 'Activity', data: s.map(function(e){return e[1];}), borderColor: '#2d3748', backgroundColor: 'rgba(45,55,72,0.1)', fill: true, tension: 0.4, borderWidth: 3, pointBackgroundColor: '#2d3748', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 }, stepSize: 0.5 }, title: { display: true, text: 'Activity Level', color: '#4a5568', font: { size: 12, weight: 'bold' } } }, x: { grid: { color: '#e2e8f0' }, ticks: { color: '#4a5568', font: { size: 11 } } } } } });
+  }
+
+  var g = data.graphs || {};
+  pie('languageChart', g.language_distribution || {});
+  bar('complexityChart', { 'Small (<1000)': (g.complexity_distribution||{}).distribution?.small||0, 'Medium (1000-3000)': (g.complexity_distribution||{}).distribution?.medium||0, 'Large (>3000)': (g.complexity_distribution||{}).distribution?.large||0 });
+  bar('scoreChart', { 'Excellent (90-100%)': (g.score_distribution||{}).distribution?.excellent||0, 'Good (80-89%)': (g.score_distribution||{}).distribution?.good||0, 'Fair (70-79%)': (g.score_distribution||{}).distribution?.fair||0, 'Poor (<70%)': (g.score_distribution||{}).distribution?.poor||0 });
+  line('activityChart', g.monthly_activity || {});
+  hbar('skillsChart', g.top_skills || {});
+  var t = data.project_type_analysis || {};
+  bar('projectTypeChart', { 'GitHub Projects': (t.github||{}).count||0, 'Local Projects': (t.local||{}).count||0 });
+})();
+      `;
+
+      const exportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Dashboard</title>
+  <style>${baseCss}\n${exportCss}</style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+</head>
+<body>
+${mainClone.outerHTML}
+<script>window.__PORTFOLIO_EXPORT_DATA = ${exportData};<\/script>
+<script>${interactiveScript}<\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([exportHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[T:]/g, "-");
+      a.href = url;
+      a.download = `portfolio-interactive-${timestamp}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export portfolio HTML:", err);
+      alert("Failed to download interactive portfolio HTML. Please try again.");
+    }
+  };
 
   const toggleProject = async (id: string | number) => {
     const next = new Set(selectedProjects);
@@ -786,10 +1254,20 @@ const PortfolioPage: React.FC = () => {
       </div>
       <div className="main-content">
         <div className="dashboard-header">
-          <h1>🎯 Portfolio Dashboard</h1>
-          <p className="dashboard-subtitle">
-            Comprehensive analysis of your development work
-          </p>
+          <div className="dashboard-header-text">
+            <h1>🎯 Portfolio Dashboard</h1>
+            <p className="dashboard-subtitle">
+              Comprehensive analysis of your development work
+            </p>
+          </div>
+          <div className="dashboard-actions">
+            <button
+              className="download-html-btn"
+              onClick={() => void downloadPortfolioInteractiveHTML()}
+            >
+              ⚡ Download Interactive HTML
+            </button>
+          </div>
         </div>
         <div className="overview-cards" id="overviewCards">
           <div className="overview-card">
@@ -827,37 +1305,46 @@ const PortfolioPage: React.FC = () => {
           <div className="graph-card">
             <h3>📊 Language Distribution</h3>
             <div className="chart-container">
-              <PieChart data={graphs.language_distribution} />
+              <PieChart
+                data={graphs.language_distribution}
+                canvasId="languageChart"
+              />
             </div>
           </div>
           <div className="graph-card">
             <h3>📈 Project Complexity</h3>
             <div className="chart-container">
-              <BarChart data={complexity} />
+              <BarChart data={complexity} canvasId="complexityChart" />
             </div>
           </div>
           <div className="graph-card">
             <h3>🏆 Score Distribution</h3>
             <div className="chart-container">
-              <BarChart data={scoreDist} />
+              <BarChart data={scoreDist} canvasId="scoreChart" />
             </div>
           </div>
           <div className="graph-card">
             <h3>📅 Monthly Activity</h3>
             <div className="chart-container">
-              <LineChart data={graphs.monthly_activity} />
+              <LineChart
+                data={graphs.monthly_activity}
+                canvasId="activityChart"
+              />
             </div>
           </div>
           <div className="graph-card">
             <h3>🛠️ Top Skills</h3>
             <div className="chart-container small">
-              <HorizontalBarChart data={graphs.top_skills} />
+              <HorizontalBarChart
+                data={graphs.top_skills}
+                canvasId="skillsChart"
+              />
             </div>
           </div>
           <div className="graph-card">
             <h3>⚖️ GitHub vs Local</h3>
             <div className="chart-container small">
-              <BarChart data={projectType} />
+              <BarChart data={projectType} canvasId="projectTypeChart" />
             </div>
           </div>
         </div>

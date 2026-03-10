@@ -34,7 +34,6 @@ DATA STORAGE:
 DATA RETENTION: 
 - Data kept until explicitly deleted by you
 
-Press Enter to return to consent prompt.
 """
 
     # Message shown when consent is granted

@@ -43,6 +43,7 @@ function parseBlocks(raw: string): Block[] {
   const lines = cleaned.split("\n");
   const blocks: Block[] = [];
   let listBuf: string[] = [];
+  let skippedFirstHeading = false;
 
   const flushList = () => {
     if (listBuf.length) {
@@ -74,7 +75,12 @@ function parseBlocks(raw: string): Block[] {
     flushList();
 
     // ALL-CAPS line → heading  (e.g. "DATA COLLECTION:")
-    if (/^[A-Z][A-Z\s:]+$/.test(trimmed)) {
+    // Skip the very first one — it's already rendered as the page <h2> title.
+    if (/^[A-Z][A-Z\s:\-]+$/.test(trimmed)) {
+      if (!skippedFirstHeading) {
+        skippedFirstHeading = true;
+        continue;
+      }
       blocks.push({ kind: "heading", text: trimmed.replace(/:$/, "") });
       continue;
     }

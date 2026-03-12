@@ -5,7 +5,7 @@ import "../styles/UploadPage.css";
 
 /**
  * Upload Page - Project upload interface
- * Select or drop a ZIP file to auto-upload. Runs analysis so projects appear in Data Management.
+ * Select or drop a ZIP file to auto-upload. Scans projects so they appear in Data Management.
  */
 export function UploadPage() {
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,7 @@ export function UploadPage() {
         upload_id,
         default_analysis_type: "local",
         similarity_action: "create_new",
+        scan_only: true,
       });
       setSuccess(true);
       setUploadedFileName(file.name);
@@ -126,7 +127,7 @@ export function UploadPage() {
             <p className="upload-hint">
               {loading
                 ? analyzing
-                  ? "Analyzing project…"
+                  ? "Scanning project…"
                   : "Uploading…"
                 : "Drop your ZIP file here or click to browse"}
             </p>

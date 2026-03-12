@@ -256,7 +256,7 @@ test('Continue button navigates to upload page', async () => {
   fireEvent.click(continueButton);
 
 
-  expect(mockNavigate).toHaveBeenCalledWith('/uploadpage');
+  expect(mockNavigate).toHaveBeenCalledWith('/userpreferencepage');
 });
 
 test('Accept button is clickable', async () => {

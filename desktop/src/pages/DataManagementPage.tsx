@@ -69,6 +69,9 @@ export function DataManagementPage() {
   return (
     <div className="data-management-container">
       <h1 className="data-management-title">Data Management</h1>
+      <p className="data-management-description">
+        View and edit chronological information for projects and skills uploaded to the app.
+      </p>
 
       <div className="data-management-projects">
         <div className="data-management-section-header">

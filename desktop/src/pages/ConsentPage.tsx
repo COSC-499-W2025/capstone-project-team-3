@@ -159,7 +159,7 @@ export function ConsentPage() {
         ? messages.granted_message
         : messages.declined_message;
       setNotification(message);
-      setTimeout(() => navigate(accepted ? "/uploadpage" : "/"), 2000);
+      setTimeout(() => navigate(accepted ? "/userpreferencepage" : "/"), 2000);
     } catch (error) {
       console.error("Failed to submit consent:", error);
     }
@@ -232,7 +232,7 @@ export function ConsentPage() {
         <div className="consent-actions">
           {hasConsent ? (
             <>
-              <button onClick={() => navigate("/uploadpage")}>Continue</button>
+              <button onClick={() => navigate("/userpreferencepage")}>Continue</button>
               <button className="btn-outline" onClick={handleRevoke}>
                 Revoke Consent
               </button>

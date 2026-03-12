@@ -6,6 +6,7 @@ export interface RunAnalysisPayload {
   similarity_action?: "create_new" | "update_existing";
   cleanup_zip?: boolean;
   cleanup_extracted?: boolean;
+  scan_only?: boolean;
 }
 
 export interface ProjectAnalysisResult {
@@ -44,6 +45,7 @@ export async function runAnalysis(
       similarity_action: payload.similarity_action ?? "create_new",
       cleanup_zip: payload.cleanup_zip ?? false,
       cleanup_extracted: payload.cleanup_extracted ?? false,
+      scan_only: payload.scan_only ?? false,
     }),
   });
 

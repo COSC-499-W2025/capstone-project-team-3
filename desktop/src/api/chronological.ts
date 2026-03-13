@@ -28,7 +28,7 @@ export interface UpdateProjectDatesPayload {
 
 export interface AddSkillPayload {
   skill: string;
-  source: "code" | "non-code";
+  source: "code" | "non-technical";
   date: string;
 }
 

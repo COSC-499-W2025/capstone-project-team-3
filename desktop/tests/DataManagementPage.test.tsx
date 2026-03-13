@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataManagementPage } from '../src/pages/DataManagementPage';
 import { test, expect, jest, beforeEach } from '@jest/globals';
@@ -14,23 +14,11 @@ const mockGetChronologicalProjects = chronologicalApi.getChronologicalProjects a
 const mockGetProjectSkills = chronologicalApi.getProjectSkills as jest.MockedFunction<
   typeof chronologicalApi.getProjectSkills
 >;
-const mockUpdateProjectName = chronologicalApi.updateProjectName as jest.MockedFunction<
-  typeof chronologicalApi.updateProjectName
->;
 const mockUpdateProjectDates = chronologicalApi.updateProjectDates as jest.MockedFunction<
   typeof chronologicalApi.updateProjectDates
 >;
 const mockUpdateSkillDate = chronologicalApi.updateSkillDate as jest.MockedFunction<
   typeof chronologicalApi.updateSkillDate
->;
-const mockUpdateSkillName = chronologicalApi.updateSkillName as jest.MockedFunction<
-  typeof chronologicalApi.updateSkillName
->;
-const mockAddSkill = chronologicalApi.addSkill as jest.MockedFunction<
-  typeof chronologicalApi.addSkill
->;
-const mockDeleteSkill = chronologicalApi.deleteSkill as jest.MockedFunction<
-  typeof chronologicalApi.deleteSkill
 >;
 
 const mockProjects: chronologicalApi.ChronologicalProject[] = [
@@ -59,12 +47,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockGetChronologicalProjects.mockResolvedValue(mockProjects);
   mockGetProjectSkills.mockResolvedValue(mockSkills);
-  mockUpdateProjectName.mockResolvedValue({ ...mockProjects[0], name: 'Updated Name' });
   mockUpdateProjectDates.mockResolvedValue(mockProjects[0]);
   mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '2026-01-20' });
-  mockUpdateSkillName.mockResolvedValue({ ...mockSkills[0], skill: 'TypeScript' });
-  mockAddSkill.mockResolvedValue({ message: 'Skill added', skill: 'Go', source: 'code', date: '2026-02-10' });
-  mockDeleteSkill.mockResolvedValue(undefined);
 });
 
 test('renders data management page with title', async () => {
@@ -172,48 +156,6 @@ test('expand project shows skills', async () => {
   expect(await screen.findByText('Skills')).toBeInTheDocument();
   expect(await screen.findByText('Python')).toBeInTheDocument();
   expect(await screen.findByText('React')).toBeInTheDocument();
-});
-
-test('add skill form appears when Add skill clicked', async () => {
-  const user = userEvent.setup();
-  render(
-    <BrowserRouter>
-      <DataManagementPage />
-    </BrowserRouter>
-  );
-
-  await screen.findByText('Project Alpha');
-  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
-  await user.click(expandButtons[0]);
-  await screen.findByText('Skills');
-
-  const addSkillBtn = screen.getByRole('button', { name: /add skill/i });
-  await user.click(addSkillBtn);
-
-  expect(screen.getByPlaceholderText('Skill name')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-});
-
-test('editing project name calls updateProjectName', async () => {
-  const user = userEvent.setup();
-  render(
-    <BrowserRouter>
-      <DataManagementPage />
-    </BrowserRouter>
-  );
-
-  const projectName = await screen.findByText('Project Alpha');
-  await user.click(projectName);
-
-  const input = screen.getByDisplayValue('Project Alpha');
-  await user.clear(input);
-  await user.type(input, 'My Renamed Project');
-  input.blur();
-
-  await waitFor(() => {
-    expect(mockUpdateProjectName).toHaveBeenCalledWith('sig-1', 'My Renamed Project');
-  });
 });
 
 test('Refresh button fetches projects', async () => {

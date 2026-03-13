@@ -1,4 +1,4 @@
-/* Uses global CSS variables from index.css */
+/* Matches Project Selection UI style - heading kept centered */
 
 .data-management-container {
   display: flex;
@@ -8,15 +8,15 @@
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  background: var(--color-bg-light);
+  background: #f7fafc;
   padding: var(--spacing-lg) var(--spacing-md);
   gap: var(--spacing-md);
 }
 
 .data-management-title {
   font-size: 2rem;
-  font-weight: 400;
-  color: var(--color-text-dark);
+  font-weight: 700;
+  color: #2c3e50;
   margin: 0;
   padding: 0 var(--spacing-sm);
   font-family: var(--font-sans);
@@ -27,9 +27,127 @@
 .data-management-description {
   margin: 0;
   font-size: 1rem;
-  color: var(--color-text-dark);
-  opacity: 0.9;
+  font-weight: 400;
+  color: #6c757d;
   text-align: center;
   max-width: 600px;
   font-family: var(--font-sans);
+}
+
+.data-management-loading {
+  padding: var(--spacing-lg);
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  color: #6c757d;
+}
+
+.data-management-error {
+  padding: var(--spacing-md);
+  background: #fde8e8;
+  color: #c53030;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  max-width: 90%;
+  font-family: var(--font-sans);
+}
+
+.data-management-projects {
+  width: 100%;
+  max-width: 800px;
+  margin-top: var(--spacing-md);
+}
+
+.data-management-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.data-management-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+.data-management-refresh {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid #aecad6;
+  background: #d4e2ea;
+  color: #34495e;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.data-management-refresh:hover:not(:disabled) {
+  background: #c5d9e2;
+  color: #2c3e50;
+}
+
+.data-management-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.data-management-empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: #6c757d;
+  font-family: var(--font-sans);
+  background: #f8f9fa;
+  border-radius: var(--radius-md);
+}
+
+.data-management-table-wrap {
+  background: var(--color-text-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px var(--color-shadow);
+  overflow: hidden;
+}
+
+.data-management-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-management-table thead tr {
+  background: #d4e2ea;
+  border-bottom: 1px solid #aecad6;
+}
+
+.data-management-table th {
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: 700;
+  color: #34495e;
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+}
+
+.data-management-table tbody tr {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color var(--transition-fast);
+}
+
+.data-management-table tbody tr:hover {
+  background: #e8f1f5;
+}
+
+.data-management-table tbody tr:hover td {
+  color: #2c3e50;
+}
+
+.data-management-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.95rem;
+  color: #2c3e50;
+  font-family: var(--font-sans);
+  transition: color var(--transition-fast);
 }

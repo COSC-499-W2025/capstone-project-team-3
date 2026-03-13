@@ -153,6 +153,7 @@ def init_db():
     )
     _ensure_project_override_exclusions_column(cursor)
     _ensure_project_score_constraint(cursor)
+    _ensure_resume_project_has_no_project_fk(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
@@ -206,6 +207,87 @@ def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
             SELECT RAISE(ABORT, 'project overridden score must be between 0 and 1');
         END;
     """)
+
+
+def _ensure_resume_project_has_no_project_fk(cursor: sqlite3.Cursor) -> None:
+    """
+    Ensure RESUME_PROJECT has no foreign key on project_id to PROJECT.
+
+    Earlier schema versions may have created RESUME_PROJECT with:
+      FOREIGN KEY (project_id) REFERENCES PROJECT(project_signature) ON DELETE CASCADE
+
+    That would cause RESUME_PROJECT rows to be deleted when a PROJECT row is deleted,
+    defeating the snapshot logic that preserves tailored resume entries.
+
+    This migration:
+      - Detects an existing FK from RESUME_PROJECT to PROJECT
+      - Rebuilds RESUME_PROJECT without that FK, preserving all rows and data
+    """
+    # If table does not exist yet, nothing to do (SCHEMA above will create the correct version)
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='RESUME_PROJECT'"
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return
+
+    # Inspect existing foreign keys on RESUME_PROJECT
+    cursor.execute("PRAGMA foreign_key_list(RESUME_PROJECT)")
+    fks = cursor.fetchall()
+    # PRAGMA foreign_key_list columns: (id, seq, table, from, to, on_update, on_delete, match)
+    has_project_fk = any(fk[2] == "PROJECT" for fk in fks)
+    if not has_project_fk:
+        # Already on the new schema (only resume_id FK); nothing to do.
+        return
+
+    # Rebuild RESUME_PROJECT to drop the FK on project_id while preserving data.
+    # New schema matches the SCHEMA definition above.
+    cursor.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS RESUME_PROJECT_NEW (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resume_id INTEGER NOT NULL,
+            project_id TEXT NOT NULL,
+
+            project_name TEXT,
+            start_date DATETIME,
+            end_date DATETIME,
+            skills JSON,
+            bullets JSON,
+
+            display_order INTEGER,
+
+            FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE,
+            UNIQUE (resume_id, project_id)
+        );
+
+        INSERT INTO RESUME_PROJECT_NEW (
+            id,
+            resume_id,
+            project_id,
+            project_name,
+            start_date,
+            end_date,
+            skills,
+            bullets,
+            display_order
+        )
+        SELECT
+            id,
+            resume_id,
+            project_id,
+            project_name,
+            start_date,
+            end_date,
+            skills,
+            bullets,
+            display_order
+        FROM RESUME_PROJECT;
+
+        DROP TABLE RESUME_PROJECT;
+        ALTER TABLE RESUME_PROJECT_NEW RENAME TO RESUME_PROJECT;
+        """
+    )
 
 def seed_db():
     """Insert test/seed data aligned with new schema."""

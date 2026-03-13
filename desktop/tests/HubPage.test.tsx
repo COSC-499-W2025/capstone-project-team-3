@@ -1,0 +1,120 @@
+import { render, screen, fireEvent } from '@testing-library/react';
+import { HubPage } from '../src/pages/HubPage';
+import { jest, test, expect, beforeEach } from '@jest/globals';
+import '@testing-library/jest-dom';
+import { BrowserRouter } from 'react-router-dom';
+
+// Mock useNavigate
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual<typeof import('react-router-dom')>('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
+beforeEach(() => {
+  mockNavigate.mockClear();
+});
+
+test('renders hub page with title', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const title = screen.getByText(/Where would you like to go/i);
+  expect(title).toBeDefined();
+});
+
+test('renders three navigation cards', () => {
+  const { container } = render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const cards = container.querySelectorAll('.hub-card');
+  expect(cards.length).toBe(3);
+});
+
+test('renders Resume Builder card', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('Resume Builder')).toBeInTheDocument();
+  expect(screen.getByText(/Build and tailor your resume/i)).toBeInTheDocument();
+});
+
+test('renders Portfolio card', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('Portfolio')).toBeInTheDocument();
+  expect(screen.getByText(/View your portfolio with charts/i)).toBeInTheDocument();
+});
+
+test('renders Data Management card', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('Data Management')).toBeInTheDocument();
+  expect(screen.getByText(/Review and edit project dates/i)).toBeInTheDocument();
+});
+
+test('navigates to resume builder on card click', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to Resume Builder');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage');
+});
+
+test('navigates to portfolio on card click', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to Portfolio');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/portfoliopage');
+});
+
+test('navigates to data management on card click', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to Data Management');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/datamanagementpage');
+});
+
+test('each card has an accessible aria-label', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByLabelText('Go to Resume Builder')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Portfolio')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Data Management')).toBeInTheDocument();
+});

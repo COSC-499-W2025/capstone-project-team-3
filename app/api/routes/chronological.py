@@ -23,6 +23,10 @@ class UpdateProjectDatesRequest(BaseModel):
     last_modified: str
 
 
+class UpdateProjectNameRequest(BaseModel):
+    name: str
+
+
 class AddSkillRequest(BaseModel):
     skill: str
     source: str  # "code" or "non-code"
@@ -87,6 +91,27 @@ def update_project_dates(signature: str, body: UpdateProjectDatesRequest):
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
         manager.update_project_dates(signature, body.created_at, body.last_modified)
+        return manager.get_project_by_signature(signature)
+    finally:
+        manager.close()
+
+
+@router.patch("/chronological/projects/{signature}/name", response_model=Dict[str, Any])
+def update_project_name(signature: str, body: UpdateProjectNameRequest):
+    """
+    Update the display name of a project.
+
+    Raises 404 if the project does not exist.
+    Raises 400 if name is empty.
+    """
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail="Project name cannot be empty")
+    manager = ChronologicalManager()
+    try:
+        project = manager.get_project_by_signature(signature)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        manager.update_project_name(signature, body.name.strip())
         return manager.get_project_by_signature(signature)
     finally:
         manager.close()

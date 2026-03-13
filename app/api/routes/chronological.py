@@ -161,17 +161,18 @@ def add_skill_to_project(signature: str, body: AddSkillRequest):
     """
     if not body.skill.strip():
         raise HTTPException(status_code=400, detail="Skill name cannot be empty")
-    if body.source not in ("code", "non-technical"):
+    if body.source not in ("code", "non-technical", "non-code"):
         raise HTTPException(
             status_code=400, detail="Source must be 'code' or 'non-technical'"
         )
+    source = "non-technical" if body.source == "non-code" else body.source
 
     manager = ChronologicalManager()
     try:
         project = manager.get_project_by_signature(signature)
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
-        manager.add_skill_with_date(signature, body.skill.strip(), body.source, body.date)
+        manager.add_skill_with_date(signature, body.skill.strip(), source, body.date)
         return {"message": "Skill added", "skill": body.skill.strip(), "source": body.source, "date": body.date}
     finally:
         manager.close()

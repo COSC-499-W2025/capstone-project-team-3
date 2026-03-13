@@ -27,7 +27,7 @@ test('renders hub page with title', () => {
   expect(title).toBeDefined();
 });
 
-test('renders four navigation cards', () => {
+test('renders five navigation cards', () => {
   const { container } = render(
     <BrowserRouter>
       <HubPage />
@@ -35,7 +35,7 @@ test('renders four navigation cards', () => {
   );
 
   const cards = container.querySelectorAll('.hub-card');
-  expect(cards.length).toBe(4);
+  expect(cards.length).toBe(5);
 });
 
 test('renders Upload File card', () => {
@@ -80,6 +80,17 @@ test('renders Data Management card', () => {
 
   expect(screen.getByText('Data Management')).toBeInTheDocument();
   expect(screen.getByText(/Review and edit project dates/i)).toBeInTheDocument();
+});
+
+test('renders Settings card', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('Settings')).toBeInTheDocument();
+  expect(screen.getByText(/Manage your profile and privacy preferences/i)).toBeInTheDocument();
 });
 
 test('navigates to upload page on card click', () => {
@@ -130,6 +141,18 @@ test('navigates to data management on card click', () => {
   expect(mockNavigate).toHaveBeenCalledWith('/datamanagementpage');
 });
 
+test('navigates to settings on card click', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to Settings');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/settingspage');
+});
+
 test('each card has an accessible aria-label', () => {
   render(
     <BrowserRouter>
@@ -141,4 +164,5 @@ test('each card has an accessible aria-label', () => {
   expect(screen.getByLabelText('Go to Resume Builder')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Portfolio')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Data Management')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Settings')).toBeInTheDocument();
 });

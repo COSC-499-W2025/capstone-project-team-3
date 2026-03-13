@@ -130,3 +130,12 @@ export async function clearScoreOverride(projectId: string): Promise<void> {
   });
   if (!res.ok) throw await buildRequestError(res);
 }
+
+export async function deleteProject(projectSignature: string): Promise<{ status: string; message: string; project_signature: string }> {
+  const encodedSig = encodeProjectId(projectSignature);
+  const res = await fetch(`${API_BASE}/api/projects/${encodedSig}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw await buildRequestError(res);
+  return res.json();
+}

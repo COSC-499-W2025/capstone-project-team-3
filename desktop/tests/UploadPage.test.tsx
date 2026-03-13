@@ -4,13 +4,25 @@ import { test, expect, jest, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import * as uploadApi from '../src/api/upload';
+import * as analysisApi from '../src/api/analysis';
 
 jest.mock('../src/api/upload');
+jest.mock('../src/api/analysis');
 
 const mockUploadZipFile = uploadApi.uploadZipFile as jest.MockedFunction<typeof uploadApi.uploadZipFile>;
+const mockRunAnalysis = analysisApi.runAnalysis as jest.MockedFunction<typeof analysisApi.runAnalysis>;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRunAnalysis.mockResolvedValue({
+    status: 'ok',
+    upload_id: 'abc-123',
+    total_projects: 1,
+    analyzed_projects: 1,
+    skipped_projects: 0,
+    failed_projects: 0,
+    results: [],
+  });
 });
 
 test('renders upload page with title', () => {

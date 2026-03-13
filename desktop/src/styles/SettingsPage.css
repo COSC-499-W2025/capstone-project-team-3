@@ -1,0 +1,135 @@
+/*
+  SettingsPage.css
+  Uses global classes from index.css:
+    .page-container  .flex-column   .flex-center   .frame   .text-center   h1 / h2  button           
+*/
+
+/* Container */
+.settings-container {
+  background: var(--color-bg-lighter);
+  gap: 0;
+  position: relative;
+}
+
+/* Back button */
+.settings-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: var(--spacing-lg);
+  left: var(--spacing-lg);
+  background: transparent;
+  border: none;
+  color: var(--color-navy);
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.settings-back-btn:hover {
+  opacity: 1;
+  background: var(--color-bg-light);
+  transform: none;
+}
+
+/* Title */
+.settings-title {
+  font-weight: 300;
+  color: var(--color-navy);
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-xs);
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out 0.2s forwards;
+}
+
+/* Subtitle */
+.settings-subtitle {
+  font-size: 1rem;
+  color: var(--color-text-dark);
+  opacity: 0;
+  margin-bottom: var(--spacing-lg);
+  animation: fadeIn 0.8s ease-out 0.3s forwards;
+}
+
+/* Card grid */
+.settings-cards {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 600px;
+  width: 100%;
+  opacity: 0;
+  animation: slideUp 0.8s ease-out 0.4s forwards;
+}
+
+/* Card */
+.settings-card {
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 260px;
+  min-height: 220px;
+  padding: var(--spacing-lg) var(--spacing-md);
+  background: var(--color-text-light);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settings-card:hover {
+  background-color: var(--color-bg-light);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: var(--color-blue-medium);
+}
+
+/* Icon */
+.settings-card-icon {
+  color: var(--color-blue-dark);
+}
+
+/* Card title */
+.settings-card-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-navy);
+}
+
+/* Card description */
+.settings-card-description {
+  font-size: 0.85rem;
+  color: var(--color-text-dark);
+  opacity: 0.65;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .settings-card {
+    width: 90%;
+    max-width: 360px;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-card {
+    width: 95%;
+    min-height: 160px;
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .settings-card-description {
+    font-size: 0.8rem;
+  }
+}

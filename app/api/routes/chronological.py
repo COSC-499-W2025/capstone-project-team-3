@@ -153,7 +153,7 @@ def add_skill_to_project(signature: str, body: AddSkillRequest):
 
     Request body:
     - skill: skill name
-    - source: "code" or "non-code"
+    - source: "code" or "non-technical"
     - date: YYYY-MM-DD
 
     Raises 404 if the project does not exist.
@@ -161,9 +161,9 @@ def add_skill_to_project(signature: str, body: AddSkillRequest):
     """
     if not body.skill.strip():
         raise HTTPException(status_code=400, detail="Skill name cannot be empty")
-    if body.source not in ("code", "non-code"):
+    if body.source not in ("code", "non-technical"):
         raise HTTPException(
-            status_code=400, detail="Source must be 'code' or 'non-code'"
+            status_code=400, detail="Source must be 'code' or 'non-technical'"
         )
 
     manager = ChronologicalManager()

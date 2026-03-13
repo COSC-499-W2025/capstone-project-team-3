@@ -3,11 +3,7 @@ import {
   getChronologicalProjects,
   getProjectSkills,
   updateProjectDates,
-  updateProjectName,
   updateSkillDate,
-  updateSkillName,
-  addSkill,
-  deleteSkill,
   type ChronologicalProject,
   type ChronologicalSkill,
 } from "../api/chronological";
@@ -52,12 +48,10 @@ export function DataManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{
-    type: "project_name" | "project_created" | "project_modified" | "skill_name" | "skill_date";
+    type: "project_created" | "project_modified" | "skill_date";
     projectSig?: string;
     skillId?: number;
   } | null>(null);
-  const [addSkillFor, setAddSkillFor] = useState<string | null>(null);
-  const [newSkill, setNewSkill] = useState({ skill: "", date: "", source: "code" as "code" | "non-code" });
   const [saving, setSaving] = useState(false);
 
   const fetchProjects = useCallback(() => {
@@ -103,24 +97,6 @@ export function DataManagementPage() {
     fetchProjects();
   }, [fetchProjects]);
 
-  const handleUpdateProjectName = async (sig: string, name: string) => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      await updateProjectName(sig, name.trim());
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.project_signature === sig ? { ...p, name: name.trim() } : p
-        )
-      );
-      setEditing(null);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleUpdateProjectDates = async (
     sig: string,
     created_at: string,
@@ -133,27 +109,6 @@ export function DataManagementPage() {
         prev.map((p) =>
           p.project_signature === sig ? { ...p, created_at, last_modified } : p
         )
-      );
-      setEditing(null);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdateSkillName = async (skillId: number, skill: string) => {
-    if (!skill.trim()) return;
-    setSaving(true);
-    try {
-      await updateSkillName(skillId, { skill: skill.trim() });
-      setProjects((prev) =>
-        prev.map((p) => ({
-          ...p,
-          skills: p.skills?.map((s) =>
-            s.id === skillId ? { ...s, skill: skill.trim() } : s
-          ),
-        }))
       );
       setEditing(null);
     } catch (e) {
@@ -178,38 +133,6 @@ export function DataManagementPage() {
       setEditing(null);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to update");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAddSkill = async (sig: string) => {
-    if (!newSkill.skill.trim() || !newSkill.date) return;
-    setSaving(true);
-    try {
-      await addSkill(sig, {
-        skill: newSkill.skill.trim(),
-        source: newSkill.source,
-        date: newSkill.date,
-      });
-      await fetchSkills(sig);
-      setAddSkillFor(null);
-      setNewSkill({ skill: "", date: "", source: "code" });
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to add skill");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteSkill = async (skillId: number, sig: string) => {
-    if (!confirm("Delete this skill?")) return;
-    setSaving(true);
-    try {
-      await deleteSkill(skillId);
-      await fetchSkills(sig);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete");
     } finally {
       setSaving(false);
     }
@@ -286,46 +209,7 @@ export function DataManagementPage() {
                           {p.expanded ? "▼" : "▶"}
                         </button>
                       </td>
-                      <td>
-                        {editing?.type === "project_name" &&
-                        editing?.projectSig === p.project_signature ? (
-                          <input
-                            type="text"
-                            className="data-management-edit-input"
-                            defaultValue={p.name || p.project_signature}
-                            autoFocus
-                            onBlur={(e) =>
-                              handleUpdateProjectName(
-                                p.project_signature,
-                                e.target.value
-                              )
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                                handleUpdateProjectName(
-                                  p.project_signature,
-                                  e.currentTarget.value
-                                );
-                                e.currentTarget.blur();
-                              }
-                              if (e.key === "Escape") setEditing(null);
-                            }}
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className="data-management-editable"
-                            onClick={() =>
-                              setEditing({
-                                type: "project_name",
-                                projectSig: p.project_signature,
-                              })
-                            }
-                          >
-                            {p.name || p.project_signature || "—"}
-                          </button>
-                        )}
-                      </td>
+                      <td>{p.name || p.project_signature || "—"}</td>
                       <td>
                         {editing?.type === "project_created" &&
                         editing?.projectSig === p.project_signature ? (
@@ -334,22 +218,17 @@ export function DataManagementPage() {
                             className="data-management-edit-input"
                             defaultValue={toDateInputValue(p.created_at)}
                             autoFocus
-                            onBlur={(e) =>
-                              handleUpdateProjectDates(
-                                p.project_signature,
-                                e.target.value,
-                                p.last_modified
-                              )
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && e.currentTarget.value) {
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
                                 handleUpdateProjectDates(
                                   p.project_signature,
-                                  e.currentTarget.value,
+                                  val,
                                   p.last_modified
                                 );
-                                e.currentTarget.blur();
                               }
+                            }}
+                            onKeyDown={(e) => {
                               if (e.key === "Escape") setEditing(null);
                             }}
                           />
@@ -376,22 +255,17 @@ export function DataManagementPage() {
                             className="data-management-edit-input"
                             defaultValue={toDateInputValue(p.last_modified)}
                             autoFocus
-                            onBlur={(e) =>
-                              handleUpdateProjectDates(
-                                p.project_signature,
-                                p.created_at,
-                                e.target.value
-                              )
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && e.currentTarget.value) {
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
                                 handleUpdateProjectDates(
                                   p.project_signature,
                                   p.created_at,
-                                  e.currentTarget.value
+                                  val
                                 );
-                                e.currentTarget.blur();
                               }
+                            }}
+                            onKeyDown={(e) => {
                               if (e.key === "Escape") setEditing(null);
                             }}
                           />
@@ -420,7 +294,7 @@ export function DataManagementPage() {
                               <div className="data-management-loading">Loading skills...</div>
                             ) : p.skills.length === 0 ? (
                               <p className="data-management-skills-empty">
-                                No skills. Add one below.
+                                No skills.
                               </p>
                             ) : (
                               <table className="data-management-skills-table">
@@ -429,53 +303,13 @@ export function DataManagementPage() {
                                     <th>Skill</th>
                                     <th>Source</th>
                                     <th>Date</th>
-                                    <th />
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {p.skills.map((s) => (
                                     <tr key={s.id}>
-                                      <td>
-                                        {editing?.type === "skill_name" &&
-                                        editing?.skillId === s.id ? (
-                                          <input
-                                            type="text"
-                                            className="data-management-edit-input"
-                                            defaultValue={s.skill}
-                                            autoFocus
-                                            onBlur={(e) =>
-                                              handleUpdateSkillName(
-                                                s.id,
-                                                e.target.value
-                                              )
-                                            }
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                                                handleUpdateSkillName(
-                                                  s.id,
-                                                  e.currentTarget.value
-                                                );
-                                                e.currentTarget.blur();
-                                              }
-                                              if (e.key === "Escape") setEditing(null);
-                                            }}
-                                          />
-                                        ) : (
-                                          <button
-                                            type="button"
-                                            className="data-management-editable"
-                                            onClick={() =>
-                                              setEditing({
-                                                type: "skill_name",
-                                                skillId: s.id,
-                                              })
-                                            }
-                                          >
-                                            {s.skill}
-                                          </button>
-                                        )}
-                                      </td>
-                                      <td>{s.source}</td>
+                                      <td>{s.skill}</td>
+                                      <td>{s.source === "non-code" ? "non-technical" : s.source}</td>
                                       <td>
                                         {editing?.type === "skill_date" &&
                                         editing?.skillId === s.id ? (
@@ -484,20 +318,13 @@ export function DataManagementPage() {
                                             className="data-management-edit-input"
                                             defaultValue={toDateInputValue(s.date)}
                                             autoFocus
-                                            onBlur={(e) =>
-                                              handleUpdateSkillDate(
-                                                s.id,
-                                                e.target.value
-                                              )
-                                            }
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter" && e.currentTarget.value) {
-                                                handleUpdateSkillDate(
-                                                  s.id,
-                                                  e.currentTarget.value
-                                                );
-                                                e.currentTarget.blur();
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              if (val) {
+                                                handleUpdateSkillDate(s.id, val);
                                               }
+                                            }}
+                                            onKeyDown={(e) => {
                                               if (e.key === "Escape") setEditing(null);
                                             }}
                                           />
@@ -516,91 +343,10 @@ export function DataManagementPage() {
                                           </button>
                                         )}
                                       </td>
-                                      <td>
-                                        <button
-                                          type="button"
-                                          className="data-management-delete-btn"
-                                          onClick={() =>
-                                            handleDeleteSkill(s.id, p.project_signature)
-                                          }
-                                          disabled={saving}
-                                          aria-label="Delete skill"
-                                        >
-                                          Delete
-                                        </button>
-                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
-                            )}
-                            {addSkillFor === p.project_signature ? (
-                              <div className="data-management-add-skill">
-                                <input
-                                  type="text"
-                                  placeholder="Skill name"
-                                  value={newSkill.skill}
-                                  onChange={(e) =>
-                                    setNewSkill((prev) => ({
-                                      ...prev,
-                                      skill: e.target.value,
-                                    }))
-                                  }
-                                  className="data-management-edit-input"
-                                />
-                                <input
-                                  type="date"
-                                  value={newSkill.date}
-                                  onChange={(e) =>
-                                    setNewSkill((prev) => ({
-                                      ...prev,
-                                      date: e.target.value,
-                                    }))
-                                  }
-                                  className="data-management-edit-input"
-                                />
-                                <select
-                                  value={newSkill.source}
-                                  onChange={(e) =>
-                                    setNewSkill((prev) => ({
-                                      ...prev,
-                                      source: e.target.value as "code" | "non-code",
-                                    }))
-                                  }
-                                  className="data-management-edit-input"
-                                >
-                                  <option value="code">code</option>
-                                  <option value="non-code">non-code</option>
-                                </select>
-                                <button
-                                  type="button"
-                                  className="data-management-refresh"
-                                  onClick={() =>
-                                    handleAddSkill(p.project_signature)
-                                  }
-                                  disabled={saving || !newSkill.skill.trim() || !newSkill.date}
-                                >
-                                  Add
-                                </button>
-                                <button
-                                  type="button"
-                                  className="data-management-cancel-btn"
-                                  onClick={() => {
-                                    setAddSkillFor(null);
-                                    setNewSkill({ skill: "", date: "", source: "code" });
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                className="data-management-add-skill-btn"
-                                onClick={() => setAddSkillFor(p.project_signature)}
-                              >
-                                + Add skill
-                              </button>
                             )}
                           </div>
                         </td>

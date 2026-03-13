@@ -151,3 +151,164 @@
   font-family: var(--font-sans);
   transition: color var(--transition-fast);
 }
+
+.data-management-col-expand {
+  width: 2.5rem;
+  padding: var(--spacing-sm) !important;
+}
+
+.data-management-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  color: #34495e;
+}
+
+.data-management-expand-btn:hover {
+  color: #2c3e50;
+}
+
+.data-management-editable {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.data-management-editable:hover {
+  text-decoration: underline;
+  color: #1a252f;
+}
+
+.data-management-edit-input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  border: 1px solid #aecad6;
+  border-radius: var(--radius-sm);
+  min-width: 120px;
+}
+
+.data-management-skills-row:hover {
+  background: transparent;
+}
+
+.data-management-skills-row:hover td {
+  color: inherit;
+}
+
+.data-management-skills-cell {
+  background: #f8f9fa;
+  padding: var(--spacing-md) !important;
+  vertical-align: top;
+}
+
+.data-management-skills {
+  padding-left: 2rem;
+}
+
+.data-management-skills-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #34495e;
+  margin: 0 0 var(--spacing-sm) 0;
+  font-family: var(--font-sans);
+}
+
+.data-management-skills-empty {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.data-management-skills-table {
+  width: 100%;
+  max-width: 500px;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-sm);
+}
+
+.data-management-skills-table th {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+}
+
+.data-management-skills-table td {
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+}
+
+.data-management-skills-table tbody tr:hover {
+  background: transparent;
+}
+
+.data-management-delete-btn {
+  background: none;
+  border: none;
+  color: #c53030;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem;
+}
+
+.data-management-delete-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.data-management-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.data-management-add-skill-btn {
+  background: none;
+  border: 1px dashed #aecad6;
+  color: #34495e;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+}
+
+.data-management-add-skill-btn:hover {
+  background: #e8f1f5;
+  border-color: #7eb8d0;
+}
+
+.data-management-add-skill {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-sm);
+}
+
+.data-management-add-skill .data-management-edit-input {
+  min-width: 100px;
+}
+
+.data-management-cancel-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.data-management-cancel-btn:hover {
+  color: #2c3e50;
+  text-decoration: underline;
+}

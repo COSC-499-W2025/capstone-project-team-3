@@ -71,6 +71,22 @@ class ChronologicalManager:
         """, (created_at, last_modified, project_signature))
         
         self.conn.commit()
+
+    def update_project_name(self, project_signature: str, name: str):
+        """
+        Update the display name of a project.
+
+        Args:
+            project_signature: Unique identifier for the project
+            name: New project name
+        """
+        cur = self.conn.cursor()
+        cur.execute("""
+            UPDATE PROJECT
+            SET name = ?
+            WHERE project_signature = ?
+        """, (name.strip(), project_signature))
+        self.conn.commit()
     
     def get_project_by_signature(self, project_signature: str) -> dict:
         """

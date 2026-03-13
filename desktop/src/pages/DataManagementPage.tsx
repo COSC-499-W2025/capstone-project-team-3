@@ -9,8 +9,12 @@ import {
 } from "../api/chronological";
 import "../styles/DataManagementPage.css";
 
+/** Format date as dd-mm-yyyy. Uses string parse for YYYY-MM-DD to avoid timezone shift. */
 function formatDate(value: string): string {
   if (!value) return "—";
+  const v = value.trim();
+  const isoMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
   try {
     const d = new Date(value);
     return d.toLocaleDateString("en-GB", {
@@ -23,15 +27,24 @@ function formatDate(value: string): string {
   }
 }
 
-/** Convert YYYY-MM-DD or ISO string to YYYY-MM-DD for date inputs */
-function toDateInputValue(value: string): string {
-  if (!value) return "";
-  try {
-    const d = new Date(value);
-    return d.toISOString().slice(0, 10);
-  } catch {
-    return value.slice(0, 10) || "";
-  }
+/** Display skill source as "Technical skill" or "Soft skill". */
+function formatSkillSource(source: string): string {
+  const s = (source || "").toLowerCase();
+  if (s === "code" || s === "technical_skill") return "Technical skill";
+  if (s === "non-code" || s === "non-technical" || s === "soft_skill") return "Soft skill";
+  return source || "—";
+}
+
+/** Parse dd-mm-yyyy to yyyy-mm-dd for API. Returns null if invalid. */
+function parseDdMmYyyyToIso(str: string): string | null {
+  const m = str.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  const day = d.padStart(2, "0");
+  const month = mo.padStart(2, "0");
+  const year = y;
+  if (parseInt(month, 10) > 12 || parseInt(day, 10) > 31) return null;
+  return `${year}-${month}-${day}`;
 }
 
 interface ProjectWithSkills extends ChronologicalProject {
@@ -51,6 +64,7 @@ export function DataManagementPage() {
     type: "project_created" | "project_modified" | "skill_date";
     projectSig?: string;
     skillId?: number;
+    value: string; // dd-mm-yyyy display value
   } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -214,21 +228,39 @@ export function DataManagementPage() {
                         {editing?.type === "project_created" &&
                         editing?.projectSig === p.project_signature ? (
                           <input
-                            type="date"
+                            type="text"
                             className="data-management-edit-input"
-                            defaultValue={toDateInputValue(p.created_at)}
+                            value={editing.value}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev ? { ...prev, value: e.target.value } : null
+                              )
+                            }
+                            placeholder="dd-mm-yyyy"
                             autoFocus
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val) {
+                            onBlur={() => {
+                              const iso = parseDdMmYyyyToIso(editing.value);
+                              if (iso) {
                                 handleUpdateProjectDates(
                                   p.project_signature,
-                                  val,
+                                  iso,
                                   p.last_modified
                                 );
                               }
+                              setEditing(null);
                             }}
                             onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const iso = parseDdMmYyyyToIso(editing.value);
+                                if (iso) {
+                                  handleUpdateProjectDates(
+                                    p.project_signature,
+                                    iso,
+                                    p.last_modified
+                                  );
+                                }
+                                setEditing(null);
+                              }
                               if (e.key === "Escape") setEditing(null);
                             }}
                           />
@@ -240,6 +272,7 @@ export function DataManagementPage() {
                               setEditing({
                                 type: "project_created",
                                 projectSig: p.project_signature,
+                                value: formatDate(p.created_at) === "—" ? "" : formatDate(p.created_at),
                               })
                             }
                           >
@@ -251,21 +284,39 @@ export function DataManagementPage() {
                         {editing?.type === "project_modified" &&
                         editing?.projectSig === p.project_signature ? (
                           <input
-                            type="date"
+                            type="text"
                             className="data-management-edit-input"
-                            defaultValue={toDateInputValue(p.last_modified)}
+                            value={editing.value}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev ? { ...prev, value: e.target.value } : null
+                              )
+                            }
+                            placeholder="dd-mm-yyyy"
                             autoFocus
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val) {
+                            onBlur={() => {
+                              const iso = parseDdMmYyyyToIso(editing.value);
+                              if (iso) {
                                 handleUpdateProjectDates(
                                   p.project_signature,
                                   p.created_at,
-                                  val
+                                  iso
                                 );
                               }
+                              setEditing(null);
                             }}
                             onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const iso = parseDdMmYyyyToIso(editing.value);
+                                if (iso) {
+                                  handleUpdateProjectDates(
+                                    p.project_signature,
+                                    p.created_at,
+                                    iso
+                                  );
+                                }
+                                setEditing(null);
+                              }
                               if (e.key === "Escape") setEditing(null);
                             }}
                           />
@@ -277,6 +328,7 @@ export function DataManagementPage() {
                               setEditing({
                                 type: "project_modified",
                                 projectSig: p.project_signature,
+                                value: formatDate(p.last_modified) === "—" ? "" : formatDate(p.last_modified),
                               })
                             }
                           >
@@ -309,22 +361,36 @@ export function DataManagementPage() {
                                   {p.skills.map((s) => (
                                     <tr key={s.id}>
                                       <td>{s.skill}</td>
-                                      <td>{s.source === "non-code" ? "non-technical" : s.source}</td>
+                                      <td>{formatSkillSource(s.source)}</td>
                                       <td>
                                         {editing?.type === "skill_date" &&
                                         editing?.skillId === s.id ? (
                                           <input
-                                            type="date"
+                                            type="text"
                                             className="data-management-edit-input"
-                                            defaultValue={toDateInputValue(s.date)}
+                                            value={editing.value}
+                                            onChange={(e) =>
+                                              setEditing((prev) =>
+                                                prev ? { ...prev, value: e.target.value } : null
+                                              )
+                                            }
+                                            placeholder="dd-mm-yyyy"
                                             autoFocus
-                                            onChange={(e) => {
-                                              const val = e.target.value;
-                                              if (val) {
-                                                handleUpdateSkillDate(s.id, val);
+                                            onBlur={() => {
+                                              const iso = parseDdMmYyyyToIso(editing.value);
+                                              if (iso) {
+                                                handleUpdateSkillDate(s.id, iso);
                                               }
+                                              setEditing(null);
                                             }}
                                             onKeyDown={(e) => {
+                                              if (e.key === "Enter") {
+                                                const iso = parseDdMmYyyyToIso(editing.value);
+                                                if (iso) {
+                                                  handleUpdateSkillDate(s.id, iso);
+                                                }
+                                                setEditing(null);
+                                              }
                                               if (e.key === "Escape") setEditing(null);
                                             }}
                                           />
@@ -336,6 +402,7 @@ export function DataManagementPage() {
                                               setEditing({
                                                 type: "skill_date",
                                                 skillId: s.id,
+                                                value: formatDate(s.date) === "—" ? "" : formatDate(s.date),
                                               })
                                             }
                                           >

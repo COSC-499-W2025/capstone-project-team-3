@@ -266,6 +266,155 @@
   cursor: not-allowed;
 }
 
+/* Trash icon button in the project row */
+.data-management-col-delete {
+  width: 2.5rem;
+  padding: var(--spacing-sm) !important;
+  text-align: center;
+}
+
+.data-management-trash-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.data-management-trash-btn:hover,
+.data-management-trash-btn:focus,
+.data-management-trash-btn:active {
+  background: none !important;
+  outline: none;
+  box-shadow: none;
+}
+
+.data-management-trash-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+  /* Tint PNG to #ff0000 */
+  filter: invert(15%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(100%) contrast(120%);
+  transition: transform 0.1s;
+}
+
+.data-management-trash-btn:hover:not(:disabled) .data-management-trash-icon {
+  transform: scale(1.15);
+}
+
+.data-management-trash-btn:disabled {
+  cursor: not-allowed;
+}
+
+.data-management-trash-btn:disabled .data-management-trash-icon {
+  filter: grayscale(100%) opacity(0.4);
+}
+
+/* Delete confirmation modal */
+.data-management-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.data-management-modal {
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.data-management-modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+.data-management-modal-body {
+  font-size: 0.95rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.5;
+  font-family: var(--font-sans);
+}
+
+.data-management-modal-warning {
+  color: #c53030;
+  font-size: 0.88rem;
+}
+
+.data-management-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.data-management-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.data-management-modal-cancel {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+}
+
+.data-management-modal-cancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.data-management-modal-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.data-management-modal-confirm-danger {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid #c53030;
+  background: #c53030;
+  color: #fff;
+  cursor: pointer;
+}
+
+.data-management-modal-confirm-danger:hover:not(:disabled) {
+  background: #9b2c2c;
+  border-color: #9b2c2c;
+}
+
+.data-management-modal-confirm-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .data-management-add-skill-btn {
   background: none;
   border: 1px dashed #d1d5db;

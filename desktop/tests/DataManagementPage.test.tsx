@@ -5,8 +5,10 @@ import { test, expect, jest, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import * as chronologicalApi from '../src/api/chronological';
+import * as projectsApi from '../src/api/projects';
 
 jest.mock('../src/api/chronological');
+jest.mock('../src/api/projects');
 
 const mockGetChronologicalProjects = chronologicalApi.getChronologicalProjects as jest.MockedFunction<
   typeof chronologicalApi.getChronologicalProjects
@@ -19,6 +21,9 @@ const mockUpdateProjectDates = chronologicalApi.updateProjectDates as jest.Mocke
 >;
 const mockUpdateSkillDate = chronologicalApi.updateSkillDate as jest.MockedFunction<
   typeof chronologicalApi.updateSkillDate
+>;
+const mockDeleteProject = projectsApi.deleteProject as jest.MockedFunction<
+  typeof projectsApi.deleteProject
 >;
 
 const mockProjects: chronologicalApi.ChronologicalProject[] = [
@@ -49,6 +54,11 @@ beforeEach(() => {
   mockGetProjectSkills.mockResolvedValue(mockSkills);
   mockUpdateProjectDates.mockResolvedValue(mockProjects[0]);
   mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '2026-01-20' });
+  mockDeleteProject.mockResolvedValue({
+    status: 'ok',
+    message: "Project 'Project Alpha' deleted successfully",
+    project_signature: 'sig-1',
+  });
 });
 
 test('renders data management page with title', async () => {
@@ -171,4 +181,118 @@ test('Refresh button fetches projects', async () => {
   await user.click(refreshBtn);
 
   expect(mockGetChronologicalProjects).toHaveBeenCalledTimes(2);
+});
+
+test('each project row has a trash/delete button', async () => {
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+  // One delete button per project
+  expect(deleteButtons.length).toBeGreaterThanOrEqual(2);
+});
+
+test('clicking trash button opens first confirmation modal', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const deleteBtn = screen.getByRole('button', { name: /delete project alpha/i });
+  await user.click(deleteBtn);
+
+  expect(await screen.findByText(/Are you sure you want to delete/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Project Alpha/)[0]).toBeInTheDocument();
+});
+
+test('cancel on first confirmation modal dismisses it', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  await user.click(screen.getByRole('button', { name: /delete project alpha/i }));
+  await screen.findByText(/Are you sure you want to delete/i);
+  await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+  expect(screen.queryByText(/Are you sure you want to delete/i)).not.toBeInTheDocument();
+});
+
+test('confirming first step advances to type-confirmation step', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  await user.click(screen.getByRole('button', { name: /delete project alpha/i }));
+  await screen.findByText(/Are you sure you want to delete/i);
+  await user.click(screen.getByRole('button', { name: /yes, delete/i }));
+
+  expect(await screen.findByText(/To confirm, type/i)).toBeInTheDocument();
+});
+
+test('Delete Project button is disabled until correct text is typed', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  await user.click(screen.getByRole('button', { name: /delete project alpha/i }));
+  await user.click(await screen.findByRole('button', { name: /yes, delete/i }));
+  await screen.findByText(/To confirm, type/i);
+
+  const confirmBtn = screen.getByRole('button', { name: 'Delete Project' });
+  expect(confirmBtn).toBeDisabled();
+
+  const input = screen.getByRole('textbox', { name: /type project name to confirm/i });
+  // Type something wrong first — button should stay disabled
+  await user.type(input, 'wrong text');
+  expect(confirmBtn).toBeDisabled();
+
+  // Clear and type the correct confirmation string — button should become enabled
+  await user.clear(input);
+  await user.type(input, 'project alphasig-');
+  expect(confirmBtn).not.toBeDisabled();
+});
+
+test('typing correct confirmation enables and submits deletion', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  await user.click(screen.getByRole('button', { name: /delete project alpha/i }));
+  await user.click(await screen.findByRole('button', { name: /yes, delete/i }));
+  await screen.findByText(/To confirm, type/i);
+
+  const input = screen.getByRole('textbox', { name: /type project name to confirm/i });
+  // project name lowercase + first 4 chars of signature "sig-1" → "sig-"
+  await user.type(input, 'project alphasig-');
+
+  const confirmBtn = screen.getByRole('button', { name: 'Delete Project' });
+  await user.click(confirmBtn);
+
+  expect(mockDeleteProject).toHaveBeenCalledWith('sig-1');
+  // Project Alpha is removed from the list
+  await screen.findByText('Project Beta');
+  expect(screen.queryByText('Project Alpha')).not.toBeInTheDocument();
 });

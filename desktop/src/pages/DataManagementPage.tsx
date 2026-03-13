@@ -7,7 +7,9 @@ import {
   type ChronologicalProject,
   type ChronologicalSkill,
 } from "../api/chronological";
+import { deleteProject } from "../api/projects";
 import "../styles/DataManagementPage.css";
+import trashIcon from "../assets/delete-24.png";
 
 /** Format date as dd-mm-yyyy. Uses string parse for YYYY-MM-DD to avoid timezone shift. */
 function formatDate(value: string): string {
@@ -67,6 +69,12 @@ export function DataManagementPage() {
     value: string; // dd-mm-yyyy display value
   } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    project: ProjectWithSkills;
+    step: "confirm" | "type";
+    typed: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProjects = useCallback(() => {
     setLoading(true);
@@ -152,6 +160,27 @@ export function DataManagementPage() {
     }
   };
 
+  const handleDeleteConfirmed = async () => {
+    if (!deleteModal) return;
+    const { project } = deleteModal;
+    const expectedName = project.name.toLowerCase();
+    const sigPrefix = (project.project_signature || "").slice(0, 4);
+    if (deleteModal.typed.trim().toLowerCase() !== `${expectedName}${sigPrefix}`) {
+      alert("Confirmation did not match. Deletion cancelled.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteProject(project.project_signature);
+      setProjects((prev) => prev.filter((p) => p.project_signature !== project.project_signature));
+      setDeleteModal(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete project");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="data-management-container">
@@ -204,6 +233,7 @@ export function DataManagementPage() {
                   <th>Project Name</th>
                   <th>Created</th>
                   <th>Last Modified</th>
+                  <th className="data-management-col-delete" />
                 </tr>
               </thead>
               <tbody>
@@ -336,10 +366,29 @@ export function DataManagementPage() {
                           </button>
                         )}
                       </td>
+                      <td className="data-management-col-delete">
+                        <button
+                          type="button"
+                          className="data-management-trash-btn"
+                          aria-label={`Delete ${p.name || "project"}`}
+                          title="Delete project"
+                          disabled={saving || deleting}
+                          onClick={() =>
+                            setDeleteModal({ project: p, step: "confirm", typed: "" })
+                          }
+                        >
+                        <img
+                            src={trashIcon}
+                            alt=""
+                            aria-hidden="true"
+                            className="data-management-trash-icon"
+                          />
+                        </button>
+                      </td>
                     </tr>
                     {p.expanded && (
                       <tr key={`${p.project_signature}-skills`} className="data-management-skills-row">
-                        <td colSpan={4} className="data-management-skills-cell">
+                        <td colSpan={5} className="data-management-skills-cell">
                           <div className="data-management-skills">
                             <h3 className="data-management-skills-title">Skills</h3>
                             {p.skills === undefined ? (
@@ -426,6 +475,93 @@ export function DataManagementPage() {
           </div>
         )}
       </div>
+
+      {deleteModal && (
+        <div className="data-management-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+          <div className="data-management-modal">
+            {deleteModal.step === "confirm" ? (
+              <>
+                <h2 id="delete-modal-title" className="data-management-modal-title">Delete Project</h2>
+                <p className="data-management-modal-body">
+                  Are you sure you want to delete{" "}
+                  <strong>{deleteModal.project.name || deleteModal.project.project_signature}</strong>?
+                  <br />
+                  <span className="data-management-modal-warning">
+                    This will permanently remove all insights for this project and cannot be undone.
+                  </span>
+                </p>
+                <div className="data-management-modal-actions">
+                  <button
+                    type="button"
+                    className="data-management-modal-cancel"
+                    onClick={() => setDeleteModal(null)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="data-management-modal-confirm-danger"
+                    onClick={() => setDeleteModal((prev) => prev ? { ...prev, step: "type" } : null)}
+                    disabled={deleting}
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 id="delete-modal-title" className="data-management-modal-title">Confirm Deletion</h2>
+                <p className="data-management-modal-body">
+                  To confirm, type{" "}
+                  <strong>
+                    {deleteModal.project.name.toLowerCase()}
+                    {(deleteModal.project.project_signature || "").slice(0, 4)}
+                  </strong>{" "}
+                  below:
+                </p>
+                <input
+                  type="text"
+                  className="data-management-edit-input data-management-modal-input"
+                  value={deleteModal.typed}
+                  onChange={(e) =>
+                    setDeleteModal((prev) => prev ? { ...prev, typed: e.target.value } : null)
+                  }
+                  placeholder={`${deleteModal.project.name.toLowerCase()}${(deleteModal.project.project_signature || "").slice(0, 4)}`}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleDeleteConfirmed();
+                    if (e.key === "Escape") setDeleteModal(null);
+                  }}
+                  aria-label="Type project name to confirm deletion"
+                />
+                <div className="data-management-modal-actions">
+                  <button
+                    type="button"
+                    className="data-management-modal-cancel"
+                    onClick={() => setDeleteModal(null)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="data-management-modal-confirm-danger"
+                    onClick={handleDeleteConfirmed}
+                    disabled={
+                      deleting ||
+                      deleteModal.typed.trim().toLowerCase() !==
+                        `${deleteModal.project.name.toLowerCase()}${(deleteModal.project.project_signature || "").slice(0, 4)}`
+                    }
+                  >
+                    {deleting ? "Deleting…" : "Delete Project"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

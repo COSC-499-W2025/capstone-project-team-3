@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
-import { runAnalysis } from "../api/analysis";
 import "../styles/UploadPage.css";
 
 /**
@@ -8,11 +8,11 @@ import "../styles/UploadPage.css";
  * Select or drop a ZIP file to auto-upload. Scans projects so they appear in Data Management.
  */
 export function UploadPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -20,27 +20,21 @@ export function UploadPage() {
     setError(null);
     setSuccess(false);
     setUploadedFileName(null);
-    setAnalyzing(false);
 
     try {
-      const { upload_id } = await uploadZipFile(file);
-      setAnalyzing(true);
-      await runAnalysis({
-        upload_id,
-        default_analysis_type: "local",
-        similarity_action: "create_new",
-        scan_only: true,
-      });
+      const result = await uploadZipFile(file);
       setSuccess(true);
       setUploadedFileName(file.name);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      navigate("/analysisrunnerpage", {
+        state: { uploadId: result.upload_id },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setLoading(false);
-      setAnalyzing(false);
     }
   };
 
@@ -100,12 +94,21 @@ export function UploadPage() {
         onClick={handleZoneClick}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && !loading && fileInputRef.current?.click()}
+        onKeyDown={(e) =>
+          e.key === "Enter" && !loading && fileInputRef.current?.click()
+        }
         aria-label="Drop or click to select ZIP file"
       >
         <div className="upload-content">
           <div className="upload-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
@@ -126,9 +129,7 @@ export function UploadPage() {
           ) : (
             <p className="upload-hint">
               {loading
-                ? analyzing
-                  ? "Scanning project…"
-                  : "Uploading…"
+                ? "Uploading…"
                 : "Drop your ZIP file here or click to browse"}
             </p>
           )}

@@ -5,7 +5,7 @@ import "../styles/UploadPage.css";
 
 /**
  * Upload Page - Project upload interface
- * Select or drop a ZIP file to auto-upload. File is stored in app/uploads.
+ * Select or drop a ZIP file to auto-upload. Scans projects so they appear in Data Management.
  */
 export function UploadPage() {
   const navigate = useNavigate();

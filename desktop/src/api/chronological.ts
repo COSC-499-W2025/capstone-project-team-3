@@ -28,7 +28,7 @@ export interface UpdateProjectDatesPayload {
 
 export interface AddSkillPayload {
   skill: string;
-  source: "code" | "non-code";
+  source: "code" | "non-technical";
   date: string;
 }
 
@@ -68,6 +68,32 @@ export async function getChronologicalProject(
   if (!res.ok) {
     if (res.status === 404) throw new Error("Project not found");
     throw new Error("Failed to fetch project: " + res.statusText);
+  }
+  return res.json();
+}
+
+/**
+ * Update the display name of a project.
+ */
+export async function updateProjectName(
+  signature: string,
+  name: string
+): Promise<ChronologicalProject> {
+  const res = await fetch(
+    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}/name`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }
+  );
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Project not found");
+    if (res.status === 400) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || "Invalid request");
+    }
+    throw new Error("Failed to update project name: " + res.statusText);
   }
   return res.json();
 }

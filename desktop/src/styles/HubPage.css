@@ -1,0 +1,136 @@
+/*
+  HubPage.css
+  Uses global classes from index.css:
+    .page-container  → full-height centered layout with padding
+    .flex-column     → column direction
+    .flex-center     → centered flex
+    .frame           → border-radius + box-shadow card base
+    .text-center     → text alignment
+    h1 / h2          → typography (size, font-family, responsive sizing)
+    button           → hover translateY, active reset, focus outline
+*/
+
+/* Container — extends .page-container with background */
+.hub-container {
+  background: var(--color-bg-lighter);
+  gap: 0;
+}
+
+/* Title — only the bits global h1 doesn't cover */
+.hub-title {
+  font-weight: 300;
+  color: var(--color-navy);
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out 0.2s forwards;
+}
+
+/* Card grid */
+.hub-cards {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 960px;
+  width: 100%;
+  opacity: 0;
+  animation: slideUp 0.8s ease-out 0.4s forwards;
+}
+
+/* Card — extends .frame with column layout + card-specific sizing */
+.hub-card {
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 260px;
+  min-height: 220px;
+  padding: var(--spacing-lg) var(--spacing-md);
+  background: var(--color-text-light);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hub-card:hover {
+  background-color: var(--color-bg-light);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: var(--color-blue-medium);
+}
+
+/* Icon */
+.hub-card-icon {
+  color: var(--color-blue-dark);
+}
+
+/* Card title — only overrides beyond global h2 */
+.hub-card-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-navy);
+}
+
+/* Card description */
+.hub-card-description {
+  font-size: 0.85rem;
+  color: var(--color-text-dark);
+  opacity: 0.65;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ---- Responsive (only card-specific overrides) ---- */
+
+@media (max-width: 768px) {
+  .hub-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hub-card {
+    width: 90%;
+    max-width: 360px;
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-card {
+    width: 95%;
+    min-height: 160px;
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .hub-card-description {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 374px) {
+  .hub-card {
+    padding: var(--spacing-sm) var(--spacing-xs);
+    min-height: 140px;
+  }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .hub-container {
+    padding: var(--spacing-sm);
+  }
+
+  .hub-cards {
+    flex-direction: row;
+  }
+
+  .hub-card {
+    width: 200px;
+    min-height: 160px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .hub-card {
+    width: 280px;
+    min-height: 240px;
+  }
+}

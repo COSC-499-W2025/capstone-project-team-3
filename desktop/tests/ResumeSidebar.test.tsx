@@ -65,6 +65,21 @@ describe('ResumeSidebar', () => {
     expect(onTailorNew).toHaveBeenCalledTimes(1);
   });
 
+  test('when hasProjects is false, hides master resume and disables Tailor button with tooltip', () => {
+    const onTailorNew = jest.fn();
+    renderSidebar({ hasProjects: false, onTailorNew });
+
+    expect(screen.queryByText('Master Resume')).toBeNull();
+    expect(screen.getByText('Software Engineer Resume')).toBeDefined();
+    expect(screen.getByText('Data Analyst Resume')).toBeDefined();
+
+    const tailorBtn = screen.getByText('Tailor New Resume');
+    expect(tailorBtn).toBeDisabled();
+    expect(tailorBtn).toHaveAttribute('title', 'You need to upload a project');
+    fireEvent.click(tailorBtn);
+    expect(onTailorNew).not.toHaveBeenCalled();
+  });
+
   test('empty name shows fallback "Resume - {index}"', () => {
     const list: ResumeListItem[] = [
       { id: 1, name: '', is_master: true },

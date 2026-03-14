@@ -31,6 +31,7 @@ class AnalyzeUploadRequest(BaseModel):
     similarity_action: Literal["create_new", "update_existing"] = "create_new"
     cleanup_zip: bool = False
     cleanup_extracted: bool = False
+    scan_only: bool = False
 
 
 class ProjectAnalysisResult(BaseModel):
@@ -126,6 +127,20 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                     effective_analysis_type="local",
                     status="skipped",
                     reason=scan_result.get("reason", "skipped"),
+                )
+            )
+            continue
+
+        if payload.scan_only:
+            results.append(
+                ProjectAnalysisResult(
+                    project_name=project_name,
+                    project_path=project_path,
+                    project_signature=project_signature,
+                    requested_analysis_type=requested_analysis_type,
+                    effective_analysis_type="local",
+                    status="analyzed",
+                    reason=None,
                 )
             )
             continue

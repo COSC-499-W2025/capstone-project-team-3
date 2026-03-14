@@ -21,6 +21,7 @@ from app.utils.generate_resume import (
     add_projects_to_resume,
     remove_project_from_resume,
     list_resumes,
+    snapshot_project_into_resume_rows,
     ResumeServiceError,
     ResumeNotFoundError,
     ResumePersistenceError,
@@ -289,6 +290,80 @@ def test_load_saved_resume(db_connection):
     assert "Machine Learning" in resume["skills"]["Skills"]
     assert resume["projects"][0]["title"] == "Alpha_Project"
     assert "Python" in resume["projects"][0]["skills"]
+
+
+def test_load_saved_resume_shows_snapshot_when_project_deleted(db_connection):
+    """When a RESUME_PROJECT row has snapshot data but no PROJECT row (deleted project), load_saved_resume still shows it."""
+    conn = db_connection
+    cursor = conn.cursor()
+    # Add a second "project" that exists only as snapshot (no PROJECT row) - simulates a deleted project
+    cursor.execute("""
+        INSERT INTO RESUME_PROJECT (resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order)
+        VALUES (1, 'ghost', 'Ghost Project', '2024-01-01', '2024-06-01', ?, ?, 2)
+    """, (json.dumps(["Go"]), json.dumps(["Ghost bullet"])))
+    conn.commit()
+    resume = load_saved_resume(1)
+    assert len(resume["projects"]) == 2
+    assert resume["projects"][0]["title"] == "Alpha_Project"
+    ghost = resume["projects"][1]
+    assert ghost["title"] == "Ghost Project"
+    assert ghost["project_id"] == "ghost"
+    assert "Go" in ghost["skills"]
+    assert "Ghost bullet" in ghost["bullets"]
+    # Resume-level skills may come from RESUME_SKILLS (edited); ghost snapshot is in the project entry only
+
+
+def test_snapshot_project_into_resume_rows_fills_columns(db_connection):
+    """snapshot_project_into_resume_rows copies project data into RESUME_PROJECT rows for that project_id."""
+    conn = db_connection
+    cursor = conn.cursor()
+    # Add a resume and a RESUME_PROJECT row with no snapshot (link only)
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (3, 'Snapshot Test')")
+    cursor.execute("""
+        INSERT INTO RESUME_PROJECT (resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order)
+        VALUES (3, 'p1', NULL, NULL, NULL, NULL, NULL, 1)
+    """)
+    conn.commit()
+    snapshot_project_into_resume_rows(cursor, "p1")
+    conn.commit()
+    cursor.execute(
+        "SELECT project_name, start_date, end_date, skills, bullets FROM RESUME_PROJECT WHERE resume_id = 3 AND project_id = 'p1'"
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "Alpha_Project"
+    assert row[1] == "2024-01-01"
+    assert row[2] == "2024-06-01"
+    assert json.loads(row[3]) == ["Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill"]
+    assert json.loads(row[4]) == ["Built backend services", "Designed REST APIs"]
+
+
+def test_snapshot_project_into_resume_rows_preserves_user_edits(db_connection):
+    """When RESUME_PROJECT already has user edits (saved tailored resume), snapshot does not overwrite them."""
+    conn = db_connection
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (4, 'Edited Resume')")
+    # User edited this project on the tailored resume: custom name, skills, bullets; leave dates NULL
+    cursor.execute("""
+        INSERT INTO RESUME_PROJECT (resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order)
+        VALUES (4, 'p1', 'My Custom Project Title', NULL, NULL, ?, ?, 1)
+    """, (json.dumps(["User", "Edited", "Skills"]), json.dumps(["My edited bullet"])))
+    conn.commit()
+    snapshot_project_into_resume_rows(cursor, "p1")
+    conn.commit()
+    cursor.execute(
+        "SELECT project_name, start_date, end_date, skills, bullets FROM RESUME_PROJECT WHERE resume_id = 4 AND project_id = 'p1'"
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    # User edits preserved
+    assert row[0] == "My Custom Project Title"
+    assert json.loads(row[3]) == ["User", "Edited", "Skills"]
+    assert json.loads(row[4]) == ["My edited bullet"]
+    # Only NULL columns filled from snapshot
+    assert row[1] == "2024-01-01"
+    assert row[2] == "2024-06-01"
+
 
 def test_save_resume_edits_update(db_connection):
     """Test that save_resume_edits updates an existing RESUME_PROJECT row."""

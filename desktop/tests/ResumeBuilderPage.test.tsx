@@ -30,6 +30,10 @@ jest.mock('../src/api/resume', () => ({
   updateResume: jest.fn(),
 }));
 
+jest.mock('../src/api/projects', () => ({
+  getProjects: jest.fn().mockResolvedValue([{ id: '1', name: 'Test Project' }]),
+}));
+
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
   ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, onEdit, sidebarOpen, onToggleSidebar }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];

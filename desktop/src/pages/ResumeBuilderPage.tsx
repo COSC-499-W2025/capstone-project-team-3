@@ -17,6 +17,7 @@ import {
   updateResume,
   type ResumeListItem,
 } from "../api/resume";
+import { getProjects } from "../api/projects";
 
 /** Convert YYYY-MM to YYYY-MM-01 for backend fromisoformat. */
 function toISOStartOfMonth(ym: string): string {
@@ -40,6 +41,7 @@ export function ResumeBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedSections, setEditedSections] = useState<Set<string>>(new Set());
+  const [hasProjects, setHasProjects] = useState(true); // assume true until we fetch
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -55,9 +57,33 @@ export function ResumeBuilderPage() {
   const isMasterResume = currentResume?.is_master || currentResume?.id === 1;
   const showSaveButton = !isMasterResume;
 
+  // When there are no projects, sidebar hides master resume; visible list is only non-master
+  const visibleResumeList = hasProjects
+    ? resumeList
+    : resumeList.filter((r) => !(r.is_master || r.id === 1));
+  const showEmptyState = visibleResumeList.length === 0;
+
+  // When master is hidden (no projects), default selection to the first resume in the sidebar
+  useEffect(() => {
+    if (hasProjects || visibleResumeList.length === 0) return;
+    const selected = resumeList[activeIndex];
+    const isSelectedMaster = selected?.is_master || selected?.id === 1;
+    if (isSelectedMaster) {
+      const firstVisibleIndex = resumeList.findIndex((r) => !(r.is_master || r.id === 1));
+      if (firstVisibleIndex >= 0) setActiveIndex(firstVisibleIndex);
+    }
+  }, [hasProjects, visibleResumeList.length, resumeList, activeIndex]);
+
   // Load sidebar items
   useEffect(() => {
     getResumes().then(setBaseResumeList);
+  }, []);
+
+  // Load project count to show/hide master resume and enable/disable Tailor button
+  useEffect(() => {
+    getProjects()
+      .then((projects) => setHasProjects(projects.length > 0))
+      .catch(() => setHasProjects(false));
   }, []);
 
   // Check for preview mode (project_ids in URL)
@@ -398,18 +424,28 @@ export function ResumeBuilderPage() {
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
             onEdit={handleEditResume}
+            hasProjects={hasProjects}
           />
         </div>
         <div className="resume-builder__main">
           <div className="container">
             <div className="card">
-              {activeContent && (
-                <ResumePreview
-                  resume={activeContent}
-                  isEditing={isEditing}
-                  onSectionChange={handleSectionChange}
-                  onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
-                />
+              {showEmptyState ? (
+                <div className="resume-builder__empty-state">
+                  <p className="resume-builder__empty-state-title">No projects to include on resume</p>
+                  <p className="resume-builder__empty-state-message">
+                    Upload a project to get started, then tailor a new resume from the sidebar.
+                  </p>
+                </div>
+              ) : (
+                activeContent && (
+                  <ResumePreview
+                    resume={activeContent}
+                    isEditing={isEditing}
+                    onSectionChange={handleSectionChange}
+                    onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
+                  />
+                )
               )}
             </div>
           </div>

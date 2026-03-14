@@ -515,4 +515,80 @@ describe('ProjectsSection', () => {
 
     expect(screen.queryByLabelText('Drag to reorder project')).toBeNull();
   });
+
+  test('in edit mode with onAddProjectClick shows Add a project button', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onAddProjectClick = jest.fn();
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        showHeading={true}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onAddProjectClick={onAddProjectClick}
+        projectStartIndex={0}
+      />
+    );
+
+    const addButton = screen.getByRole('button', { name: 'Add a project' });
+    expect(addButton).toBeDefined();
+    fireEvent.click(addButton);
+    expect(onAddProjectClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('in edit mode without onAddProjectClick does not show Add a project button', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        showHeading={true}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Add a project' })).toBeNull();
+  });
+
+  test('when showHeading is false does not show Add a project button even with onAddProjectClick', () => {
+    const projects: Project[] = [
+      {
+        title: 'Test Project',
+        dates: 'Jan 2024 – Mar 2024',
+        skills: ['Python'],
+        bullets: ['Bullet']
+      }
+    ];
+    const onAddProjectClick = jest.fn();
+
+    render(
+      <ProjectsSection
+        projects={projects}
+        showHeading={false}
+        isEditing={true}
+        onProjectChange={jest.fn()}
+        onAddProjectClick={onAddProjectClick}
+        projectStartIndex={0}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Add a project' })).toBeNull();
+  });
 });

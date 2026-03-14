@@ -29,6 +29,7 @@ class AnalyzeUploadRequest(BaseModel):
     default_analysis_type: Literal["local", "ai"] = "local"
     project_analysis_types: Dict[str, Literal["local", "ai"]] = Field(default_factory=dict)
     similarity_action: Literal["create_new", "update_existing"] = "create_new"
+    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]] = Field(default_factory=dict)
     cleanup_zip: bool = False
     cleanup_extracted: bool = False
     scan_only: bool = False
@@ -80,6 +81,19 @@ def _resolve_requested_analysis_type(
     return default_analysis_type
 
 
+def _resolve_requested_similarity_action(
+    project_path: str,
+    default_similarity_action: Literal["create_new", "update_existing"],
+    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]],
+) -> Literal["create_new", "update_existing"]:
+    project_name = Path(project_path).name
+    if project_name in project_similarity_actions:
+        return project_similarity_actions[project_name]
+    if project_path in project_similarity_actions:
+        return project_similarity_actions[project_path]
+    return default_similarity_action
+
+
 @router.post("/analysis/run")
 def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
     upload_context = _load_projects_from_upload(payload.upload_id)
@@ -90,7 +104,6 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
     api_key = os.getenv("GEMINI_API_KEY")
     llm_client = GeminiLLMClient(api_key=api_key) if api_available and api_key else None
 
-    similarity_decision = payload.similarity_action == "update_existing"
     results: List[ProjectAnalysisResult] = []
 
     for project_path in project_paths:
@@ -100,6 +113,12 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
             default_analysis_type=payload.default_analysis_type,
             project_analysis_types=payload.project_analysis_types,
         )
+        requested_similarity_action = _resolve_requested_similarity_action(
+            project_path=project_path,
+            default_similarity_action=payload.similarity_action,
+            project_similarity_actions=payload.project_similarity_actions,
+        )
+        similarity_decision = requested_similarity_action == "update_existing"
 
         try:
             scan_result = run_scan_flow(project_path, similarity_decision=similarity_decision)

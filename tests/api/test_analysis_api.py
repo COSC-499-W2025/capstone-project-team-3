@@ -111,6 +111,7 @@ def test_run_analysis_non_interactive_flow(
         "default_analysis_type": "ai",
         "project_analysis_types": {"proj2": "local"},
         "similarity_action": "create_new",
+        "project_similarity_actions": {"proj2": "update_existing"},
     }
 
     response = client.post("/api/analysis/run", json=payload)
@@ -134,5 +135,6 @@ def test_run_analysis_non_interactive_flow(
     assert analyzed["requested_analysis_type"] == "local"
     assert analyzed["effective_analysis_type"] == "local"
 
-    for call in mock_run_scan.call_args_list:
-        assert call.kwargs.get("similarity_decision") is False
+    first_call, second_call = mock_run_scan.call_args_list
+    assert first_call.kwargs.get("similarity_decision") is False
+    assert second_call.kwargs.get("similarity_decision") is True

@@ -157,7 +157,7 @@ def clear_project_override(signature: str):
         raise HTTPException(status_code=404, detail="Project not found")
 
 
-@router.delete("/projects/{signature}", response_model=Dict[str, Any])
+@router.delete("/projects/{signature:path}", response_model=Dict[str, Any])
 def delete_project(signature: str):
     """
     Delete all insights for a project by its signature.

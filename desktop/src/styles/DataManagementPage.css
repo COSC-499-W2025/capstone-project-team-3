@@ -83,7 +83,6 @@
   background: #d4e2ea;
   color: #34495e;
   cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .data-management-refresh:hover:not(:disabled) {
@@ -118,30 +117,26 @@
 }
 
 .data-management-table thead tr {
-  background: #d4e2ea;
-  border-bottom: 1px solid #aecad6;
+  background: #f3f4f6;
+  border-bottom: 1px solid #d1d5db;
 }
 
 .data-management-table th {
   padding: var(--spacing-sm) var(--spacing-md);
   text-align: left;
   font-weight: 700;
-  color: #34495e;
+  color: #374151;
   font-size: 0.95rem;
   font-family: var(--font-sans);
 }
 
 .data-management-table tbody tr {
   border-bottom: 1px solid #e9ecef;
-  transition: background-color var(--transition-fast);
 }
 
-.data-management-table tbody tr:hover {
-  background: #e8f1f5;
-}
-
-.data-management-table tbody tr:hover td {
-  color: #2c3e50;
+.data-management-project-row:hover,
+.data-management-project-row:hover td {
+  background: transparent !important;
 }
 
 .data-management-table td {
@@ -149,5 +144,315 @@
   font-size: 0.95rem;
   color: #2c3e50;
   font-family: var(--font-sans);
-  transition: color var(--transition-fast);
+}
+
+.data-management-col-expand {
+  width: 2.5rem;
+  padding: var(--spacing-sm) !important;
+}
+
+.data-management-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.data-management-expand-btn:hover {
+  color: #374151;
+}
+
+.data-management-editable {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.data-management-editable:hover {
+  text-decoration: underline;
+  color: inherit;
+  background: transparent;
+}
+
+.data-management-edit-input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-sm);
+  min-width: 120px;
+}
+
+.data-management-skills-row:hover {
+  background: transparent;
+}
+
+.data-management-skills-row:hover td {
+  color: inherit;
+}
+
+.data-management-skills-cell {
+  background: #f8f9fa;
+  padding: var(--spacing-md) !important;
+  vertical-align: top;
+}
+
+.data-management-skills {
+  padding-left: 2rem;
+}
+
+.data-management-skills-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 var(--spacing-sm) 0;
+  font-family: var(--font-sans);
+}
+
+.data-management-skills-empty {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.data-management-skills-table {
+  width: 100%;
+  max-width: 500px;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-sm);
+}
+
+.data-management-skills-table th {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+}
+
+.data-management-skills-table td {
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+}
+
+.data-management-skills-table tbody tr:hover {
+  background: transparent;
+}
+
+.data-management-delete-btn {
+  background: none;
+  border: none;
+  color: #c53030;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem;
+}
+
+.data-management-delete-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.data-management-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Trash icon button in the project row */
+.data-management-col-delete {
+  width: 2.5rem;
+  padding: var(--spacing-sm) !important;
+  text-align: center;
+}
+
+.data-management-trash-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.data-management-trash-btn:hover,
+.data-management-trash-btn:focus,
+.data-management-trash-btn:active {
+  background: none !important;
+  outline: none;
+  box-shadow: none;
+}
+
+.data-management-trash-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+  /* Tint PNG to #ff0000 */
+  filter: invert(15%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(100%) contrast(120%);
+  transition: transform 0.1s;
+}
+
+.data-management-trash-btn:hover:not(:disabled) .data-management-trash-icon {
+  transform: scale(1.15);
+}
+
+.data-management-trash-btn:disabled {
+  cursor: not-allowed;
+}
+
+.data-management-trash-btn:disabled .data-management-trash-icon {
+  filter: grayscale(100%) opacity(0.4);
+}
+
+/* Delete confirmation modal */
+.data-management-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.data-management-modal {
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.data-management-modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+.data-management-modal-body {
+  font-size: 0.95rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.5;
+  font-family: var(--font-sans);
+}
+
+.data-management-modal-warning {
+  color: #c53030;
+  font-size: 0.88rem;
+}
+
+.data-management-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.data-management-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.data-management-modal-cancel {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+}
+
+.data-management-modal-cancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.data-management-modal-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.data-management-modal-confirm-danger {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid #c53030;
+  background: #c53030;
+  color: #fff;
+  cursor: pointer;
+}
+
+.data-management-modal-confirm-danger:hover:not(:disabled) {
+  background: #9b2c2c;
+  border-color: #9b2c2c;
+}
+
+.data-management-modal-confirm-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.data-management-add-skill-btn {
+  background: none;
+  border: 1px dashed #d1d5db;
+  color: #6b7280;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+}
+
+.data-management-add-skill-btn:hover {
+  background: #f1f3f4;
+  border-color: #9ca3af;
+}
+
+.data-management-add-skill {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-top: var(--spacing-sm);
+}
+
+.data-management-add-skill .data-management-edit-input {
+  min-width: 100px;
+}
+
+.data-management-cancel-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.data-management-cancel-btn:hover {
+  color: #2c3e50;
+  text-decoration: underline;
 }

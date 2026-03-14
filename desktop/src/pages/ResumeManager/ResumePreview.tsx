@@ -47,12 +47,15 @@ export function ResumePreview({
   isEditing = false,
   onSectionChange,
   onProjectDelete,
+  onAddProjectClick,
 }: {
   resume: Resume;
   isEditing?: boolean;
   onSectionChange?: OnSectionChange;
   /** When provided, an X button is shown per project in edit mode to remove the project from the resume (saved resumes only). */
   onProjectDelete?: (projectId: string) => void;
+  /** When provided and in edit mode, "Add a project" is shown in the Projects section header (saved resumes only). */
+  onAddProjectClick?: () => void;
 }) {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [sectionHeights, setSectionHeights] = useState<number[]>([]);
@@ -208,6 +211,7 @@ export function ResumePreview({
                             isEditing={isEditing}
                             onProjectChange={handleProjectChange}
                             onProjectDelete={onProjectDelete}
+                            onAddProjectClick={sectionIndices.includes(3) ? onAddProjectClick : undefined}
                             projectStartIndex={projectIndices[0]}
                             enableSortable
                           />
@@ -262,6 +266,7 @@ export function ResumePreview({
                         isEditing={isEditing}
                         onProjectChange={handleProjectChange}
                         onProjectDelete={onProjectDelete}
+                        onAddProjectClick={sectionIndices.includes(3) ? onAddProjectClick : undefined}
                         projectStartIndex={projectIndices[0]}
                       />
                     )}

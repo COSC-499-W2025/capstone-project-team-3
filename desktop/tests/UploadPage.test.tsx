@@ -73,7 +73,7 @@ describe("UploadPage", () => {
 
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    expect(await screen.findByText(/Upload ID: abc-123/i)).toBeInTheDocument();
+    expect(await screen.findByText("project.zip")).toBeInTheDocument();
     expect(await screen.findByText("proj-a")).toBeInTheDocument();
 
     const similaritySelect = screen.getByLabelText(
@@ -117,5 +117,44 @@ describe("UploadPage", () => {
     });
 
     expect((screen.getByLabelText(/Default Analysis Type/i) as HTMLSelectElement).value).toBe("ai");
+  });
+
+  test("successful run clears upload form state to avoid stale upload_id reruns", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          analyzed_projects: 1,
+          skipped_projects: 0,
+          failed_projects: 0,
+        }),
+      } as Response);
+
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
+
+    const file = new File(["content"], "project.zip", { type: "application/zip" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await screen.findByText("proj-a");
+    fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
+
+    expect(await screen.findByText(/Analysis complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/No file selected/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Upload a ZIP to load projects for configuration/i),
+    ).toBeInTheDocument();
   });
 });

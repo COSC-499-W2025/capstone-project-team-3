@@ -184,10 +184,11 @@
   line-height: 1.4;
 }
 
-.upload-label-with-help {
+.upload-label-row {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 5px;
 }
 
 .upload-help-wrap {
@@ -197,6 +198,7 @@
 }
 
 .upload-help-trigger {
+  padding: 0;
   width: 16px;
   height: 16px;
   border-radius: 999px;
@@ -222,15 +224,15 @@
   left: 50%;
   top: calc(100% + 8px);
   transform: translateX(-50%);
-  width: 320px;
-  max-width: min(320px, 80vw);
+  width: 300px;
+  max-width: min(300px, 80vw);
   padding: 9px 10px;
   border-radius: 8px;
   background: #1f2937;
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.45;
   text-transform: none;
   letter-spacing: normal;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);

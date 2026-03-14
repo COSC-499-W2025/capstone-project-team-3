@@ -255,6 +255,17 @@ export function UploadPage() {
         skipped_projects: data.skipped_projects ?? 0,
         failed_projects: data.failed_projects ?? 0,
       });
+      setUploadId(null);
+      setUploadedFileName(null);
+      setProjects([]);
+      setProjectSimilarityActions({});
+      setDefaultMode("local");
+      setSimilarityAction("create_new");
+      setLoadError(null);
+      setAiConsentAccepted(false);
+      setShowAiConsentModal(false);
+      setPendingAiSelection(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
@@ -283,9 +294,6 @@ export function UploadPage() {
             <p className="upload-card-value">
               {uploadedFileName ? uploadedFileName : "No file selected"}
             </p>
-            {hasUpload && uploadId && (
-              <p className="upload-card-meta">Upload ID: {uploadId}</p>
-            )}
 
             <div className="upload-card-actions">
               <button
@@ -370,23 +378,23 @@ export function UploadPage() {
               </div>
 
               <div className="ar-field">
-                <label className="ar-label upload-label-with-help" htmlFor="similarityAction">
-                  <span>Similarity Action</span>
+                <div className="upload-label-row">
+                  <label className="ar-label" htmlFor="similarityAction">Similarity Action</label>
                   <span className="upload-help-wrap">
-                    <span
+                    <button
+                      type="button"
                       className="upload-help-trigger"
-                      tabIndex={0}
                       aria-label="Similarity action help"
                     >
                       ?
-                    </span>
+                    </button>
                     <span className="upload-help-tooltip" role="tooltip">
-                      Create new keeps both projects as separate entries. Update existing
-                      checks similarity and, when score is 70% or higher, can update/override
-                      the existing matching project instead of creating a duplicate.
+                      Update existing: if similarity is 70%+, update the matching project.
+                      Create new: keep separate entries when similar. If an exact same project
+                      (100% match) was already analyzed before, it is skipped instead of added again.
                     </span>
                   </span>
-                </label>
+                </div>
                 <select
                   id="similarityAction"
                   className="ar-select"
@@ -431,13 +439,12 @@ export function UploadPage() {
                     <th>Project Name</th>
                     <th>Analysis Type</th>
                     <th>Similarity Action</th>
-                    <th>Path</th>
                   </tr>
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="ar-table-empty">No projects found.</td>
+                      <td colSpan={3} className="ar-table-empty">No projects found.</td>
                     </tr>
                   ) : (
                     projects.map((project, index) => (
@@ -472,7 +479,6 @@ export function UploadPage() {
                             <option value="update_existing">Update existing</option>
                           </select>
                         </td>
-                        <td className="ar-table-path">{project.path}</td>
                       </tr>
                     ))
                   )}

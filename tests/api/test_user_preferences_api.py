@@ -54,6 +54,7 @@ def test_get_user_preferences_success(mock_get_conn):
         "Jane Smith",
         "jane@example.com",
         "janesmith",
+        "https://linkedin.com/in/janesmith",
         "Master's",
         "Finance",
         "Data Scientist",
@@ -67,6 +68,7 @@ def test_get_user_preferences_success(mock_get_conn):
     assert data["name"] == "Jane Smith"
     assert data["email"] == "jane@example.com"
     assert data["github_user"] == "janesmith"
+    assert data["linkden"] == "https://linkedin.com/in/janesmith"
     assert data["education"] == "Master's"
     assert data["industry"] == "Finance"
     assert data["job_title"] == "Data Scientist"

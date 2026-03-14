@@ -14,6 +14,7 @@ def create_user_pref_table(conn: sqlite3.Connection):
         name TEXT,
         email TEXT,
         github_user TEXT,
+        linkden TEXT,
         education TEXT,
         industry TEXT,
         job_title TEXT,
@@ -150,12 +151,13 @@ class FakeStore:
     def get_latest_preferences(self):
         return self.data[-1] if self.data else None
 
-    def save_preferences(self,user_id, name, email, github_user, education, industry, job_title, education_details):
+    def save_preferences(self, user_id, name, email, github_user, linkden=None, education=None, industry=None, job_title=None, education_details=None):
         self.data.append({
             user_id: 1,
             "name": name,
             "email": email,
             "github_user": github_user,
+            "linkden": linkden,
             "education": education,
             "industry": industry,
             "job_title": job_title,

@@ -43,6 +43,7 @@ class UserPreferenceRequest(BaseModel):
     name: str
     email: str
     github_user: str
+    linkden: Optional[str] = None
     education: str
     industry: str
     job_title: str
@@ -56,7 +57,7 @@ def get_user_preferences():
     
     cursor.execute(
         """
-        SELECT name, email, github_user, education, industry, job_title, education_details
+        SELECT name, email, github_user, linkden, education, industry, job_title, education_details
         FROM USER_PREFERENCES
         ORDER BY updated_at DESC
         LIMIT 1
@@ -72,10 +73,11 @@ def get_user_preferences():
         "name": row[0],
         "email": row[1],
         "github_user": row[2],
-        "education": row[3],
-        "industry": row[4],
-        "job_title": row[5],
-        "education_details": row[6],
+        "linkden": row[3],
+        "education": row[4],
+        "industry": row[5],
+        "job_title": row[6],
+        "education_details": row[7],
     }
 
 @router.post("/user-preferences")
@@ -92,19 +94,20 @@ def save_user_preferences(request: UserPreferenceRequest):
     # UPSERT: Insert if no row exists (user_id=1), otherwise UPDATE existing row
     cursor.execute(
         """
-        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title, education_details, updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ? , CURRENT_TIMESTAMP)
+        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, linkden, education, industry, job_title, education_details, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(user_id) DO UPDATE SET
             name = excluded.name,
             email = excluded.email,
             github_user = excluded.github_user,
+            linkden = excluded.linkden,
             education = excluded.education,
             industry = excluded.industry,
             job_title = excluded.job_title,
             education_details = excluded.education_details,
             updated_at = CURRENT_TIMESTAMP
         """,
-        (request.name, request.email, request.github_user, request.education, request.industry, request.job_title, education_details_json)
+        (request.name, request.email, request.github_user, request.linkden, request.education, request.industry, request.job_title, education_details_json)
     )
     conn.commit()
     conn.close()

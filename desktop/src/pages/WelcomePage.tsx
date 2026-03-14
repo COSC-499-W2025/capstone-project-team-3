@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../config/api";
+import { getConsentStatus } from "../api/consent";
 import "../styles/WelcomePage.css";
+import "../styles/Notification.css";
 
 /**
  * Welcome/Landing Page - First page users see
  */
 export function WelcomePage() {
   const navigate = useNavigate();
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
 
   // On mount, check if the user has already given consent.
   // If so, treat them as a returning user and, after a short
@@ -17,20 +20,19 @@ export function WelcomePage() {
 
     const checkConsentAndMaybeRedirect = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/privacy-consent`);
-        if (!res.ok) return;
+        const { has_consent } = await getConsentStatus();
+        if (!isCancelled) setHasConsent(has_consent);
+        if (!has_consent) return;
 
-        const data = await res.json();
-        if (!data.has_consent) return; // first-time user, stay on home
-
-        // Returning user – after ~2s of the home animation, go to hub
+        // Returning user – after ~3s of the home animation, go to hub
         setTimeout(() => {
-          if (!isCancelled) {
-            navigate("/hubpage");
-          }
+          if (!isCancelled) navigate("/hubpage");
         }, 3000);
-      } catch {
-        // On error, do nothing – user can proceed manually
+      } catch (err) {
+        if (!isCancelled) {
+          const message = err instanceof Error ? err.message : "Something went wrong. You can continue by clicking the screen.";
+          setConsentError(message);
+        }
       }
     };
 
@@ -42,11 +44,35 @@ export function WelcomePage() {
   }, [navigate]);
 
   const handleClick = () => {
-    navigate("/consentpage");
+    if (hasConsent === true) {
+      navigate("/hubpage");
+    } else {
+      navigate("/consentpage");
+    }
   };
 
   return (
     <div className="welcome-container" onClick={handleClick}>
+      {consentError && (
+        <div
+          className="notification error"
+          role="alert"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <pre>{consentError}</pre>
+          <button
+            type="button"
+            className="welcome-toast-dismiss"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConsentError(null);
+            }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="welcome-frame welcome-frame-1">
         <div className="welcome-frame welcome-frame-2">
           <div className="welcome-frame welcome-frame-3">

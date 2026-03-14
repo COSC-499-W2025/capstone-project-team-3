@@ -24,12 +24,16 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('renders welcome page with title', () => {
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
+test('renders welcome page with title', async () => {
+  await act(async () => {
+    render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
   const title = screen.getByText(/Welcome to your Big Picture/i);
   expect(title).toBeDefined();
@@ -41,13 +45,12 @@ test('returning user: auto-redirects to hub after delay and click goes to hub', 
     json: async () => ({ has_consent: true }),
   });
 
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
-
   await act(async () => {
+    render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -66,11 +69,15 @@ test('first-time user: does not auto-redirect to hub and click goes to consent p
     json: async () => ({ has_consent: false }),
   });
 
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
+  await act(async () => {
+    render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
   await jest.runAllTimersAsync();
   expect(mockNavigate).not.toHaveBeenCalled();
@@ -80,16 +87,22 @@ test('first-time user: does not auto-redirect to hub and click goes to consent p
   expect(mockNavigate).toHaveBeenCalledWith('/consentpage');
 });
 
-test('renders nested frame structure', () => {
+test('renders nested frame structure', async () => {
   mockFetch.mockResolvedValue({ ok: false });
 
-  const { container } = render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
+  let container: HTMLElement;
+  await act(async () => {
+    const result = render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
+    container = result.container;
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
-  const frames = container.querySelectorAll('.welcome-frame');
+  const frames = container!.querySelectorAll('.welcome-frame');
   expect(frames.length).toBe(4);
 });
 

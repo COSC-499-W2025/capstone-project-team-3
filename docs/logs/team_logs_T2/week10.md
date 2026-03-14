@@ -16,15 +16,6 @@
 - **Features planned for this milestone:**
   - Desktop frontend (Electron + React) integrated with Python backend (Milestone 3).
 - **Associated project board tasks for this week:**
-  - Display projects list on Data Management page – #782
-  - Connect analysis after upload so projects appear in Data Management – #783
-  - Add analysis API client for desktop – #784
-  - Add inline editing for project and skill dates in Data Management – #802
-  - Fix skill source to only be "Technical skill" or "Soft skill" – #803
-  - Fix chronological API to support non-technical skill source – #804
-  - Add chronological skill view – #805
-  - Add date validation for skills ensuring correct range – #824
-  - Add date format validation for project and skills – #825
 
 ---
 
@@ -57,26 +48,28 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 ## Completed Tasks
 
 
-| Task/Issue ID                                    | Title                                                                                                                                                         | Username       |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| [#782, #783, #784]                               | Display projects list for Data Management UI, Connect Upload to trigger scanning (PR #781): projects list, analysis API client, upload→analysis flow           | @6s-1          |
-| [#802, #803, #804, #805]                         | Project/skill chronological editing and display (PR #801): inline editing for dates, skill source display, chronological API support, skill view                | @6s-1          |
-| [#821, #824, #825]                               | Date validation for Data Management UI (PR #821): dd-mm-yyyy format, modified>created, skill date range, timestamp normalization, error messages             | @6s-1          |
+| Task/Issue ID                        | Title                                                                                                                                                                                                                                                                                                                                                                                                      | Username       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| [#628, #626, #761, #762, #765, #766] | End-to-end upload functionality for zipped files (PR #760): connect upload to backend, Remove button, drag-and-drop, UI; Base UI and API module for Data Management (PR #763)                                                                                                                                                                                                                              | @6s-1          |
+| [#735, #769, #770]                   | ConsentPage Testing for UI (PR #764): 20+ unit tests for consent management, positive and negative testing for revoke functionality, manual testing of consent manager and revoke system                                                                                                                                                                                                                   | @PaintedW0lf   |
+| [#771, #773]                         | Desktop score-override API integration, Functional Score Override management page in desktop app                                                                                                                                                                                                                                                                                                           | @kjassani      |
+| [#767, #777]                         | Migrate full portfolio dashboard to desktop React frontend (PR #767): charts, inline editing, HTML export, thumbnail fix, canvas export fix, 22 tests; Add user profile card to portfolio (PR #777): UserProfileCard component, extend load_user() API, CSS, 10 tests                                                                                                                                      | @KarimKhalil33 |
+| [#786, #726, #810, #816, #818]       | Handle no projects for resume (PR #787): no-projects UI, snapshot-on-delete, DB migration; Add project to existing resume (PR #806): add-project modal, tests; Navigation for returning/first-time user (PR #811): consent-based redirect, error notification, WelcomePage tests; Navigation bar and ResumeBuilder/ProjectSelection (PR #819): collapsible nav, Hub home link, back button, responsiveness | @dabby04       |
 
 
 ## In Progress Tasks
 
 
-| Task/Issue ID                                                                | Title                                                                                                                     | Username     |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| —                                                                           | *Add in-progress tasks here*                                                                                              | —            |
+| Task/Issue ID | Title                                                             | Username |
+| ------------- | ----------------------------------------------------------------- | -------- |
+| —             | Data Management UI – projects list, edit dates, skills management | @6s-1    |
 
 
 ---
 
 ## Meeting Notes
 
-*Add meeting notes for Week 10*
+Discussed plans for Milestone 3 and what to wrap up for Peer testing. All notes for this meeting reflected in this [document](https://docs.google.com/document/d/1whjxm8Dyh-01K47Lic2t34O8g8vnQ7Zb3WwkUFfi3y4)
 
 ---
 
@@ -85,19 +78,23 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 - **Framework used:** pytest (backend); Jest/React Testing Library (desktop frontend)
 - **Test run date:** Mar 2026
 - **Summary:**  
-  - Data Management page tests: projects list, expand skills, refresh, delete flow
-  - Date validation tests: invalid format, last modified before created, skill outside range, same-day boundary (timestamp vs date-only)
+  - Upload page tests: auto-upload, Remove button, loading guards, ZIP validation
+  - Data Management page tests
+  - ConsentPage tests: 20+ unit tests covering positive and negative flows, consent/revoke UI, navigation, and error handling
+  - Portfolio page tests: 32 Jest/RTL tests (loading/error states, project cards, project selection, charts, analysis section, user profile card)
   - All test suites passing
 
 ---
 
 ## Reflection
 
-*Add team reflection for Week 10*
+We discussed as a team to wrap up major elements for Milestone 3 going into next week. This way, we would be able to get major feedback from classmates on what elements could be improved.
 
 ---
 
 ## Plan for Next Cycle
 
-- Continue Data Management and desktop integration work
+- Updates to UI where needed
+- Implementation of some nice-to-haves
 - Support team with code reviews and testing
+

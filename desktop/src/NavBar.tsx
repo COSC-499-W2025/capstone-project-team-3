@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { mainNavItems } from "./navigation";
+import { mainNavItems, footerNavItems } from "./navigation";
 import "./styles/NavBar.css";
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -49,6 +49,13 @@ const navIcons: Record<string, React.ReactNode> = {
   ),
 };
 
+const settingsIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -70,9 +77,7 @@ export function NavBar() {
       </div>
 
       <nav className="app-sidebar__links">
-        {mainNavItems
-          .filter(({ path }) => path !== "/userpreferencepage")
-          .map(({ path, label }) => (
+        {mainNavItems.map(({ path, label }) => (
             <NavLink
               key={path}
               to={path}
@@ -89,15 +94,18 @@ export function NavBar() {
 
       <div className="app-sidebar__footer">
         <div className="app-sidebar__footer-row">
-          <NavLink
-            to="/userpreferencepage"
-            className={({ isActive }) =>
-              `app-sidebar__profile ${isActive ? "app-sidebar__profile--active" : ""}`
-            }
-            title="Profile"
-          >
-            <span className="app-sidebar__link-icon">{navIcons["/userpreferencepage"]}</span>
-          </NavLink>
+          {footerNavItems.map(({ path, label }) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) =>
+                `app-sidebar__profile ${isActive ? "app-sidebar__profile--active" : ""}`
+              }
+              title={label}
+            >
+              <span className="app-sidebar__link-icon">{path === "/settingspage" ? settingsIcon : navIcons[path]}</span>
+            </NavLink>
+          ))}
           <button
             type="button"
             className="app-sidebar__toggle"

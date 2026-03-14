@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 import "../styles/WelcomePage.css";
 
 /**
@@ -7,8 +9,40 @@ import "../styles/WelcomePage.css";
 export function WelcomePage() {
   const navigate = useNavigate();
 
+  // On mount, check if the user has already given consent.
+  // If so, treat them as a returning user and, after a short
+  // splash delay, send them straight to the hub page.
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkConsentAndMaybeRedirect = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/privacy-consent`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!data.has_consent) return; // first-time user, stay on home
+
+        // Returning user – after ~2s of the home animation, go to hub
+        setTimeout(() => {
+          if (!isCancelled) {
+            navigate("/hubpage");
+          }
+        }, 3000);
+      } catch {
+        // On error, do nothing – user can proceed manually
+      }
+    };
+
+    checkConsentAndMaybeRedirect();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [navigate]);
+
   const handleClick = () => {
-    navigate("/uploadpage");
+    navigate("/consentpage");
   };
 
   return (

@@ -510,7 +510,7 @@ export function ResumeBuilderPage() {
                           className="project-row"
                           onClick={() => toggleAddProjectSelection(project.id)}
                         >
-                          <td>
+                          <td onClick={(e) => e.stopPropagation()}>
                             <label className="project-checkbox-label">
                               <input
                                 type="checkbox"

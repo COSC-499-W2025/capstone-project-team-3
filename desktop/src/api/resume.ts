@@ -3,6 +3,21 @@ import { API_BASE_URL } from "../config/api";
 
 const API_BASE = API_BASE_URL;
 
+/** Parse error body (e.g. FastAPI detail) when available; fallback to statusText. */
+async function parseErrorDetail(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (body?.detail != null) {
+      if (typeof body.detail === "string") return body.detail;
+      if (Array.isArray(body.detail)) return body.detail.map((d: { msg?: string }) => d?.msg ?? String(d)).join("; ");
+    }
+    if (body && typeof body.message === "string") return body.message;
+  } catch {
+    // ignore non-JSON or read errors
+  }
+  return "Request failed: " + res.statusText;
+}
+
 export interface ResumeListItem {
   id: number | null; // null for preview resumes
   name: string;
@@ -53,7 +68,10 @@ export async function deleteProjectFromResume(
   const res = await fetch(`${API_BASE}/resume/${resumeId}/project/${encodeURIComponent(projectId)}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
   return res.json();
 }
 
@@ -67,7 +85,10 @@ export async function addProjectsToResume(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project_ids: projectIds }),
   });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
   return res.json();
 }
 // Save new resume with selected projects

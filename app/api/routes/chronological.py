@@ -23,6 +23,10 @@ class UpdateProjectDatesRequest(BaseModel):
     last_modified: str
 
 
+class UpdateProjectNameRequest(BaseModel):
+    name: str
+
+
 class AddSkillRequest(BaseModel):
     skill: str
     source: str  # "code" or "non-code"
@@ -92,6 +96,27 @@ def update_project_dates(signature: str, body: UpdateProjectDatesRequest):
         manager.close()
 
 
+@router.patch("/chronological/projects/{signature}/name", response_model=Dict[str, Any])
+def update_project_name(signature: str, body: UpdateProjectNameRequest):
+    """
+    Update the display name of a project.
+
+    Raises 404 if the project does not exist.
+    Raises 400 if name is empty.
+    """
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail="Project name cannot be empty")
+    manager = ChronologicalManager()
+    try:
+        project = manager.get_project_by_signature(signature)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        manager.update_project_name(signature, body.name.strip())
+        return manager.get_project_by_signature(signature)
+    finally:
+        manager.close()
+
+
 # ---------------------------------------------------------------------------
 # Skill endpoints (per project)
 # ---------------------------------------------------------------------------
@@ -128,7 +153,7 @@ def add_skill_to_project(signature: str, body: AddSkillRequest):
 
     Request body:
     - skill: skill name
-    - source: "code" or "non-code"
+    - source: "code" or "non-technical"
     - date: YYYY-MM-DD
 
     Raises 404 if the project does not exist.
@@ -136,17 +161,18 @@ def add_skill_to_project(signature: str, body: AddSkillRequest):
     """
     if not body.skill.strip():
         raise HTTPException(status_code=400, detail="Skill name cannot be empty")
-    if body.source not in ("code", "non-code"):
+    if body.source not in ("code", "non-technical", "non-code"):
         raise HTTPException(
-            status_code=400, detail="Source must be 'code' or 'non-code'"
+            status_code=400, detail="Source must be 'code' or 'non-technical'"
         )
+    source = "non-technical" if body.source == "non-code" else body.source
 
     manager = ChronologicalManager()
     try:
         project = manager.get_project_by_signature(signature)
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
-        manager.add_skill_with_date(signature, body.skill.strip(), body.source, body.date)
+        manager.add_skill_with_date(signature, body.skill.strip(), source, body.date)
         return {"message": "Skill added", "skill": body.skill.strip(), "source": body.source, "date": body.date}
     finally:
         manager.close()

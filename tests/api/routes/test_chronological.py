@@ -115,7 +115,7 @@ def test_add_skill():
 def test_add_skill_persists():
     """Newly added skill appears when fetching project skills."""
     client.post(f"/api/chronological/projects/{SIG1}/skills",
-                json={"skill": "Redis", "source": "non-code", "date": "2024-05-01"})
+                json={"skill": "Redis", "source": "non-technical", "date": "2024-05-01"})
     names = [s["skill"] for s in client.get(f"/api/chronological/projects/{SIG1}/skills").json()]
     assert "Redis" in names
 

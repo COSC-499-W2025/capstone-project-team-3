@@ -342,7 +342,7 @@ export function ResumeBuilderPage() {
         <div className="resume-builder__nav">
           <button 
             className="nav-link" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/hubpage')}
           >
             Home
           </button>

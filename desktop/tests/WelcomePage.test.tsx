@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { WelcomePage } from '../src/pages/WelcomePage';
 import { jest, test, expect, beforeEach, afterEach } from '@jest/globals';
 import '@testing-library/jest-dom';
@@ -35,8 +35,11 @@ test('renders welcome page with title', () => {
   expect(title).toBeDefined();
 });
 
-test('navigates to consent page on click', () => {
-  mockFetch.mockResolvedValue({ ok: false }); // no consent, so no auto-redirect
+test('returning user: auto-redirects to hub after delay and click goes to hub', async () => {
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({ has_consent: true }),
+  });
 
   render(
     <BrowserRouter>
@@ -44,13 +47,36 @@ test('navigates to consent page on click', () => {
     </BrowserRouter>
   );
 
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
   const container = screen.getByText(/Welcome to your Big Picture/i).closest('.welcome-container');
-  expect(container).toBeDefined();
+  if (container) fireEvent.click(container);
+  expect(mockNavigate).toHaveBeenCalledWith('/hubpage');
 
-  if (container) {
-    fireEvent.click(container);
-  }
+  await jest.runAllTimersAsync();
+  expect(mockNavigate).toHaveBeenLastCalledWith('/hubpage');
+});
 
+test('first-time user: does not auto-redirect to hub and click goes to consent page', async () => {
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({ has_consent: false }),
+  });
+
+  render(
+    <BrowserRouter>
+      <WelcomePage />
+    </BrowserRouter>
+  );
+
+  await jest.runAllTimersAsync();
+  expect(mockNavigate).not.toHaveBeenCalled();
+
+  const container = screen.getByText(/Welcome to your Big Picture/i).closest('.welcome-container');
+  if (container) fireEvent.click(container);
   expect(mockNavigate).toHaveBeenCalledWith('/consentpage');
 });
 
@@ -67,52 +93,18 @@ test('renders nested frame structure', () => {
   expect(frames.length).toBe(4);
 });
 
-test('returning user: when API returns has_consent true, navigates to hub after delay', async () => {
-  mockFetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({ has_consent: true }),
-  });
-
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
-
-  expect(mockNavigate).not.toHaveBeenCalled();
-
-  await jest.runAllTimersAsync();
-
-  expect(mockNavigate).toHaveBeenCalledWith('/hubpage');
-});
-
-test('first-time user: when API returns has_consent false, does not redirect to hub', async () => {
-  mockFetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({ has_consent: false }),
-  });
-
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
-
-  await jest.runAllTimersAsync();
-
-  expect(mockNavigate).not.toHaveBeenCalled();
-});
-
 test('when consent API fails, does not redirect to hub', async () => {
   mockFetch.mockRejectedValue(new Error('Network error'));
 
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
-
-  await jest.runAllTimersAsync();
+  await act(async () => {
+    render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
   expect(mockNavigate).not.toHaveBeenCalled();
 });

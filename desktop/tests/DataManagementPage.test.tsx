@@ -188,6 +188,56 @@ test('shows date format error when invalid date entered', async () => {
   expect(await screen.findByText(/Invalid date format. Use dd-mm-yyyy/i)).toBeInTheDocument();
 });
 
+test('shows error when last modified is before or equal to date created', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  // Project Alpha: created 15-01-2026, last_modified 01-02-2026
+  // Click Last Modified (01-02-2026) and change to 10-01-2026 (before created)
+  const lastModifiedBtn = screen.getAllByText('01-02-2026')[0];
+  await user.click(lastModifiedBtn);
+
+  const input = screen.getByPlaceholderText('dd-mm-yyyy');
+  await user.clear(input);
+  await user.type(input, '10-01-2026');
+  await user.tab();
+
+  expect(await screen.findByText(/Last modified must be after date created/i)).toBeInTheDocument();
+  expect(mockUpdateProjectDates).not.toHaveBeenCalled();
+});
+
+test('shows error when skill date is outside project date range', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  // Project Alpha: created 15-01-2026, last_modified 01-02-2026
+  // Index 0 = project created, index 1 = Python skill date
+  const skillDateBtns = screen.getAllByText('15-01-2026');
+  await user.click(skillDateBtns[1]);
+
+  const input = screen.getByPlaceholderText('dd-mm-yyyy');
+  await user.clear(input);
+  await user.type(input, '01-01-2026');
+  await user.tab();
+
+  expect(await screen.findByText(/Skill date must be within the project's date range/i)).toBeInTheDocument();
+  expect(mockUpdateSkillDate).not.toHaveBeenCalled();
+});
+
 test('Refresh button fetches projects', async () => {
   const user = userEvent.setup();
   render(

@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
-import { runAnalysis } from "../api/analysis";
 import "../styles/UploadPage.css";
 
 /**
@@ -14,7 +13,6 @@ export function UploadPage() {
   const [success, setSuccess] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = async (file: File) => {
@@ -22,7 +20,6 @@ export function UploadPage() {
     setError(null);
     setSuccess(false);
     setUploadedFileName(null);
-    setAnalyzing(false);
 
     try {
       const result = await uploadZipFile(file);
@@ -38,7 +35,6 @@ export function UploadPage() {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setLoading(false);
-      setAnalyzing(false);
     }
   };
 

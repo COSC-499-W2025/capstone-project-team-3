@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 import "../styles/PortfolioPage.css";
 import Chart from "chart.js/auto";
@@ -94,6 +95,187 @@ const projectDates = (p: Project): string => {
   const start = p.start_date ? new Date(p.start_date).toLocaleDateString() : "";
   const end = p.end_date ? new Date(p.end_date).toLocaleDateString() : "";
   return `${start}${start && end ? " - " : ""}${end}`;
+};
+
+const formatMetricName = (metricName: string): string =>
+  metricName
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const formatScoreOutOf100 = (score: number): string =>
+  `${Math.round(Math.max(0, Math.min(1, score)) * 100)}/100`;
+
+type ScoreBandTone = "excellent" | "strong" | "steady" | "emerging";
+
+interface ScoreBand {
+  label: string;
+  description: string;
+  tone: ScoreBandTone;
+}
+
+interface ScoreSignal {
+  label: string;
+  value: string;
+  tone: "strong" | "moderate" | "limited";
+  explanation: string;
+}
+
+const getScoreBand = (score: number): ScoreBand => {
+  if (score >= 0.9) {
+    return {
+      label: "Exceptional",
+      description: "Strong evidence across activity, scope, and quality signals.",
+      tone: "excellent",
+    };
+  }
+  if (score >= 0.8) {
+    return {
+      label: "Strong",
+      description: "Consistently positive project signals with few obvious gaps.",
+      tone: "strong",
+    };
+  }
+  if (score >= 0.65) {
+    return {
+      label: "Solid",
+      description: "Good overall evidence, with room to strengthen a few areas.",
+      tone: "steady",
+    };
+  }
+  return {
+    label: "Emerging",
+    description: "The project shows potential, but the visible evidence is still lighter.",
+    tone: "emerging",
+  };
+};
+
+const getSignalTone = (
+  value: number,
+  strongThreshold: number,
+  moderateThreshold: number,
+): ScoreSignal["tone"] => {
+  if (value >= strongThreshold) return "strong";
+  if (value >= moderateThreshold) return "moderate";
+  return "limited";
+};
+
+const getProjectDurationDays = (project: Project): number | null => {
+  const startValue = project.created_at || project.start_date;
+  const endValue = project.last_modified || project.end_date;
+  if (!startValue || !endValue) return null;
+
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+  const diffMs = end.getTime() - start.getTime();
+  if (diffMs < 0) return null;
+  return Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+};
+
+const getProjectScoreSignals = (project: Project): ScoreSignal[] => {
+  const metrics = project.metrics || {};
+  const isGithubProject =
+    (project.type || "").toLowerCase() === "github" ||
+    (metrics.total_commits || 0) > 0;
+  const durationDays = getProjectDurationDays(project);
+  const signals: ScoreSignal[] = [];
+
+  if (isGithubProject && typeof metrics.total_commits === "number") {
+    const tone = getSignalTone(metrics.total_commits, 25, 8);
+    signals.push({
+      label: "Repository Activity",
+      value: `${metrics.total_commits} commits`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "The repository shows sustained iteration and visible delivery history."
+          : tone === "moderate"
+            ? "There is meaningful commit history, though the activity footprint is moderate."
+            : "Limited commit history is visible, so activity contributes less to this score.",
+    });
+  }
+
+  if (durationDays != null) {
+    const tone = getSignalTone(durationDays, 30, 7);
+    signals.push({
+      label: "Project Duration",
+      value: `${durationDays} days`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "The project appears to have been developed over a sustained period of time."
+          : tone === "moderate"
+            ? "The project has a meaningful active window, but not a long-lived history."
+            : "The visible timeline is short, so duration contributes less to the score.",
+    });
+  }
+
+  if (typeof metrics.total_lines === "number") {
+    const tone = getSignalTone(metrics.total_lines, 2500, 750);
+    signals.push({
+      label: "Codebase Scope",
+      value: `${metrics.total_lines.toLocaleString()} LOC`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "The project has substantial implementation depth and visible code volume."
+          : tone === "moderate"
+            ? "The project shows moderate implementation scope."
+            : "The visible code footprint is lighter, so scope contributes less to the score.",
+    });
+  }
+
+  if (typeof metrics.test_files_changed === "number") {
+    const tone = getSignalTone(metrics.test_files_changed, 5, 1);
+    signals.push({
+      label: "Testing Evidence",
+      value: `${metrics.test_files_changed} test files`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "Testing is clearly represented in the repository and helps strengthen confidence."
+          : tone === "moderate"
+            ? "Some testing evidence is present, though it is not yet a standout strength."
+            : "There is limited visible testing evidence in the portfolio data.",
+    });
+  }
+
+  const maintainability =
+    metrics.complexity_analysis?.maintainability_score?.overall_score;
+  if (typeof maintainability === "number") {
+    const tone = getSignalTone(maintainability, 75, 55);
+    signals.push({
+      label: "Maintainability",
+      value: `${Math.round(maintainability)}/100`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "Code quality signals appear healthy and support a stronger overall score."
+          : tone === "moderate"
+            ? "Maintainability is reasonable, but there is still room to improve structure or complexity."
+            : "Maintainability is currently limiting the visible score profile.",
+    });
+  }
+
+  if (typeof metrics.completeness_score === "number") {
+    const tone = getSignalTone(metrics.completeness_score, 75, 40);
+    signals.push({
+      label: "Documentation",
+      value: `${Math.round(metrics.completeness_score)}%`,
+      tone,
+      explanation:
+        tone === "strong"
+          ? "Documentation is a visible strength and improves portfolio readability."
+          : tone === "moderate"
+            ? "Some documentation support is present, but it is not yet a standout signal."
+            : "Documentation completeness is limited in the current portfolio data.",
+    });
+  }
+
+  return signals.slice(0, 4);
 };
 
 const shouldTruncateSummary = (summary: string): boolean => {
@@ -287,7 +469,7 @@ function PieChart({
         chartRef.current = null;
       }
     };
-  }, [JSON.stringify(data || {})]);
+  }, [labels, values]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -349,7 +531,7 @@ function BarChart({
         chartRef.current = null;
       }
     };
-  }, [JSON.stringify(data || {})]);
+  }, [labels, values]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -413,7 +595,7 @@ function HorizontalBarChart({
         chartRef.current = null;
       }
     };
-  }, [JSON.stringify(data || {})]);
+  }, [labels, values]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -490,7 +672,7 @@ function LineChart({
         chartRef.current = null;
       }
     };
-  }, [JSON.stringify(data || {})]);
+  }, [labels, values]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -512,6 +694,7 @@ function ProjectCard({
   rank: number;
   onReload: () => Promise<void>;
 }) {
+  const navigate = useNavigate();
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -519,9 +702,12 @@ function ProjectCard({
   const summary = project.summary || "";
   const title = projectName(project);
   const dates = projectDates(project);
+  const displayScore = getDisplayScore(project);
+  const scoreBand = getScoreBand(displayScore);
 
   const skills = project.skills || project.technical_keywords || [];
   const metrics = project.metrics || {};
+  const scoreSignals = getProjectScoreSignals(project);
 
   const roles = Array.isArray(metrics.roles)
     ? (metrics.roles as string[]).filter(
@@ -540,13 +726,7 @@ function ProjectCard({
     : [];
   const hasEquationOverride =
     project.score_overridden && scoreOverrideExclusions.length > 0;
-  const formattedExclusions = scoreOverrideExclusions.map((m) =>
-    m
-      .replace(/_/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/\b\w/g, (l) => l.toUpperCase()),
-  );
+  const formattedExclusions = scoreOverrideExclusions.map(formatMetricName);
   const visibleExclusions = formattedExclusions.slice(0, 4);
   const hiddenExclusionsCount = Math.max(
     0,
@@ -569,6 +749,14 @@ function ProjectCard({
     Object.entries(docTypes)
       .map(([type, count]) => `${type}: ${count}`)
       .join(", ") || "N/A";
+  const scoreConfigurationSummary = hasEquationOverride
+    ? `Adjusted scoring is active for this project. The current score excludes ${formattedExclusions.join(", ")} to better match the project context.`
+    : project.score_overridden
+      ? "This project is using an adjusted score instead of the default portfolio calculation."
+      : "This project is currently using the default portfolio scoring calculation.";
+  const scoreExplanationIntro = isGithubProject
+    ? "This score summarizes visible evidence from repository activity, implementation scope, testing, maintainability, and documentation."
+    : "This score summarizes visible evidence from implementation scope, maintainability, testing, and documentation.";
 
   const uploadThumbnail = async () => {
     const input = document.createElement("input");
@@ -785,13 +973,30 @@ function ProjectCard({
               onClick={() => startEdit("score")}
               title="Click to edit score"
             >
-              {getDisplayScore(project).toFixed(2)}
+              {displayScore.toFixed(2)}
             </div>
           )}
           {project.score_overridden ? (
             <span className="project-score-badge">Overridden</span>
           ) : null}
         </div>
+        <button
+          type="button"
+          className="score-configure-btn portfolio-owner-only"
+          onClick={() =>
+            navigate(
+              `/scoreoverridepage?project=${encodeURIComponent(String(project.id))}&from=portfoliopage`,
+            )
+          }
+        >
+          Configure score
+        </button>
+      </div>
+      <div className="project-score-meaning">
+        <span className={`project-score-band project-score-band-${scoreBand.tone}`}>
+          {formatScoreOutOf100(displayScore)} · {scoreBand.label}
+        </span>
+        <p className="project-score-band-copy">{scoreBand.description}</p>
       </div>
 
       {/* Score exclusion chips */}
@@ -812,6 +1017,39 @@ function ProjectCard({
           </div>
         </div>
       ) : null}
+      <details className="project-score-explainer">
+        <summary className="project-score-explainer-toggle">
+          Why this score?
+        </summary>
+        <div className="project-score-explainer-content">
+          <p className="project-score-explainer-intro">{scoreExplanationIntro}</p>
+          <p className="project-score-explainer-status">{scoreConfigurationSummary}</p>
+          {scoreSignals.length > 0 ? (
+            <div className="project-score-signal-list">
+              {scoreSignals.map((signal) => (
+                <div key={signal.label} className="project-score-signal">
+                  <div className="project-score-signal-header">
+                    <span className="project-score-signal-name">{signal.label}</span>
+                    <span
+                      className={`project-score-signal-value project-score-signal-value-${signal.tone}`}
+                    >
+                      {signal.value}
+                    </span>
+                  </div>
+                  <p className="project-score-signal-copy">{signal.explanation}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="project-score-explainer-note">
+              Detailed scoring inputs are limited for this project, so the score should be read as a high-level summary only.
+            </p>
+          )}
+          <p className="project-score-explainer-footnote">
+            This summary highlights the clearest visible signals in the portfolio. The complete scoring formulas are shown in the methodology section below.
+          </p>
+        </div>
+      </details>
 
       {/* Dates — editable */}
       {editing?.field === "dates" ? (
@@ -1076,6 +1314,9 @@ const PortfolioPage: React.FC = () => {
       mainClone
         .querySelectorAll(".dashboard-actions")
         .forEach((el) => el.remove());
+      mainClone
+        .querySelectorAll(".portfolio-owner-only")
+        .forEach((el) => el.remove());
 
       // Inline thumbnails as data URLs for offline export
       const thumbnailImages = Array.from(
@@ -1177,12 +1418,12 @@ const PortfolioPage: React.FC = () => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portfolio Dashboard</title>
   <style>${baseCss}\n${exportCss}</style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 ${mainClone.outerHTML}
-<script>window.__PORTFOLIO_EXPORT_DATA = ${exportData};<\/script>
-<script>${interactiveScript}<\/script>
+<script>window.__PORTFOLIO_EXPORT_DATA = ${exportData};</script>
+<script>${interactiveScript}</script>
 </body>
 </html>`;
 

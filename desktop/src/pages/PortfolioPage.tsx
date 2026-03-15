@@ -104,16 +104,8 @@ const formatMetricName = (metricName: string): string =>
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const formatScoreOutOf100 = (score: number): string =>
-  `${Math.round(Math.max(0, Math.min(1, score)) * 100)}/100`;
-
-type ScoreBandTone = "excellent" | "strong" | "steady" | "emerging";
-
-interface ScoreBand {
-  label: string;
-  description: string;
-  tone: ScoreBandTone;
-}
+const formatScorePercent = (score: number): string =>
+  `${Math.round(Math.max(0, Math.min(1, score)) * 100)}%`;
 
 interface ScoreSignal {
   label: string;
@@ -121,35 +113,6 @@ interface ScoreSignal {
   tone: "strong" | "moderate" | "limited";
   explanation: string;
 }
-
-const getScoreBand = (score: number): ScoreBand => {
-  if (score >= 0.9) {
-    return {
-      label: "Exceptional",
-      description: "Strong evidence across activity, scope, and quality signals.",
-      tone: "excellent",
-    };
-  }
-  if (score >= 0.8) {
-    return {
-      label: "Strong",
-      description: "Consistently positive project signals with few obvious gaps.",
-      tone: "strong",
-    };
-  }
-  if (score >= 0.65) {
-    return {
-      label: "Solid",
-      description: "Good overall evidence, with room to strengthen a few areas.",
-      tone: "steady",
-    };
-  }
-  return {
-    label: "Emerging",
-    description: "The project shows potential, but the visible evidence is still lighter.",
-    tone: "emerging",
-  };
-};
 
 const getSignalTone = (
   value: number,
@@ -703,7 +666,6 @@ function ProjectCard({
   const title = projectName(project);
   const dates = projectDates(project);
   const displayScore = getDisplayScore(project);
-  const scoreBand = getScoreBand(displayScore);
 
   const skills = project.skills || project.technical_keywords || [];
   const metrics = project.metrics || {};
@@ -973,7 +935,7 @@ function ProjectCard({
               onClick={() => startEdit("score")}
               title="Click to edit score"
             >
-              {displayScore.toFixed(2)}
+              {formatScorePercent(displayScore)}
             </div>
           )}
           {project.score_overridden ? (
@@ -991,12 +953,6 @@ function ProjectCard({
         >
           Configure score
         </button>
-      </div>
-      <div className="project-score-meaning">
-        <span className={`project-score-band project-score-band-${scoreBand.tone}`}>
-          {formatScoreOutOf100(displayScore)} · {scoreBand.label}
-        </span>
-        <p className="project-score-band-copy">{scoreBand.description}</p>
       </div>
 
       {/* Score exclusion chips */}
@@ -1608,7 +1564,7 @@ ${mainClone.outerHTML}
                   />
                   <div className="project-name">{sidebarProjectName(p)}</div>
                   <div className="project-score">
-                    Score: {getDisplayScore(p).toFixed(2)}
+                    Score: {formatScorePercent(getDisplayScore(p))}
                   </div>
                   <div className="project-skills">
                     {tags.map((t) => (
@@ -1652,7 +1608,7 @@ ${mainClone.outerHTML}
           </div>
           <div className="overview-card">
             <div className="overview-card-value">
-              {Number(portfolio?.overview?.avg_score || 0).toFixed(2)}
+              {formatScorePercent(Number(portfolio?.overview?.avg_score || 0))}
             </div>
             <div className="overview-card-label">Average Score</div>
           </div>

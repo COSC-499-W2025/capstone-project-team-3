@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ResumePreview } from '../src/pages/ResumeManager/ResumePreview';
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import '@testing-library/jest-dom';
@@ -325,5 +325,62 @@ describe('ResumePreview', () => {
     render(<ResumePreview resume={mockResume} />);
 
     expect(screen.queryByLabelText('Drag to reorder project')).toBeNull();
+  });
+
+  test('in edit mode with onAddProjectClick shows Add a project button', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        }
+      ]
+    };
+    const onAddProjectClick = jest.fn();
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={jest.fn()}
+        onAddProjectClick={onAddProjectClick}
+      />
+    );
+
+    const addButton = screen.getByRole('button', { name: 'Add a project' });
+    expect(addButton).toBeDefined();
+    fireEvent.click(addButton);
+    expect(onAddProjectClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('in edit mode without onAddProjectClick does not show Add a project button', () => {
+    const resumeWithId: Resume = {
+      ...mockResume,
+      projects: [
+        {
+          ...mockResume.projects[0],
+          project_id: 'sig-123',
+          title: 'E-commerce Website',
+          dates: 'Jan 2024 – Mar 2024',
+          skills: ['React', 'Node.js'],
+          bullets: ['Built app']
+        }
+      ]
+    };
+
+    render(
+      <ResumePreview
+        resume={resumeWithId}
+        isEditing={true}
+        onSectionChange={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Add a project' })).toBeNull();
   });
 });

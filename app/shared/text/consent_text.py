@@ -33,9 +33,7 @@ DATA STORAGE:
 
 DATA RETENTION: 
 - Data kept until explicitly deleted by you
-- Use '--clear-data' command to remove all stored information
 
-Press Enter to return to consent prompt.
 """
 
     # Message shown when consent is granted

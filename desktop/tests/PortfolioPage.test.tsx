@@ -231,7 +231,7 @@ describe("PortfolioPage – successful load", () => {
       // Total projects label is unique in the overview grid
       expect(screen.getByText(/total projects/i)).toBeDefined();
       // Average score value
-      expect(screen.getByText("0.83")).toBeDefined();
+      expect(screen.getByText("83%")).toBeDefined();
     });
   });
 
@@ -300,8 +300,7 @@ describe("PortfolioPage – project cards", () => {
   test("shows overridden score value instead of raw score", async () => {
     renderPortfolio();
     await waitFor(() => {
-      // CLI Toolbox has score_overridden_value 0.85, displayed as toFixed(2) = "0.85"
-      expect(screen.getAllByText("0.85").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("85%").length).toBeGreaterThan(0);
     });
   });
 
@@ -327,11 +326,11 @@ describe("PortfolioPage – project cards", () => {
     });
   });
 
-  test("renders human-readable score band and expandable score explainer", async () => {
+  test("renders percentage score and expandable score explainer", async () => {
     renderPortfolio();
 
     await waitFor(() => {
-      expect(screen.getByText("91/100 · Exceptional")).toBeInTheDocument();
+      expect(screen.getAllByText("91%").length).toBeGreaterThan(0);
     });
 
     const explainers = screen.getAllByText("Why this score?");

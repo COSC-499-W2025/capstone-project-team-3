@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router-dom";
 import ScoreOverridePage from "../src/pages/ScoreOverridePage";
 import * as projectsApi from "../src/api/projects";
 
@@ -97,6 +98,14 @@ function getMetricCheckbox(metricLabel: string): HTMLInputElement {
   return checkbox as HTMLInputElement;
 }
 
+function renderPage(initialPath = "/scoreoverridepage"): void {
+  render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <ScoreOverridePage />
+    </MemoryRouter>
+  );
+}
+
 describe("ScoreOverridePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -117,7 +126,7 @@ describe("ScoreOverridePage", () => {
   });
 
   test("loads score breakdown after project selection", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
 
     await screen.findByText("Score Override");
     await selectProject();
@@ -128,7 +137,7 @@ describe("ScoreOverridePage", () => {
   });
 
   test("toggles a metric and requests preview update", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
     await screen.findByRole("heading", { name: "Score Preview" });
 
@@ -147,7 +156,7 @@ describe("ScoreOverridePage", () => {
   });
 
   test("applies override and refreshes breakdown", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
     await screen.findByRole("heading", { name: "Score Preview" });
 
@@ -163,7 +172,7 @@ describe("ScoreOverridePage", () => {
   });
 
   test("clears override and refreshes breakdown", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
     await screen.findByRole("heading", { name: "Score Preview" });
 
@@ -181,7 +190,7 @@ describe("ScoreOverridePage", () => {
   });
 
   test("reset restores original exclusions and recalculates preview", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
     await screen.findByRole("heading", { name: "Score Preview" });
 
@@ -200,6 +209,15 @@ describe("ScoreOverridePage", () => {
         "sig_alpha_project/hash",
         ["total_lines"]
       )
+    );
+  });
+
+  test("preselects the requested project when opened from portfolio", async () => {
+    renderPage("/scoreoverridepage?project=sig_alpha_project%2Fhash&from=portfoliopage");
+
+    expect(await screen.findByText("Back to Portfolio")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockGetScoreBreakdown).toHaveBeenCalledWith("sig_alpha_project/hash")
     );
   });
 });

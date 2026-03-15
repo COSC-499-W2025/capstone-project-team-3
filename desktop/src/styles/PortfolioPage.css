@@ -650,9 +650,10 @@
         .project-score-row {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-between;
             gap: 16px;
             margin-bottom: 8px;
+            flex-wrap: wrap;
         }
 
         .project-score-main {
@@ -678,6 +679,75 @@
             font-weight: 600;
             letter-spacing: 0.02em;
             white-space: nowrap;
+        }
+
+        .score-configure-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--accent);
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .score-configure-btn:hover {
+            border-color: var(--accent);
+            background: var(--border-light);
+            transform: translateY(-1px);
+        }
+
+        .project-score-meaning {
+            margin-bottom: 14px;
+        }
+
+        .project-score-band {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .project-score-band-excellent {
+            background: rgba(56, 161, 105, 0.12);
+            color: #276749;
+            border: 1px solid rgba(56, 161, 105, 0.25);
+        }
+
+        .project-score-band-strong {
+            background: rgba(49, 130, 206, 0.12);
+            color: #2b6cb0;
+            border: 1px solid rgba(49, 130, 206, 0.25);
+        }
+
+        .project-score-band-steady {
+            background: rgba(214, 158, 46, 0.12);
+            color: #b7791f;
+            border: 1px solid rgba(214, 158, 46, 0.25);
+        }
+
+        .project-score-band-emerging {
+            background: rgba(229, 62, 62, 0.1);
+            color: #c53030;
+            border: 1px solid rgba(229, 62, 62, 0.2);
+        }
+
+        .project-score-band-copy {
+            margin-top: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         .project-score-config-inline {
@@ -710,6 +780,124 @@
             color: var(--text-primary);
             line-height: 1.2;
             font-size: 11px;
+        }
+
+        .project-score-explainer {
+            margin-bottom: 18px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(45, 55, 72, 0.02) 0%, rgba(45, 55, 72, 0.05) 100%);
+            overflow: hidden;
+        }
+
+        .project-score-explainer-toggle {
+            cursor: pointer;
+            padding: 14px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            list-style: none;
+        }
+
+        .project-score-explainer-toggle::-webkit-details-marker {
+            display: none;
+        }
+
+        .project-score-explainer-toggle::after {
+            content: "Show details";
+            float: right;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .project-score-explainer[open] .project-score-explainer-toggle::after {
+            content: "Hide details";
+        }
+
+        .project-score-explainer-content {
+            border-top: 1px solid var(--border);
+            padding: 16px;
+        }
+
+        .project-score-explainer-intro,
+        .project-score-explainer-status,
+        .project-score-explainer-note,
+        .project-score-explainer-footnote {
+            margin: 0 0 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .project-score-explainer-status {
+            color: var(--text-primary);
+        }
+
+        .project-score-explainer-footnote {
+            margin-bottom: 0;
+            color: var(--text-muted);
+        }
+
+        .project-score-signal-list {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .project-score-signal {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            padding: 12px;
+        }
+
+        .project-score-signal-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .project-score-signal-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .project-score-signal-value {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 3px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .project-score-signal-value-strong {
+            color: #276749;
+            background: rgba(56, 161, 105, 0.12);
+        }
+
+        .project-score-signal-value-moderate {
+            color: #b7791f;
+            background: rgba(214, 158, 46, 0.14);
+        }
+
+        .project-score-signal-value-limited {
+            color: #c53030;
+            background: rgba(229, 62, 62, 0.12);
+        }
+
+        .project-score-signal-copy {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
         }
 
         .project-dates {
@@ -1131,5 +1319,19 @@
             .profile-contact-link {
                 min-width: unset;
                 width: 100%;
+            }
+
+            .project-score-row {
+                align-items: stretch;
+            }
+
+            .score-configure-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .project-score-signal-header {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }

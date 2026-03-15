@@ -16,7 +16,7 @@ beforeEach(() => {
     name: '',
     email: '',
     github_user: '',
-    linkden: null,
+    linkedin: null,
     education: '',
     industry: '',
     job_title: '',

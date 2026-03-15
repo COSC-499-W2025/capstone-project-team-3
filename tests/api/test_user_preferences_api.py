@@ -68,7 +68,7 @@ def test_get_user_preferences_success(mock_get_conn):
     assert data["name"] == "Jane Smith"
     assert data["email"] == "jane@example.com"
     assert data["github_user"] == "janesmith"
-    assert data["linkden"] == "https://linkedin.com/in/janesmith"
+    assert data["linkedin"] == "https://linkedin.com/in/janesmith"
     assert data["education"] == "Master's"
     assert data["industry"] == "Finance"
     assert data["job_title"] == "Data Scientist"

@@ -101,7 +101,7 @@ function convertToFrontend(backendData: UserPreferences): ProfileData {
     fullName: backendData.name || "",
     email: backendData.email || "",
     github: backendData.github_user || "",
-    linkedin: backendData.linkden || "",
+    linkedin: backendData.linkedin || "",
     jobTitle: backendData.job_title || "",
     industry: backendData.industry as typeof INDUSTRIES[number] || null,
     educationEntries,
@@ -135,7 +135,7 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
     name: frontendData.fullName,
     email: frontendData.email,
     github_user: frontendData.github,
-    linkden: frontendData.linkedin || null,
+    linkedin: frontendData.linkedin || null,
     education: frontendData.educationEntries[0]?.degree || "", // Use first degree as main education level
     industry: frontendData.industry || "",
     job_title: frontendData.jobTitle || "",

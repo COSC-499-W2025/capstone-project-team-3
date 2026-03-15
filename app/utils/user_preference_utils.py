@@ -32,7 +32,7 @@ class UserPreferenceStore:
         cur = self.conn.cursor()
         cur.execute(
             """
-            SELECT name, email, github_user, linkden, education, industry, job_title, education_details
+            SELECT name, email, github_user, linkedin, education, industry, job_title, education_details
             FROM USER_PREFERENCES
             ORDER BY updated_at DESC
             LIMIT 1
@@ -41,20 +41,20 @@ class UserPreferenceStore:
         row = cur.fetchone()
         if not row:
             return None
-        keys = ["name", "email", "github_user", "linkden", "education", "industry", "job_title", "education_details"]
+        keys = ["name", "email", "github_user", "linkedin", "education", "industry", "job_title", "education_details"]
         return dict(zip(keys, row))
 
     # Save/Update user preferences (Write to DB)
-    def save_preferences(self, user_id: int, name: str, email: str, github_user: str, linkden: str = None, education: str = None, industry: str = None, job_title: str = None, education_details: dict = None):
+    def save_preferences(self, user_id: int, name: str, email: str, github_user: str, linkedin: str = None, education: str = None, industry: str = None, job_title: str = None, education_details: dict = None):
         
         cur = self.conn.cursor()
 
         cur.execute(
             """
-            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, linkden, education, industry, job_title, education_details)
+            INSERT OR REPLACE INTO USER_PREFERENCES (user_id, name, email, github_user, linkedin, education, industry, job_title, education_details)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, email, github_user, linkden, education, industry, job_title, json.dumps(education_details) if education_details else None,
+            (user_id, name, email, github_user, linkedin, education, industry, job_title, json.dumps(education_details) if education_details else None,
             ))
         self.conn.commit()
         

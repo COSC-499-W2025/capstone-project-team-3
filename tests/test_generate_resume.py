@@ -56,7 +56,7 @@ def db_connection(monkeypatch):
             name TEXT,
             email TEXT,
             github_user TEXT,
-            linkden TEXT,
+            linkedin TEXT,
             education TEXT,
             job_title TEXT,
             education_details JSON,
@@ -110,7 +110,7 @@ def db_connection(monkeypatch):
 
     # --- Seed Data ---
     cursor.execute("""
-        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, linkden, education, job_title)
+        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, linkedin, education, job_title)
         VALUES (1, 'John Doe', 'john@example.com', 'johndoe', 'https://linkedin.com/in/johndoe', 'University X', 'Developer')
     """)
 

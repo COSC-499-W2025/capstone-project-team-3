@@ -76,18 +76,18 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
     try:
         try:
-            # Extended query — includes industry, personal_summary, and linkden
+            # Extended query — includes industry, personal_summary, and linkedin
             cursor.execute(
                 """
                 SELECT name, email, github_user, education, job_title, education_details,
-                       industry, personal_summary, linkden
+                       industry, personal_summary, linkedin
                 FROM USER_PREFERENCES
                 ORDER BY updated_at DESC LIMIT 1
                 """
             )
         except sqlite3.OperationalError:
             try:
-                # Fallback: without linkden (older schema)
+                # Fallback: without linkedin (older schema)
                 cursor.execute(
                     """
                     SELECT name, email, github_user, education, job_title, education_details,
@@ -130,11 +130,11 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
             "url": f"https://github.com/{row[2]}"
         })
 
-    linkden = row[8] if len(row) > 8 else None
-    if linkden:
+    linkedin = row[8] if len(row) > 8 else None
+    if linkedin:
         links.append({
             "label": "LinkedIn",
-            "url": linkden if linkden.startswith("http") else f"https://{linkden}"
+            "url": linkedin if linkedin.startswith("http") else f"https://{linkedin}"
         })
 
     return {
@@ -147,7 +147,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "github_user": row[2],
         "industry": row[6] if len(row) > 6 else None,
         "personal_summary": row[7] if len(row) > 7 else None,
-        "linkden": linkden,
+        "linkedin": linkedin,
     }
 
 def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:

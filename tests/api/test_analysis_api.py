@@ -109,9 +109,9 @@ def test_run_analysis_non_interactive_flow(
     payload = {
         "upload_id": "upload-123",
         "default_analysis_type": "ai",
-        "project_analysis_types": {"proj2": "local"},
+        "project_analysis_types": {"/tmp/extracted/proj2": "local"},
         "similarity_action": "create_new",
-        "project_similarity_actions": {"proj2": "update_existing"},
+        "project_similarity_actions": {"/tmp/extracted/proj2": "update_existing"},
     }
 
     response = client.post("/api/analysis/run", json=payload)

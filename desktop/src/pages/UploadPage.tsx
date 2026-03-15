@@ -71,8 +71,8 @@ export function UploadPage() {
         );
         setProjectSimilarityActions(
           (data.projects || []).reduce(
-            (acc: Record<string, SimilarityAction>, p: { name: string }) => {
-              acc[p.name] = similarityAction;
+            (acc: Record<string, SimilarityAction>, p: { path: string }) => {
+              acc[p.path] = similarityAction;
               return acc;
             },
             {},
@@ -207,19 +207,19 @@ export function UploadPage() {
     setProjectSimilarityActions((prev) => {
       const next = { ...prev };
       projects.forEach((project) => {
-        next[project.name] = action;
+        next[project.path] = action;
       });
       return next;
     });
   };
 
   const handleProjectSimilarityActionChange = (
-    projectName: string,
+    projectPath: string,
     action: SimilarityAction,
   ) => {
     setProjectSimilarityActions((prev) => ({
       ...prev,
-      [projectName]: action,
+      [projectPath]: action,
     }));
   };
 
@@ -228,7 +228,7 @@ export function UploadPage() {
 
     const project_analysis_types: Record<string, string> = {};
     projects.forEach((p) => {
-      project_analysis_types[p.name] = p.mode;
+      project_analysis_types[p.path] = p.mode;
     });
 
     setRunning(true);
@@ -465,10 +465,10 @@ export function UploadPage() {
                         <td>
                           <select
                             className="ar-select ar-select--inline"
-                            value={projectSimilarityActions[project.name] ?? similarityAction}
+                            value={projectSimilarityActions[project.path] ?? similarityAction}
                             onChange={(e) =>
                               handleProjectSimilarityActionChange(
-                                project.name,
+                                project.path,
                                 e.target.value as SimilarityAction,
                               )
                             }

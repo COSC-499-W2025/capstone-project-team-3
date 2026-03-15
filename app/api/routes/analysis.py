@@ -73,11 +73,11 @@ def _resolve_requested_analysis_type(
     default_analysis_type: Literal["local", "ai"],
     project_analysis_types: Dict[str, Literal["local", "ai"]],
 ) -> Literal["local", "ai"]:
+    if project_path in project_analysis_types:
+        return project_analysis_types[project_path]
     project_name = Path(project_path).name
     if project_name in project_analysis_types:
         return project_analysis_types[project_name]
-    if project_path in project_analysis_types:
-        return project_analysis_types[project_path]
     return default_analysis_type
 
 
@@ -86,11 +86,11 @@ def _resolve_requested_similarity_action(
     default_similarity_action: Literal["create_new", "update_existing"],
     project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]],
 ) -> Literal["create_new", "update_existing"]:
+    if project_path in project_similarity_actions:
+        return project_similarity_actions[project_path]
     project_name = Path(project_path).name
     if project_name in project_similarity_actions:
         return project_similarity_actions[project_name]
-    if project_path in project_similarity_actions:
-        return project_similarity_actions[project_path]
     return default_similarity_action
 
 

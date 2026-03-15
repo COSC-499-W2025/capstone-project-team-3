@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   OverridePreview,
   Project,
@@ -277,8 +278,11 @@ interface ImprovementHint {
 }
 
 export default function ScoreOverridePage() {
+  const [searchParams] = useSearchParams();
+  const preselectedProjectId = searchParams.get("project") ?? "";
+  const fromPortfolio = searchParams.get("from") === "portfoliopage";
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string>(preselectedProjectId);
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null);
   const [excludedMetrics, setExcludedMetrics] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<OverridePreview | null>(null);
@@ -306,6 +310,12 @@ export default function ScoreOverridePage() {
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (preselectedProjectId) {
+      setSelectedId(preselectedProjectId);
+    }
+  }, [preselectedProjectId]);
 
   function showStatus(type: StatusType, text: string) {
     setStatus({ type, text });
@@ -454,11 +464,21 @@ export default function ScoreOverridePage() {
       <header className="sor-header">
         <div className="sor-header-inner">
           <div>
+            {fromPortfolio && (
+              <Link to="/portfoliopage" className="sor-context-link">
+                Back to Portfolio
+              </Link>
+            )}
             <h1 className="sor-title">Score Override</h1>
             <p className="sor-subtitle">
               Adjust which metrics contribute to a project's score. Excluded metrics are removed
               and the remaining weights are renormalized automatically.
             </p>
+            {fromPortfolio && (
+              <p className="sor-context-note">
+                Changes applied here will be reflected in the portfolio view and in the downloaded portfolio export.
+              </p>
+            )}
           </div>
           {status && (
             <div className={`sor-status sor-status-${status.type}`}>{status.text}</div>

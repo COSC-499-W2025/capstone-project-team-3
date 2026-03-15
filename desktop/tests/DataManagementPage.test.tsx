@@ -238,6 +238,33 @@ test('shows error when skill date is outside project date range', async () => {
   expect(mockUpdateSkillDate).not.toHaveBeenCalled();
 });
 
+test('accepts skill date on same day as project created (timestamp vs date-only)', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  // Project Alpha: created_at 2026-01-15T10:30:00Z, last_modified 2026-02-01T14:20:00Z
+  // Skill date 15-01-2026 (same day as created) should be valid after normalization
+  const skillDateBtns = screen.getAllByText('15-01-2026');
+  await user.click(skillDateBtns[1]);
+
+  const input = screen.getByPlaceholderText('dd-mm-yyyy');
+  await user.clear(input);
+  await user.type(input, '15-01-2026');
+  await user.tab();
+
+  expect(mockUpdateSkillDate).toHaveBeenCalledWith(1, expect.objectContaining({ date: '2026-01-15' }));
+  expect(screen.queryByText(/Skill date must be within the project's date range/i)).not.toBeInTheDocument();
+});
+
 test('Refresh button fetches projects', async () => {
   const user = userEvent.setup();
   render(

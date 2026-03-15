@@ -49,6 +49,13 @@ function parseDdMmYyyyToIso(str: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
+/** Normalize date string to YYYY-MM-DD for comparison. Handles ISO timestamps (2026-01-15T10:30:00Z) and date-only (2026-01-15). */
+function normalizeToDateOnly(value: string): string {
+  if (!value) return value;
+  const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : value;
+}
+
 const DATE_FORMAT_ERR = "Invalid date format. Use dd-mm-yyyy (e.g. 25-12-2024).";
 const MODIFIED_BEFORE_CREATED_ERR = "Last modified must be after date created.";
 const SKILL_OUTSIDE_RANGE_ERR = "Skill date must be within the project's date range (created to last modified).";
@@ -130,7 +137,9 @@ export function DataManagementPage() {
     last_modified: string
   ) => {
     setDateError(null);
-    if (created_at >= last_modified) {
+    const createdNorm = normalizeToDateOnly(created_at);
+    const modifiedNorm = normalizeToDateOnly(last_modified);
+    if (createdNorm >= modifiedNorm) {
       setDateError(MODIFIED_BEFORE_CREATED_ERR);
       return;
     }
@@ -157,9 +166,14 @@ export function DataManagementPage() {
   ) => {
     setDateError(null);
     const proj = projects.find((p) => p.project_signature === projectSig);
-    if (proj && (date < proj.created_at || date > proj.last_modified)) {
-      setDateError(SKILL_OUTSIDE_RANGE_ERR);
-      return;
+    if (proj) {
+      const dateNorm = normalizeToDateOnly(date);
+      const createdNorm = normalizeToDateOnly(proj.created_at);
+      const modifiedNorm = normalizeToDateOnly(proj.last_modified);
+      if (dateNorm < createdNorm || dateNorm > modifiedNorm) {
+        setDateError(SKILL_OUTSIDE_RANGE_ERR);
+        return;
+      }
     }
     setSaving(true);
     try {

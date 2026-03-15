@@ -703,53 +703,6 @@
             transform: translateY(-1px);
         }
 
-        .project-score-meaning {
-            margin-bottom: 14px;
-        }
-
-        .project-score-band {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        .project-score-band-excellent {
-            background: rgba(56, 161, 105, 0.12);
-            color: #276749;
-            border: 1px solid rgba(56, 161, 105, 0.25);
-        }
-
-        .project-score-band-strong {
-            background: rgba(49, 130, 206, 0.12);
-            color: #2b6cb0;
-            border: 1px solid rgba(49, 130, 206, 0.25);
-        }
-
-        .project-score-band-steady {
-            background: rgba(214, 158, 46, 0.12);
-            color: #b7791f;
-            border: 1px solid rgba(214, 158, 46, 0.25);
-        }
-
-        .project-score-band-emerging {
-            background: rgba(229, 62, 62, 0.1);
-            color: #c53030;
-            border: 1px solid rgba(229, 62, 62, 0.2);
-        }
-
-        .project-score-band-copy {
-            margin-top: 8px;
-            color: var(--text-secondary);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
         .project-score-config-inline {
             display: flex;
             align-items: center;

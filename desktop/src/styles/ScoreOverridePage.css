@@ -39,10 +39,35 @@
   margin-bottom: 4px;
 }
 
+.sor-context-link {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sor-context-link:hover {
+  color: white;
+  text-decoration: underline;
+}
+
 .sor-subtitle {
   font-size: 0.9rem;
   opacity: 0.8;
   max-width: 560px;
+  line-height: 1.6;
+}
+
+.sor-context-note {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  opacity: 0.92;
+  max-width: 620px;
   line-height: 1.6;
 }
 

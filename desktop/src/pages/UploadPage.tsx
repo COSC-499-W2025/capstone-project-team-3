@@ -25,21 +25,14 @@ export function UploadPage() {
     setAnalyzing(false);
 
     try {
-      const { upload_id } = await uploadZipFile(file);
-      setAnalyzing(true);
-      await runAnalysis({
-        upload_id,
-        default_analysis_type: "local",
-        similarity_action: "create_new",
-        scan_only: true,
-      });
+      const result = await uploadZipFile(file);
       setSuccess(true);
       setUploadedFileName(file.name);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       navigate("/analysisrunnerpage", {
-        state: { uploadId: upload_id },
+        state: { uploadId: result.upload_id },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -140,9 +133,7 @@ export function UploadPage() {
           ) : (
             <p className="upload-hint">
               {loading
-                ? analyzing
-                  ? "Scanning project…"
-                  : "Uploading…"
+                ? "Uploading…"
                 : "Drop your ZIP file here or click to browse"}
             </p>
           )}

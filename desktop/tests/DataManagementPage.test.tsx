@@ -168,6 +168,26 @@ test('expand project shows skills', async () => {
   expect(await screen.findByText('React')).toBeInTheDocument();
 });
 
+test('shows date format error when invalid date entered', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const createdBtn = screen.getAllByText('15-01-2026')[0];
+  await user.click(createdBtn);
+
+  const input = screen.getByPlaceholderText('dd-mm-yyyy');
+  await user.clear(input);
+  await user.type(input, 'invalid-date');
+  await user.tab();
+
+  expect(await screen.findByText(/Invalid date format. Use dd-mm-yyyy/i)).toBeInTheDocument();
+});
+
 test('Refresh button fetches projects', async () => {
   const user = userEvent.setup();
   render(

@@ -51,6 +51,16 @@
   font-family: var(--font-sans);
 }
 
+.data-management-date-error {
+  padding: var(--spacing-md);
+  background: #fde8e8;
+  color: #c53030;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  max-width: 600px;
+  font-family: var(--font-sans);
+}
+
 .data-management-projects {
   width: 100%;
   max-width: 800px;

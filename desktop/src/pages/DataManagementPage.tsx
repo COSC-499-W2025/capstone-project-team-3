@@ -49,6 +49,10 @@ function parseDdMmYyyyToIso(str: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
+const DATE_FORMAT_ERR = "Invalid date format. Use dd-mm-yyyy (e.g. 25-12-2024).";
+const MODIFIED_BEFORE_CREATED_ERR = "Last modified must be after date created.";
+const SKILL_OUTSIDE_RANGE_ERR = "Skill date must be within the project's date range (created to last modified).";
+
 interface ProjectWithSkills extends ChronologicalProject {
   skills?: ChronologicalSkill[];
   expanded?: boolean;
@@ -75,6 +79,7 @@ export function DataManagementPage() {
     typed: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const fetchProjects = useCallback(() => {
     setLoading(true);
@@ -124,6 +129,11 @@ export function DataManagementPage() {
     created_at: string,
     last_modified: string
   ) => {
+    setDateError(null);
+    if (created_at >= last_modified) {
+      setDateError(MODIFIED_BEFORE_CREATED_ERR);
+      return;
+    }
     setSaving(true);
     try {
       await updateProjectDates(sig, { created_at, last_modified });
@@ -140,7 +150,17 @@ export function DataManagementPage() {
     }
   };
 
-  const handleUpdateSkillDate = async (skillId: number, date: string) => {
+  const handleUpdateSkillDate = async (
+    skillId: number,
+    date: string,
+    projectSig: string
+  ) => {
+    setDateError(null);
+    const proj = projects.find((p) => p.project_signature === projectSig);
+    if (proj && (date < proj.created_at || date > proj.last_modified)) {
+      setDateError(SKILL_OUTSIDE_RANGE_ERR);
+      return;
+    }
     setSaving(true);
     try {
       await updateSkillDate(skillId, { date });
@@ -207,6 +227,12 @@ export function DataManagementPage() {
       <p className="data-management-description">
         View and edit chronological information for projects and skills uploaded to the app.
       </p>
+
+      {dateError && (
+        <div className="data-management-date-error" role="alert">
+          {dateError}
+        </div>
+      )}
 
       <div className="data-management-projects">
         <div className="data-management-section-header">
@@ -276,6 +302,8 @@ export function DataManagementPage() {
                                   iso,
                                   p.last_modified
                                 );
+                              } else if (editing.value.trim()) {
+                                setDateError(DATE_FORMAT_ERR);
                               }
                               setEditing(null);
                             }}
@@ -288,6 +316,8 @@ export function DataManagementPage() {
                                     iso,
                                     p.last_modified
                                   );
+                                } else if (editing.value.trim()) {
+                                  setDateError(DATE_FORMAT_ERR);
                                 }
                                 setEditing(null);
                               }
@@ -298,13 +328,14 @@ export function DataManagementPage() {
                           <button
                             type="button"
                             className="data-management-editable"
-                            onClick={() =>
+                            onClick={() => {
+                              setDateError(null);
                               setEditing({
                                 type: "project_created",
                                 projectSig: p.project_signature,
                                 value: formatDate(p.created_at) === "—" ? "" : formatDate(p.created_at),
-                              })
-                            }
+                              });
+                            }}
                           >
                             {formatDate(p.created_at)}
                           </button>
@@ -332,6 +363,8 @@ export function DataManagementPage() {
                                   p.created_at,
                                   iso
                                 );
+                              } else if (editing.value.trim()) {
+                                setDateError(DATE_FORMAT_ERR);
                               }
                               setEditing(null);
                             }}
@@ -344,6 +377,8 @@ export function DataManagementPage() {
                                     p.created_at,
                                     iso
                                   );
+                                } else if (editing.value.trim()) {
+                                  setDateError(DATE_FORMAT_ERR);
                                 }
                                 setEditing(null);
                               }
@@ -354,13 +389,14 @@ export function DataManagementPage() {
                           <button
                             type="button"
                             className="data-management-editable"
-                            onClick={() =>
+                            onClick={() => {
+                              setDateError(null);
                               setEditing({
                                 type: "project_modified",
                                 projectSig: p.project_signature,
                                 value: formatDate(p.last_modified) === "—" ? "" : formatDate(p.last_modified),
-                              })
-                            }
+                              });
+                            }}
                           >
                             {formatDate(p.last_modified)}
                           </button>
@@ -428,7 +464,9 @@ export function DataManagementPage() {
                                             onBlur={() => {
                                               const iso = parseDdMmYyyyToIso(editing.value);
                                               if (iso) {
-                                                handleUpdateSkillDate(s.id, iso);
+                                                handleUpdateSkillDate(s.id, iso, p.project_signature);
+                                              } else if (editing.value.trim()) {
+                                                setDateError(DATE_FORMAT_ERR);
                                               }
                                               setEditing(null);
                                             }}
@@ -436,7 +474,9 @@ export function DataManagementPage() {
                                               if (e.key === "Enter") {
                                                 const iso = parseDdMmYyyyToIso(editing.value);
                                                 if (iso) {
-                                                  handleUpdateSkillDate(s.id, iso);
+                                                  handleUpdateSkillDate(s.id, iso, p.project_signature);
+                                                } else if (editing.value.trim()) {
+                                                  setDateError(DATE_FORMAT_ERR);
                                                 }
                                                 setEditing(null);
                                               }
@@ -447,13 +487,14 @@ export function DataManagementPage() {
                                           <button
                                             type="button"
                                             className="data-management-editable"
-                                            onClick={() =>
+                                            onClick={() => {
+                                              setDateError(null);
                                               setEditing({
                                                 type: "skill_date",
                                                 skillId: s.id,
                                                 value: formatDate(s.date) === "—" ? "" : formatDate(s.date),
-                                              })
-                                            }
+                                              });
+                                            }}
                                           >
                                             {formatDate(s.date)}
                                           </button>

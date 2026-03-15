@@ -347,3 +347,99 @@ body {
   align-self: center;
   padding: 10px 40px;
 }
+
+/* Add Project modal: larger, scrollable table like project selection page */
+.modal-content--add-project {
+  min-width: 520px;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.modal-error {
+  font-size: 14px;
+  color: #b91c1c;
+  margin: 0;
+}
+
+.modal-loading {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.modal-table-wrap {
+  overflow: auto;
+  max-height: 320px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+
+.modal-content--add-project .modal-projects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modal-content--add-project .table-header {
+  background: var(--bg-page);
+  border-bottom: 2px solid var(--border-light);
+}
+
+.modal-content--add-project .table-header th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.modal-content--add-project .project-row {
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+}
+
+.modal-content--add-project .project-row:hover {
+  background: var(--bg-page);
+}
+
+.modal-content--add-project .project-row td {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.modal-content--add-project .project-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.modal-content--add-project .project-checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  accent-color: var(--button-blue);
+}
+
+.modal-empty {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}

@@ -80,6 +80,38 @@
   border-bottom: 1px solid #000;
 }
 
+/* Row for section heading + "Add a project" button in edit mode */
+.resume-preview__heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.resume-preview__heading-row .resume-preview__heading {
+  margin: 0;
+  padding-bottom: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.resume-preview__add-project-btn {
+  flex-shrink: 0;
+  font-size: 10pt;
+  padding: 4px 10px;
+  cursor: pointer;
+  background: #1e3a8a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.resume-preview__add-project-btn:hover {
+  background: #2563eb;
+}
+
 .resume-preview__header {
   text-align: center;
   margin-bottom: 6px;

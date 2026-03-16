@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     name TEXT,
     email TEXT,
     github_user TEXT,
+    linkedin TEXT,
     industry TEXT,
     education TEXT,
     job_title TEXT,
@@ -152,6 +153,7 @@ def init_db():
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_skills_resume_id ON RESUME_SKILLS(resume_id)"
     )
     _ensure_project_override_exclusions_column(cursor)
+    _ensure_user_preferences_linkedin_column(cursor)
     _ensure_project_score_constraint(cursor)
     _ensure_resume_project_has_no_project_fk(cursor)
     conn.commit()
@@ -164,6 +166,15 @@ def _ensure_project_override_exclusions_column(cursor: sqlite3.Cursor) -> None:
     existing_columns = {row[1] for row in cursor.fetchall()}
     if "score_override_exclusions" not in existing_columns:
         cursor.execute("ALTER TABLE PROJECT ADD COLUMN score_override_exclusions TEXT")
+
+def _ensure_user_preferences_linkedin_column(cursor: sqlite3.Cursor) -> None:
+    """Ensure USER_PREFERENCES has linkedin column on existing DBs."""
+    cursor.execute("PRAGMA table_info(USER_PREFERENCES)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "linkden" in existing_columns and "linkedin" not in existing_columns:
+        cursor.execute("ALTER TABLE USER_PREFERENCES RENAME COLUMN linkden TO linkedin")
+    elif "linkedin" not in existing_columns:
+        cursor.execute("ALTER TABLE USER_PREFERENCES ADD COLUMN linkedin TEXT")
 
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""

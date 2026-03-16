@@ -14,6 +14,7 @@ export interface UserPreferences {
   name: string;
   email: string;
   github_user: string;
+  linkedin?: string | null; // LinkedIn profile URL
   education: string; // e.g., "Bachelor's", "Master's", "PhD"
   industry: string;
   job_title: string;

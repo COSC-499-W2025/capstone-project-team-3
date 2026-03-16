@@ -22,11 +22,17 @@ const mockUpdateProjectDates = chronologicalApi.updateProjectDates as jest.Mocke
 const mockUpdateSkillDate = chronologicalApi.updateSkillDate as jest.MockedFunction<
   typeof chronologicalApi.updateSkillDate
 >;
+const mockUpdateProjectName = chronologicalApi.updateProjectName as jest.MockedFunction<
+  typeof chronologicalApi.updateProjectName
+>;
 const mockUpdateSkillName = chronologicalApi.updateSkillName as jest.MockedFunction<
   typeof chronologicalApi.updateSkillName
 >;
 const mockAddSkill = chronologicalApi.addSkill as jest.MockedFunction<
   typeof chronologicalApi.addSkill
+>;
+const mockDeleteSkill = chronologicalApi.deleteSkill as jest.MockedFunction<
+  typeof chronologicalApi.deleteSkill
 >;
 const mockDeleteProject = projectsApi.deleteProject as jest.MockedFunction<
   typeof projectsApi.deleteProject
@@ -60,8 +66,10 @@ beforeEach(() => {
   mockGetProjectSkills.mockResolvedValue(mockSkills);
   mockUpdateProjectDates.mockResolvedValue(mockProjects[0]);
   mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '2026-01-20' });
+  mockUpdateProjectName.mockResolvedValue({ ...mockProjects[0], name: 'Updated Project Name' });
   mockUpdateSkillName.mockResolvedValue({ ...mockSkills[0], skill: 'TypeScript' });
   mockAddSkill.mockResolvedValue({ message: 'Skill added', skill: 'TypeScript', source: 'code', date: '2026-01-15' });
+  mockDeleteSkill.mockResolvedValue(undefined);
   mockDeleteProject.mockResolvedValue({
     status: 'ok',
     message: "Project 'Project Alpha' deleted successfully",
@@ -87,7 +95,7 @@ test('renders description after load', async () => {
     </BrowserRouter>
   );
 
-  const description = await screen.findByText(/View and edit chronological information/i);
+  const description = await screen.findByText(/Edit project names, dates, and skills/i);
   expect(description).toBeInTheDocument();
 });
 
@@ -429,6 +437,83 @@ test('edit skill name: click, type, blur saves and calls updateSkillName', async
   expect(mockUpdateSkillName).toHaveBeenCalledWith(1, expect.objectContaining({ skill: 'TypeScript' }));
 });
 
+test('edit project name: click, type, blur saves and calls updateProjectName', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const projectNameBtn = screen.getByRole('button', { name: 'Project Alpha' });
+  await user.click(projectNameBtn);
+
+  const input = screen.getByPlaceholderText('Project name');
+  expect(input).toHaveValue('Project Alpha');
+  await user.clear(input);
+  await user.type(input, 'Updated Project Name');
+  await user.tab();
+
+  expect(mockUpdateProjectName).toHaveBeenCalledWith('sig-1', 'Updated Project Name');
+});
+
+test('edit project name: Escape cancels without saving', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const projectNameBtn = screen.getByRole('button', { name: 'Project Alpha' });
+  await user.click(projectNameBtn);
+
+  const input = screen.getByPlaceholderText('Project name');
+  await user.type(input, 'Changed');
+  await user.keyboard('{Escape}');
+
+  expect(mockUpdateProjectName).not.toHaveBeenCalled();
+  expect(screen.getByText('Project Alpha')).toBeInTheDocument();
+});
+
+test('description mentions Resume and Portfolio', async () => {
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  const description = await screen.findByText(/Resume and Portfolio/i);
+  expect(description).toBeInTheDocument();
+});
+
+test('Add button disabled when form first opened, enabled after skill name and type', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  await user.click(screen.getByRole('button', { name: '+ Add skill' }));
+
+  const addBtn = screen.getByRole('button', { name: 'Add' });
+  expect(addBtn).toBeDisabled();
+
+  await user.type(screen.getByPlaceholderText('Skill name'), 'NewSkill');
+  expect(addBtn).toBeDisabled();
+
+  await user.selectOptions(screen.getByRole('combobox'), 'Technical skill');
+  expect(addBtn).not.toBeDisabled();
+});
+
 test('add skill: form appears, fill and submit calls addSkill', async () => {
   const user = userEvent.setup();
   render(
@@ -447,6 +532,7 @@ test('add skill: form appears, fill and submit calls addSkill', async () => {
 
   const skillInput = screen.getByPlaceholderText('Skill name');
   await user.type(skillInput, 'TypeScript');
+  await user.selectOptions(screen.getByRole('combobox'), 'Technical skill');
   const addBtn = screen.getByRole('button', { name: 'Add' });
   await user.click(addBtn);
 
@@ -457,9 +543,9 @@ test('add skill: form appears, fill and submit calls addSkill', async () => {
   }));
 });
 
-test('clear date button calls updateSkillDate with empty date', async () => {
+test('delete skill: click × opens confirmation, confirm calls deleteSkill', async () => {
   const user = userEvent.setup();
-  mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '' });
+  mockGetProjectSkills.mockResolvedValue(mockSkills);
 
   render(
     <BrowserRouter>
@@ -472,15 +558,20 @@ test('clear date button calls updateSkillDate with empty date', async () => {
   await user.click(expandButtons[0]);
 
   await screen.findByText('Python');
-  const clearDateBtn = screen.getByRole('button', { name: /remove date for python/i });
-  await user.click(clearDateBtn);
+  const deleteBtn = screen.getByRole('button', { name: /remove python/i });
+  await user.click(deleteBtn);
 
-  expect(mockUpdateSkillDate).toHaveBeenCalledWith(1, expect.objectContaining({ date: '' }));
+  expect(await screen.findByText(/Are you sure you want to delete/)).toBeInTheDocument();
+  expect(screen.getByText('Python', { selector: 'strong' })).toBeInTheDocument();
+
+  const confirmBtn = screen.getByRole('button', { name: /yes, delete/i });
+  await user.click(confirmBtn);
+
+  expect(mockDeleteSkill).toHaveBeenCalledWith(1);
 });
 
-test('clear date button is disabled when skill has no date', async () => {
+test('delete skill: cancel dismisses confirmation without calling deleteSkill', async () => {
   const user = userEvent.setup();
-  mockGetProjectSkills.mockResolvedValue([{ ...mockSkills[0], date: '' }, mockSkills[1]]);
 
   render(
     <BrowserRouter>
@@ -493,6 +584,12 @@ test('clear date button is disabled when skill has no date', async () => {
   await user.click(expandButtons[0]);
 
   await screen.findByText('Python');
-  const clearDateBtn = screen.getByRole('button', { name: /remove date for python/i });
-  expect(clearDateBtn).toBeDisabled();
+  const deleteBtn = screen.getByRole('button', { name: /remove python/i });
+  await user.click(deleteBtn);
+
+  await screen.findByText(/Are you sure you want to delete/);
+  await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+  expect(mockDeleteSkill).not.toHaveBeenCalled();
+  expect(screen.queryByText(/Are you sure you want to delete/)).not.toBeInTheDocument();
 });

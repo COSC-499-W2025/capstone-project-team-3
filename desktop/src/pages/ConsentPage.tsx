@@ -195,6 +195,16 @@ export function ConsentPage() {
 
   return (
     <div className="consent-container">
+      <button
+        type="button"
+        className="project-selection__back consent-back"
+        onClick={() => navigate(-1)}
+      >
+        <span className="project-selection__back-chevron" aria-hidden>
+          ‹
+        </span>
+        Back
+      </button>
       {notification && (
         <div className="notification">
           <p>{notification}</p>

@@ -2,11 +2,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
   background: var(--color-bg-light);
   padding: var(--spacing-lg) var(--spacing-md);
+}
+
+.consent-back {
+  position: absolute;
+  top: var(--spacing-lg);
+  left: var(--spacing-md);
 }
 
 .consent-frame {

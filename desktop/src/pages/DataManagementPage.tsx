@@ -4,9 +4,11 @@ import {
   getChronologicalProjects,
   getProjectSkills,
   updateProjectDates,
+  updateProjectName,
   updateSkillDate,
   updateSkillName,
   addSkill,
+  deleteSkill,
   type ChronologicalProject,
   type ChronologicalSkill,
 } from "../api/chronological";
@@ -78,15 +80,15 @@ export function DataManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{
-    type: "project_created" | "project_modified" | "skill_date" | "skill_name";
+    type: "project_created" | "project_modified" | "project_name" | "skill_date" | "skill_name";
     projectSig?: string;
     skillId?: number;
-    value: string; // dd-mm-yyyy or skill name
+    value: string; // dd-mm-yyyy or skill name or project name
   } | null>(null);
   const [addingSkill, setAddingSkill] = useState<{
     projectSig: string;
     skill: string;
-    source: "code" | "non-technical";
+    source: "" | "code" | "non-technical";
     date: string; // dd-mm-yyyy or empty
   } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -96,6 +98,12 @@ export function DataManagementPage() {
     typed: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteSkillModal, setDeleteSkillModal] = useState<{
+    skillId: number;
+    skillName: string;
+    projectSig: string;
+  } | null>(null);
+  const [deletingSkill, setDeletingSkill] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
 
   const fetchProjects = useCallback(() => {
@@ -164,6 +172,27 @@ export function DataManagementPage() {
       setEditing(null);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateProjectName = async (projectSig: string, name: string) => {
+    if (!name.trim()) {
+      alert("Project name cannot be empty");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateProjectName(projectSig, name.trim());
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.project_signature === projectSig ? { ...p, name: name.trim() } : p
+        )
+      );
+      setEditing(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to update project name");
     } finally {
       setSaving(false);
     }
@@ -255,6 +284,10 @@ export function DataManagementPage() {
       alert("Skill name cannot be empty");
       return;
     }
+    if (!add.source || (add.source !== "code" && add.source !== "non-technical")) {
+      alert("Please select a skill type");
+      return;
+    }
     const proj = projects.find((p) => p.project_signature === projectSig);
     if (!proj) return;
     let dateIso = add.date.trim() ? parseDdMmYyyyToIso(add.date) : null;
@@ -316,6 +349,26 @@ export function DataManagementPage() {
     }
   };
 
+  const handleDeleteSkillConfirmed = async () => {
+    if (!deleteSkillModal) return;
+    const { skillId, projectSig } = deleteSkillModal;
+    setDeletingSkill(true);
+    try {
+      await deleteSkill(skillId);
+      const skills = await getProjectSkills(projectSig);
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.project_signature === projectSig ? { ...p, skills } : p
+        )
+      );
+      setDeleteSkillModal(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete skill");
+    } finally {
+      setDeletingSkill(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="data-management-container">
@@ -373,7 +426,7 @@ export function DataManagementPage() {
       </div>
       <h1 className="data-management-title">Data Management</h1>
       <p className="data-management-description">
-        View and edit chronological information for projects and skills uploaded to the app.
+        Edit project names, dates, and skills for all uploaded projects. Changes you make here are saved to the database and will appear in your Resume and Portfolio across the app. Click any project name, date, or skill to edit inline.
       </p>
 
       {dateError && (
@@ -427,7 +480,53 @@ export function DataManagementPage() {
                           {p.expanded ? "▼" : "▶"}
                         </button>
                       </td>
-                      <td>{p.name || p.project_signature || "—"}</td>
+                      <td className="data-management-col-project-name">
+                        {editing?.type === "project_name" &&
+                        editing?.projectSig === p.project_signature ? (
+                          <input
+                            type="text"
+                            className="data-management-edit-input data-management-edit-input-full"
+                            value={editing.value}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev ? { ...prev, value: e.target.value } : null
+                              )
+                            }
+                            placeholder="Project name"
+                            autoFocus
+                            onBlur={() => {
+                              if (editing.value.trim()) {
+                                handleUpdateProjectName(p.project_signature, editing.value);
+                              }
+                              setEditing(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                if (editing.value.trim()) {
+                                  handleUpdateProjectName(p.project_signature, editing.value);
+                                }
+                                setEditing(null);
+                              }
+                              if (e.key === "Escape") setEditing(null);
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="data-management-editable"
+                            onClick={() => {
+                              setDateError(null);
+                              setEditing({
+                                type: "project_name",
+                                projectSig: p.project_signature,
+                                value: p.name || p.project_signature || "",
+                              });
+                            }}
+                          >
+                            {p.name || p.project_signature || "—"}
+                          </button>
+                        )}
+                      </td>
                       <td>
                         {editing?.type === "project_created" &&
                         editing?.projectSig === p.project_signature ? (
@@ -583,19 +682,20 @@ export function DataManagementPage() {
                                   <p className="data-management-skills-empty">No skills.</p>
                                 ) : null}
                                 {p.skills.length > 0 ? (
+                                <div className="data-management-skills-table-wrap">
                                 <table className="data-management-skills-table">
                                   <thead>
                                     <tr>
-                                      <th>Skill</th>
-                                      <th>Source</th>
-                                      <th>Date</th>
-                                      <th className="data-management-skill-actions">Actions</th>
+                                      <th className="data-management-col-skill">Skill</th>
+                                      <th className="data-management-col-source">Source</th>
+                                      <th className="data-management-col-date">Date</th>
+                                      <th className="data-management-skill-delete-col" aria-label="Remove skill" />
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {p.skills.map((s) => (
                                       <tr key={s.id}>
-                                        <td>
+                                        <td className="data-management-col-skill">
                                           {editing?.type === "skill_name" &&
                                           editing?.skillId === s.id ? (
                                             <input
@@ -642,8 +742,8 @@ export function DataManagementPage() {
                                             </button>
                                           )}
                                         </td>
-                                        <td>{formatSkillSource(s.source)}</td>
-                                        <td>
+                                        <td className="data-management-col-source">{formatSkillSource(s.source)}</td>
+                                        <td className="data-management-col-date">
                                           {editing?.type === "skill_date" &&
                                           editing?.skillId === s.id ? (
                                             <input
@@ -700,22 +800,29 @@ export function DataManagementPage() {
                                             </button>
                                           )}
                                         </td>
-                                        <td className="data-management-skill-actions">
+                                        <td className="data-management-skill-delete-col">
                                           <button
                                             type="button"
-                                            className="data-management-clear-date-btn"
-                                            onClick={() => handleRemoveSkillDate(s.id, p.project_signature)}
-                                            disabled={saving || !s.date}
-                                            title="Remove date"
-                                            aria-label={`Remove date for ${s.skill}`}
+                                            className="data-management-skill-delete-btn"
+                                            onClick={() =>
+                                              setDeleteSkillModal({
+                                                skillId: s.id,
+                                                skillName: s.skill || "this skill",
+                                                projectSig: p.project_signature,
+                                              })
+                                            }
+                                            disabled={saving || deletingSkill}
+                                            title="Remove skill"
+                                            aria-label={`Remove ${s.skill || "skill"}`}
                                           >
-                                            Clear date
+                                            ×
                                           </button>
                                         </td>
                                       </tr>
                                     ))}
                                   </tbody>
                                 </table>
+                                </div>
                                 ) : null}
                                 {addingSkill?.projectSig === p.project_signature ? (
                                   <div className="data-management-add-skill">
@@ -736,18 +843,19 @@ export function DataManagementPage() {
                                       onChange={(e) =>
                                         setAddingSkill((prev) =>
                                           prev
-                                            ? { ...prev, source: e.target.value as "code" | "non-technical" }
+                                            ? { ...prev, source: e.target.value as "" | "code" | "non-technical" }
                                             : null
                                         )
                                       }
                                     >
+                                      <option value="">Select</option>
                                       <option value="code">Technical skill</option>
                                       <option value="non-technical">Soft skill</option>
                                     </select>
                                     <input
                                       type="text"
                                       className="data-management-edit-input"
-                                      placeholder="dd-mm-yyyy (optional)"
+                                      placeholder="dd-mm-yyyy"
                                       value={addingSkill.date}
                                       onChange={(e) =>
                                         setAddingSkill((prev) =>
@@ -759,7 +867,7 @@ export function DataManagementPage() {
                                       type="button"
                                       className="data-management-add-skill-btn"
                                       onClick={() => handleAddSkill(p.project_signature)}
-                                      disabled={saving || !addingSkill.skill.trim()}
+                                      disabled={saving || !addingSkill.skill.trim() || !addingSkill.source}
                                     >
                                       Add
                                     </button>
@@ -779,7 +887,7 @@ export function DataManagementPage() {
                                       setAddingSkill({
                                         projectSig: p.project_signature,
                                         skill: "",
-                                        source: "code",
+                                        source: "",
                                         date: "",
                                       })
                                     }
@@ -801,6 +909,35 @@ export function DataManagementPage() {
           </div>
         )}
       </div>
+
+      {deleteSkillModal && (
+        <div className="data-management-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-skill-modal-title">
+          <div className="data-management-modal data-management-modal-sm">
+            <h2 id="delete-skill-modal-title" className="data-management-modal-title">Delete Skill</h2>
+            <p className="data-management-modal-body">
+              Are you sure you want to delete <strong>{deleteSkillModal.skillName}</strong>?
+            </p>
+            <div className="data-management-modal-actions">
+              <button
+                type="button"
+                className="data-management-modal-cancel"
+                onClick={() => setDeleteSkillModal(null)}
+                disabled={deletingSkill}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="data-management-modal-confirm-danger"
+                onClick={handleDeleteSkillConfirmed}
+                disabled={deletingSkill}
+              >
+                {deletingSkill ? "Deleting…" : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteModal && (
         <div className="data-management-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">

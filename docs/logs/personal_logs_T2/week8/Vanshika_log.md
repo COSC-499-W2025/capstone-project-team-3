@@ -24,8 +24,8 @@ Building on the consent management UI work from reading break, I focused on crit
 ### Associated Issues Completed
 | Issue ID | Title | Status | Related PRs |
 |----------|-------|--------|-------------|
-| [#731](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/731) | Refactor non code pdf, readme, text parsing to full parse for collaborative files | ✅ In review | PR #733 |
-| [#732](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/732) | Analysis of collaborative non-code files not happening | ✅ In Review | PR #733 |
+| [#731](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/731) | Refactor non code pdf, readme, text parsing to full parse for collaborative files | ✅ Closed| PR #733 |
+| [#732](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/732) | Analysis of collaborative non-code files not happening | ✅ Closed | PR #733 |
 | [#736](https://github.com/COSC-499-W2025/capstone-project-team-3/issues/736) | Record the parts for video demo | ✅ Closed | - |
 
 ### Issues In Progress

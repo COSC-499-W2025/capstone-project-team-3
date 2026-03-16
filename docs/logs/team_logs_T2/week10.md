@@ -57,11 +57,15 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 ## Completed Tasks
 
 
-| Task/Issue ID                                    | Title                                                                                                                                                         | Username       |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| [#782, #783, #784]                               | Display projects list for Data Management UI, Connect Upload to trigger scanning (PR #781): projects list, analysis API client, upload→analysis flow           | @6s-1          |
-| [#802, #803, #804, #805]                         | Project/skill chronological editing and display (PR #801): inline editing for dates, skill source display, chronological API support, skill view                | @6s-1          |
-| [#821, #824, #825]                               | Date validation for Data Management UI (PR #821): dd-mm-yyyy format, modified>created, skill date range, timestamp normalization, error messages             | @6s-1          |
+| Task/Issue ID                        | Title                                                                                                                                                                                                                                                                                                                                                                                                      | Username       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| [#821, #824, #825, #802, #803, #804, #805, #782, #783, #784] |Date validation for Data Management UI (PR #821): dd-mm-yyyy format, modified>created, skill date range, timestamp normalization, error messages (PR #763), Project/skill chronological editing and display (PR #801): inline editing for dates, skill source display, chronological API support, skill view                                                                                                                                                                                                                               | @6s-1          |
+| [#788, #789, #790, #793, #795, #796, #797] | Hub Page UI and Consent Page Redesign: Central Hub Page for navigation (PR #791), accessible aria-labels, comprehensive unit tests (PR #797); Consent page visual redesign with text parser for structured content (PR #792); Upload file panel integration (PR #798); Manual testing and documentation for peer testing | @PaintedW0lf   |
+| [#771, #773]                         | Desktop score-override API integration, Functional Score Override management page in desktop app                                                                                                                                                                                                                                                                                                           | @kjassani      |
+| [#836, #835]                         | Analysis runner setup (PR #794): desktop analysis configuration page after upload, project preload, per-project analysis type and run results; Unified one-page upload + analysis flow (PR #809): merged pages, per-project similarity actions (frontend+backend), AI consent modal + notice, tooltip guidance, post-run reset behavior, deterministic path-based override keys; also contributed to Peer Testing 2 UI task-list drafting/refinement | @KarimKhalil33 |
+| [#786, #726, #810, #816, #818]       | Handle no projects for resume (PR #787): no-projects UI, snapshot-on-delete, DB migration; Add project to existing resume (PR #806): add-project modal, tests; Navigation for returning/first-time user (PR #811): consent-based redirect, error notification, WelcomePage tests; Navigation bar and ResumeBuilder/ProjectSelection (PR #819): collapsible nav, Hub home link, back button, responsiveness | @dabby04       |
+
+| [ #815, #834 , #814 , #799, #800 ]| Collect & Store LinkedIn Info, Returning + First user Navigation user Preference Page, Update Profile Ui to align with current UI, Front-end Deletion, Add settings Option to hub page | @abatractafua |
 
 
 ## In Progress Tasks
@@ -76,7 +80,7 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 ## Meeting Notes
 
-*Add meeting notes for Week 10*
+Discussed plans for Milestone 3 and what to wrap up for Peer testing. All notes for this meeting reflected in this [document](https://docs.google.com/document/d/1whjxm8Dyh-01K47Lic2t34O8g8vnQ7Zb3WwkUFfi3y4)
 
 ---
 
@@ -85,19 +89,23 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 - **Framework used:** pytest (backend); Jest/React Testing Library (desktop frontend)
 - **Test run date:** Mar 2026
 - **Summary:**  
-  - Data Management page tests: projects list, expand skills, refresh, delete flow
-  - Date validation tests: invalid format, last modified before created, skill outside range, same-day boundary (timestamp vs date-only)
+  - Upload page tests: auto-upload, Remove button, loading guards, ZIP validation
+  - Data Management page tests
+  - ConsentPage tests: 20+ unit tests covering positive and negative flows, consent/revoke UI, navigation, and error handling
+  - Portfolio page tests: 32 Jest/RTL tests (loading/error states, project cards, project selection, charts, analysis section, user profile card)
   - All test suites passing
 
 ---
 
 ## Reflection
 
-*Add team reflection for Week 10*
+We discussed as a team to wrap up major elements for Milestone 3 going into next week. This way, we would be able to get major feedback from classmates on what elements could be improved.
 
 ---
 
 ## Plan for Next Cycle
 
-- Continue Data Management and desktop integration work
+- Updates to UI where needed
+- Implementation of some nice-to-haves
 - Support team with code reviews and testing
+

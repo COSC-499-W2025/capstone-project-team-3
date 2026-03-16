@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 import "@testing-library/jest-dom";
+import { MemoryRouter } from "react-router-dom";
 import ScoreOverridePage from "../src/pages/ScoreOverridePage";
 import * as projectsApi from "../src/api/projects";
 
@@ -82,18 +83,27 @@ function makeBreakdown(
 }
 
 async function selectProject(): Promise<void> {
-  const projectSelect = await screen.findByRole("combobox", { name: "Project" });
+  const projectSelect = await screen.findByRole("combobox", { name: /Select Project/i });
   await act(async () => {
     fireEvent.change(projectSelect, { target: { value: "sig_alpha_project/hash" } });
   });
 }
 
 function getMetricCheckbox(metricLabel: string): HTMLInputElement {
-  const row = screen.getByText(metricLabel).closest("label");
+  const metricName = screen.getByText(metricLabel, { selector: ".sor-metric-name" });
+  const row = metricName.closest(".sor-metric-row");
   if (!row) throw new Error(`Could not find metric row for ${metricLabel}`);
   const checkbox = row.querySelector('input[type="checkbox"]');
   if (!checkbox) throw new Error(`Could not find checkbox for ${metricLabel}`);
   return checkbox as HTMLInputElement;
+}
+
+function renderPage(initialPath = "/scoreoverridepage"): void {
+  render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <ScoreOverridePage />
+    </MemoryRouter>
+  );
 }
 
 describe("ScoreOverridePage", () => {
@@ -116,20 +126,20 @@ describe("ScoreOverridePage", () => {
   });
 
   test("loads score breakdown after project selection", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
 
     await screen.findByText("Score Override");
     await selectProject();
 
-    await screen.findByText("Code Metrics");
+    await screen.findByRole("heading", { name: "Score Preview" });
     expect(mockGetScoreBreakdown).toHaveBeenCalledWith("sig_alpha_project/hash");
-    expect(screen.getByText("Total Commits")).toBeInTheDocument();
+    expect(screen.getByText("Total Commits", { selector: ".sor-metric-name" })).toBeInTheDocument();
   });
 
   test("toggles a metric and requests preview update", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
-    await screen.findByText("Code Metrics");
+    await screen.findByRole("heading", { name: "Score Preview" });
 
     const commitsCheckbox = getMetricCheckbox("Total Commits");
     await act(async () => {
@@ -142,13 +152,13 @@ describe("ScoreOverridePage", () => {
         expect.arrayContaining(["total_lines", "total_commits"])
       )
     );
-    expect(await screen.findByText(/Preview score: 82.0%/i)).toBeInTheDocument();
+    expect(await screen.findByText("+12.0%")).toBeInTheDocument();
   });
 
   test("applies override and refreshes breakdown", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
-    await screen.findByText("Code Metrics");
+    await screen.findByRole("heading", { name: "Score Preview" });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Apply Override" }));
@@ -158,13 +168,13 @@ describe("ScoreOverridePage", () => {
       expect(mockApplyScoreOverride).toHaveBeenCalledWith("sig_alpha_project/hash", ["total_lines"])
     );
     await waitFor(() => expect(mockGetScoreBreakdown).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Override saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Score override applied successfully")).toBeInTheDocument();
   });
 
   test("clears override and refreshes breakdown", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
-    await screen.findByText("Code Metrics");
+    await screen.findByRole("heading", { name: "Score Preview" });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear Override" }));
@@ -174,13 +184,15 @@ describe("ScoreOverridePage", () => {
       expect(mockClearScoreOverride).toHaveBeenCalledWith("sig_alpha_project/hash")
     );
     await waitFor(() => expect(mockGetScoreBreakdown).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Override cleared.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Score override cleared — original score restored")
+    ).toBeInTheDocument();
   });
 
   test("reset restores original exclusions and recalculates preview", async () => {
-    render(<ScoreOverridePage />);
+    renderPage();
     await selectProject();
-    await screen.findByText("Code Metrics");
+    await screen.findByRole("heading", { name: "Score Preview" });
 
     const commitsCheckbox = getMetricCheckbox("Total Commits");
     await act(async () => {
@@ -197,6 +209,15 @@ describe("ScoreOverridePage", () => {
         "sig_alpha_project/hash",
         ["total_lines"]
       )
+    );
+  });
+
+  test("preselects the requested project when opened from portfolio", async () => {
+    renderPage("/scoreoverridepage?project=sig_alpha_project%2Fhash&from=portfoliopage");
+
+    expect(await screen.findByText("Back to Portfolio")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockGetScoreBreakdown).toHaveBeenCalledWith("sig_alpha_project/hash")
     );
   });
 });

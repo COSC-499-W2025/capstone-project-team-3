@@ -4,6 +4,7 @@ import {
   waitFor,
   fireEvent,
   act,
+  within,
 } from "@testing-library/react";
 import { test, expect, jest, beforeEach, describe } from "@jest/globals";
 import "@testing-library/jest-dom";
@@ -16,6 +17,14 @@ jest.mock("chart.js/auto", () => {
     destroy: jest.fn(),
     update: jest.fn(),
   }));
+});
+
+beforeEach(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+    configurable: true,
+    writable: true,
+    value: jest.fn(() => ({})),
+  });
 });
 
 // --- fixtures ----------------------------------------------------------------
@@ -122,6 +131,12 @@ function setupFetchMock(
 
   const mockFetch = jest.fn((url: RequestInfo | URL) => {
     const urlStr = url.toString();
+    if (urlStr.includes("/api/portfolio/project/thumbnail")) {
+      return Promise.resolve({
+        ok: false,
+        statusText: "Not Found",
+      } as Response);
+    }
     if (urlStr.includes("/api/projects")) {
       return Promise.resolve({
         ok: true,
@@ -142,11 +157,21 @@ function setupFetchMock(
 }
 
 function renderPortfolio() {
+  window.history.pushState({}, "", "/");
   return render(
     <BrowserRouter>
       <PortfolioPage />
     </BrowserRouter>,
   );
+}
+
+function readBlobAsText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
 }
 
 // --- tests -------------------------------------------------------------------
@@ -206,7 +231,7 @@ describe("PortfolioPage – successful load", () => {
       // Total projects label is unique in the overview grid
       expect(screen.getByText(/total projects/i)).toBeDefined();
       // Average score value
-      expect(screen.getByText("0.83")).toBeDefined();
+      expect(screen.getByText("83%")).toBeDefined();
     });
   });
 
@@ -275,8 +300,7 @@ describe("PortfolioPage – project cards", () => {
   test("shows overridden score value instead of raw score", async () => {
     renderPortfolio();
     await waitFor(() => {
-      // CLI Toolbox has score_overridden_value 0.85, displayed as toFixed(2) = "0.85"
-      expect(screen.getAllByText("0.85").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("85%").length).toBeGreaterThan(0);
     });
   });
 
@@ -300,6 +324,112 @@ describe("PortfolioPage – project cards", () => {
       const imgs = document.querySelectorAll("img.project-thumbnail");
       expect(imgs.length).toBe(1);
     });
+  });
+
+  test("renders percentage score and expandable score explainer", async () => {
+    renderPortfolio();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("91%").length).toBeGreaterThan(0);
+    });
+
+    const explainers = screen.getAllByText("Why this score?");
+    const firstExplainer = explainers[0].closest("details");
+    expect(firstExplainer).not.toBeNull();
+    expect(firstExplainer).not.toHaveAttribute("open");
+
+    fireEvent.click(explainers[0]);
+
+    expect(firstExplainer).toHaveAttribute("open");
+    expect(
+      within(firstExplainer as HTMLElement).getByText("Repository Activity"),
+    ).toBeInTheDocument();
+    expect(
+      within(firstExplainer as HTMLElement).getByText("Testing Evidence"),
+    ).toBeInTheDocument();
+  });
+
+  test("explains adjusted scoring for overridden projects", async () => {
+    renderPortfolio();
+
+    const explainers = await screen.findAllByText("Why this score?");
+    fireEvent.click(explainers[1]);
+
+    expect(
+      screen.getByText(
+        /adjusted scoring is active for this project\. the current score excludes test files/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test("navigates to score override page with project preselected", async () => {
+    renderPortfolio();
+
+    const configureButtons = await screen.findAllByRole("button", {
+      name: /configure score/i,
+    });
+
+    fireEvent.click(configureButtons[0]);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/scoreoverridepage");
+      expect(window.location.search).toContain("project=proj1");
+      expect(window.location.search).toContain("from=portfoliopage");
+    });
+  });
+
+  test("omits owner-only configure controls from exported HTML", async () => {
+    setupFetchMock();
+
+    let exportedBlob: Blob | null = null;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURLMock = jest.fn((blob: Blob) => {
+      exportedBlob = blob;
+      return "blob:mock-export";
+    });
+    const revokeObjectURLMock = jest.fn();
+
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: createObjectURLMock,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: revokeObjectURLMock,
+    });
+
+    const anchorClickSpy = jest
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    try {
+      renderPortfolio();
+
+      const downloadButton = await screen.findByText(/download interactive html/i);
+      await act(async () => {
+        fireEvent.click(downloadButton);
+      });
+
+      expect(exportedBlob).not.toBeNull();
+      const exportedHtml = await readBlobAsText(exportedBlob!);
+      expect(exportedHtml).toContain("Why this score?");
+      expect(exportedHtml).not.toContain("Configure score");
+    } finally {
+      anchorClickSpy.mockRestore();
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        writable: true,
+        value: originalCreateObjectURL,
+      });
+      Object.defineProperty(URL, "revokeObjectURL", {
+        configurable: true,
+        writable: true,
+        value: originalRevokeObjectURL,
+      });
+    }
   });
 });
 

@@ -258,6 +258,30 @@
   background: transparent;
 }
 
+.data-management-skill-actions {
+  white-space: nowrap;
+}
+
+.data-management-clear-date-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  text-decoration: underline;
+}
+
+.data-management-clear-date-btn:hover:not(:disabled) {
+  color: #c53030;
+}
+
+.data-management-clear-date-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
 .data-management-delete-btn {
   background: none;
   border: none;

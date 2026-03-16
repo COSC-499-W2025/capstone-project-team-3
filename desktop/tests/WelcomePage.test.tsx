@@ -24,6 +24,10 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 test('renders welcome page with title', async () => {
   await act(async () => {
     render(
@@ -45,12 +49,13 @@ test('returning user: auto-redirects to hub after delay and click goes to hub', 
     json: async () => ({ has_consent: true }),
   });
 
+  render(
+    <BrowserRouter>
+      <WelcomePage />
+    </BrowserRouter>
+  );
+
   await act(async () => {
-    render(
-      <BrowserRouter>
-        <WelcomePage />
-      </BrowserRouter>
-    );
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -69,15 +74,11 @@ test('first-time user: does not auto-redirect to hub and click goes to consent p
     json: async () => ({ has_consent: false }),
   });
 
-  await act(async () => {
-    render(
-      <BrowserRouter>
-        <WelcomePage />
-      </BrowserRouter>
-    );
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+  render(
+    <BrowserRouter>
+      <WelcomePage />
+    </BrowserRouter>
+  );
 
   await jest.runAllTimersAsync();
   expect(mockNavigate).not.toHaveBeenCalled();
@@ -87,20 +88,14 @@ test('first-time user: does not auto-redirect to hub and click goes to consent p
   expect(mockNavigate).toHaveBeenCalledWith('/consentpage');
 });
 
-test('renders nested frame structure', async () => {
+test('renders nested frame structure', () => {
   mockFetch.mockResolvedValue({ ok: false });
 
-  let container: HTMLElement;
-  await act(async () => {
-    const result = render(
-      <BrowserRouter>
-        <WelcomePage />
-      </BrowserRouter>
-    );
-    container = result.container;
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+  const { container } = render(
+    <BrowserRouter>
+      <WelcomePage />
+    </BrowserRouter>
+  );
 
   const frames = container!.querySelectorAll('.welcome-frame');
   expect(frames.length).toBe(4);

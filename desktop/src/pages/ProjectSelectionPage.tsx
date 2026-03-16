@@ -57,6 +57,14 @@ function ProjectSelectionPage() {
 
   return (
     <div className="project-selection-container">
+      <button
+        type="button"
+        className="project-selection__back"
+        onClick={() => navigate(-1)}
+      >
+        <span className="project-selection__back-chevron" aria-hidden>‹</span>
+        Back
+      </button>
       <h1 className="page-title">
         Select Projects for Resume
       </h1>

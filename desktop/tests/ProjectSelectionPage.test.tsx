@@ -332,5 +332,19 @@ describe('ProjectSelectionPage', () => {
     expect(skillsCell.textContent).not.toContain('...');
   });
 
+  test('Back button is present and calls navigate(-1) when clicked', async () => {
+    render(
+      <BrowserRouter>
+        <ProjectSelectionPage />
+      </BrowserRouter>
+    );
 
+    await screen.findByText('Project Alpha');
+
+    const backButton = screen.getByRole('button', { name: /back/i });
+    expect(backButton).toBeInTheDocument();
+
+    fireEvent.click(backButton);
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
 });

@@ -1,17 +1,44 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { pageList } from "./pages";
 import WelcomePage from "./pages/WelcomePage";
 import { getHealth } from "./api/health";
+import { getConsentStatus } from "./api/consent";
 import { useState, useEffect } from "react";
+import { NavBar } from "./NavBar";
+
+function AppLayout() {
+  const location = useLocation();
+  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getConsentStatus()
+      .then(({ has_consent }) => setHasConsent(has_consent))
+      .catch(() => setHasConsent(false));
+  }, [location.pathname]);
+
+  const showNavBar = hasConsent === true;
+
+  return (
+    <div className="app-layout">
+      {showNavBar && <NavBar />}
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<WelcomePage />} />
+          {pageList.map(({ path, component: Component }) => (
+            <Route key={path} path={path} element={<Component />} />
+          ))}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
 
 function App() {
-  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getHealth()
-      .then((data) => setStatus(data.status))
-      .catch((err) => setError(err.message));
+    getHealth().catch((err) => setError(err.message));
   }, []);
 
   if (error) {
@@ -20,24 +47,7 @@ function App() {
 
   return (
     <Router>
-      <nav style={{ padding: 10, borderBottom: "1px solid #ccc" }}>
-        <Link to="/" style={{ marginRight: 10 }}>Home</Link>
-        {pageList.map(({ path }) => (
-          <Link key={path} to={path} style={{ marginRight: 10 }}>
-            {path.replace('/', '')}
-          </Link>
-        ))}
-        <span style={{ marginLeft: "auto", opacity: 0.7, fontSize: "0.9em" }} title={error ?? undefined}>{status}</span>
-        </nav>
-      <div>
-        <Routes>
-          <Route path="/" element={<WelcomePage />} />
-          {pageList.map(({ path, component: Component }) => (
-            <Route key={path} path={path} element={<Component />} />
-          ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
+      <AppLayout />
     </Router>
   );
 }

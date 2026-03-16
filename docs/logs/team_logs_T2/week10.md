@@ -16,6 +16,18 @@
 - **Features planned for this milestone:**
   - Desktop frontend (Electron + React) integrated with Python backend (Milestone 3).
 - **Associated project board tasks for this week:**
+  - Display projects list on Data Management page – #782
+  - Connect analysis after upload so projects appear in Data Management – #783
+  - Add analysis API client for desktop – #784
+  - Add inline editing for project and skill dates in Data Management – #802
+  - Fix skill source to only be "Technical skill" or "Soft skill" – #803
+  - Fix chronological API to support non-technical skill source – #804
+  - Add chronological skill view – #805
+  - Add date validation for skills ensuring correct range – #824
+  - Add date format validation for project and skills – #825
+  - Score Override Page UI Visuals - #829
+  - Portfolio page connection to score override page - #830
+  - Portfolio page score section - recruiter friendly - #831
 
 ---
 
@@ -50,9 +62,9 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 
 | Task/Issue ID                        | Title                                                                                                                                                                                                                                                                                                                                                                                                      | Username       |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| [#628, #626, #761, #762, #765, #766] | End-to-end upload functionality for zipped files (PR #760): connect upload to backend, Remove button, drag-and-drop, UI; Base UI and API module for Data Management (PR #763)                                                                                                                                                                                                                              | @6s-1          |
+| [#821, #824, #825, #802, #803, #804, #805, #782, #783, #784] |Date validation for Data Management UI (PR #821): dd-mm-yyyy format, modified>created, skill date range, timestamp normalization, error messages (PR #763), Project/skill chronological editing and display (PR #801): inline editing for dates, skill source display, chronological API support, skill view                                                                                                                                                                                                                               | @6s-1          |
 | [#788, #789, #790, #793, #795, #796, #797] | Hub Page UI and Consent Page Redesign: Central Hub Page for navigation (PR #791), accessible aria-labels, comprehensive unit tests (PR #797); Consent page visual redesign with text parser for structured content (PR #792); Upload file panel integration (PR #798); Manual testing and documentation for peer testing | @PaintedW0lf   |
-| [#771, #773]                         | Desktop score-override API integration, Functional Score Override management page in desktop app                                                                                                                                                                                                                                                                                                           | @kjassani      |
+| [#829, #830, #831]                         | Score Override Page UI Visuals, Portfolio page connection to score override page, Portfolio page score section - recruiter friendly                                                                                                                             | @kjassani      |
 | [#836, #835]                         | Analysis runner setup (PR #794): desktop analysis configuration page after upload, project preload, per-project analysis type and run results; Unified one-page upload + analysis flow (PR #809): merged pages, per-project similarity actions (frontend+backend), AI consent modal + notice, tooltip guidance, post-run reset behavior, deterministic path-based override keys; also contributed to Peer Testing 2 UI task-list drafting/refinement | @KarimKhalil33 |
 | [#786, #726, #810, #816, #818]       | Handle no projects for resume (PR #787): no-projects UI, snapshot-on-delete, DB migration; Add project to existing resume (PR #806): add-project modal, tests; Navigation for returning/first-time user (PR #811): consent-based redirect, error notification, WelcomePage tests; Navigation bar and ResumeBuilder/ProjectSelection (PR #819): collapsible nav, Hub home link, back button, responsiveness | @dabby04       |
 
@@ -62,9 +74,9 @@ Status Burnup: [https://github.com/orgs/COSC-499-W2025/projects/45/insights/2](h
 ## In Progress Tasks
 
 
-| Task/Issue ID | Title                                                             | Username |
-| ------------- | ----------------------------------------------------------------- | -------- |
-| —             | Data Management UI – projects list, edit dates, skills management | @6s-1    |
+| Task/Issue ID                                                                | Title                                                                                                                     | Username     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| —                                                                           | *Add in-progress tasks here*                                                                                              | —            |
 
 
 ---

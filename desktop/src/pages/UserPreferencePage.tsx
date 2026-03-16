@@ -127,7 +127,7 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
       }
 
       // Only add gpa if it has a value and is a valid number
-      if (entry.gpa && !isNaN(parseFloat(entry.gpa))) {
+      if (entry.gpa !== "" && !isNaN(parseFloat(entry.gpa))) {
         detail.gpa = parseFloat(entry.gpa);
       }
 
@@ -543,12 +543,16 @@ export default function UserPreferencePage() {
       // Use consent status as the authoritative "first-time user" signal.
       // A user who has consented but not yet saved preferences is first-time.
       // A user who has consented AND has saved preferences is returning.
+      // consentChecked tracks whether the lookup actually succeeded — if it
+      // failed we cannot safely derive first-time status from it.
       let hasConsent = false;
+      let consentChecked = false;
       try {
         const consentStatus = await getConsentStatus();
         hasConsent = consentStatus.has_consent;
+        consentChecked = true;
       } catch {
-        // If consent check fails, fall back to preferences-based detection below
+        // Consent check failed — we'll fall back to a safe default below.
       }
 
       try {
@@ -558,14 +562,22 @@ export default function UserPreferencePage() {
         // Has saved preferences → definitely a returning user
         setIsFirstTimeUser(false);
       } catch (err: any) {
-        // Only treat a 404 (no preferences saved yet) as first-time.
+        // Only treat a 404 (no preferences saved yet) as a first-time situation.
         // Any other error (500, network failure, etc.) is a real error.
         const is404 = err?.message?.includes("No user preferences found");
         if (is404) {
-          // No preferences yet — first-time if they also have consent,
-          // otherwise they haven't even consented (edge case).
-          setIsFirstTimeUser(hasConsent);
+          if (consentChecked) {
+            // Consent lookup succeeded — use it as the source of truth.
+            setIsFirstTimeUser(hasConsent);
+          } else {
+            // Consent lookup failed — we can't be sure, so default to first-time
+            // (safer: first-timers go to /uploadpage which is always valid).
+            setIsFirstTimeUser(true);
+          }
+          // No error banner for a missing-preferences 404 — blank form is expected.
         } else {
+          // Real error (500, network, etc.) — only show to returning users who
+          // expected their data to load.
           setError("Could not load your preferences. Please try again.");
         }
       }

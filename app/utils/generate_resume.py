@@ -326,6 +326,8 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                 "project_id": pid,
                 "title": title,
                 "dates": format_dates(start_val, end_val) if start_val and end_val else "",
+                "start_date": start_val,
+                "end_date": end_val,
                 "skills": limited_skills,
                 "bullets": bullets_list,
             })
@@ -377,6 +379,8 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
             projects.append({
                 "title": name,
                 "dates": format_dates(created_at, last_modified),
+                "start_date": created_at or "",
+                "end_date": last_modified or "",
                 "skills": ", ".join(limited_skills),
                 "bullets": bullets_map.get(pid, [])
             })

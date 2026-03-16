@@ -22,6 +22,12 @@ const mockUpdateProjectDates = chronologicalApi.updateProjectDates as jest.Mocke
 const mockUpdateSkillDate = chronologicalApi.updateSkillDate as jest.MockedFunction<
   typeof chronologicalApi.updateSkillDate
 >;
+const mockUpdateSkillName = chronologicalApi.updateSkillName as jest.MockedFunction<
+  typeof chronologicalApi.updateSkillName
+>;
+const mockAddSkill = chronologicalApi.addSkill as jest.MockedFunction<
+  typeof chronologicalApi.addSkill
+>;
 const mockDeleteProject = projectsApi.deleteProject as jest.MockedFunction<
   typeof projectsApi.deleteProject
 >;
@@ -54,6 +60,8 @@ beforeEach(() => {
   mockGetProjectSkills.mockResolvedValue(mockSkills);
   mockUpdateProjectDates.mockResolvedValue(mockProjects[0]);
   mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '2026-01-20' });
+  mockUpdateSkillName.mockResolvedValue({ ...mockSkills[0], skill: 'TypeScript' });
+  mockAddSkill.mockResolvedValue({ message: 'Skill added', skill: 'TypeScript', source: 'code', date: '2026-01-15' });
   mockDeleteProject.mockResolvedValue({
     status: 'ok',
     message: "Project 'Project Alpha' deleted successfully",
@@ -392,4 +400,99 @@ test('typing correct confirmation enables and submits deletion', async () => {
   // Project Alpha is removed from the list
   await screen.findByText('Project Beta');
   expect(screen.queryByText('Project Alpha')).not.toBeInTheDocument();
+});
+
+// --- Skill editing tests ---
+
+test('edit skill name: click, type, blur saves and calls updateSkillName', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  const skillNameBtn = screen.getByRole('button', { name: 'Python' });
+  await user.click(skillNameBtn);
+
+  const input = screen.getByPlaceholderText('Skill name');
+  expect(input).toHaveValue('Python');
+  await user.clear(input);
+  await user.type(input, 'TypeScript');
+  await user.tab();
+
+  expect(mockUpdateSkillName).toHaveBeenCalledWith(1, expect.objectContaining({ skill: 'TypeScript' }));
+});
+
+test('add skill: form appears, fill and submit calls addSkill', async () => {
+  const user = userEvent.setup();
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  const addSkillBtn = screen.getByRole('button', { name: '+ Add skill' });
+  await user.click(addSkillBtn);
+
+  const skillInput = screen.getByPlaceholderText('Skill name');
+  await user.type(skillInput, 'TypeScript');
+  const addBtn = screen.getByRole('button', { name: 'Add' });
+  await user.click(addBtn);
+
+  expect(mockAddSkill).toHaveBeenCalledWith('sig-1', expect.objectContaining({
+    skill: 'TypeScript',
+    source: 'code',
+    date: '2026-01-15',
+  }));
+});
+
+test('clear date button calls updateSkillDate with empty date', async () => {
+  const user = userEvent.setup();
+  mockUpdateSkillDate.mockResolvedValue({ ...mockSkills[0], date: '' });
+
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  const clearDateBtn = screen.getByRole('button', { name: /remove date for python/i });
+  await user.click(clearDateBtn);
+
+  expect(mockUpdateSkillDate).toHaveBeenCalledWith(1, expect.objectContaining({ date: '' }));
+});
+
+test('clear date button is disabled when skill has no date', async () => {
+  const user = userEvent.setup();
+  mockGetProjectSkills.mockResolvedValue([{ ...mockSkills[0], date: '' }, mockSkills[1]]);
+
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  const expandButtons = screen.getAllByRole('button', { name: /expand skills/i });
+  await user.click(expandButtons[0]);
+
+  await screen.findByText('Python');
+  const clearDateBtn = screen.getByRole('button', { name: /remove date for python/i });
+  expect(clearDateBtn).toBeDisabled();
 });

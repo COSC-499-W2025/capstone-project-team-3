@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { API_BASE_URL } from "../config/api";
 import "../styles/UploadPage.css";
@@ -29,6 +30,7 @@ interface PendingAiSelection {
  * Step 1: Drop/select a ZIP. Step 2: Configure and run analysis inline.
  */
 export function UploadPage() {
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -280,6 +282,20 @@ export function UploadPage() {
 
   return (
     <div className="upload-page">
+      <div className="upload-page-nav" aria-label="Page navigation">
+        <div className="page-home-nav">
+          <button
+            type="button"
+            className="page-home-link"
+            onClick={() => navigate("/hubpage")}
+          >
+            Home
+          </button>
+          <span className="page-home-separator">›</span>
+          <span className="page-home-current">Upload</span>
+        </div>
+      </div>
+
       <div className="upload-shell">
         <header className="upload-header">
           <h1 className="upload-title">Upload & Run Analysis</h1>

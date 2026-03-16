@@ -208,6 +208,48 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.page-home-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin-right: auto;
+  margin-bottom: 8px;
+  font-size: 14px;
+  text-align: left;
+  align-self: flex-start;
+}
+
+.page-home-link {
+  background: none;
+  border: none;
+  color: var(--color-text-dark);
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.page-home-link:hover {
+  background: none;
+  color: var(--color-blue-dark);
+  box-shadow: none;
+  transform: none;
+}
+
+.page-home-separator {
+  color: var(--color-text-dark);
+}
+
+.page-home-current {
+  color: var(--color-text-dark);
+  font-weight: 500;
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
   :root {

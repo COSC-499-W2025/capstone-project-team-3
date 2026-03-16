@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getChronologicalProjects,
   getProjectSkills,
@@ -70,6 +71,7 @@ interface ProjectWithSkills extends ChronologicalProject {
  * for projects and skills uploaded to the app.
  */
 export function DataManagementPage() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -218,6 +220,17 @@ export function DataManagementPage() {
   if (loading) {
     return (
       <div className="data-management-container">
+        <div className="page-home-nav" aria-label="Page navigation">
+          <button
+            type="button"
+            className="page-home-link"
+            onClick={() => navigate("/hubpage")}
+          >
+            Home
+          </button>
+          <span className="page-home-separator">›</span>
+          <span className="page-home-current">Projects</span>
+        </div>
         <h1 className="data-management-title">Data Management</h1>
         <div className="data-management-loading">Loading projects...</div>
       </div>
@@ -227,6 +240,17 @@ export function DataManagementPage() {
   if (error) {
     return (
       <div className="data-management-container">
+        <div className="page-home-nav" aria-label="Page navigation">
+          <button
+            type="button"
+            className="page-home-link"
+            onClick={() => navigate("/hubpage")}
+          >
+            Home
+          </button>
+          <span className="page-home-separator">›</span>
+          <span className="page-home-current">Projects</span>
+        </div>
         <h1 className="data-management-title">Data Management</h1>
         <div className="data-management-error" role="alert">
           Error: {error}
@@ -237,6 +261,17 @@ export function DataManagementPage() {
 
   return (
     <div className="data-management-container">
+      <div className="page-home-nav" aria-label="Page navigation">
+        <button
+          type="button"
+          className="page-home-link"
+          onClick={() => navigate("/hubpage")}
+        >
+          Home
+        </button>
+        <span className="page-home-separator">›</span>
+        <span className="page-home-current">Projects</span>
+      </div>
       <h1 className="data-management-title">Data Management</h1>
       <p className="data-management-description">
         View and edit chronological information for projects and skills uploaded to the app.

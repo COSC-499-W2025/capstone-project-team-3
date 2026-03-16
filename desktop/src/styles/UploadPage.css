@@ -3,32 +3,38 @@
 .upload-page {
   min-height: 100vh;
   width: 100%;
-  background: var(--color-bg-light);
+  background: #f7fafc;
   padding: var(--spacing-lg) var(--spacing-md);
+}
+
+.upload-page-nav {
+  width: 100%;
 }
 
 .upload-shell {
   width: 100%;
-  max-width: 960px;
+  max-width: 880px;
   margin: 0 auto;
 }
 
 .upload-header {
   margin-bottom: 16px;
+  text-align: center;
 }
 
 .upload-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 2rem;
   font-weight: 700;
-  color: var(--color-text-dark);
+  color: #2c3e50;
+  font-family: var(--font-sans);
 }
 
 .upload-subtitle {
   margin: 6px 0 0;
-  font-size: 14px;
-  color: var(--color-text-dark);
-  opacity: 0.7;
+  font-size: 1rem;
+  color: #6c757d;
+  opacity: 1;
 }
 
 .upload-card {
@@ -37,7 +43,7 @@
   gap: 14px;
   background: var(--color-text-light);
   border-radius: var(--radius-sm);
-  box-shadow: 0 2px 6px var(--color-shadow);
+  box-shadow: 0 1px 3px var(--color-shadow);
   padding: 14px;
   margin-bottom: 14px;
 }

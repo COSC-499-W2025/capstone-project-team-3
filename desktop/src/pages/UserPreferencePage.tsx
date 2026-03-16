@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/UserPreferencePage.css';
 import '../styles/Notification.css';
+import '../styles/ProjectSelectionPage.css';
 import { 
   getUserPreferences, 
   saveUserPreferences,
@@ -658,6 +659,16 @@ export default function UserPreferencePage() {
   return (
     <div className="user-preference-page">
       <div className="preference-container">
+        <button
+          type="button"
+          className="project-selection__back"
+          onClick={() => navigate(-1)}
+        >
+          <span className="project-selection__back-chevron" aria-hidden>
+            ‹
+          </span>
+          Back
+        </button>
         <h1 className="page-title">Build your Profile</h1>
 
         {showSuccess && (

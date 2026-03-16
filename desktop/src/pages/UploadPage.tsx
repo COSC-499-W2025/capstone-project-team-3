@@ -268,6 +268,8 @@ export function UploadPage() {
       setShowAiConsentModal(false);
       setPendingAiSelection(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      // After a successful analysis run, take the user to the hub page
+      navigate("/hubpage");
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
     } finally {

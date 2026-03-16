@@ -24,12 +24,20 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('renders welcome page with title', () => {
-  render(
-    <BrowserRouter>
-      <WelcomePage />
-    </BrowserRouter>
-  );
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+test('renders welcome page with title', async () => {
+  await act(async () => {
+    render(
+      <BrowserRouter>
+        <WelcomePage />
+      </BrowserRouter>
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 
   const title = screen.getByText(/Welcome to your Big Picture/i);
   expect(title).toBeDefined();
@@ -89,7 +97,7 @@ test('renders nested frame structure', () => {
     </BrowserRouter>
   );
 
-  const frames = container.querySelectorAll('.welcome-frame');
+  const frames = container!.querySelectorAll('.welcome-frame');
   expect(frames.length).toBe(4);
 });
 

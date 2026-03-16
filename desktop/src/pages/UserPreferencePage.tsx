@@ -101,7 +101,7 @@ function convertToFrontend(backendData: UserPreferences): ProfileData {
     fullName: backendData.name || "",
     email: backendData.email || "",
     github: backendData.github_user || "",
-    linkedin: "", // LinkedIn not in backend yet TBD
+    linkedin: "", // LinkedIn not in backend yet TODO
     jobTitle: backendData.job_title || "",
     industry: backendData.industry as typeof INDUSTRIES[number] || null,
     educationEntries,

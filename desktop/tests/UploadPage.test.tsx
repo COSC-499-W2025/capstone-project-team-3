@@ -1,166 +1,160 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { UploadPage } from '../src/pages/UploadPage';
-import { test, expect, jest, beforeEach } from '@jest/globals';
-import '@testing-library/jest-dom';
-import { BrowserRouter } from 'react-router-dom';
-import * as uploadApi from '../src/api/upload';
-import * as analysisApi from '../src/api/analysis';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { UploadPage } from "../src/pages/UploadPage";
+import { test, expect, jest, beforeEach, afterEach } from "@jest/globals";
+import "@testing-library/jest-dom";
+import { BrowserRouter } from "react-router-dom";
+import * as uploadApi from "../src/api/upload";
 
-jest.mock('../src/api/upload');
-jest.mock('../src/api/analysis');
+jest.mock("../src/api/upload");
 
-const mockUploadZipFile = uploadApi.uploadZipFile as jest.MockedFunction<typeof uploadApi.uploadZipFile>;
-const mockRunAnalysis = analysisApi.runAnalysis as jest.MockedFunction<typeof analysisApi.runAnalysis>;
+const mockUploadZipFile = uploadApi.uploadZipFile as jest.MockedFunction<
+  typeof uploadApi.uploadZipFile
+>;
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockRunAnalysis.mockResolvedValue({
-    status: 'ok',
-    upload_id: 'abc-123',
-    total_projects: 1,
-    analyzed_projects: 1,
-    skipped_projects: 0,
-    failed_projects: 0,
-    results: [],
+const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+
+describe("UploadPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = mockFetch;
   });
-});
 
-test('renders upload page with title', () => {
-  render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
-  const title = screen.getByText(/Upload Project to analyse/i);
-  expect(title).toBeDefined();
-});
+  test("renders unified upload and analysis page", () => {
+    render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
 
-test('renders single frame', () => {
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    expect(screen.getByText(/Upload & Run Analysis/i)).toBeInTheDocument();
+    expect(screen.getByText(/Choose ZIP file/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Upload a ZIP to load projects for configuration/i),
+    ).toBeInTheDocument();
+  });
 
-  const frames = container.querySelectorAll('.upload-frame');
-  expect(frames.length).toBe(1);
-});
+  test("selecting non-zip file shows error", () => {
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
 
-test('renders upload icon', () => {
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    const file = new File(["content"], "test.txt", { type: "text/plain" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
 
-  const icon = container.querySelector('.upload-icon svg');
-  expect(icon).toBeDefined();
-});
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-test('title is positioned above rectangle', () => {
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    expect(screen.getByText(/Please upload a ZIP file/i)).toBeInTheDocument();
+  });
 
-  const title = screen.getByText(/Upload Project to analyse/i);
-  const titleElement = title as HTMLElement;
-  
-  expect(title).toBeDefined();
-  // Title should be direct child of container
-  expect(titleElement.parentElement?.classList.contains('upload-container')).toBe(true);
-});
+  test("uploading zip loads projects and enables per-project similarity selection", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
 
-test('frame contains icon', () => {
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+      }),
+    } as Response);
 
-  const frame = container.querySelector('.upload-frame');
-  const icon = frame?.querySelector('.upload-icon');
-  
-  expect(frame).toBeDefined();
-  expect(icon).toBeDefined();
-});
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
 
-test('renders drop hint', () => {
-  render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    const file = new File(["content"], "project.zip", { type: "application/zip" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
 
-  expect(screen.getByText(/Drop your ZIP file here or click to browse/i)).toBeInTheDocument();
-});
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-test('selecting non-zip file shows error', () => {
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    expect(await screen.findByText("project.zip")).toBeInTheDocument();
+    expect(await screen.findByText("proj-a")).toBeInTheDocument();
 
-  const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-  const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-  fireEvent.change(fileInput, { target: { files: [file] } });
+    const similaritySelect = screen.getByLabelText(
+      /Similarity action for proj-a/i,
+    ) as HTMLSelectElement;
+    expect(similaritySelect).toBeInTheDocument();
+    expect(similaritySelect.value).toBe("create_new");
+  });
 
-  expect(screen.getByText(/Please upload a ZIP file/i)).toBeInTheDocument();
-});
+  test("selecting AI prompts consent modal and applies AI after acceptance", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "xyz-789" });
 
-test('selecting zip file auto-uploads and shows success', async () => {
-  mockUploadZipFile.mockResolvedValue({ status: 'ok', upload_id: 'abc-123-uuid' });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+      }),
+    } as Response);
 
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
 
-  const file = new File(['content'], 'project.zip', { type: 'application/zip' });
-  const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-  fireEvent.change(fileInput, { target: { files: [file] } });
+    const file = new File(["content"], "project.zip", { type: "application/zip" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-  expect(await screen.findByText(/Upload successful. Your file has been saved/i)).toBeInTheDocument();
-});
+    await screen.findByText("proj-a");
 
-test('upload error shows error message', async () => {
-  mockUploadZipFile.mockRejectedValue(new Error('Upload failed'));
+    const defaultModeSelect = screen.getByLabelText(/Default Analysis Type/i);
+    fireEvent.change(defaultModeSelect, { target: { value: "ai" } });
 
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+    expect(await screen.findByText(/AI consent required/i)).toBeInTheDocument();
 
-  const file = new File(['content'], 'project.zip', { type: 'application/zip' });
-  const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-  fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: /I understand, continue with AI/i }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Upload failed');
-});
+    await waitFor(() => {
+      expect(screen.getByText(/AI consent accepted for this upload session/i)).toBeInTheDocument();
+    });
 
-test('shows uploaded filename and Remove button clears it', async () => {
-  mockUploadZipFile.mockResolvedValue({ status: 'ok', upload_id: 'abc-123' });
+    expect((screen.getByLabelText(/Default Analysis Type/i) as HTMLSelectElement).value).toBe("ai");
+  });
 
-  const { container } = render(
-    <BrowserRouter>
-      <UploadPage />
-    </BrowserRouter>
-  );
+  test("successful run clears upload form state to avoid stale upload_id reruns", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
 
-  const file = new File(['content'], 'my-project.zip', { type: 'application/zip' });
-  const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-  fireEvent.change(fileInput, { target: { files: [file] } });
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          analyzed_projects: 1,
+          skipped_projects: 0,
+          failed_projects: 0,
+        }),
+      } as Response);
 
-  expect(await screen.findByText(/Uploaded: my-project\.zip/i)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Remove/i })).toBeInTheDocument();
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
 
-  fireEvent.click(screen.getByRole('button', { name: /Remove/i }));
+    const file = new File(["content"], "project.zip", { type: "application/zip" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-  expect(screen.queryByText(/Uploaded: my-project\.zip/i)).not.toBeInTheDocument();
-  expect(screen.getByText(/Drop your ZIP file here or click to browse/i)).toBeInTheDocument();
+    await screen.findByText("proj-a");
+    fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
+
+    expect(await screen.findByText(/Analysis complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/No file selected/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Upload a ZIP to load projects for configuration/i),
+    ).toBeInTheDocument();
+  });
 });

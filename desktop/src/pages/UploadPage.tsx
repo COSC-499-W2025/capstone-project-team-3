@@ -1,50 +1,106 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import { uploadZipFile } from "../api/upload";
+import { API_BASE_URL } from "../config/api";
 import "../styles/UploadPage.css";
+import "../styles/AnalysisRunnerPage.css";
+
+interface Project {
+  name: string;
+  path: string;
+  mode: string;
+}
+
+interface RunResult {
+  analyzed_projects: number;
+  skipped_projects: number;
+  failed_projects: number;
+}
+
+type SimilarityAction = "create_new" | "update_existing";
+
+interface PendingAiSelection {
+  type: "default" | "project";
+  mode: "local" | "ai";
+  projectIndex?: number;
+}
 
 /**
- * Upload Page - Project upload interface
- * Select or drop a ZIP file to auto-upload. Scans projects so they appear in Data Management.
+ * Upload + Analysis page — single seamless flow.
+ * Step 1: Drop/select a ZIP. Step 2: Configure and run analysis inline.
  */
 export function UploadPage() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadId, setUploadId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const uploadFile = async (file: File) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-    setUploadedFileName(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [defaultMode, setDefaultMode] = useState<"local" | "ai">("local");
+  const [similarityAction, setSimilarityAction] =
+    useState<SimilarityAction>("create_new");
+  const [projectSimilarityActions, setProjectSimilarityActions] =
+    useState<Record<string, SimilarityAction>>({});
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [aiConsentAccepted, setAiConsentAccepted] = useState(false);
+  const [showAiConsentModal, setShowAiConsentModal] = useState(false);
+  const [pendingAiSelection, setPendingAiSelection] =
+    useState<PendingAiSelection | null>(null);
 
+  useEffect(() => {
+    if (!uploadId) return;
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      setLoadError(null);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/projects`,
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Failed to load projects");
+        setProjects(
+          (data.projects || []).map((p: { name: string; path: string }) => ({
+            name: p.name,
+            path: p.path,
+            mode: "local",
+          })),
+        );
+        setProjectSimilarityActions(
+          (data.projects || []).reduce(
+            (acc: Record<string, SimilarityAction>, p: { path: string }) => {
+              acc[p.path] = similarityAction;
+              return acc;
+            },
+            {},
+          ),
+        );
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "Failed to load projects");
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, [uploadId]);
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    setRunResult(null);
+    setRunError(null);
     try {
       const result = await uploadZipFile(file);
-      setSuccess(true);
       setUploadedFileName(file.name);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      navigate("/analysisrunnerpage", {
-        state: { uploadId: result.upload_id },
-      });
+      setUploadId(result.upload_id);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setUploadedFileName(null);
-    setSuccess(false);
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      setUploading(false);
     }
   };
 
@@ -53,86 +109,239 @@ export function UploadPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.name.toLowerCase().endsWith(".zip")) {
-      setError(ZIP_ERROR);
+      setUploadError(ZIP_ERROR);
       e.target.value = "";
       return;
     }
-
     uploadFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (uploading) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
-      setError(null);
+      setUploadError(null);
       uploadFile(file);
     } else if (file) {
-      setError(ZIP_ERROR);
+      setUploadError(ZIP_ERROR);
     }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = loading ? "none" : "copy";
+    e.dataTransfer.dropEffect = uploading ? "none" : "copy";
   };
 
-  const handleZoneClick = () => {
-    if (!loading) fileInputRef.current?.click();
+  const handleResetUpload = () => {
+    setUploadId(null);
+    setUploadedFileName(null);
+    setUploadError(null);
+    setDefaultMode("local");
+    setSimilarityAction("create_new");
+    setProjectSimilarityActions({});
+    setProjects([]);
+    setRunResult(null);
+    setRunError(null);
+    setLoadError(null);
+    setAiConsentAccepted(false);
+    setShowAiConsentModal(false);
+    setPendingAiSelection(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const applyModeChange = (selection: PendingAiSelection) => {
+    if (selection.type === "default") {
+      setDefaultMode(selection.mode);
+      setProjects((prev) => prev.map((project) => ({ ...project, mode: selection.mode })));
+      return;
+    }
+
+    if (typeof selection.projectIndex === "number") {
+      setProjects((prev) =>
+        prev.map((project, index) =>
+          index === selection.projectIndex ? { ...project, mode: selection.mode } : project,
+        ),
+      );
+    }
+  };
+
+  const requestAiConsentFor = (selection: PendingAiSelection) => {
+    if (selection.mode === "ai" && !aiConsentAccepted) {
+      setPendingAiSelection(selection);
+      setShowAiConsentModal(true);
+      return;
+    }
+    applyModeChange(selection);
+  };
+
+  const handleDefaultModeChange = (mode: "local" | "ai") => {
+    requestAiConsentFor({ type: "default", mode });
+  };
+
+  const handleProjectModeChange = (index: number, mode: string) => {
+    requestAiConsentFor({
+      type: "project",
+      mode: mode as "local" | "ai",
+      projectIndex: index,
+    });
+  };
+
+  const handleAcceptAiConsent = () => {
+    setAiConsentAccepted(true);
+    if (pendingAiSelection) {
+      applyModeChange(pendingAiSelection);
+    }
+    setPendingAiSelection(null);
+    setShowAiConsentModal(false);
+  };
+
+  const handleCancelAiConsent = () => {
+    setPendingAiSelection(null);
+    setShowAiConsentModal(false);
+  };
+
+  const handleSimilarityActionChange = (action: SimilarityAction) => {
+    setSimilarityAction(action);
+    setProjectSimilarityActions((prev) => {
+      const next = { ...prev };
+      projects.forEach((project) => {
+        next[project.path] = action;
+      });
+      return next;
+    });
+  };
+
+  const handleProjectSimilarityActionChange = (
+    projectPath: string,
+    action: SimilarityAction,
+  ) => {
+    setProjectSimilarityActions((prev) => ({
+      ...prev,
+      [projectPath]: action,
+    }));
+  };
+
+  const handleRunAnalysis = async () => {
+    if (!uploadId) return;
+
+    const project_analysis_types: Record<string, string> = {};
+    projects.forEach((p) => {
+      project_analysis_types[p.path] = p.mode;
+    });
+
+    setRunning(true);
+    setRunResult(null);
+    setRunError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upload_id: uploadId,
+          default_analysis_type: defaultMode,
+          project_analysis_types,
+          similarity_action: similarityAction,
+          project_similarity_actions: projectSimilarityActions,
+          cleanup_zip: true,
+          cleanup_extracted: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Analysis failed");
+      setRunResult({
+        analyzed_projects: data.analyzed_projects ?? 0,
+        skipped_projects: data.skipped_projects ?? 0,
+        failed_projects: data.failed_projects ?? 0,
+      });
+      setUploadId(null);
+      setUploadedFileName(null);
+      setProjects([]);
+      setProjectSimilarityActions({});
+      setDefaultMode("local");
+      setSimilarityAction("create_new");
+      setLoadError(null);
+      setAiConsentAccepted(false);
+      setShowAiConsentModal(false);
+      setPendingAiSelection(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Analysis failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const hasUpload = !!uploadId;
+  const analysisDisabled = !hasUpload || loadingProjects || running;
+  const isAiSelected =
+    defaultMode === "ai" || projects.some((project) => project.mode === "ai");
 
   return (
-    <div className="upload-container">
-      <h1 className="upload-title">Upload Project to analyse</h1>
-      <div
-        className={`upload-frame${loading ? " upload-frame--loading" : ""}`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onClick={handleZoneClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) =>
-          e.key === "Enter" && !loading && fileInputRef.current?.click()
-        }
-        aria-label="Drop or click to select ZIP file"
-      >
-        <div className="upload-content">
-          <div className="upload-icon">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </div>
-          {uploadedFileName ? (
-            <>
-              <p className="upload-uploaded">Uploaded: {uploadedFileName}</p>
+    <div className="upload-page">
+      <div className="upload-shell">
+        <header className="upload-header">
+          <h1 className="upload-title">Upload & Run Analysis</h1>
+          <p className="upload-subtitle">
+            Upload a ZIP, review detected projects, set analysis mode, and run everything from this page.
+          </p>
+        </header>
+
+        <section className="upload-card" aria-label="Upload zip section">
+          <div className="upload-card-main">
+            <p className="upload-card-label">Project ZIP</p>
+            <p className="upload-card-value">
+              {uploadedFileName ? uploadedFileName : "No file selected"}
+            </p>
+
+            <div className="upload-card-actions">
               <button
                 type="button"
-                className="upload-remove-button"
-                onClick={handleRemove}
-                aria-label="Remove uploaded file"
+                className="upload-select-btn"
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                disabled={uploading}
               >
-                Remove
+                {uploading ? "Uploading…" : hasUpload ? "Upload another ZIP" : "Choose ZIP file"}
               </button>
-            </>
-          ) : (
+              {hasUpload && (
+                <button
+                  type="button"
+                  className="upload-clear-btn"
+                  onClick={handleResetUpload}
+                  disabled={uploading || running}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div
+            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) =>
+              e.key === "Enter" && !uploading && fileInputRef.current?.click()
+            }
+            aria-label="Drop or click to select ZIP file"
+          >
+            <div className="upload-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
             <p className="upload-hint">
-              {loading
-                ? "Uploading…"
-                : "Drop your ZIP file here or click to browse"}
+              {uploading ? "Uploading ZIP…" : "Drag and drop ZIP here"}
             </p>
-          )}
+            <p className="upload-dropzone-subhint">or click to browse</p>
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -140,22 +349,194 @@ export function UploadPage() {
             onChange={handleFileChange}
             className="upload-file-input"
             aria-label="Select ZIP file"
-            disabled={loading}
+            disabled={uploading}
           />
+        </section>
+
+        {uploadError && (
+          <div className="upload-error" role="alert">
+            {uploadError}
+          </div>
+        )}
+
+        <div className="ar-container upload-analysis-container">
+          <div className="ar-card">
+            <h2 className="ar-section-title">Settings</h2>
+            <div className="ar-settings-row">
+              <div className="ar-field">
+                <label className="ar-label" htmlFor="defaultMode">Default Analysis Type</label>
+                <select
+                  id="defaultMode"
+                  className="ar-select"
+                  value={defaultMode}
+                  onChange={(e) => handleDefaultModeChange(e.target.value as "local" | "ai")}
+                  disabled={analysisDisabled}
+                >
+                  <option value="local">Local (rule-based)</option>
+                  <option value="ai">AI (language model)</option>
+                </select>
+              </div>
+
+              <div className="ar-field">
+                <div className="upload-label-row">
+                  <label className="ar-label" htmlFor="similarityAction">Similarity Action</label>
+                  <span className="upload-help-wrap">
+                    <button
+                      type="button"
+                      className="upload-help-trigger"
+                      aria-label="Similarity action help"
+                    >
+                      ?
+                    </button>
+                    <span className="upload-help-tooltip" role="tooltip">
+                      Update existing: if similarity is 70%+, update the matching project.
+                      Create new: keep separate entries when similar. If an exact same project
+                      (100% match) was already analyzed before, it is skipped instead of added again.
+                    </span>
+                  </span>
+                </div>
+                <select
+                  id="similarityAction"
+                  className="ar-select"
+                  value={similarityAction}
+                  onChange={(e) =>
+                    handleSimilarityActionChange(e.target.value as SimilarityAction)
+                  }
+                  disabled={analysisDisabled}
+                >
+                  <option value="create_new">Create new</option>
+                  <option value="update_existing">Update existing</option>
+                </select>
+              </div>
+            </div>
+
+            {isAiSelected && (
+              <div className="upload-ai-disclaimer" role="note" aria-live="polite">
+                AI mode notice: When analysis type is set to AI, selected project content may
+                be sent to our configured LLM provider to generate insights. Avoid uploading
+                sensitive, personal, or confidential data unless you have permission to share it.
+              </div>
+            )}
+
+            {aiConsentAccepted && (
+              <p className="upload-ai-consent-status">AI consent accepted for this upload session.</p>
+            )}
+          </div>
+
+          <div className="ar-card">
+            <h2 className="ar-section-title">Projects</h2>
+
+            {!hasUpload && (
+              <p className="upload-info-msg">Upload a ZIP to load projects for configuration.</p>
+            )}
+            {hasUpload && loadingProjects && <p className="ar-loading">Loading projects…</p>}
+            {hasUpload && loadError && <p className="ar-error">{loadError}</p>}
+
+            {hasUpload && !loadingProjects && !loadError && (
+              <table className="ar-table">
+                <thead>
+                  <tr>
+                    <th>Project Name</th>
+                    <th>Analysis Type</th>
+                    <th>Similarity Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="ar-table-empty">No projects found.</td>
+                    </tr>
+                  ) : (
+                    projects.map((project, index) => (
+                      <tr key={project.name}>
+                        <td className="ar-table-name">{project.name}</td>
+                        <td>
+                          <select
+                            className="ar-select ar-select--inline"
+                            value={project.mode}
+                            onChange={(e) => handleProjectModeChange(index, e.target.value)}
+                            aria-label={`Analysis type for ${project.name}`}
+                            disabled={analysisDisabled}
+                          >
+                            <option value="local">Local</option>
+                            <option value="ai">AI</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="ar-select ar-select--inline"
+                            value={projectSimilarityActions[project.path] ?? similarityAction}
+                            onChange={(e) =>
+                              handleProjectSimilarityActionChange(
+                                project.path,
+                                e.target.value as SimilarityAction,
+                              )
+                            }
+                            aria-label={`Similarity action for ${project.name}`}
+                            disabled={analysisDisabled}
+                          >
+                            <option value="create_new">Create new</option>
+                            <option value="update_existing">Update existing</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="ar-actions">
+            <button
+              className="ar-btn ar-btn--primary"
+              onClick={handleRunAnalysis}
+              disabled={analysisDisabled || projects.length === 0}
+            >
+              {running ? "Running…" : "Run Analysis"}
+            </button>
+          </div>
+
+          {runResult && (
+            <div className="ar-result ar-result--success">
+              <strong>Analysis complete</strong>
+              <span className="ar-result-stats">
+                <span className="ar-stat ar-stat--ok">{runResult.analyzed_projects} analyzed</span>
+                <span className="ar-stat">{runResult.skipped_projects} skipped</span>
+                {runResult.failed_projects > 0 && (
+                  <span className="ar-stat ar-stat--warn">{runResult.failed_projects} failed</span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {runError && (
+            <div className="ar-result ar-result--error">
+              <strong>Error:</strong> {runError}
+            </div>
+          )}
         </div>
+
+        {showAiConsentModal && (
+          <div className="upload-consent-overlay" role="dialog" aria-modal="true" aria-label="AI consent required">
+            <div className="upload-consent-modal">
+              <h3 className="upload-consent-title">AI consent required</h3>
+              <p className="upload-consent-text">
+                To use AI analysis, project content may be sent to our configured LLM provider.
+                Please confirm you have permission to share this data.
+              </p>
+              <div className="upload-consent-actions">
+                <button type="button" className="upload-clear-btn" onClick={handleCancelAiConsent}>
+                  Cancel
+                </button>
+                <button type="button" className="upload-select-btn" onClick={handleAcceptAiConsent}>
+                  I understand, continue with AI
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {error && (
-        <div className="upload-error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {success && !loading && (
-        <div className="upload-success">
-          <p>Upload successful. Your file has been saved.</p>
-        </div>
-      )}
     </div>
   );
 }

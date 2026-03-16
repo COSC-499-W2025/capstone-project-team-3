@@ -1214,6 +1214,7 @@ function ProjectCard({
 }
 
 const PortfolioPage: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
@@ -1582,6 +1583,17 @@ ${mainClone.outerHTML}
       <div className="main-content">
         <div className="dashboard-header">
           <div className="dashboard-header-text">
+            <div className="page-home-nav" aria-label="Page navigation">
+              <button
+                type="button"
+                className="page-home-link"
+                onClick={() => navigate("/hubpage")}
+              >
+                Home
+              </button>
+              <span className="page-home-separator">›</span>
+              <span className="page-home-current">Portfolio</span>
+            </div>
             <h1>🎯 Portfolio Dashboard</h1>
             <p className="dashboard-subtitle">
               Comprehensive analysis of your development work

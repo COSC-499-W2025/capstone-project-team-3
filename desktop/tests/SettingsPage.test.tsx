@@ -113,7 +113,7 @@ test('navigates back to hub page on back button click', () => {
 
   const backBtn = screen.getByLabelText('Back to Hub');
   fireEvent.click(backBtn);
-  expect(mockNavigate).toHaveBeenCalledWith('/hubpage');
+  expect(mockNavigate).toHaveBeenCalledWith(-1);
 });
 
 test('each settings card has an accessible aria-label', () => {

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/UserPreferencePage.css';
+import '../styles/Notification.css';
 import { 
   getUserPreferences, 
   saveUserPreferences,
@@ -8,6 +10,7 @@ import {
   type EducationDetail,
   type Institution 
 } from '../api/userPreferences';
+import { getConsentStatus } from '../api/consent';
 
 const INDUSTRIES = [
   "Technology",
@@ -508,6 +511,7 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
 }
 
 export default function UserPreferencePage() {
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData>({
     fullName: "",
     email: "",
@@ -522,6 +526,9 @@ export default function UserPreferencePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  // True when no preferences exist yet (first-time user arriving from consent flow)
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   // Load user preferences on component mount
   useEffect(() => {
@@ -532,13 +539,36 @@ export default function UserPreferencePage() {
     try {
       setLoading(true);
       setError(null);
-      const backendData = await getUserPreferences();
-      const frontendData = convertToFrontend(backendData);
-      setProfileData(frontendData);
-    } catch (err) {
-      console.error("Failed to load user preferences:", err);
-      setError("Could not load your preferences. Starting with a blank form.");
-      // Continue with empty form
+
+      // Use consent status as the authoritative "first-time user" signal.
+      // A user who has consented but not yet saved preferences is first-time.
+      // A user who has consented AND has saved preferences is returning.
+      let hasConsent = false;
+      try {
+        const consentStatus = await getConsentStatus();
+        hasConsent = consentStatus.has_consent;
+      } catch {
+        // If consent check fails, fall back to preferences-based detection below
+      }
+
+      try {
+        const backendData = await getUserPreferences();
+        const frontendData = convertToFrontend(backendData);
+        setProfileData(frontendData);
+        // Has saved preferences → definitely a returning user
+        setIsFirstTimeUser(false);
+      } catch (err: any) {
+        // Only treat a 404 (no preferences saved yet) as first-time.
+        // Any other error (500, network failure, etc.) is a real error.
+        const is404 = err?.message?.includes("No user preferences found");
+        if (is404) {
+          // No preferences yet — first-time if they also have consent,
+          // otherwise they haven't even consented (edge case).
+          setIsFirstTimeUser(hasConsent);
+        } else {
+          setError("Could not load your preferences. Please try again.");
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -581,16 +611,21 @@ export default function UserPreferencePage() {
       setError(null);
       
       const backendData = convertToBackend(profileData);
-      console.log("Sending data to backend:", JSON.stringify(backendData, null, 2));
-      
       await saveUserPreferences(backendData);
-      
-      alert("Profile saved successfully!");
+
+      // Show success message for 2.5s then navigate.
+      setShowSuccess(true);
+      setTimeout(() => {
+        if (isFirstTimeUser) {
+          navigate("/uploadpage");
+        } else {
+          navigate("/hubpage");
+        }
+      }, 2000);
     } catch (err: any) {
       console.error("Failed to save user preferences:", err);
       const errorMessage = err?.message || "Failed to save your preferences. Please try again.";
       setError(errorMessage);
-      alert(`Failed to save profile: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -611,6 +646,12 @@ export default function UserPreferencePage() {
     <div className="user-preference-page">
       <div className="preference-container">
         <h1 className="page-title">Build your Profile</h1>
+
+        {showSuccess && (
+          <div className="notification success" role="status">
+            <p>Profile saved successfully!</p>
+          </div>
+        )}
 
         {error && (
           <div className="error-message">

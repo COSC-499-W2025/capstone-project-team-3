@@ -56,9 +56,12 @@ def db_connection(monkeypatch):
             name TEXT,
             email TEXT,
             github_user TEXT,
+            linkedin TEXT,
             education TEXT,
             job_title TEXT,
             education_details JSON,
+            industry TEXT,
+            personal_summary TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -107,8 +110,8 @@ def db_connection(monkeypatch):
 
     # --- Seed Data ---
     cursor.execute("""
-        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, education, job_title)
-        VALUES (1, 'John Doe', 'john@example.com', 'johndoe', 'University X', 'Developer')
+        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, linkedin, education, job_title)
+        VALUES (1, 'John Doe', 'john@example.com', 'johndoe', 'https://linkedin.com/in/johndoe', 'University X', 'Developer')
     """)
 
     cursor.execute("""
@@ -190,8 +193,8 @@ def test_limit_skills_dedup_and_limit():
 
 def test_load_user(db_connection):
     """
-    Tests that load_user returns the user's profile data and construct
-    a GitHub link when a github_user is present.
+    Tests that load_user returns the user's profile data and constructs
+    GitHub and LinkedIn links when the respective fields are present.
     """
     cursor = db_connection.cursor()
     user = load_user(cursor)
@@ -201,7 +204,16 @@ def test_load_user(db_connection):
     assert user["education"] == "University X"
     assert user["job_title"] == "Developer"
     assert user["education_details"] is None  # No education_details in seed data
-    assert user["links"][0]["url"] == "https://github.com/johndoe"
+
+    link_labels = [link["label"] for link in user["links"]]
+    assert "GitHub" in link_labels
+    assert "LinkedIn" in link_labels
+
+    github_link = next(l for l in user["links"] if l["label"] == "GitHub")
+    assert github_link["url"] == "https://github.com/johndoe"
+
+    linkedin_link = next(l for l in user["links"] if l["label"] == "LinkedIn")
+    assert linkedin_link["url"] == "https://linkedin.com/in/johndoe"
 
 
 def test_load_projects_ordered_by_score(db_connection):

@@ -191,6 +191,12 @@
   margin-bottom: 12px;
 }
 
+.ar-result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .ar-result--success {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
@@ -224,6 +230,11 @@
 .ar-stat--warn {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.ar-result-insights-btn {
+  margin-left: auto;
+  padding-inline: 16px;
 }
 
 @media (max-width: 640px) {

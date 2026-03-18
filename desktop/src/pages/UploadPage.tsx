@@ -515,14 +515,27 @@ export function UploadPage() {
 
           {runResult && (
             <div className="ar-result ar-result--success">
-              <strong>Analysis complete</strong>
-              <span className="ar-result-stats">
-                <span className="ar-stat ar-stat--ok">{runResult.analyzed_projects} analyzed</span>
-                <span className="ar-stat">{runResult.skipped_projects} skipped</span>
-                {runResult.failed_projects > 0 && (
-                  <span className="ar-stat ar-stat--warn">{runResult.failed_projects} failed</span>
-                )}
-              </span>
+              <div className="ar-result-main">
+                <strong>Analysis complete</strong>
+                <span className="ar-result-stats">
+                  <span className="ar-stat ar-stat--ok">
+                    {runResult.analyzed_projects} analyzed
+                  </span>
+                  <span className="ar-stat">{runResult.skipped_projects} skipped</span>
+                  {runResult.failed_projects > 0 && (
+                    <span className="ar-stat ar-stat--warn">
+                      {runResult.failed_projects} failed
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="ar-btn ar-btn--primary ar-result-insights-btn"
+                onClick={() => navigate("/hubpage")}
+              >
+                View insights
+              </button>
             </div>
           )}
 

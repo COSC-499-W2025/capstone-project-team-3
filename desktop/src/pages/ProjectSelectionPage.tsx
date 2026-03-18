@@ -22,7 +22,7 @@ function ProjectSelectionPage() {
       });
   }, []);
 
-  const toggleProject = (projectId: string) => {
+  const toggleAddProjectSelection = (projectId: string) => {
     const newSelected = new Set(selectedProjects);
     if (newSelected.has(projectId)) {
       newSelected.delete(projectId);
@@ -92,13 +92,20 @@ function ProjectSelectionPage() {
               <tr
                 key={project.id}
                 className="project-row"
+                onClick={() => toggleAddProjectSelection(project.id)}
               >
                 <td>
-                  <label className="project-checkbox-label">
+                  <label
+                    className="project-checkbox-label"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedProjects.has(project.id)}
-                      onChange={() => toggleProject(project.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleAddProjectSelection(project.id);
+                      }}
                       className="project-checkbox"
                     />
                     <span>

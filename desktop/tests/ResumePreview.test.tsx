@@ -21,7 +21,8 @@ describe('ResumePreview', () => {
       gpa: '3.8'
     }],
     skills: {
-      Skills: ['Python', 'JavaScript', 'React', 'Node.js', 'SQL']
+      Proficient: ['Python', 'JavaScript', 'React', 'Node.js', 'SQL'],
+      Familiar: [],
     },
     projects: [
       {
@@ -84,7 +85,8 @@ describe('ResumePreview', () => {
         degree: 'Test Degree'
       }],
       skills: {
-        Skills: ['Python']
+        Proficient: ['Python'],
+        Familiar: [],
       },
       projects: []
     };
@@ -124,7 +126,7 @@ describe('ResumePreview', () => {
   test('renders with empty skills array', () => {
     const emptySkillsResume: Resume = {
       ...mockResume,
-      skills: { Skills: [] }
+      skills: { Proficient: [], Familiar: [] }
     };
 
     render(<ResumePreview resume={emptySkillsResume} />);

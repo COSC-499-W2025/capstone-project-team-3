@@ -30,7 +30,8 @@
   font-weight: 400;
   color: #6c757d;
   text-align: center;
-  max-width: 600px;
+  max-width: 680px;
+  line-height: 1.5;
   font-family: var(--font-sans);
 }
 
@@ -127,15 +128,15 @@
 }
 
 .data-management-table thead tr {
-  background: #f3f4f6;
-  border-bottom: 1px solid #d1d5db;
+  background: var(--color-bg-light);
+  border-bottom: 2px solid var(--color-blue-light);
 }
 
 .data-management-table th {
   padding: var(--spacing-sm) var(--spacing-md);
   text-align: left;
   font-weight: 700;
-  color: #374151;
+  color: var(--color-navy);
   font-size: 0.95rem;
   font-family: var(--font-sans);
 }
@@ -197,7 +198,19 @@
   font-family: var(--font-sans);
   border: 1px solid #d1d5db;
   border-radius: var(--radius-sm);
+  min-width: 80px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.data-management-edit-input-full {
+  width: 100%;
   min-width: 120px;
+}
+
+.data-management-col-project-name {
+  min-width: 120px;
+  max-width: 280px;
 }
 
 .data-management-skills-row:hover {
@@ -232,11 +245,21 @@
   font-size: 0.9rem;
 }
 
+.data-management-skills-table-wrap {
+  background: var(--color-text-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px var(--color-shadow);
+  overflow: auto;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: var(--spacing-sm);
+}
+
 .data-management-skills-table {
   width: 100%;
-  max-width: 500px;
+  min-width: 380px;
   border-collapse: collapse;
-  margin-bottom: var(--spacing-sm);
+  table-layout: auto;
 }
 
 .data-management-skills-table th {
@@ -244,18 +267,75 @@
   font-size: 0.85rem;
   color: #6c757d;
   font-weight: 600;
-  padding: 0.25rem 0.5rem 0.25rem 0;
+  padding: 0.35rem 0.5rem;
 }
 
 .data-management-skills-table td {
-  padding: 0.25rem 0.5rem 0.25rem 0;
+  padding: 0.35rem 0.5rem;
   font-size: 0.9rem;
   border: none;
   background: transparent;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.data-management-skills-table .data-management-col-skill {
+  min-width: 100px;
+  max-width: 45%;
+}
+
+.data-management-skills-table .data-management-col-source {
+  min-width: 85px;
+}
+
+.data-management-skills-table .data-management-col-date {
+  min-width: 85px;
+}
+
+.data-management-skills-table .data-management-edit-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .data-management-skills-table tbody tr:hover {
   background: transparent;
+}
+
+.data-management-skill-delete-col {
+  width: 2rem;
+  text-align: center;
+  padding-left: 0.25rem !important;
+}
+
+.data-management-skill-delete-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.15rem 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+
+.data-management-skill-delete-btn:hover:not(:disabled) {
+  color: #c53030;
+  background: #fde8e8;
+}
+
+.data-management-skill-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.data-management-modal-sm {
+  max-width: 360px;
 }
 
 .data-management-delete-btn {
@@ -426,19 +506,33 @@
 }
 
 .data-management-add-skill-btn {
-  background: none;
-  border: 1px dashed #d1d5db;
-  color: #6b7280;
   padding: 0.35rem 0.75rem;
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.data-management-add-skill-btn:hover {
-  background: #f1f3f4;
-  border-color: #9ca3af;
+/* Enabled: blue highlight when skill name and type are filled */
+.data-management-add-skill-btn:not(:disabled) {
+  background: var(--color-blue-light);
+  border: 1px solid var(--color-blue-medium);
+  color: var(--color-text-light);
+}
+
+.data-management-add-skill-btn:hover:not(:disabled) {
+  background: var(--color-blue-medium);
+  border-color: var(--color-blue-dark);
+}
+
+/* Disabled: greyed out when required fields missing */
+.data-management-add-skill-btn:disabled {
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .data-management-add-skill {

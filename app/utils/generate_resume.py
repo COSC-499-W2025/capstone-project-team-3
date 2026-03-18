@@ -218,6 +218,62 @@ def limit_skills(skills: List[str], max_count: int = 5) -> List[str]:
 
     return limited
 
+
+def bucket_skills_for_evidence(
+    cursor: sqlite3.Cursor,
+    evidence_project_ids: List[str],
+    allowed_skills: Optional[List[str]] = None,
+) -> Dict[str, List[str]]:
+    """
+    Buckets evidence-based resume skills into recruiter-friendly groups.
+
+    Bucket logic (based on distinct skill count, n):
+    - if n <= 10: Proficient = all skills; Familiar = []
+    - if 11 <= n <= 18: Proficient = top 7; Familiar = next up to 8
+    - if n > 18: Proficient = top 8; Familiar = next up to 8
+    """
+    if not evidence_project_ids:
+        return {"Proficient": [], "Familiar": []}
+
+    allowed_set = set(allowed_skills) if allowed_skills is not None else None
+
+    placeholders = ",".join(["?"] * len(evidence_project_ids))
+    cursor.execute(
+        f"""
+        SELECT
+            s.skill AS skill,
+            COUNT(DISTINCT s.project_id) AS frequency,
+            MAX(COALESCE(s.date, p.last_modified)) AS latest_use
+        FROM SKILL_ANALYSIS s
+        JOIN PROJECT p ON p.project_signature = s.project_id
+        WHERE s.project_id IN ({placeholders})
+        GROUP BY s.skill
+        ORDER BY frequency DESC, latest_use DESC, s.skill ASC
+        """,
+        evidence_project_ids,
+    )
+
+    ordered_skills: List[str] = []
+    for skill, _frequency, _latest_use in cursor.fetchall():
+        if allowed_set is not None and skill not in allowed_set:
+            continue
+        ordered_skills.append(skill)
+
+    # If legacy resume-level skills contain entries not present in the evidence set,
+    # keep them (append to the end) so we don't silently drop user edits.
+    if allowed_skills is not None:
+        ordered_set = set(ordered_skills)
+        for skill in allowed_skills:
+            if skill not in ordered_set:
+                ordered_skills.append(skill)
+
+    n = len(ordered_skills)
+    if n <= 10:
+        return {"Proficient": ordered_skills, "Familiar": []}
+    if 11 <= n <= 18:
+        return {"Proficient": ordered_skills[:7], "Familiar": ordered_skills[7:15]}
+    return {"Proficient": ordered_skills[:8], "Familiar": ordered_skills[8:16]}
+
 def load_resume_projects(cursor: sqlite3.Cursor, resume_id: int) -> List[Tuple[str, Optional[str], Optional[str], Optional[str], Optional[str], int, Optional[str], Optional[str], Optional[str]]]:
     """Get all projects associated with the given resume_id. Uses LEFT JOIN so rows remain when PROJECT is deleted (snapshot)."""
     cursor.execute("""
@@ -280,18 +336,35 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                 except json.JSONDecodeError:
                     bullets_map[pid].append(text)
 
-        row = load_edited_skills(cursor,resume_id)
+        row = load_edited_skills(cursor, resume_id)
         if row and row[0]:
-            all_skills = json.loads(row[0])
+            edited = json.loads(row[0])
+            # New format: persisted bucket dict.
+            if isinstance(edited, dict):
+                all_skills_buckets = {
+                    "Proficient": list(edited.get("Proficient", []) or []),
+                    "Familiar": list(edited.get("Familiar", []) or []),
+                }
+            # Legacy format: persisted flat list of skills.
+            elif isinstance(edited, list):
+                all_skills_buckets = bucket_skills_for_evidence(
+                    cursor=cursor,
+                    evidence_project_ids=project_ids,
+                    allowed_skills=edited,
+                )
+            else:
+                all_skills_buckets = bucket_skills_for_evidence(
+                    cursor=cursor,
+                    evidence_project_ids=project_ids,
+                    allowed_skills=None,
+                )
         else:
-            # Aggregate skills from live projects and from snapshot (override_skills) for deleted projects
-            union = set()
-            for (pid, _, _, _, override_skills, *_rest) in rows:
-                union.update(skills_map.get(pid, []))
-                if override_skills:
-                    parsed = json.loads(override_skills) if isinstance(override_skills, str) else (override_skills or [])
-                    union.update(parsed)
-            all_skills = sorted(union)
+            # No persisted resume-level skills: bucket based on evidence.
+            all_skills_buckets = bucket_skills_for_evidence(
+                cursor=cursor,
+                evidence_project_ids=project_ids,
+                allowed_skills=None,
+            )
 
         projects = []
         for (
@@ -343,7 +416,8 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             "links": user["links"],
             "education": education_list,
             "skills": {
-                "Skills": all_skills
+                "Proficient": all_skills_buckets["Proficient"],
+                "Familiar": all_skills_buckets["Familiar"],
             },
             "projects": projects
         }
@@ -381,18 +455,11 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
                 "bullets": bullets_map.get(pid, [])
             })
 
-        if selected_ids:
-            # Union of skills for selected projects
-            union = set()
-            for sid in selected_ids:
-                union.update(skills_map.get(sid, []))
-            all_skills = sorted(union)
-        else:
-            all_skills = sorted({
-                skill
-                for skills in skills_map.values()
-                for skill in skills
-            })
+        all_skills_buckets = bucket_skills_for_evidence(
+            cursor=cursor,
+            evidence_project_ids=list(selected_ids),
+            allowed_skills=None,
+        )
 
         # Parse education details
         education_list = parse_education_details(
@@ -407,7 +474,8 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
             "links": user["links"],
             "education": education_list,
             "skills": {
-                "Skills": all_skills
+                "Proficient": all_skills_buckets["Proficient"],
+                "Familiar": all_skills_buckets["Familiar"],
             },
             "projects": projects
         }
@@ -469,6 +537,22 @@ def save_resume_edits(resume_id: int, payload: dict):
     try:
         # Update resume-level skills (if provided)
         if "skills" in payload:
+            skills_payload = payload["skills"]
+            if isinstance(skills_payload, dict):
+                # Normalize to { Proficient: [...], Familiar: [...] }
+                normalized = {
+                    "Proficient": [
+                        str(s).strip()
+                        for s in (skills_payload.get("Proficient", []) or [])
+                        if str(s).strip()
+                    ],
+                    "Familiar": [
+                        str(s).strip()
+                        for s in (skills_payload.get("Familiar", []) or [])
+                        if str(s).strip()
+                    ],
+                }
+                skills_payload = normalized
             cursor.execute("""
                 INSERT INTO RESUME_SKILLS (resume_id, skills)
                 VALUES (?, ?)
@@ -476,7 +560,7 @@ def save_resume_edits(resume_id: int, payload: dict):
                 DO UPDATE SET
                     skills = excluded.skills,
                     updated_at = CURRENT_TIMESTAMP
-            """, (resume_id, json.dumps(payload["skills"])))
+            """, (resume_id, json.dumps(skills_payload)))
 
         for project in payload.get("projects", []):
             cursor.execute("""

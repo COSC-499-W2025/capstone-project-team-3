@@ -23,6 +23,8 @@ os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
     project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")
+    # Optional: persist user-selected/edited skill buckets for tailored resumes.
+    skills: Optional[Dict[str, List[str]]] = None
 
 
 class AddProjectsToResumeBody(BaseModel):
@@ -59,6 +61,9 @@ def create_tailored_resume(filter: ResumeFilter):
     try:
         resume_id = create_resume(name=filter.name)
         attach_projects_to_resume(resume_id, filter.project_ids)
+        if filter.skills is not None:
+            # Persist resume-level skills buckets for the new tailored resume.
+            save_resume_edits(resume_id, {"skills": filter.skills})
         return {
             "resume_id": resume_id,
             "message": "Resume created successfully"

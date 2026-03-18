@@ -35,8 +35,13 @@ def render_skills(skills: Dict[str, List[str]]) -> str:
     """Return LaTeX longtable rows for skills."""
     rows = []
     for category, items in skills.items():
+        # Avoid rendering empty buckets/sections (e.g., Familiar may be empty).
+        if not items:
+            continue
         escaped_items = ", ".join(escape_latex(i) for i in items)
-        rows.append(f"{escape_latex(category)}: & {escaped_items} \\\\")
+        # Match the recruiter-friendly styling used in the UI by making labels bold.
+        # Put the colon inside the bold wrapper so "Proficient:" / "Familiar:" is fully bold.
+        rows.append(f"\\textbf{{{escape_latex(category)}:}} & {escaped_items} \\\\")
     return "\n".join(rows)
 
 

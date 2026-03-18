@@ -28,7 +28,7 @@ def fake_resume_model():
             "dates": "",
             "gpa": "",
         },
-        "skills": {"Skills": ["Python", "Flask"]},
+        "skills": {"Proficient": ["Python", "Flask"], "Familiar": []},
         "projects": [],
     }
 
@@ -389,13 +389,18 @@ def test_save_edited_resume_not_found(mock_exists, mock_save, client):
 
 @patch("app.api.routes.resume.create_resume")
 @patch("app.api.routes.resume.attach_projects_to_resume")
-def test_create_tailored_resume_success(mock_attach, mock_create, client):
+@patch("app.api.routes.resume.save_resume_edits")
+def test_create_tailored_resume_success(mock_save, mock_attach, mock_create, client):
     """
     Test POST /resume creates a resume and associates selected projects.
     """
     mock_create.return_value = 42
     mock_attach.return_value = None
-    payload = {"name": "My Custom Resume", "project_ids": ["p1", "p2"]}
+    payload = {
+        "name": "My Custom Resume",
+        "project_ids": ["p1", "p2"],
+        "skills": {"Proficient": ["Python"], "Familiar": ["GraphQL"]},
+    }
     response = client.post("/resume", json=payload)
     assert response.status_code == 200
     data = response.json()
@@ -403,6 +408,7 @@ def test_create_tailored_resume_success(mock_attach, mock_create, client):
     assert data["message"] == "Resume created successfully"
     mock_create.assert_called_once_with(name="My Custom Resume")
     mock_attach.assert_called_once_with(42, ["p1", "p2"])
+    mock_save.assert_called_once_with(42, {"skills": payload["skills"]})
 
 
 def test_create_tailored_resume_no_projects(client):

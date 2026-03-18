@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { mainNavItems, footerNavItems } from "./navigation";
-import { getProjects } from "./api/projects";
+import { getResumes } from "./api/resume";
 import "./styles/NavBar.css";
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -66,12 +66,15 @@ const settingsIcon = (
 
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [hasProjects, setHasProjects] = useState(false);
+  const [hasMasterResume, setHasMasterResume] = useState(true);
 
   useEffect(() => {
-    getProjects()
-      .then((projects) => setHasProjects(projects.length > 0))
-      .catch(() => setHasProjects(false));
+    getResumes()
+      .then((resumes) => {
+        const masterHasContent = resumes.some((r) => r.is_master);
+        setHasMasterResume(masterHasContent);
+      })
+      .catch(() => setHasMasterResume(true));
   }, []);
 
   return (
@@ -94,7 +97,7 @@ export function NavBar() {
       <nav className="app-sidebar__links">
         {mainNavItems.map(({ path, label }) => {
           const isATS = path === "/atsscoringpage";
-          const disabled = isATS && !hasProjects;
+          const disabled = isATS && !hasMasterResume;
 
           if (disabled) {
             return (

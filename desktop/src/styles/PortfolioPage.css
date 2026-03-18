@@ -1235,6 +1235,169 @@
             font-weight: 600;
         }
 
+        .activity-heatmap-section {
+            margin-bottom: 40px;
+        }
+
+        .activity-heatmap-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .activity-heatmap-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .activity-heatmap-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .activity-heatmap-kpi {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: linear-gradient(180deg, rgba(45, 55, 72, 0.02) 0%, rgba(45, 55, 72, 0.05) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .activity-heatmap-kpi-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .activity-heatmap-kpi strong {
+            color: var(--accent);
+            font-size: 18px;
+            letter-spacing: -0.01em;
+        }
+
+        .activity-heatmap-note {
+            margin: 0 0 14px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .activity-heatmap-calendar-wrap {
+            display: grid;
+            grid-template-columns: 36px 1fr;
+            gap: 10px;
+            align-items: start;
+        }
+
+        .activity-heatmap-weekdays {
+            display: grid;
+            grid-template-rows: repeat(7, 12px);
+            gap: 4px;
+            padding-top: 20px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 12px;
+        }
+
+        .activity-heatmap-scroll {
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .activity-heatmap-months {
+            position: relative;
+            height: 18px;
+            margin-bottom: 6px;
+        }
+
+        .activity-heatmap-month {
+            position: absolute;
+            top: 0;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .activity-heatmap-grid {
+            display: flex;
+            gap: 4px;
+        }
+
+        .activity-heatmap-week {
+            display: grid;
+            grid-template-rows: repeat(7, 12px);
+            gap: 4px;
+        }
+
+        .activity-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: #edf2f7;
+            border: 1px solid rgba(45, 55, 72, 0.06);
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+
+        .activity-cell:hover {
+            transform: scale(1.15);
+            filter: brightness(0.95);
+        }
+
+        .activity-cell-level-0 {
+            background: #edf2f7;
+        }
+
+        .activity-cell-level-1 {
+            background: #c6f6d5;
+        }
+
+        .activity-cell-level-2 {
+            background: #9ae6b4;
+        }
+
+        .activity-cell-level-3 {
+            background: #68d391;
+        }
+
+        .activity-cell-level-4 {
+            background: #2f855a;
+        }
+
+        .activity-heatmap-footer {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .activity-heatmap-legend {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .activity-heatmap-legend .activity-cell {
+            pointer-events: none;
+        }
+
         /* Additional Responsive */
         @media (max-width: 768px) {
             .graph-grid {
@@ -1286,5 +1449,13 @@
             .project-score-signal-header {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .activity-heatmap-calendar-wrap {
+                grid-template-columns: 1fr;
+            }
+
+            .activity-heatmap-weekdays {
+                display: none;
             }
         }

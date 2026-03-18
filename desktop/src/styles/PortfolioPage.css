@@ -1284,13 +1284,6 @@
             letter-spacing: -0.01em;
         }
 
-        .activity-heatmap-note {
-            margin: 0 0 14px;
-            color: var(--text-secondary);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
         .activity-heatmap-calendar-wrap {
             display: grid;
             grid-template-columns: 36px 1fr;
@@ -1383,6 +1376,17 @@
             flex-wrap: wrap;
             color: var(--text-secondary);
             font-size: 12px;
+        }
+
+        .activity-heatmap-highlight {
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            background: var(--border-light);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 5px 10px;
         }
 
         .activity-heatmap-legend {

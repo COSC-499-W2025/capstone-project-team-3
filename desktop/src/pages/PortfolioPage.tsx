@@ -69,6 +69,7 @@ interface PortfolioData {
     complexity_distribution?: { distribution?: Record<string, number> };
     score_distribution?: { distribution?: Record<string, number> };
     monthly_activity?: Record<string, number>;
+    daily_activity?: Record<string, number>;
     top_skills?: Record<string, number>;
   };
   project_type_analysis?: {
@@ -654,7 +655,6 @@ interface HeatmapModel {
   maxValue: number;
   totalSignal: number;
   activeDays: number;
-  streakDays: number;
   busiestDay: HeatmapCell | null;
 }
 
@@ -682,7 +682,15 @@ const formatHeatmapDate = (date: Date): string =>
     year: "numeric",
   });
 
+const formatHeatmapHighlightDate = (date: Date): string =>
+  date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
 const buildHeatmapModel = (
+  dailyActivity: Record<string, number> | undefined,
   monthlyActivity: Record<string, number> | undefined,
   projects: Project[] | undefined,
 ): HeatmapModel => {
@@ -704,41 +712,53 @@ const buildHeatmapModel = (
     dayScores.set(key, (dayScores.get(key) || 0) + score);
   };
 
-  (projects || []).forEach((project) => {
-    const createdAt = parseDateLike(project.created_at || project.start_date);
-    const lastModified = parseDateLike(
-      project.last_modified || project.end_date,
-    );
+  const hasDailyActivity = Object.keys(dailyActivity || {}).length > 0;
 
-    if (createdAt) addSignal(createdAt, 1.25);
-    if (lastModified) {
-      const isSameAsCreate =
-        createdAt && toDateKey(createdAt) === toDateKey(lastModified);
-      addSignal(lastModified, isSameAsCreate ? 0.5 : 1);
-    }
-  });
+  if (hasDailyActivity) {
+    Object.entries(dailyActivity || {}).forEach(([dayKey, rawValue]) => {
+      const value = Number(rawValue) || 0;
+      if (value <= 0) return;
+      const date = parseDateLike(dayKey);
+      if (!date) return;
+      addSignal(date, value);
+    });
+  } else {
+    (projects || []).forEach((project) => {
+      const createdAt = parseDateLike(project.created_at || project.start_date);
+      const lastModified = parseDateLike(
+        project.last_modified || project.end_date,
+      );
 
-  Object.entries(monthlyActivity || {}).forEach(([monthKey, rawValue]) => {
-    const value = Number(rawValue) || 0;
-    if (value <= 0) return;
+      if (createdAt) addSignal(createdAt, 1.25);
+      if (lastModified) {
+        const isSameAsCreate =
+          createdAt && toDateKey(createdAt) === toDateKey(lastModified);
+        addSignal(lastModified, isSameAsCreate ? 0.5 : 1);
+      }
+    });
 
-    const monthMatch = monthKey.match(/^(\d{4})-(\d{2})/);
-    if (!monthMatch) return;
+    Object.entries(monthlyActivity || {}).forEach(([monthKey, rawValue]) => {
+      const value = Number(rawValue) || 0;
+      if (value <= 0) return;
 
-    const year = Number(monthMatch[1]);
-    const monthIndex = Number(monthMatch[2]) - 1;
-    if (Number.isNaN(year) || Number.isNaN(monthIndex)) return;
+      const monthMatch = monthKey.match(/^(\d{4})-(\d{2})/);
+      if (!monthMatch) return;
 
-    const monthEnd = new Date(year, monthIndex + 1, 0);
-    const daysInMonth = monthEnd.getDate();
-    if (daysInMonth <= 0) return;
+      const year = Number(monthMatch[1]);
+      const monthIndex = Number(monthMatch[2]) - 1;
+      if (Number.isNaN(year) || Number.isNaN(monthIndex)) return;
 
-    const dailySignal = (value / daysInMonth) * 0.35;
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const date = new Date(year, monthIndex, day);
-      addSignal(date, dailySignal);
-    }
-  });
+      const monthEnd = new Date(year, monthIndex + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+      if (daysInMonth <= 0) return;
+
+      const dailySignal = (value / daysInMonth) * 0.35;
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, monthIndex, day);
+        addSignal(date, dailySignal);
+      }
+    });
+  }
 
   const allDays: Date[] = [];
   for (
@@ -798,33 +818,28 @@ const buildHeatmapModel = (
         )
       : null;
 
-  let streakDays = 0;
-  for (let i = cells.length - 1; i >= 0; i -= 1) {
-    if (cells[i].value <= 0) break;
-    streakDays += 1;
-  }
-
   return {
     weeks,
     monthLabels,
     maxValue,
     totalSignal,
     activeDays,
-    streakDays,
     busiestDay,
   };
 };
 
 function ActivityHeatmap({
+  dailyActivity,
   monthlyActivity,
   projects,
 }: {
+  dailyActivity?: Record<string, number>;
   monthlyActivity?: Record<string, number>;
   projects?: Project[];
 }) {
   const model = useMemo(
-    () => buildHeatmapModel(monthlyActivity, projects),
-    [monthlyActivity, projects],
+    () => buildHeatmapModel(dailyActivity, monthlyActivity, projects),
+    [dailyActivity, monthlyActivity, projects],
   );
 
   const calendarWidth = model.weeks.length * HEATMAP_CELL_STEP;
@@ -837,10 +852,6 @@ function ActivityHeatmap({
           <strong>{model.activeDays}</strong>
         </div>
         <div className="activity-heatmap-kpi">
-          <span className="activity-heatmap-kpi-label">Current Streak</span>
-          <strong>{model.streakDays} days</strong>
-        </div>
-        <div className="activity-heatmap-kpi">
           <span className="activity-heatmap-kpi-label">Peak Signal</span>
           <strong>{model.maxValue.toFixed(2)}</strong>
         </div>
@@ -849,11 +860,6 @@ function ActivityHeatmap({
           <strong>{model.totalSignal.toFixed(1)}</strong>
         </div>
       </div>
-
-      <p className="activity-heatmap-note">
-        Activity signal blends monthly trend data with project milestones
-        (created and last modified dates) to show productivity over time.
-      </p>
 
       <div className="activity-heatmap-calendar-wrap">
         <div className="activity-heatmap-weekdays" aria-hidden>
@@ -904,9 +910,9 @@ function ActivityHeatmap({
       </div>
 
       <div className="activity-heatmap-footer">
-        <span>
+        <span className="activity-heatmap-highlight">
           {model.busiestDay
-            ? `Most active: ${formatHeatmapDate(model.busiestDay.date)}`
+            ? `Peak activity date: ${formatHeatmapHighlightDate(model.busiestDay.date)}`
             : "No activity yet"}
         </span>
         <div className="activity-heatmap-legend" aria-hidden>
@@ -1987,6 +1993,7 @@ ${mainClone.outerHTML}
         <div className="activity-heatmap-section">
           <h2 className="section-title">🔥 Activity Heatmap</h2>
           <ActivityHeatmap
+            dailyActivity={graphs.daily_activity}
             monthlyActivity={graphs.monthly_activity}
             projects={portfolio?.projects}
           />

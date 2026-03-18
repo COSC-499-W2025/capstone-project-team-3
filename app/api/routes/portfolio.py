@@ -41,6 +41,7 @@ def get_portfolio(project_ids: Optional[str] = Query(None, description="Comma-se
     - Language distribution for pie charts
     - Project complexity distribution for bar charts
     - Score distribution for quality analysis
+    - Daily activity timeline (exact commit-day counts for GitHub projects when available)
     - Monthly activity timeline
     - Project type analysis (GitHub vs Local)
     - Top skills usage

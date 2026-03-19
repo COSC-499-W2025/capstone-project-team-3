@@ -5,6 +5,27 @@ import { API_BASE_URL } from "../config/api";
 import "../styles/UploadPage.css";
 import "../styles/AnalysisRunnerPage.css";
 
+interface FileTypeGroup {
+  id: string;
+  label: string;
+  exts: readonly string[];
+  namePrefix?: string; // case-insensitive filename stem prefix (e.g. "readme")
+}
+
+const FILE_TYPE_GROUPS: FileTypeGroup[] = [
+  { id: "markdown", label: "Markdown",       exts: [".md", ".markdown"] },
+  { id: "readme",   label: "README files",   exts: [], namePrefix: "readme" },
+  { id: "text",     label: "Plain Text",     exts: [".txt"] },
+  { id: "pdf",      label: "PDF",            exts: [".pdf"] },
+  { id: "word",     label: "Word Docs",      exts: [".docx", ".doc"] },
+  { id: "slides",   label: "Presentations",  exts: [".pptx", ".ppt"] },
+  { id: "json",     label: "JSON / Config",  exts: [".json", ".toml", ".ini"] },
+  { id: "yaml",     label: "YAML",           exts: [".yml", ".yaml"] },
+  { id: "html",     label: "HTML",           exts: [".html", ".htm"] },
+  { id: "css",      label: "Stylesheets",    exts: [".css", ".scss", ".sass", ".less"] },
+  { id: "shell",    label: "Shell Scripts",  exts: [".sh", ".bash"] },
+];
+
 interface Project {
   name: string;
   path: string;
@@ -52,6 +73,12 @@ export function UploadPage() {
   const [showAiConsentModal, setShowAiConsentModal] = useState(false);
   const [pendingAiSelection, setPendingAiSelection] =
     useState<PendingAiSelection | null>(null);
+
+  // Per-project file type exclusions
+  const [projectExcludeGroups, setProjectExcludeGroups] =
+    useState<Record<string, Set<string>>>({});
+  const [expandedExclude, setExpandedExclude] =
+    useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!uploadId) return;
@@ -150,6 +177,8 @@ export function UploadPage() {
     setAiConsentAccepted(false);
     setShowAiConsentModal(false);
     setPendingAiSelection(null);
+    setProjectExcludeGroups({});
+    setExpandedExclude(new Set());
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -225,12 +254,41 @@ export function UploadPage() {
     }));
   };
 
+  const toggleExcludeGroup = (projectPath: string, groupId: string) => {
+    setProjectExcludeGroups((prev) => {
+      const current = new Set(prev[projectPath] ?? []);
+      current.has(groupId) ? current.delete(groupId) : current.add(groupId);
+      return { ...prev, [projectPath]: current };
+    });
+  };
+
+  const toggleExpandExclude = (projectPath: string) => {
+    setExpandedExclude((prev) => {
+      const next = new Set(prev);
+      next.has(projectPath) ? next.delete(projectPath) : next.add(projectPath);
+      return next;
+    });
+  };
+
   const handleRunAnalysis = async () => {
     if (!uploadId) return;
 
     const project_analysis_types: Record<string, string> = {};
     projects.forEach((p) => {
       project_analysis_types[p.path] = p.mode;
+    });
+
+    const project_exclude_extensions: Record<string, string[]> = {};
+    const project_exclude_name_prefixes: Record<string, string[]> = {};
+    projects.forEach((p) => {
+      const groups = projectExcludeGroups[p.path];
+      if (groups?.size) {
+        const matched = FILE_TYPE_GROUPS.filter((g) => groups.has(g.id));
+        const exts = matched.flatMap((g) => [...g.exts]);
+        const prefixes = matched.filter((g) => g.namePrefix).map((g) => g.namePrefix!);
+        if (exts.length) project_exclude_extensions[p.path] = exts;
+        if (prefixes.length) project_exclude_name_prefixes[p.path] = prefixes;
+      }
     });
 
     setRunning(true);
@@ -246,6 +304,8 @@ export function UploadPage() {
           project_analysis_types,
           similarity_action: similarityAction,
           project_similarity_actions: projectSimilarityActions,
+          project_exclude_extensions,
+          project_exclude_name_prefixes,
           cleanup_zip: true,
           cleanup_extracted: true,
         }),
@@ -267,6 +327,8 @@ export function UploadPage() {
       setAiConsentAccepted(false);
       setShowAiConsentModal(false);
       setPendingAiSelection(null);
+      setProjectExcludeGroups({});
+      setExpandedExclude(new Set());
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
@@ -455,48 +517,100 @@ export function UploadPage() {
                     <th>Project Name</th>
                     <th>Analysis Type</th>
                     <th>Similarity Action</th>
+                    <th>Exclude Types</th>
                   </tr>
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="ar-table-empty">No projects found.</td>
+                      <td colSpan={4} className="ar-table-empty">No projects found.</td>
                     </tr>
                   ) : (
-                    projects.map((project, index) => (
-                      <tr key={project.name}>
-                        <td className="ar-table-name">{project.name}</td>
-                        <td>
-                          <select
-                            className="ar-select ar-select--inline"
-                            value={project.mode}
-                            onChange={(e) => handleProjectModeChange(index, e.target.value)}
-                            aria-label={`Analysis type for ${project.name}`}
-                            disabled={analysisDisabled}
-                          >
-                            <option value="local">Local</option>
-                            <option value="ai">AI</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="ar-select ar-select--inline"
-                            value={projectSimilarityActions[project.path] ?? similarityAction}
-                            onChange={(e) =>
-                              handleProjectSimilarityActionChange(
-                                project.path,
-                                e.target.value as SimilarityAction,
-                              )
-                            }
-                            aria-label={`Similarity action for ${project.name}`}
-                            disabled={analysisDisabled}
-                          >
-                            <option value="create_new">Create new</option>
-                            <option value="update_existing">Update existing</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))
+                    projects.map((project, index) => {
+                      const excluded = projectExcludeGroups[project.path];
+                      const excludeCount = excluded?.size ?? 0;
+                      const isExpanded = expandedExclude.has(project.path);
+                      return (
+                        <>
+                          <tr key={project.name}>
+                            <td className="ar-table-name">{project.name}</td>
+                            <td>
+                              <select
+                                className="ar-select ar-select--inline"
+                                value={project.mode}
+                                onChange={(e) => handleProjectModeChange(index, e.target.value)}
+                                aria-label={`Analysis type for ${project.name}`}
+                                disabled={analysisDisabled}
+                              >
+                                <option value="local">Local</option>
+                                <option value="ai">AI</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                className="ar-select ar-select--inline"
+                                value={projectSimilarityActions[project.path] ?? similarityAction}
+                                onChange={(e) =>
+                                  handleProjectSimilarityActionChange(
+                                    project.path,
+                                    e.target.value as SimilarityAction,
+                                  )
+                                }
+                                aria-label={`Similarity action for ${project.name}`}
+                                disabled={analysisDisabled}
+                              >
+                                <option value="create_new">Create new</option>
+                                <option value="update_existing">Update existing</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className={`ar-exclude-btn${isExpanded ? " ar-exclude-btn--open" : ""}`}
+                                onClick={() => toggleExpandExclude(project.path)}
+                                disabled={analysisDisabled}
+                                aria-expanded={isExpanded}
+                                aria-label={`Exclude file types for ${project.name}`}
+                              >
+                                {excludeCount > 0
+                                  ? <span className="ar-exclude-badge">{excludeCount} type{excludeCount !== 1 ? "s" : ""}</span>
+                                  : "None"
+                                }
+                                <span className="ar-exclude-chevron">{isExpanded ? "▴" : "▾"}</span>
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr key={`${project.name}-exclude`} className="ar-exclude-row">
+                              <td colSpan={4} className="ar-exclude-cell">
+                                <div className="ar-exclude-panel">
+                                  <p className="ar-exclude-hint">
+                                    Check types to <strong>exclude</strong> from analysis for this project.
+                                  </p>
+                                  <div className="ar-exclude-grid">
+                                    {FILE_TYPE_GROUPS.map((group) => {
+                                      const checked = excluded?.has(group.id) ?? false;
+                                      return (
+                                        <label key={group.id} className={`ar-exclude-group${checked ? " ar-exclude-group--checked" : ""}`}>
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => toggleExcludeGroup(project.path, group.id)}
+                                            disabled={analysisDisabled}
+                                          />
+                                          <span className="ar-exclude-label">{group.label}</span>
+                                          <span className="ar-exclude-exts">{group.exts.join(", ")}</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

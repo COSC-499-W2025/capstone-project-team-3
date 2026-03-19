@@ -139,7 +139,7 @@ def render_education(education_list: List[Dict[str, Any]]) -> str:
         gpa_line = rf"{{\sl GPA: {gpa}}}\\" if gpa else ""
         
         block = rf"""{school} \hfill {dates}\\
-{{\sl {degree}}}\\
+{degree}\\
 {gpa_line}"""
         blocks.append(block.strip())
     
@@ -209,19 +209,16 @@ def render_awards(awards: Any) -> str:
         if date:
             header_line += rf" \hfill {date}"
 
-        issuer_line = rf"{{\sl {issuer}}}\\" if issuer else ""
+        issuer_line = rf"{issuer}\\" if issuer else ""
 
-        # Each award is one bullet item.
-        item_tex = rf"\item {header_line}\\{issuer_line}{details_block}"
-        items_tex.append(item_tex)
+        block = rf"{header_line}\\{issuer_line}{details_block}"
+        items_tex.append(block)
 
-    awards_body = "\n".join(items_tex)
+    awards_body = "\n\n".join(items_tex)
     return (
         r"\header{Awards \& Honours}" "\n"
         r"\vspace{2mm}" "\n"
-        r"\begin{achievements}" "\n"
         f"{awards_body}\n"
-        r"\end{achievements}"
     )
 
 
@@ -275,22 +272,22 @@ def render_work_experience(work_experience: Any) -> str:
                 r"\end{itemize}"
             )
 
-        header_line = rf"\textbf{{{role}}}"
+        if company:
+            header_text = rf"\textbf{{{company} | {role}}}"
+        else:
+            header_text = rf"\textbf{{{role}}}"
+        header_line = header_text
         if date_range:
             header_line += rf" \hfill {date_range}"
 
-        company_line = rf"{{\sl {company}}}\\" if company else ""
+        block = rf"{header_line}\\{details_block}"
+        items_tex.append(block)
 
-        item_tex = rf"\item {header_line}\\{company_line}{details_block}"
-        items_tex.append(item_tex)
-
-    work_body = "\n".join(items_tex)
+    work_body = "\n\n".join(items_tex)
     return (
         r"\header{Work Experience}" "\n"
         r"\vspace{2mm}" "\n"
-        r"\begin{achievements}" "\n"
         f"{work_body}\n"
-        r"\end{achievements}"
     )
     
 def generate_resume_tex(resume: Dict[str, Any]) -> str:

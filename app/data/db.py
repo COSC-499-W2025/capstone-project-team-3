@@ -542,6 +542,35 @@ def seed_db():
         "Python,Flask,Backend, Java,Team Collaboration,Git,Agile Methodologies"
     ))
 
+    # --- RESUME_AWARDS ---
+    awards_data = [
+        {
+            "title": "Hackathon Winner",
+            "issuer": "Tech Challenge Inc.",
+            "date": "2024-03",
+            "details": ["Won first place in 24-hour coding competition", "Led team of 3 developers"],
+        }
+    ]
+    cursor.execute("""
+        INSERT OR REPLACE INTO RESUME_AWARDS (resume_id, awards)
+        VALUES (?, ?)
+    """, (1, json.dumps(awards_data)))
+
+    # --- RESUME_WORK_EXPERIENCE ---
+    work_exp_data = [
+        {
+            "role": "Software Engineer",
+            "company": "Tech Corp",
+            "start_date": "2023-06",
+            "end_date": "2024-12",
+            "details": ["Developed backend services", "Collaborated with cross-functional teams"],
+        }
+    ]
+    cursor.execute("""
+        INSERT OR REPLACE INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience)
+        VALUES (?, ?)
+    """, (1, json.dumps(work_exp_data)))
+
     conn.commit()
     conn.close()
 

@@ -8,6 +8,7 @@
   display: flex;
   justify-content: center;
   padding: 24px;
+  --resume-page-height: 1056px;
 }
 
 .resume-preview__scroll {
@@ -45,7 +46,7 @@
   position: absolute;
   left: 0;
   width: 816px;
-  height: 1056px;
+  height: var(--resume-page-height);
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   pointer-events: none;
@@ -55,7 +56,7 @@
 .resume-preview__content {
   position: relative;
   width: 816px;
-  min-height: 1056px;
+  min-height: var(--resume-page-height);
   padding: 40px 48px 40px;
   font-family: "CMU Serif", "Latin Modern Roman", "Times New Roman", Times, Georgia, serif;
   font-size: 11pt;
@@ -387,6 +388,14 @@
   margin-bottom: 2px;
 }
 
+.resume-preview__work-bullets li {
+  white-space: pre-wrap;
+}
+
+.resume-preview__award-bullets li {
+  white-space: pre-wrap;
+}
+
 /* Project edit: inline skills (comma-separated) */
 .resume-preview__skills-edit-inline {
   display: inline;
@@ -411,6 +420,66 @@
   font-size: 11pt;
 }
 
+.resume-preview__awards-wrapper {
+  position: relative;
+}
+
+.resume-preview__add-section-footer {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.resume-preview__add-section-footer--page {
+  margin-top: 18px;
+}
+
+.resume-preview__add-section-btn {
+  font-family: inherit;
+  font-size: 12.5pt;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  background: #fff;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resume-preview__add-section-plus {
+  font-weight: 700;
+  font-size: 18pt;
+  line-height: 0;
+}
+
+.resume-preview__add-section-menu {
+  margin-top: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: static;
+}
+
+.resume-preview__add-section-option {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-family: inherit;
+  font-size: 12.5pt;
+  color: #111827;
+}
+
 /* Contenteditable styles */
 [contenteditable="true"] {
   outline: 1px solid #ccc;
@@ -429,4 +498,15 @@
   content: attr(data-placeholder);
   color: #999;
   font-style: italic;
+}
+
+/* In edit mode, allow controls to overflow the fixed page height.
+   Otherwise inputs/textarea focus states can get clipped when a section is near
+   the bottom of a page. */
+.resume-preview--editing .resume-preview__page-content {
+  overflow: visible;
+}
+
+.resume-preview--editing .resume-preview__page-content .resume-preview__content {
+  overflow: visible;
 }

@@ -109,6 +109,24 @@ CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
 );
 
+-- Table for edited resume awards/honours (tailored resumes only)
+CREATE TABLE IF NOT EXISTS RESUME_AWARDS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL UNIQUE,
+    awards JSON NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
+-- Table for edited resume work experience (tailored resumes only)
+CREATE TABLE IF NOT EXISTS RESUME_WORK_EXPERIENCE (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL UNIQUE,
+    work_experience JSON NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
 --Table to edited resume details. project_id has no FK to PROJECT so we snapshot on delete and keep rows.
 CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

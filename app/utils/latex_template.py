@@ -2,7 +2,7 @@ class ResumeTemplate:
     
     # Placeholders in LATEX_TEMPLATE are:
     # name, email, links_block, education_section,
-    # skills_table, projects
+    # skills_table, work_experience_section, projects, awards_section
     
     LATEX_TEMPLATE = r"""
     \documentclass[a4paper]{article}
@@ -95,9 +95,13 @@ class ResumeTemplate:
     \end{longtable}
     \vspace{1mm}
 
+    {work_experience_section}
+
     \header{Projects / Experience}
     \vspace{2mm}
     {projects} % projects are filled in here, includes name, skills, duration, and bullets
+
+    {awards_section}
 
     \end{document}
     """

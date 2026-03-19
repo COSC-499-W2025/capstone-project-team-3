@@ -71,6 +71,56 @@ def parse_education_details(education_details_json: Optional[str], fallback_educ
         }]
     
     return []
+
+
+def load_awards(cursor: sqlite3.Cursor, resume_id: int) -> List[Dict[str, Any]]:
+    """Load awards/honours for a saved tailored resume."""
+    cursor.execute(
+        "SELECT awards FROM RESUME_AWARDS WHERE resume_id = ? LIMIT 1",
+        (resume_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return []
+
+    awards_raw = row[0]
+    if not awards_raw:
+        return []
+
+    try:
+        parsed = json.loads(awards_raw) if isinstance(awards_raw, str) else awards_raw
+        if isinstance(parsed, list):
+            # Keep only dict entries to avoid template renderer issues.
+            return [a for a in parsed if isinstance(a, dict)]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return []
+
+
+def load_work_experience(cursor: sqlite3.Cursor, resume_id: int) -> List[Dict[str, Any]]:
+    """Load work experience entries for a saved tailored resume."""
+    cursor.execute(
+        "SELECT work_experience FROM RESUME_WORK_EXPERIENCE WHERE resume_id = ? LIMIT 1",
+        (resume_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return []
+
+    work_raw = row[0]
+    if not work_raw:
+        return []
+
+    try:
+        parsed = json.loads(work_raw) if isinstance(work_raw, str) else work_raw
+        if isinstance(parsed, list):
+            # Keep only dict entries to avoid template renderer issues.
+            return [e for e in parsed if isinstance(e, dict)]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return []
     
 def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
@@ -410,11 +460,24 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             fallback_job_title=user.get("job_title", "")
         )
         
+        # Parse awards/honours (tailored-resume only)
+        awards_list = load_awards(cursor, resume_id)
+        if resume_id == 1:
+            # Master resume should never include awards.
+            awards_list = []
+
+        work_experience_list = load_work_experience(cursor, resume_id)
+        if resume_id == 1:
+            # Master resume should never include work experience.
+            work_experience_list = []
+        
         return {
             "name": user["name"],
             "email": user["email"],
             "links": user["links"],
             "education": education_list,
+            "awards": awards_list,
+            "work_experience": work_experience_list,
             "skills": {
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
@@ -473,6 +536,9 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
             "email": user["email"],
             "links": user["links"],
             "education": education_list,
+            # Awards are tailored-resume only; preview/master don't load them.
+            "awards": [],
+            "work_experience": [],
             "skills": {
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
@@ -561,6 +627,97 @@ def save_resume_edits(resume_id: int, payload: dict):
                     skills = excluded.skills,
                     updated_at = CURRENT_TIMESTAMP
             """, (resume_id, json.dumps(skills_payload)))
+
+        # Update tailored-resume awards (if provided)
+        if "awards" in payload:
+            awards_payload = payload.get("awards") or []
+
+            normalized_awards: List[Dict[str, Any]] = []
+            if isinstance(awards_payload, list):
+                for a in awards_payload:
+                    if not isinstance(a, dict):
+                        continue
+                    title = str(a.get("title", "")).strip()
+                    if not title:
+                        continue
+                    issuer = str(a.get("issuer", "")).strip() if a.get("issuer") else ""
+                    date = str(a.get("date", "")).strip() if a.get("date") else ""
+
+                    details_raw = a.get("details", []) or []
+                    details: List[str] = []
+                    if isinstance(details_raw, list):
+                        details = [str(d).strip() for d in details_raw if str(d).strip()]
+                    elif isinstance(details_raw, str):
+                        # Accept newline-separated details for robustness.
+                        details = [line.strip() for line in details_raw.splitlines() if line.strip()]
+
+                    normalized_awards.append(
+                        {
+                            "title": title,
+                            "issuer": issuer,
+                            "date": date,
+                            "details": details,
+                        }
+                    )
+
+            cursor.execute(
+                """
+                INSERT INTO RESUME_AWARDS (resume_id, awards)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    awards = excluded.awards,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (resume_id, json.dumps(normalized_awards)),
+            )
+
+        # Update tailored-resume work experience (if provided)
+        if "work_experience" in payload:
+            work_payload = payload.get("work_experience") or []
+
+            normalized_work: List[Dict[str, Any]] = []
+            if isinstance(work_payload, list):
+                for e in work_payload:
+                    if not isinstance(e, dict):
+                        continue
+                    role = str(e.get("role", "")).strip()
+                    if not role:
+                        continue
+
+                    company = str(e.get("company", "")).strip() if e.get("company") else ""
+                    start_date = str(e.get("start_date", "")).strip() if e.get("start_date") else ""
+                    end_date = str(e.get("end_date", "")).strip() if e.get("end_date") else ""
+
+                    details_raw = e.get("details", []) or []
+                    details: List[str] = []
+                    if isinstance(details_raw, list):
+                        details = [str(d).strip() for d in details_raw if str(d).strip()]
+                    elif isinstance(details_raw, str):
+                        # Accept newline-separated details for robustness.
+                        details = [line.strip() for line in details_raw.splitlines() if line.strip()]
+
+                    normalized_work.append(
+                        {
+                            "role": role,
+                            "company": company,
+                            "start_date": start_date,
+                            "end_date": end_date,
+                            "details": details,
+                        }
+                    )
+
+            cursor.execute(
+                """
+                INSERT INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    work_experience = excluded.work_experience,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (resume_id, json.dumps(normalized_work)),
+            )
 
         for project in payload.get("projects", []):
             cursor.execute("""

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Resume, Skills, Project } from "../api/resume_types";
+import { Resume, Skills, Project, Award, WorkExperience } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
@@ -151,7 +151,24 @@ export function ResumeBuilderPage() {
     setEditedSections(new Set()); // Clear edited sections when entering edit mode
   };
 
-  const handleSectionChange = (section: "skills" | "projects", data: Skills | Project[]) => {
+  const hasAwards =
+    activeContent?.awards?.some((a) => (a.title ?? "").trim().length > 0) ?? false;
+  const showAwardsSection =
+    !isMasterResume && (hasAwards || (isEditing && editedSections.has("awards")));
+  const allowAddAwardsSection =
+    !isMasterResume && isEditing && !hasAwards && !editedSections.has("awards");
+
+  const hasWorkExperience =
+    activeContent?.work_experience?.some((we) => (we.role ?? "").trim().length > 0) ?? false;
+  const showWorkExperienceSection =
+    !isMasterResume && (hasWorkExperience || (isEditing && editedSections.has("work_experience")));
+  const allowAddWorkExperienceSection =
+    !isMasterResume && isEditing && !hasWorkExperience && !editedSections.has("work_experience");
+
+  const handleSectionChange = (
+    section: "skills" | "projects" | "awards" | "work_experience",
+    data: Skills | Project[] | Award[] | WorkExperience[],
+  ) => {
     setActiveContent(prev => (prev ? { ...prev, [section]: data } : prev));
     setEditedSections(prev => new Set(prev).add(section));
   };
@@ -274,7 +291,7 @@ export function ResumeBuilderPage() {
       setSaving(true);
       
       // Build payload with only edited sections
-      const payload: { skills?: Skills, projects?: any[] } = {};
+      const payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] } = {};
       
       if (editedSections.has('skills')) {
         payload.skills = activeContent.skills;
@@ -302,6 +319,14 @@ export function ResumeBuilderPage() {
           };
         });
       }
+
+      if (editedSections.has("awards")) {
+        payload.awards = activeContent.awards;
+      }
+
+      if (editedSections.has("work_experience")) {
+        payload.work_experience = activeContent.work_experience ?? [];
+      }
       
       await updateResume(currentResume.id, payload);
       setIsEditing(false); // Exit edit mode after save
@@ -322,7 +347,13 @@ export function ResumeBuilderPage() {
 
     try {
       setSaving(true);
-      const result = await saveNewResume(saveResumeName, previewProjectIds, activeContent?.skills ?? undefined);
+      const result = await saveNewResume(
+        saveResumeName,
+        previewProjectIds,
+        activeContent?.skills ?? undefined,
+        activeContent?.awards ?? undefined,
+        activeContent?.work_experience ?? undefined,
+      );
       // console.log('Resume saved with ID:', result.resume_id);
       
       // Reload resume list
@@ -592,6 +623,12 @@ export function ResumeBuilderPage() {
                     resume={activeContent}
                     isEditing={isEditing}
                     onSectionChange={handleSectionChange}
+                    showAwards={showAwardsSection}
+                    allowAddAwards={allowAddAwardsSection}
+                    {...({
+                      showWorkExperience: showWorkExperienceSection,
+                      allowAddWorkExperience: allowAddWorkExperienceSection,
+                    } as any)}
                     onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
                     onAddProjectClick={
                       isEditing && !isMasterResume && currentResume?.id != null

@@ -905,12 +905,14 @@ describe('ResumeBuilderPage', () => {
     const modalSaveButton = document.querySelector('.modal-save-btn') as HTMLButtonElement;
     fireEvent.click(modalSaveButton);
 
-    // Should call saveNewResume with correct params
+    // Should call saveNewResume with correct params (skills, awards, work_experience)
     await waitFor(() => {
       expect(mockSaveNewResume).toHaveBeenCalledWith(
         'Frontend Resume',
         ['proj1', 'proj2'],
-        mockPreviewResumeData.skills
+        mockPreviewResumeData.skills,
+        undefined,
+        undefined
       );
     });
 

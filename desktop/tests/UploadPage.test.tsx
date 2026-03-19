@@ -119,6 +119,69 @@ describe("UploadPage", () => {
     expect((screen.getByLabelText(/Default Analysis Type/i) as HTMLSelectElement).value).toBe("ai");
   });
 
+  test("Exclude Types column appears after project load", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
+    } as Response);
+
+    const { container } = render(<BrowserRouter><UploadPage /></BrowserRouter>);
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [new File(["x"], "p.zip", { type: "application/zip" })] } });
+
+    await screen.findByText("proj-a");
+    expect(screen.getByText(/Exclude Types/i)).toBeInTheDocument();
+  });
+
+  test("clicking exclude button opens file type panel with Markdown and README options", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
+    } as Response);
+
+    const { container } = render(<BrowserRouter><UploadPage /></BrowserRouter>);
+    fireEvent.change(
+      container.querySelector("input[type='file']") as HTMLInputElement,
+      { target: { files: [new File(["x"], "p.zip", { type: "application/zip" })] } },
+    );
+    await screen.findByText("proj-a");
+
+    fireEvent.click(screen.getByLabelText(/Exclude file types for proj-a/i));
+    expect(await screen.findByLabelText(/Markdown/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/README files/i)).toBeInTheDocument();
+  });
+
+  test("checking file types sends project_exclude_extensions in analysis payload", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ analyzed_projects: 1, skipped_projects: 0, failed_projects: 0 }),
+      } as Response);
+
+    const { container } = render(<BrowserRouter><UploadPage /></BrowserRouter>);
+    fireEvent.change(
+      container.querySelector("input[type='file']") as HTMLInputElement,
+      { target: { files: [new File(["x"], "p.zip", { type: "application/zip" })] } },
+    );
+    await screen.findByText("proj-a");
+
+    fireEvent.click(screen.getByLabelText(/Exclude file types for proj-a/i));
+    fireEvent.click(await screen.findByLabelText(/Markdown/i));
+    fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
+
+    await screen.findByText(/Analysis complete/i);
+    const [, runCall] = mockFetch.mock.calls;
+    const body = JSON.parse((runCall[1] as RequestInit).body as string);
+    expect(body.project_exclude_extensions["/tmp/proj-a"]).toContain(".md");
+  });
+
   test("successful run clears upload form state to avoid stale upload_id reruns", async () => {
     mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
 

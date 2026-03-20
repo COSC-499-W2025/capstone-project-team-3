@@ -19,7 +19,8 @@ export interface Education{
 }
 
 export interface Skills{
-    Skills: string[];
+    Proficient: string[];
+    Familiar: string[];
 }
 
 export interface Link {

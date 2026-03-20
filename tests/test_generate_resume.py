@@ -80,7 +80,9 @@ def db_connection(monkeypatch):
 
         CREATE TABLE SKILL_ANALYSIS (
             project_id TEXT,
-            skill TEXT
+            skill TEXT,
+            source TEXT,
+            date TEXT
         );
         
         CREATE TABLE RESUME (
@@ -134,16 +136,16 @@ def db_connection(monkeypatch):
 
     cursor.executemany("""
         INSERT INTO SKILL_ANALYSIS
-        VALUES (?, ?)
+        VALUES (?, ?, ?, ?)
     """, [
-        ('p1', 'Python'),
-        ('p1', 'Flask'),
-        ('p1', 'SQL'),
-        ('p1', 'Docker'),
-        ('p1', 'Git'),
-        ('p1', 'ExtraSkill'), 
-        ('p2', 'Python'),
-        ('p2', 'Machine Learning'),
+        ('p1', 'Python', 'technical_skill', '2024-02-01'),
+        ('p1', 'Flask', 'technical_skill', '2024-02-01'),
+        ('p1', 'SQL', 'technical_skill', '2024-02-01'),
+        ('p1', 'Docker', 'technical_skill', '2024-02-01'),
+        ('p1', 'Git', 'technical_skill', '2024-02-01'),
+        ('p1', 'ExtraSkill', 'technical_skill', '2024-02-01'),
+        ('p2', 'Python', 'technical_skill', '2024-03-01'),
+        ('p2', 'Machine Learning', 'technical_skill', '2024-03-01'),
     ])
     
     cursor.execute("INSERT INTO RESUME (id) VALUES (1)")
@@ -261,9 +263,8 @@ def test_build_resume_model_filters_projects(db_connection):
     assert len(model_single["projects"]) == 1
     assert model_single["projects"][0]["title"] == "Alpha_Project"
     # Top-level skills should include all skills from p1
-    assert set(model_single["skills"]["Skills"]) == {
-        "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill"
-    }
+    combined_single = model_single["skills"]["Proficient"] + model_single["skills"]["Familiar"]
+    assert set(combined_single) == {"Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill"}
 
     # Multiple project selection
     model_multi = build_resume_model(project_ids=["p1", "p2"])
@@ -272,8 +273,15 @@ def test_build_resume_model_filters_projects(db_connection):
     titles = [p["title"] for p in model_multi["projects"]]
     assert titles == ["Alpha_Project", "Beta Project"]
     # Union of skills from both projects
-    assert set(model_multi["skills"]["Skills"]) == {
-        "Python", "Flask", "SQL", "Docker", "Git", "ExtraSkill", "Machine Learning"
+    combined_multi = model_multi["skills"]["Proficient"] + model_multi["skills"]["Familiar"]
+    assert set(combined_multi) == {
+        "Python",
+        "Flask",
+        "SQL",
+        "Docker",
+        "Git",
+        "ExtraSkill",
+        "Machine Learning",
     }
 
 def test_load_resume_projects(db_connection):
@@ -296,10 +304,11 @@ def test_load_saved_resume(db_connection):
     """Test that load_saved_resume returns a complete resume model."""
     resume = load_saved_resume(1)
     assert resume["name"] == "John Doe"
-    assert "Python" in resume["skills"]["Skills"]
-    assert "Flask" in resume["skills"]["Skills"]
-    assert "SQL" in resume["skills"]["Skills"]
-    assert "Machine Learning" in resume["skills"]["Skills"]
+    combined = resume["skills"]["Proficient"] + resume["skills"]["Familiar"]
+    assert "Python" in combined
+    assert "Flask" in combined
+    assert "SQL" in combined
+    assert "Machine Learning" in combined
     assert resume["projects"][0]["title"] == "Alpha_Project"
     assert "Python" in resume["projects"][0]["skills"]
 
@@ -417,7 +426,10 @@ def test_save_resume_edits_update_resume_skills(db_connection):
     """Test that save_resume_edits updates RESUME_SKILLS and load_saved_resume reflects it."""
     # Update resume-level skills via payload
     payload_skills = {
-        "skills": ["Python", "Flask", "GraphQL"]
+        "skills": {
+            "Proficient": ["Python", "Flask"],
+            "Familiar": ["GraphQL"],
+        }
     }
     save_resume_edits(1, payload_skills)
 
@@ -426,11 +438,17 @@ def test_save_resume_edits_update_resume_skills(db_connection):
     cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
     row = cursor.fetchone()
     assert row is not None
-    assert json.loads(row[0]) == ["Python", "Flask", "GraphQL"]
+    assert json.loads(row[0]) == {
+        "Proficient": ["Python", "Flask"],
+        "Familiar": ["GraphQL"],
+    }
 
     # Verify load_saved_resume picks up the edited resume-level skills
     resume = load_saved_resume(1)
-    assert resume["skills"]["Skills"] == ["Python", "Flask", "GraphQL"]
+    assert resume["skills"] == {
+        "Proficient": ["Python", "Flask"],
+        "Familiar": ["GraphQL"],
+    }
 
 def test_resume_exists_true_and_false(db_connection):
     """

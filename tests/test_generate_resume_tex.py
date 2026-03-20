@@ -44,9 +44,9 @@ def test_render_skills_basic():
 
     rendered = render_skills(skills)
 
-    assert "Languages:" in rendered
+    assert r"\textbf{Languages:}" in rendered
     assert "Python, C++" in rendered
-    assert "Frameworks:" in rendered
+    assert r"\textbf{Frameworks:}" in rendered
     assert "Flask, Django" in rendered
     assert r"\\" in rendered
 

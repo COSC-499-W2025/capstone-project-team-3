@@ -206,6 +206,37 @@
   flex: 1;
 }
 
+.resume-preview__skills-bucket-label {
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 9em;
+}
+
+.resume-preview__skills-bucket-row {
+  display: flex;
+  gap: 0.75em;
+  align-items: flex-start;
+}
+
+.resume-preview__skills-bucket-items {
+  flex: 1;
+  min-width: 0;
+}
+
+.resume-preview__skills-editors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.resume-preview__skills-editor {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .resume-preview__project {
   margin-bottom: 8px;
   position: relative;

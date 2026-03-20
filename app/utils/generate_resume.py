@@ -595,6 +595,128 @@ def resume_exists(resume_id: int) -> bool:
     finally:
         conn.close()
 
+
+def duplicate_resume(source_id: int) -> int:
+    """Clone a resume (including master id=1) into a new row with copied projects and optional sidecar tables."""
+    if not resume_exists(source_id):
+        raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (source_id,))
+        src_row = cursor.fetchone()
+        if not src_row:
+            raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+        raw_name = (src_row[0] or "").strip()
+        base = raw_name if raw_name else f"Resume-{source_id}"
+        new_name = f"{base} copy"
+
+        cursor.execute("INSERT INTO RESUME (name) VALUES (?)", (new_name,))
+        new_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+            FROM RESUME_PROJECT
+            WHERE resume_id = ?
+            ORDER BY display_order
+            """,
+            (source_id,),
+        )
+        for (
+            project_id,
+            project_name,
+            start_date,
+            end_date,
+            skills,
+            bullets,
+            display_order,
+        ) in cursor.fetchall():
+            cursor.execute(
+                """
+                INSERT INTO RESUME_PROJECT (
+                    resume_id, project_id, project_name, start_date, end_date,
+                    skills, bullets, display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id,
+                    project_id,
+                    project_name,
+                    start_date,
+                    end_date,
+                    skills,
+                    bullets,
+                    display_order,
+                ),
+            )
+
+        cursor.execute(
+            "SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        sk_row = cursor.fetchone()
+        if sk_row and sk_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_SKILLS (resume_id, skills) VALUES (?, ?)",
+                (new_id, sk_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT awards FROM RESUME_AWARDS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        aw_row = cursor.fetchone()
+        if aw_row and aw_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_AWARDS (resume_id, awards) VALUES (?, ?)",
+                (new_id, aw_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT work_experience FROM RESUME_WORK_EXPERIENCE WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        we_row = cursor.fetchone()
+        if we_row and we_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience) VALUES (?, ?)",
+                (new_id, we_row[0]),
+            )
+
+        conn.commit()
+        return new_id
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to duplicate resume") from e
+    finally:
+        conn.close()
+
+
+def rename_resume(resume_id: int, name: str) -> None:
+    """Rename a saved resume. Master resume (id=1) cannot be renamed."""
+    trimmed = (name or "").strip()
+    if not trimmed:
+        raise ResumePersistenceError("Resume name cannot be empty")
+    if resume_id == 1:
+        raise ResumePersistenceError("Cannot rename the Master Resume")
+    if not resume_exists(resume_id):
+        raise ResumeNotFoundError(f"Resume with ID {resume_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE RESUME SET name = ? WHERE id = ?", (trimmed, resume_id))
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to rename resume") from e
+    finally:
+        conn.close()
+
+
 def save_resume_edits(resume_id: int, payload: dict):
     """ Save or update edits made to the resume in the DB """
     conn = get_connection()

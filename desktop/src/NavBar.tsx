@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { mainNavItems, footerNavItems } from "./navigation";
+import { getResumes } from "./api/resume";
 import "./styles/NavBar.css";
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -47,6 +48,13 @@ const navIcons: Record<string, React.ReactNode> = {
       <circle cx="12" cy="7" r="4" />
     </svg>
   ),
+  "/atsscoringpage": (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  ),
 };
 
 const settingsIcon = (
@@ -58,6 +66,16 @@ const settingsIcon = (
 
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [hasMasterResume, setHasMasterResume] = useState(true);
+
+  useEffect(() => {
+    getResumes()
+      .then((resumes) => {
+        const masterHasContent = resumes.some((r) => r.is_master);
+        setHasMasterResume(masterHasContent);
+      })
+      .catch(() => setHasMasterResume(true));
+  }, []);
 
   return (
     <aside
@@ -77,7 +95,24 @@ export function NavBar() {
       </div>
 
       <nav className="app-sidebar__links">
-        {mainNavItems.map(({ path, label }) => (
+        {mainNavItems.map(({ path, label }) => {
+          const isATS = path === "/atsscoringpage";
+          const disabled = isATS && !hasMasterResume;
+
+          if (disabled) {
+            return (
+              <span
+                key={path}
+                className="app-sidebar__link app-sidebar__link--disabled"
+                title="Upload a project to enable ATS Scoring"
+              >
+                <span className="app-sidebar__link-icon">{navIcons[path]}</span>
+                {!collapsed && <span className="app-sidebar__link-label">{label}</span>}
+              </span>
+            );
+          }
+
+          return (
             <NavLink
               key={path}
               to={path}
@@ -89,7 +124,8 @@ export function NavBar() {
               <span className="app-sidebar__link-icon">{navIcons[path]}</span>
               {!collapsed && <span className="app-sidebar__link-label">{label}</span>}
             </NavLink>
-          ))}
+          );
+        })}
       </nav>
 
       <div className="app-sidebar__footer">

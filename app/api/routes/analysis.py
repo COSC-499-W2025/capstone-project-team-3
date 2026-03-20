@@ -26,18 +26,35 @@ router = APIRouter()
 
 
 def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any]]) -> None:
-    """Replace stored git history for a project with the latest parsed commits."""
+    """Replace stored git history only when there is valid parsed commit data."""
+    if not project_signature:
+        return
+
+    valid_commits: List[Dict[str, str]] = []
+    for commit in git_commits:
+        commit_hash = commit.get("hash") or commit.get("commit_hash")
+        commit_date = commit.get("authored_datetime") or commit.get("committed_datetime")
+        if not commit_hash or not commit_date:
+            continue
+        valid_commits.append(
+            {
+                "commit_hash": str(commit_hash),
+                "commit_date": str(commit_date),
+                "author_name": str(commit.get("author_name") or ""),
+                "author_email": str(commit.get("author_email") or ""),
+                "message": str(commit.get("message_summary") or commit.get("message") or ""),
+            }
+        )
+
+    if not valid_commits:
+        return
+
     conn = get_connection()
     cur = conn.cursor()
     try:
         cur.execute("DELETE FROM GIT_HISTORY WHERE project_id = ?", (project_signature,))
 
-        for commit in git_commits:
-            commit_hash = commit.get("hash") or commit.get("commit_hash")
-            commit_date = commit.get("authored_datetime") or commit.get("committed_datetime")
-            if not commit_hash or not commit_date:
-                continue
-
+        for commit in valid_commits:
             cur.execute(
                 """
                 INSERT INTO GIT_HISTORY (project_id, commit_hash, author_name, author_email, commit_date, message)
@@ -45,11 +62,11 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
                 """,
                 (
                     project_signature,
-                    str(commit_hash),
-                    str(commit.get("author_name") or ""),
-                    str(commit.get("author_email") or ""),
-                    str(commit_date),
-                    str(commit.get("message_summary") or commit.get("message") or ""),
+                    commit["commit_hash"],
+                    commit["author_name"],
+                    commit["author_email"],
+                    commit["commit_date"],
+                    commit["message"],
                 ),
             )
 

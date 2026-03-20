@@ -809,11 +809,12 @@ const buildHeatmapModel = (
     }
   });
 
-  const activeDays = cells.filter((cell) => cell.value > 0).length;
+  const activeCells = cells.filter((cell) => cell.value > 0);
+  const activeDays = activeCells.length;
   const totalSignal = cells.reduce((sum, cell) => sum + cell.value, 0);
   const busiestDay =
-    cells.length > 0
-      ? cells.reduce((best, current) =>
+    activeCells.length > 0
+      ? activeCells.reduce((best, current) =>
           current.value > best.value ? current : best,
         )
       : null;

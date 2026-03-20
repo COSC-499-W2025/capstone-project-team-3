@@ -22,6 +22,8 @@ from app.utils.generate_resume import (
     remove_project_from_resume,
     list_resumes,
     snapshot_project_into_resume_rows,
+    duplicate_resume,
+    rename_resume,
     ResumeServiceError,
     ResumeNotFoundError,
     ResumePersistenceError,
@@ -581,6 +583,76 @@ def test_create_resume_with_name(db_connection):
     row = cursor.fetchone()
     assert row is not None
     assert row[0] == "My Resume"
+
+
+def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
+    """duplicate_resume inserts a new RESUME and copies RESUME_PROJECT + RESUME_SKILLS from source."""
+    new_id = duplicate_resume(1)
+    assert new_id != 1
+
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT name FROM RESUME WHERE id = ?", (new_id,))
+    row = cursor.fetchone()
+    assert row is not None
+    # Seeded resume 1 has NULL name → base "Resume-1"
+    assert row[0] == "Resume-1 copy"
+
+    cursor.execute(
+        """
+        SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+        FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order
+        """,
+        (new_id,),
+    )
+    copy_rows = cursor.fetchall()
+    cursor.execute(
+        """
+        SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+        FROM RESUME_PROJECT WHERE resume_id = 1 ORDER BY display_order
+        """
+    )
+    source_rows = cursor.fetchall()
+    assert copy_rows == source_rows
+
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
+    sk_new = cursor.fetchone()
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
+    sk_src = cursor.fetchone()
+    assert sk_new is not None and sk_src is not None
+    assert sk_new[0] == sk_src[0]
+
+
+def test_duplicate_resume_not_found(db_connection):
+    with pytest.raises(ResumeNotFoundError):
+        duplicate_resume(99999)
+
+
+def test_rename_resume_trims_and_updates(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Old Name')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+
+    rename_resume(2, "  Tailored A  ")
+    cursor.execute("SELECT name FROM RESUME WHERE id = 2")
+    assert cursor.fetchone()[0] == "Tailored A"
+
+
+def test_rename_resume_master_forbidden(db_connection):
+    with pytest.raises(ResumePersistenceError) as exc_info:
+        rename_resume(1, "Anything")
+    assert "Master" in str(exc_info.value)
+
+
+def test_rename_resume_empty_name(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'X')")
+    db_connection.commit()
+    with pytest.raises(ResumePersistenceError):
+        rename_resume(2, "   ")
+
     
 def test_attach_projects_to_resume(db_connection):
     """

@@ -591,6 +591,26 @@ describe('ResumeBuilderPage', () => {
     });
   });
 
+  // ATS Score link
+  test('ATS Score button is rendered in the header', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    expect(screen.getByRole('button', { name: 'ATS Score' })).toBeDefined();
+  });
+
+  test('clicking ATS Score button navigates to /atsscoringpage', async () => {
+    render(<ResumeBuilderPage />);
+
+    await screen.findByText('Master Resume');
+    await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'ATS Score' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/atsscoringpage');
+  });
+
   // Download functionality tests
   test('download button renders and shows dropdown menu on click', async () => {
     render(<ResumeBuilderPage />);

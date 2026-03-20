@@ -1643,6 +1643,7 @@ ${mainClone.outerHTML}
             <div className="overview-card-label">Lines of Code</div>
           </div>
         </div>
+
         <div className="graph-grid">
           <div className="graph-card">
             <h3>📊 Language Distribution</h3>

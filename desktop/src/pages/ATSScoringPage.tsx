@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getResumes, type ResumeListItem } from "../api/resume";
-import { scoreATS, type ATSScoreResult } from "../api/ats";
+import { scoreATS, type ATSScoreResult, type ATSBreakdown } from "../api/ats";
 import "../styles/ATSScoringPage.css";
 
 // ---------------------------------------------------------------------------
@@ -10,12 +10,14 @@ import "../styles/ATSScoringPage.css";
 interface ATSHistoryEntry {
   id: string;
   timestamp: string;
+  resumeId: number | null;
   resumeName: string;
   jobDescriptionPreview: string;
   jobDescription: string;
   score: number;
   matchLevel: string;
   experienceMonths: number;
+  breakdown: ATSBreakdown;
   matchedKeywords: string[];
   missingKeywords: string[];
   tips: string[];
@@ -230,8 +232,17 @@ export function ATSScoringPage() {
     try {
       const list = await getResumes();
       setResumes(list);
+      // If master resume doesn't exist and we're defaulting to it, switch to first available
+      const hasMaster = list.some((r) => r.is_master);
+      if (!hasMaster) {
+        setSelectedResumeId((prev) => {
+          if (prev !== null) return prev;
+          const first = list.find((r) => !r.is_master && r.id !== null);
+          return first?.id ?? null;
+        });
+      }
     } catch {
-      // show master option only
+      // keep current selection on error
     } finally {
       setResumesLoading(false);
     }
@@ -242,8 +253,8 @@ export function ATSScoringPage() {
   }, [loadResumes]);
 
   const resumeNameFor = (id: number | null) => {
-    if (id === null) return "Master Resume";
-    return resumes.find((r) => r.id === id)?.name ?? "Master Resume";
+    if (id === null) return resumes.find((r) => r.is_master)?.name ?? "Master Resume";
+    return resumes.find((r) => r.id === id)?.name ?? `Resume ${id}`;
   };
 
   const handleScore = useCallback(async () => {
@@ -259,14 +270,16 @@ export function ATSScoringPage() {
       const entry: ATSHistoryEntry = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
+        resumeId: selectedResumeId,
         resumeName: resumeNameFor(selectedResumeId),
         jobDescriptionPreview: jobDescription.slice(0, 120),
         jobDescription,
         score: res.score,
         matchLevel: res.match_level,
         experienceMonths: res.experience_months,
-        matchedKeywords: [...new Set([...res.matched_keywords, ...res.matched_skills])],
-        missingKeywords: [...new Set([...res.missing_keywords, ...res.missing_skills])],
+        breakdown: res.breakdown,
+        matchedKeywords: [...new Set([...res.matched_keywords, ...res.matched_skills])].slice(0, 20),
+        missingKeywords: [...new Set([...res.missing_keywords, ...res.missing_skills])].slice(0, 20),
         tips: res.tips,
       };
       pushHistory(entry);
@@ -281,8 +294,19 @@ export function ATSScoringPage() {
 
   const handleRestoreHistory = (entry: ATSHistoryEntry) => {
     setJobDescription(entry.jobDescription);
+    setSelectedResumeId(entry.resumeId);
+    setResult({
+      score: entry.score,
+      match_level: entry.matchLevel,
+      experience_months: entry.experienceMonths,
+      breakdown: entry.breakdown,
+      matched_keywords: entry.matchedKeywords,
+      missing_keywords: entry.missingKeywords,
+      matched_skills: [],
+      missing_skills: [],
+      tips: entry.tips,
+    });
     setActiveTab("score");
-    setResult(null);
   };
 
   const handleClearHistory = () => {
@@ -290,12 +314,12 @@ export function ATSScoringPage() {
     setHistory([]);
   };
 
-  // Merged keyword+skills sets from current result
+  // Merged keyword+skills sets from current result, capped to 20 to match backend limit
   const mergedMatched = result
-    ? [...new Set([...result.matched_keywords, ...result.matched_skills])]
+    ? [...new Set([...result.matched_keywords, ...result.matched_skills])].slice(0, 20)
     : [];
   const mergedMissing = result
-    ? [...new Set([...result.missing_keywords, ...result.missing_skills])]
+    ? [...new Set([...result.missing_keywords, ...result.missing_skills])].slice(0, 20)
     : [];
 
   const matchLevelColor =
@@ -372,7 +396,16 @@ export function ATSScoringPage() {
           {/* ---- Input panel ---- */}
           <div className="ats-input-panel frame">
             <div className="ats-field">
-              <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
+              <div className="ats-label-row">
+                <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
+                <button
+                  type="button"
+                  className="ats-manage-resumes-link"
+                  onClick={() => navigate("/resumebuilderpage")}
+                >
+                  Manage Resumes →
+                </button>
+              </div>
               {resumesLoading ? (
                 <p className="ats-loading-small">Loading resumes…</p>
               ) : (
@@ -386,7 +419,9 @@ export function ATSScoringPage() {
                     setResult(null);
                   }}
                 >
-                  <option value="">Master Resume (all projects)</option>
+                  {resumes.some((r) => r.is_master) && (
+                    <option value="">Master Resume (all projects)</option>
+                  )}
                   {resumes
                     .filter((r) => !r.is_master && r.id !== null)
                     .map((r) => (

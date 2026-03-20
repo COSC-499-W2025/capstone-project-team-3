@@ -844,6 +844,7 @@ function ActivityHeatmap({
   );
 
   const calendarWidth = model.weeks.length * HEATMAP_CELL_STEP;
+  const totalWeeks = model.weeks.length;
 
   return (
     <div className="activity-heatmap-card">
@@ -899,8 +900,14 @@ function ActivityHeatmap({
                 {week.map((cell) => (
                   <div
                     key={cell.key}
-                    className={`activity-cell activity-cell-level-${cell.level}`}
-                    title={`${formatHeatmapDate(cell.date)} · ${cell.value.toFixed(2)} activity signal`}
+                    className={`activity-cell activity-cell-level-${cell.level} ${
+                      weekIndex <= 1
+                        ? "activity-cell-tooltip-right"
+                        : weekIndex >= totalWeeks - 2
+                          ? "activity-cell-tooltip-left"
+                          : "activity-cell-tooltip-center"
+                    }`}
+                    data-tooltip={`${formatHeatmapDate(cell.date)} · ${cell.value.toFixed(2)} activity signal`}
                     aria-label={`${formatHeatmapDate(cell.date)} with activity signal ${cell.value.toFixed(2)}`}
                   />
                 ))}

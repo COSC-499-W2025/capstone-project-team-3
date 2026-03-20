@@ -1304,6 +1304,10 @@
 
         .activity-heatmap-scroll {
             overflow-x: auto;
+            overflow-y: visible;
+            position: relative;
+            padding-top: 36px;
+            margin-top: -36px;
             padding-bottom: 2px;
         }
 
@@ -1334,17 +1338,98 @@
         }
 
         .activity-cell {
+            position: relative;
             width: 12px;
             height: 12px;
             border-radius: 3px;
             background: #edf2f7;
             border: 1px solid rgba(45, 55, 72, 0.06);
             transition: transform 0.15s ease, filter 0.15s ease;
+            cursor: pointer;
         }
 
         .activity-cell:hover {
             transform: scale(1.15);
             filter: brightness(0.95);
+            z-index: 2;
+        }
+
+        .activity-cell::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(4px);
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 5;
+        }
+
+        .activity-cell::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 4px);
+            transform: translateX(-50%) translateY(4px) rotate(45deg);
+            width: 8px;
+            height: 8px;
+            opacity: 0;
+            pointer-events: none;
+            background: var(--secondary-bg);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 5;
+        }
+
+        .activity-cell-tooltip-right::after {
+            left: 0;
+            transform: translateX(0) translateY(4px);
+        }
+
+        .activity-cell-tooltip-right::before {
+            left: 6px;
+            transform: translateX(0) translateY(4px) rotate(45deg);
+        }
+
+        .activity-cell-tooltip-left::after {
+            left: auto;
+            right: 0;
+            transform: translateX(0) translateY(4px);
+        }
+
+        .activity-cell-tooltip-left::before {
+            left: auto;
+            right: 6px;
+            transform: translateX(0) translateY(4px) rotate(45deg);
+        }
+
+        .activity-cell:hover::after,
+        .activity-cell:hover::before {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .activity-cell-tooltip-right:hover::after,
+        .activity-cell-tooltip-right:hover::before,
+        .activity-cell-tooltip-left:hover::after,
+        .activity-cell-tooltip-left:hover::before {
+            transform: translateX(0) translateY(0);
+        }
+
+        .activity-cell-tooltip-right:hover::before,
+        .activity-cell-tooltip-left:hover::before {
+            transform: translateX(0) translateY(0) rotate(45deg);
         }
 
         .activity-cell-level-0 {

@@ -15,10 +15,10 @@ import shutil
 
 
 router = APIRouter()
-PDF_CACHE_DIR = "/tmp/resume_pdf_cache"
+PDF_CACHE_DIR = os.getenv("PDF_CACHE_DIR", "app/data/resume_pdf_cache")
 os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 
-LATEX_BUILD_DIR = "/tmp/latex_build"
+LATEX_BUILD_DIR = os.getenv("LATEX_BUILD_DIR", "app/data/latex_build")
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")

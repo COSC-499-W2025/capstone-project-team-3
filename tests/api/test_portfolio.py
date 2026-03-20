@@ -60,6 +60,7 @@ def mock_portfolio_data():
             "complexity_distribution": {"distribution": {"small": 1, "medium": 2, "large": 0}},
             "score_distribution": {"distribution": {"excellent": 1, "good": 2, "fair": 0, "poor": 0}},
             "monthly_activity": {"2024-01": 2, "2024-02": 1},
+            "daily_activity": {"2024-01-15": 2.0, "2024-01-16": 1.0},
             "top_skills": {"Python": 3, "FastAPI": 2}
         },
         "metadata": {
@@ -286,6 +287,7 @@ class TestPortfolioDataStructure:
             assert "complexity_distribution" in graphs
             assert "score_distribution" in graphs
             assert "monthly_activity" in graphs
+            assert "daily_activity" in graphs
             assert "top_skills" in graphs
             
             # Test metadata structure

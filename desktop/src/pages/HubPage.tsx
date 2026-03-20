@@ -61,6 +61,17 @@ export function HubPage() {
       path: "/datamanagementpage",
     },
     {
+      title: "ATS Scoring",
+      description: "Check how well your resume matches a job description.",
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      ),
+      path: "/atsscoringpage",
+    },
+    {
       title: "Settings",
       description: "Manage your profile and privacy preferences.",
       icon: (

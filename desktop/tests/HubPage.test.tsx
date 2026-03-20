@@ -27,7 +27,7 @@ test('renders hub page with title', () => {
   expect(title).toBeDefined();
 });
 
-test('renders five navigation cards', () => {
+test('renders six navigation cards', () => {
   const { container } = render(
     <BrowserRouter>
       <HubPage />
@@ -35,7 +35,7 @@ test('renders five navigation cards', () => {
   );
 
   const cards = container.querySelectorAll('.hub-card');
-  expect(cards.length).toBe(5);
+  expect(cards.length).toBe(6);
 });
 
 test('renders Upload File card', () => {
@@ -80,6 +80,17 @@ test('renders Data Management card', () => {
 
   expect(screen.getByText('Data Management')).toBeInTheDocument();
   expect(screen.getByText(/Review and edit project dates/i)).toBeInTheDocument();
+});
+
+test('renders ATS Scoring card', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('ATS Scoring')).toBeInTheDocument();
+  expect(screen.getByText(/Check how well your resume matches a job description/i)).toBeInTheDocument();
 });
 
 test('renders Settings card', () => {
@@ -153,6 +164,18 @@ test('navigates to settings on card click', () => {
   expect(mockNavigate).toHaveBeenCalledWith('/settingspage');
 });
 
+test('navigates to ATS scoring on card click', () => {
+  render(
+    <BrowserRouter>
+      <HubPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to ATS Scoring');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/atsscoringpage');
+});
+
 test('each card has an accessible aria-label', () => {
   render(
     <BrowserRouter>
@@ -164,5 +187,6 @@ test('each card has an accessible aria-label', () => {
   expect(screen.getByLabelText('Go to Resume Builder')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Portfolio')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Data Management')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to ATS Scoring')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Settings')).toBeInTheDocument();
 });

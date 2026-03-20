@@ -23,6 +23,8 @@ jest.mock('../src/api/resume', () => ({
   getResumeById: jest.fn(),
   previewResume: jest.fn(),
   deleteResume: jest.fn(),
+  duplicateResume: jest.fn(),
+  renameResume: jest.fn(),
   deleteProjectFromResume: jest.fn(),
   addProjectsToResume: jest.fn(),
   downloadResumePDF: jest.fn(),
@@ -36,13 +38,22 @@ jest.mock('../src/api/projects', () => ({
 }));
 
 jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
-  ResumeSidebar: ({ resumeList, activeIndex, onSelect, onTailorNew, onDelete, onEdit, sidebarOpen, onToggleSidebar }: {
+  ResumeSidebar: ({
+    resumeList,
+    activeIndex,
+    onSelect,
+    onTailorNew,
+    onDelete,
+    onEditResume,
+    sidebarOpen,
+    onToggleSidebar,
+  }: {
     resumeList: { id: number | null; name: string; is_master: boolean }[];
     activeIndex: number;
     onSelect: (i: number) => void;
     onTailorNew?: () => void;
     onDelete?: (id: number) => void;
-    onEdit?: () => void;
+    onEditResume?: (i: number) => void;
     sidebarOpen: boolean;
     onToggleSidebar: () => void;
   }) => (
@@ -53,8 +64,13 @@ jest.mock('../src/pages/ResumeManager/ResumeSidebar', () => ({
           <button onClick={() => onSelect(i)} data-active={i === activeIndex}>
             {r.name}
           </button>
-          {!r.is_master && r.id != null && i === activeIndex && onEdit && (
-            <button type="button" aria-label="Edit resume" data-testid={`edit-resume-${r.id}`} onClick={() => onEdit()}>
+          {!r.is_master && r.id != null && onEditResume && (
+            <button
+              type="button"
+              aria-label="Edit resume"
+              data-testid={`edit-resume-${r.id}`}
+              onClick={() => onEditResume(i)}
+            >
               Edit
             </button>
           )}
@@ -132,9 +148,11 @@ const mockDownloadResumePDF = resumeApi.downloadResumePDF as ReturnType<typeof j
 const mockDownloadResumeTeX = resumeApi.downloadResumeTeX as ReturnType<typeof jest.fn>;
 const mockSaveNewResume = resumeApi.saveNewResume as ReturnType<typeof jest.fn>;
 const mockUpdateResume = resumeApi.updateResume as ReturnType<typeof jest.fn>;
+const mockDuplicateResume = resumeApi.duplicateResume as ReturnType<typeof jest.fn>;
+const mockRenameResume = resumeApi.renameResume as ReturnType<typeof jest.fn>;
 
 const mockResumeList: ResumeListItem[] = [
-  { id: null, name: 'Master Resume', is_master: true },
+  { id: 1, name: 'Master Resume', is_master: true },
   { id: 2, name: 'Saved Resume', is_master: false },
 ];
 
@@ -215,6 +233,8 @@ describe('ResumeBuilderPage', () => {
     mockUpdateResume.mockResolvedValue(undefined);
     mockDeleteProjectFromResume.mockResolvedValue({ success: true, message: 'Project removed' });
     mockAddProjectsToResume.mockResolvedValue({ message: 'Projects added to resume 2' });
+    mockDuplicateResume.mockResolvedValue({ resume_id: 99 });
+    mockRenameResume.mockResolvedValue(undefined);
   });
 
   test('fetches resume list on mount and sidebar shows list and Tailor button', async () => {
@@ -450,7 +470,7 @@ describe('ResumeBuilderPage', () => {
 
   test('deleting a resume calls deleteResume API and refreshes the list', async () => {
     const updatedList: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
+      { id: 1, name: 'Master Resume', is_master: true },
     ];
 
     mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
@@ -558,7 +578,7 @@ describe('ResumeBuilderPage', () => {
 
   test('deleting the active resume switches to first available resume', async () => {
     const updatedList: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
+      { id: 1, name: 'Master Resume', is_master: true },
     ];
 
     mockDeleteResume.mockResolvedValue({ success: true, message: 'Resume deleted' });
@@ -772,7 +792,7 @@ describe('ResumeBuilderPage', () => {
 
     // Setup mock to return updated list after deletion
     const updatedList: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
+      { id: 1, name: 'Master Resume', is_master: true },
     ];
     mockGetResumes.mockResolvedValueOnce(updatedList);
 

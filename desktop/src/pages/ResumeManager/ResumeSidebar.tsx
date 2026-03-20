@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ResumeListItem } from "../../api/resume";
 import "../../styles/ResumeSidebar.css";
 
@@ -14,7 +14,9 @@ export const ResumeSidebar = ({
   onDelete,
   sidebarOpen = true,
   onToggleSidebar,
-  onEdit,
+  onEditResume,
+  onDuplicateResume,
+  onRenameResume,
   hasProjects = true
 }: {
   resumeList: ResumeListItem[];
@@ -24,10 +26,58 @@ export const ResumeSidebar = ({
   onDelete?: (id: number) => void;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
-  onEdit?: () => void;
+  onEditResume?: (index: number) => void;
+  onDuplicateResume?: (id: number) => void;
+  onRenameResume?: (id: number, newName: string) => Promise<void>;
   hasProjects?: boolean;
 }) => {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const [renamingResumeId, setRenamingResumeId] = useState<number | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renamingResumeIdRef = useRef<number | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    renamingResumeIdRef.current = renamingResumeId;
+  }, [renamingResumeId]);
+
+  useEffect(() => {
+    if (renamingResumeId != null) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [renamingResumeId]);
+
+  const cancelInlineRename = useCallback(() => {
+    renamingResumeIdRef.current = null;
+    setRenamingResumeId(null);
+    setRenameDraft("");
+  }, []);
+
+  const commitInlineRename = useCallback(async () => {
+    const id = renamingResumeIdRef.current;
+    if (id == null || !onRenameResume) return;
+
+    const trimmed = (renameInputRef.current?.value ?? "").trim();
+    if (!trimmed) {
+      cancelInlineRename();
+      return;
+    }
+
+    const currentRow = resumeList.find((x) => x.id === id);
+    const previous = (currentRow?.name ?? "").trim();
+    if (trimmed === previous) {
+      cancelInlineRename();
+      return;
+    }
+
+    try {
+      await onRenameResume(id, trimmed);
+      cancelInlineRename();
+    } catch {
+      renameInputRef.current?.focus();
+    }
+  }, [cancelInlineRename, onRenameResume, resumeList]);
 
   // When there are no projects, hide the master resume from the sidebar
   const displayIndices = hasProjects
@@ -55,13 +105,23 @@ export const ResumeSidebar = ({
         <ul className="resume-sidebar__list">
         {displayList.map((r, displayI) => {
           const fullIndex = displayIndices[displayI];
+          const master = isMasterItem(r);
+          const showOverflow =
+            r.id != null &&
+            ((master && onDuplicateResume) ||
+              (!master && !!(onDuplicateResume || onRenameResume || onDelete)));
+
           return (
           <li key={fullIndex}>
             <div
               role="button"
               tabIndex={0}
-              onClick={() => onSelect(fullIndex)}
+              onClick={() => {
+                if (r.id != null && renamingResumeId === r.id) return;
+                onSelect(fullIndex);
+              }}
               onKeyDown={(e) => {
+                if (renamingResumeId === r.id) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   onSelect(fullIndex);
@@ -69,24 +129,51 @@ export const ResumeSidebar = ({
               }}
               className={`resume-sidebar__item ${displayI === activeDisplayIndex ? "resume-sidebar__item--active" : ""}`}
             >
-              <span className="resume-sidebar__item-label">{r.name || `Resume - ${displayI + 1}`}</span>
+              {r.id != null && renamingResumeId === r.id ? (
+                <input
+                  ref={renameInputRef}
+                  type="text"
+                  className="resume-sidebar__item-rename-input"
+                  value={renameDraft}
+                  aria-label="Resume name"
+                  onChange={(e) => setRenameDraft(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void commitInlineRename();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      cancelInlineRename();
+                    }
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => {
+                      if (renamingResumeIdRef.current !== r.id) return;
+                      void commitInlineRename();
+                    }, 0);
+                  }}
+                />
+              ) : (
+                <span className="resume-sidebar__item-label">{r.name || `Resume - ${displayI + 1}`}</span>
+              )}
               <span className="resume-sidebar__actions">
-                {!r.is_master && r.id != null && (
+                {!master && r.id != null && (
                   <button 
                     type="button" 
                     className="resume-sidebar__icon-btn" 
                     aria-label="Edit resume" 
                     onClick={(e) => { 
                       e.stopPropagation();
-                      if (fullIndex === activeIndex && onEdit) {
-                        onEdit();
-                      }
+                      onEditResume?.(fullIndex);
                     }}
                   >
                     <img src="/edit_icon.svg" alt="" width={20} height={20} />
                   </button>
                 )}
-                {r.id !== null && r.id !== 1 && onDelete && (
+                {showOverflow && (
                   <div className="resume-sidebar__menu-wrapper">
                     <button 
                       type="button" 
@@ -101,20 +188,54 @@ export const ResumeSidebar = ({
                     </button>
                     {openMenuIndex === fullIndex && (
                       <div className="resume-sidebar__dropdown">
-                        <button
-                          type="button"
-                          aria-label="Delete resume"
-                          className="resume-sidebar__dropdown-item resume-sidebar__dropdown-item--danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuIndex(null);
-                            if (r.id != null && window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
-                              onDelete(r.id);
-                            }
-                          }}
-                        >
-                          Delete Resume
-                        </button>
+                        {onDuplicateResume && r.id != null && (
+                          <button
+                            type="button"
+                            aria-label="Duplicate resume"
+                            className="resume-sidebar__dropdown-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuIndex(null);
+                              const rid = r.id;
+                              if (rid != null) onDuplicateResume(rid);
+                            }}
+                          >
+                            Duplicate Resume
+                          </button>
+                        )}
+                        {!master && onRenameResume && r.id != null && (
+                          <button
+                            type="button"
+                            aria-label="Rename resume"
+                            className="resume-sidebar__dropdown-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuIndex(null);
+                              renamingResumeIdRef.current = r.id;
+                              setRenamingResumeId(r.id);
+                              setRenameDraft(r.name || "");
+                            }}
+                          >
+                            Rename
+                          </button>
+                        )}
+                        {!master && onDelete && r.id != null && (
+                          <button
+                            type="button"
+                            aria-label="Delete resume"
+                            className="resume-sidebar__dropdown-item resume-sidebar__dropdown-item--danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuIndex(null);
+                              const rid = r.id;
+                              if (rid != null && window.confirm(`Are you sure you want to delete "${r.name || 'this resume'}"?`)) {
+                                onDelete(rid);
+                              }
+                            }}
+                          >
+                            Delete Resume
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

@@ -18,7 +18,7 @@ from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.non_code_parsing.document_parser import parsed_input_text
 from app.utils.project_extractor import extract_and_list_projects, get_project_top_level_dirs
 from app.utils.scan_utils import run_scan_flow
-from app.utils.git_utils import detect_git
+from app.utils.git_utils import detect_git, extract_all_contributors
 from app.utils.clean_up import cleanup_upload
 from app.data.db import get_connection
 
@@ -70,6 +70,27 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
                 ),
             )
 
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def _persist_collaborators(project_signature: str, contributors: List[Dict[str, Any]]) -> None:
+    """Store the collaborator list for a project as a DASHBOARD_DATA metric."""
+    if not project_signature or not contributors:
+        return
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "DELETE FROM DASHBOARD_DATA WHERE project_id = ? AND metric_name = 'collaborators'",
+            (project_signature,),
+        )
+        cur.execute(
+            "INSERT INTO DASHBOARD_DATA (project_id, metric_name, metric_value) VALUES (?, 'collaborators', ?)",
+            (project_signature, json.dumps(contributors)),
+        )
         conn.commit()
     finally:
         cur.close()
@@ -302,6 +323,7 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                         _persist_git_history(project_signature, git_commits)
                     except Exception:
                         pass
+
             except Exception:
                 git_commits = []
         else:
@@ -348,6 +370,24 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                 project_name=project_name,
                 project_signature=project_signature,
             )
+
+            # Extract and persist collaborator data AFTER merge
+            # (merge_analysis_results wipes DASHBOARD_DATA, so this must come after)
+            if is_git_repo:
+                try:
+                    github_user, user_email = _get_preferred_author_email()
+                    author_aliases: List[str] = [a for a in [github_user, user_email] if a]
+                    print(f"[collab] Extracting contributors from {project_path} with aliases {author_aliases}")
+                    contributors = extract_all_contributors(project_path, author_aliases)
+                    print(f"[collab] Found {len(contributors)} contributor(s): "
+                          f"{[c.get('name') for c in contributors]}")
+                    if contributors:
+                        _persist_collaborators(project_signature, contributors)
+                        print(f"[collab] Persisted {len(contributors)} contributor(s) for {project_signature[:12]}...")
+                    else:
+                        print("[collab] No contributors found — nothing to persist")
+                except Exception as collab_exc:
+                    print(f"[collab] Error extracting contributors: {collab_exc}")
 
             results.append(
                 ProjectAnalysisResult(

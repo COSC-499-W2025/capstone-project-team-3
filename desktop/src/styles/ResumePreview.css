@@ -434,3 +434,41 @@
   color: #999;
   font-style: italic;
 }
+
+/* ── Dark mode */
+[data-theme="dark"] .resume-preview {
+  background: #0f1923;
+}
+
+[data-theme="dark"] .resume-preview__page {
+  /* Keep paper white — it represents a real printed document */
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .resume-preview__project-delete-btn {
+  background: var(--color-card-bg);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .resume-preview__project-delete-btn:hover {
+  background: #2d1a1a;
+  color: #f56565;
+  border-color: #f56565;
+}
+
+[data-theme="dark"] [contenteditable="true"] {
+  outline-color: var(--color-border);
+  background-color: var(--color-card-bg);
+}
+
+[data-theme="dark"] [contenteditable="true"]:focus {
+  outline-color: var(--color-blue-medium);
+  background-color: var(--color-card-bg);
+}
+
+[data-theme="dark"] .resume-preview__project-date-input:focus,
+[data-theme="dark"] .resume-preview__project-date-input:not(:placeholder-shown) {
+  background: var(--color-card-bg);
+}

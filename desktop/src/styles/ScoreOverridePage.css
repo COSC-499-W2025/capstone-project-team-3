@@ -928,3 +928,8 @@
     transform: rotate(90deg);
   }
 }
+
+/* ── Dark mode  ── */
+[data-theme="dark"] .sor-metric-readonly {
+  background: var(--color-page-bg) !important;
+}

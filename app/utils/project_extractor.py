@@ -40,9 +40,15 @@ def extract_and_list_projects(zip_path: Union[str, Path]) -> dict:
         temp_dir = extract_zipped_contents(str(p))
     except (ValueError, RuntimeError) as exc:
         return {"status": "error", "reason": str(exc)}
+    except Exception as exc:
+        return {"status": "error", "reason": str(exc)}
     
     # Scan for projects
-    projects = _identify_projects(temp_dir)
+    try:
+        projects = _identify_projects(temp_dir)
+    except Exception as exc:
+        return {"status": "error", "reason": f"failed to identify projects in extracted ZIP: {exc}"}
+
     return {
         "status": "ok",
         "projects": projects,

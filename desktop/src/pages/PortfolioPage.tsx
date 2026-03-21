@@ -69,6 +69,7 @@ interface PortfolioData {
     complexity_distribution?: { distribution?: Record<string, number> };
     score_distribution?: { distribution?: Record<string, number> };
     monthly_activity?: Record<string, number>;
+    daily_activity?: Record<string, number>;
     top_skills?: Record<string, number>;
   };
   project_type_analysis?: {
@@ -641,6 +642,301 @@ function LineChart({
   return <canvas ref={canvasRef} id={canvasId} />;
 }
 
+interface HeatmapCell {
+  key: string;
+  date: Date;
+  value: number;
+  level: 0 | 1 | 2 | 3 | 4;
+}
+
+interface HeatmapModel {
+  weeks: HeatmapCell[][];
+  monthLabels: Array<{ label: string; col: number }>;
+  maxValue: number;
+  totalSignal: number;
+  activeDays: number;
+  busiestDay: HeatmapCell | null;
+}
+
+const HEATMAP_CELL_STEP = 16;
+
+const toDateKey = (date: Date): string => date.toISOString().slice(0, 10);
+
+const parseDateLike = (value?: string): Date | null => {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const monthShort = (date: Date): string =>
+  date.toLocaleDateString(undefined, { month: "short" });
+
+const formatHeatmapDate = (date: Date): string =>
+  date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+const formatHeatmapHighlightDate = (date: Date): string =>
+  date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+const buildHeatmapModel = (
+  dailyActivity: Record<string, number> | undefined,
+  monthlyActivity: Record<string, number> | undefined,
+  projects: Project[] | undefined,
+): HeatmapModel => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = new Date(today);
+  start.setDate(start.getDate() - 364);
+
+  const calendarStart = new Date(start);
+  calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
+
+  const dayScores = new Map<string, number>();
+  const endBound = new Date(today);
+
+  const addSignal = (date: Date, score: number) => {
+    if (date < calendarStart || date > endBound) return;
+    const key = toDateKey(date);
+    dayScores.set(key, (dayScores.get(key) || 0) + score);
+  };
+
+  const hasDailyActivity = Object.keys(dailyActivity || {}).length > 0;
+
+  if (hasDailyActivity) {
+    Object.entries(dailyActivity || {}).forEach(([dayKey, rawValue]) => {
+      const value = Number(rawValue) || 0;
+      if (value <= 0) return;
+      const date = parseDateLike(dayKey);
+      if (!date) return;
+      addSignal(date, value);
+    });
+  } else {
+    (projects || []).forEach((project) => {
+      const createdAt = parseDateLike(project.created_at || project.start_date);
+      const lastModified = parseDateLike(
+        project.last_modified || project.end_date,
+      );
+
+      if (createdAt) addSignal(createdAt, 1.25);
+      if (lastModified) {
+        const isSameAsCreate =
+          createdAt && toDateKey(createdAt) === toDateKey(lastModified);
+        addSignal(lastModified, isSameAsCreate ? 0.5 : 1);
+      }
+    });
+
+    Object.entries(monthlyActivity || {}).forEach(([monthKey, rawValue]) => {
+      const value = Number(rawValue) || 0;
+      if (value <= 0) return;
+
+      const monthMatch = monthKey.match(/^(\d{4})-(\d{2})/);
+      if (!monthMatch) return;
+
+      const year = Number(monthMatch[1]);
+      const monthIndex = Number(monthMatch[2]) - 1;
+      if (Number.isNaN(year) || Number.isNaN(monthIndex)) return;
+
+      const monthEnd = new Date(year, monthIndex + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+      if (daysInMonth <= 0) return;
+
+      const dailySignal = (value / daysInMonth) * 0.35;
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, monthIndex, day);
+        addSignal(date, dailySignal);
+      }
+    });
+  }
+
+  const allDays: Date[] = [];
+  for (
+    const cursor = new Date(calendarStart);
+    cursor <= endBound;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
+    allDays.push(new Date(cursor));
+  }
+
+  const values = allDays.map((date) => dayScores.get(toDateKey(date)) || 0);
+  const maxValue = Math.max(0, ...values);
+
+  const levelFor = (value: number): 0 | 1 | 2 | 3 | 4 => {
+    if (value <= 0 || maxValue <= 0) return 0;
+    const ratio = value / maxValue;
+    if (ratio <= 0.25) return 1;
+    if (ratio <= 0.5) return 2;
+    if (ratio <= 0.75) return 3;
+    return 4;
+  };
+
+  const cells: HeatmapCell[] = allDays.map((date) => {
+    const key = toDateKey(date);
+    const value = dayScores.get(key) || 0;
+    return {
+      key,
+      date,
+      value,
+      level: levelFor(value),
+    };
+  });
+
+  const weeks: HeatmapCell[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+
+  const monthLabels: Array<{ label: string; col: number }> = [];
+  let lastLabel = "";
+  weeks.forEach((week, col) => {
+    const firstDay = week[0];
+    if (!firstDay) return;
+    const label = monthShort(firstDay.date);
+    if (label !== lastLabel && firstDay.date.getDate() <= 7) {
+      monthLabels.push({ label, col });
+      lastLabel = label;
+    }
+  });
+
+  const activeCells = cells.filter((cell) => cell.value > 0);
+  const activeDays = activeCells.length;
+  const totalSignal = cells.reduce((sum, cell) => sum + cell.value, 0);
+  const busiestDay =
+    activeCells.length > 0
+      ? activeCells.reduce((best, current) =>
+          current.value > best.value ? current : best,
+        )
+      : null;
+
+  return {
+    weeks,
+    monthLabels,
+    maxValue,
+    totalSignal,
+    activeDays,
+    busiestDay,
+  };
+};
+
+function ActivityHeatmap({
+  dailyActivity,
+  monthlyActivity,
+  projects,
+}: {
+  dailyActivity?: Record<string, number>;
+  monthlyActivity?: Record<string, number>;
+  projects?: Project[];
+}) {
+  const model = useMemo(
+    () => buildHeatmapModel(dailyActivity, monthlyActivity, projects),
+    [dailyActivity, monthlyActivity, projects],
+  );
+
+  const calendarWidth = model.weeks.length * HEATMAP_CELL_STEP;
+  const totalWeeks = model.weeks.length;
+
+  return (
+    <div className="activity-heatmap-card">
+      <div className="activity-heatmap-summary">
+        <div className="activity-heatmap-kpi">
+          <span className="activity-heatmap-kpi-label">Active Days</span>
+          <strong>{model.activeDays}</strong>
+        </div>
+        <div className="activity-heatmap-kpi">
+          <span className="activity-heatmap-kpi-label">Peak Signal</span>
+          <strong>{model.maxValue.toFixed(2)}</strong>
+        </div>
+        <div className="activity-heatmap-kpi">
+          <span className="activity-heatmap-kpi-label">Total Signal</span>
+          <strong>{model.totalSignal.toFixed(1)}</strong>
+        </div>
+      </div>
+
+      <div className="activity-heatmap-calendar-wrap">
+        <div className="activity-heatmap-weekdays" aria-hidden>
+          <span>Sun</span>
+          <span></span>
+          <span>Tue</span>
+          <span></span>
+          <span>Thu</span>
+          <span></span>
+          <span>Sat</span>
+        </div>
+
+        <div className="activity-heatmap-scroll">
+          <div
+            className="activity-heatmap-months"
+            style={{ width: `${calendarWidth}px` }}
+            aria-hidden
+          >
+            {model.monthLabels.map((month) => (
+              <span
+                key={`${month.label}-${month.col}`}
+                className="activity-heatmap-month"
+                style={{ left: `${month.col * HEATMAP_CELL_STEP}px` }}
+              >
+                {month.label}
+              </span>
+            ))}
+          </div>
+
+          <div
+            className="activity-heatmap-grid"
+            style={{ width: `${calendarWidth}px` }}
+          >
+            {model.weeks.map((week, weekIndex) => (
+              <div key={`week-${weekIndex}`} className="activity-heatmap-week">
+                {week.map((cell) => (
+                  <div
+                    key={cell.key}
+                    className={`activity-cell activity-cell-level-${cell.level} ${
+                      weekIndex <= 1
+                        ? "activity-cell-tooltip-right"
+                        : weekIndex >= totalWeeks - 2
+                          ? "activity-cell-tooltip-left"
+                          : "activity-cell-tooltip-center"
+                    }`}
+                    data-tooltip={`${formatHeatmapDate(cell.date)} · ${cell.value.toFixed(2)} activity signal`}
+                    aria-label={`${formatHeatmapDate(cell.date)} with activity signal ${cell.value.toFixed(2)}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="activity-heatmap-footer">
+        <span className="activity-heatmap-highlight">
+          {model.busiestDay
+            ? `Peak activity date: ${formatHeatmapHighlightDate(model.busiestDay.date)}`
+            : "No activity yet"}
+        </span>
+        <div className="activity-heatmap-legend" aria-hidden>
+          <span>Less</span>
+          <i className="activity-cell activity-cell-level-0" />
+          <i className="activity-cell activity-cell-level-1" />
+          <i className="activity-cell activity-cell-level-2" />
+          <i className="activity-cell activity-cell-level-3" />
+          <i className="activity-cell activity-cell-level-4" />
+          <span>More</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface EditState {
   field: "name" | "score" | "dates" | "summary";
   value: string;
@@ -978,31 +1274,42 @@ function ProjectCard({
           Why this score?
         </summary>
         <div className="project-score-explainer-content">
-          <p className="project-score-explainer-intro">{scoreExplanationIntro}</p>
-          <p className="project-score-explainer-status">{scoreConfigurationSummary}</p>
+          <p className="project-score-explainer-intro">
+            {scoreExplanationIntro}
+          </p>
+          <p className="project-score-explainer-status">
+            {scoreConfigurationSummary}
+          </p>
           {scoreSignals.length > 0 ? (
             <div className="project-score-signal-list">
               {scoreSignals.map((signal) => (
                 <div key={signal.label} className="project-score-signal">
                   <div className="project-score-signal-header">
-                    <span className="project-score-signal-name">{signal.label}</span>
+                    <span className="project-score-signal-name">
+                      {signal.label}
+                    </span>
                     <span
                       className={`project-score-signal-value project-score-signal-value-${signal.tone}`}
                     >
                       {signal.value}
                     </span>
                   </div>
-                  <p className="project-score-signal-copy">{signal.explanation}</p>
+                  <p className="project-score-signal-copy">
+                    {signal.explanation}
+                  </p>
                 </div>
               ))}
             </div>
           ) : (
             <p className="project-score-explainer-note">
-              Detailed scoring inputs are limited for this project, so the score should be read as a high-level summary only.
+              Detailed scoring inputs are limited for this project, so the score
+              should be read as a high-level summary only.
             </p>
           )}
           <p className="project-score-explainer-footnote">
-            This summary highlights the clearest visible signals in the portfolio. The complete scoring formulas are shown in the methodology section below.
+            This summary highlights the clearest visible signals in the
+            portfolio. The complete scoring formulas are shown in the
+            methodology section below.
           </p>
         </div>
       </details>
@@ -1690,6 +1997,16 @@ ${mainClone.outerHTML}
             </div>
           </div>
         </div>
+
+        <div className="activity-heatmap-section">
+          <h2 className="section-title">🔥 Activity Heatmap</h2>
+          <ActivityHeatmap
+            dailyActivity={graphs.daily_activity}
+            monthlyActivity={graphs.monthly_activity}
+            projects={portfolio?.projects}
+          />
+        </div>
+
         <div className="projects-section">
           <h2 className="section-title">🏆 Top Ranked Projects</h2>
           <div className="top-projects" id="topProjects">

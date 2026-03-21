@@ -111,6 +111,12 @@
   background-color: var(--color-bg-light);
 }
 
+.app-sidebar__link--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .app-sidebar__link-icon {
   display: flex;
   align-items: center;

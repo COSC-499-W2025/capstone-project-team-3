@@ -110,6 +110,7 @@ const MOCK_PORTFOLIO = {
     score_distribution: {
       distribution: { excellent: 1, good: 1, fair: 0, poor: 0 },
     },
+    daily_activity: { "2024-01-10": 2, "2024-01-11": 1, "2024-01-12": 3 },
     monthly_activity: { "2024-01": 2, "2024-02": 1, "2024-03": 3 },
     top_skills: { Python: 2, React: 1, FastAPI: 1 },
   },
@@ -408,7 +409,9 @@ describe("PortfolioPage – project cards", () => {
     try {
       renderPortfolio();
 
-      const downloadButton = await screen.findByText(/download interactive html/i);
+      const downloadButton = await screen.findByText(
+        /download interactive html/i,
+      );
       await act(async () => {
         fireEvent.click(downloadButton);
       });

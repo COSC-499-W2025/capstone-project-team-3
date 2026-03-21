@@ -1,0 +1,40 @@
+import { API_BASE_URL } from "../config/api";
+
+const API_BASE = API_BASE_URL;
+
+export interface ATSBreakdown {
+  keyword_coverage: number;
+  skills_match: number;
+  content_richness: number;
+}
+
+export interface ATSScoreResult {
+  score: number;
+  match_level: string;
+  experience_months: number;
+  breakdown: ATSBreakdown;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  tips: string[];
+}
+
+export async function scoreATS(
+  jobDescription: string,
+  resumeId: number | null
+): Promise<ATSScoreResult> {
+  const res = await fetch(`${API_BASE}/api/ats/score`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      job_description: jobDescription,
+      resume_id: resumeId,
+    }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to calculate ATS score");
+  }
+  return res.json();
+}

@@ -404,6 +404,77 @@ def get_monthly_activity(cursor: sqlite3.Cursor, project_ids: Optional[List[str]
     
     return dict(sorted(monthly_activity.items()))
 
+
+def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        normalized = value.strip().replace("Z", "+00:00")
+        return datetime.fromisoformat(normalized)
+    except Exception:
+        return None
+
+
+def get_daily_activity(
+    cursor: sqlite3.Cursor,
+    projects_raw: List[Tuple[str, str, float, str, str, int, Optional[float], Optional[str]]],
+    project_metrics: DefaultDict[str, Dict[str, Any]],
+) -> Dict[str, float]:
+    """Get daily activity timeline.
+
+    - GitHub projects: exact daily counts from GIT_HISTORY.commit_date
+    - Local projects: fallback signal from created/last_modified dates
+    - GitHub projects without GIT_HISTORY: fallback to created/last_modified
+    """
+    daily_activity: DefaultDict[str, float] = defaultdict(float)
+    if not projects_raw:
+        return {}
+
+    project_ids = [pid for pid, *_ in projects_raw]
+    github_project_ids = [
+        pid for pid in project_ids if (project_metrics.get(pid, {}).get("total_commits", 0) or 0) > 0
+    ]
+
+    github_days_with_activity = set()
+
+    if github_project_ids:
+        placeholders = ",".join(["?"] * len(github_project_ids))
+        cursor.execute(
+            f"""
+            SELECT project_id, commit_date
+            FROM GIT_HISTORY
+            WHERE project_id IN ({placeholders})
+            """,
+            github_project_ids,
+        )
+
+        for project_id, commit_date in cursor.fetchall():
+            dt = _parse_iso_datetime(commit_date)
+            if not dt:
+                continue
+            day_key = dt.strftime("%Y-%m-%d")
+            daily_activity[day_key] += 1.0
+            github_days_with_activity.add(project_id)
+
+    for pid, _name, _score, created_at, last_modified, *_ in projects_raw:
+        is_github = (project_metrics.get(pid, {}).get("total_commits", 0) or 0) > 0
+        if is_github and pid in github_days_with_activity:
+            continue
+
+        created_dt = _parse_iso_datetime(created_at)
+        modified_dt = _parse_iso_datetime(last_modified)
+
+        if created_dt:
+            daily_activity[created_dt.strftime("%Y-%m-%d")] += 1.0
+
+        if modified_dt and created_dt:
+            if modified_dt.date() != created_dt.date():
+                daily_activity[modified_dt.strftime("%Y-%m-%d")] += 0.5
+        elif modified_dt:
+            daily_activity[modified_dt.strftime("%Y-%m-%d")] += 0.5
+
+    return dict(sorted(daily_activity.items()))
+
 def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """Return assembled portfolio model built from the database.
     If project_ids are provided, include only those projects.
@@ -424,6 +495,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
     complexity_distribution = get_project_complexity_distribution(cursor, project_ids)
     score_distribution = get_score_distribution(cursor, project_ids)
     monthly_activity = get_monthly_activity(cursor, project_ids)
+    daily_activity = get_daily_activity(cursor, projects_raw, project_metrics)
 
     projects = []
     selected_ids = [pid for pid, *_ in projects_raw]
@@ -564,6 +636,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
             "complexity_distribution": complexity_distribution,
             "score_distribution": score_distribution,
             "monthly_activity": monthly_activity,
+            "daily_activity": daily_activity,
             "top_skills": dict(list(defaultdict(int, {
                 skill: len([p for p in projects if skill in skills_map.get(p["id"], [])])
                 for skill in set(skill for project_skills in skills_map.values() for skill in project_skills)

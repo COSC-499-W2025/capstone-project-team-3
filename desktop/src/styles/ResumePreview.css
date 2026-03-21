@@ -221,6 +221,7 @@
 
 .resume-preview__skills-bucket-items {
   flex: 1;
+  min-width: 0;
 }
 
 .resume-preview__skills-editors {
@@ -231,7 +232,10 @@
 }
 
 .resume-preview__skills-editor {
-  flex: none;
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .resume-preview__project {

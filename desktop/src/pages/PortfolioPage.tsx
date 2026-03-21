@@ -717,7 +717,7 @@ const buildHeatmapModel = (
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Find the earliest project date to determine how far back to show
+  // Find the earliest date across projects, daily activity, and monthly activity
   let earliest: Date | null = null;
   const consider = (d: Date | null) => {
     if (d && (!earliest || d < earliest)) earliest = d;
@@ -728,13 +728,24 @@ const buildHeatmapModel = (
     consider(parseDateLike(p.last_modified || p.end_date));
   });
 
-  // Start from Jan 1 of the earliest project year, but always show at least the current year
+  // Also consider daily activity dates so the calendar range covers them
+  Object.keys(dailyActivity || {}).forEach((dayKey) => {
+    consider(parseDateLike(dayKey));
+  });
+
+  // Also consider monthly activity dates
+  Object.keys(monthlyActivity || {}).forEach((monthKey) => {
+    const m = monthKey.match(/^(\d{4})-(\d{2})/);
+    if (m) consider(new Date(Number(m[1]), Number(m[2]) - 1, 1));
+  });
+
+  // Start from Jan 1 of the earliest project year, but always show at least a full year
   const currentYear = today.getFullYear();
-  let startYear = currentYear; // default: show current year
+  let startYear = currentYear - 1; // default: at least one full year back
 
   if (earliest) {
     const earliestYear = earliest.getFullYear();
-    if (earliestYear < currentYear) startYear = earliestYear;
+    if (earliestYear < startYear) startYear = earliestYear;
   }
 
   const start = new Date(startYear, 0, 1); // Jan 1 of the start year
@@ -1605,9 +1616,11 @@ const PortfolioPage: React.FC = () => {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
 
   const loadPortfolio = async (selectedIds?: Array<string | number>) => {
+    if (!selectedIds || selectedIds.length === 0) {
+      setPortfolio(null);
+      return;
+    }
     const query =
-      selectedIds &&
-      selectedIds.length > 0 &&
       selectedIds.length < allProjects.length
         ? `?project_ids=${selectedIds.join(",")}`
         : "";
@@ -1833,13 +1846,11 @@ ${mainClone.outerHTML}
   };
 
   const displayedProjects = useMemo(() => {
-    const src = (
-      portfolio?.projects?.length ? portfolio.projects : allProjects
-    ).slice();
+    const src = (portfolio?.projects || []).slice();
     return src
       .sort((a, b) => getDisplayScore(b) - getDisplayScore(a))
       .slice(0, 6);
-  }, [portfolio?.projects, allProjects]);
+  }, [portfolio?.projects]);
 
   const graphs = portfolio?.graphs || {};
   const complexity = {
@@ -1866,6 +1877,7 @@ ${mainClone.outerHTML}
     let totalFunctions = 0;
     let totalClasses = 0;
     let totalComponents = 0;
+    let totalCommits = 0;
     let githubProjects = 0;
     let localProjects = 0;
     let totalCompleteness = 0;
@@ -1879,6 +1891,7 @@ ${mainClone.outerHTML}
       totalFunctions += metrics.functions || 0;
       totalClasses += metrics.classes || 0;
       totalComponents += metrics.components || 0;
+      totalCommits += metrics.total_commits || 0;
       if (project.type === "GitHub") githubProjects += 1;
       else localProjects += 1;
       if (metrics.completeness_score)
@@ -1904,6 +1917,7 @@ ${mainClone.outerHTML}
       totalFunctions,
       totalClasses,
       totalComponents,
+      totalCommits,
       githubProjects,
       localProjects,
       avgCompleteness,
@@ -2012,6 +2026,7 @@ ${mainClone.outerHTML}
             <button
               className="download-html-btn"
               onClick={() => void downloadPortfolioInteractiveHTML()}
+              disabled={selectedProjects.size === 0}
             >
               ⚡ Download Interactive HTML
             </button>
@@ -2023,7 +2038,7 @@ ${mainClone.outerHTML}
         <div className="overview-cards" id="overviewCards">
           <div className="overview-card">
             <div className="overview-card-value">
-              {portfolio?.overview?.total_projects ?? allProjects.length}
+              {portfolio?.overview?.total_projects ?? 0}
             </div>
             <div className="overview-card-label">Total Projects</div>
           </div>
@@ -2145,24 +2160,36 @@ ${mainClone.outerHTML}
                       {analysis.totalTestFiles}
                     </span>
                   </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Functions Created:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalFunctions}
-                    </span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Classes Created:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalClasses}
-                    </span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Components Built:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalComponents}
-                    </span>
-                  </div>
+                  {analysis.githubProjects > 0 && (
+                    <div className="analysis-item">
+                      <span className="analysis-label">Total Commits:</span>{" "}
+                      <span className="analysis-value">
+                        {analysis.totalCommits.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {analysis.localProjects > 0 && (
+                    <>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Functions Created:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalFunctions}
+                        </span>
+                      </div>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Classes Created:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalClasses}
+                        </span>
+                      </div>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Components Built:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalComponents}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="analysis-card">
                   <h4>📊 Project Distribution</h4>

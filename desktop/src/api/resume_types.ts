@@ -18,6 +18,27 @@ export interface Education{
     gpa?: string;
 }
 
+export interface Award {
+    title: string;
+    issuer?: string;
+    /**
+     * Month-year in YYYY-MM (recommended) or ISO-like YYYY-MM-01.
+     * Renderers handle both.
+     */
+    date?: string;
+    details?: string[];
+}
+
+export interface WorkExperience {
+    role: string;
+    company?: string;
+    /** Month-year in YYYY-MM (recommended) or ISO-like YYYY-MM-01. */
+    start_date?: string;
+    /** Month-year in YYYY-MM (recommended) or ISO-like YYYY-MM-01. */
+    end_date?: string;
+    details?: string[];
+}
+
 export interface Skills{
     Proficient: string[];
     Familiar: string[];
@@ -34,6 +55,10 @@ export interface Resume {
   links: Link[];
 
   education: Education[];
+
+  awards: Award[];
+
+  work_experience?: WorkExperience[];
 
   skills: Skills;
 

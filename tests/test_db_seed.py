@@ -76,6 +76,8 @@ def test_all_tables_populated(isolated_db):
     delete_order = [
     "RESUME_PROJECT",
     "RESUME_SKILLS",
+    "RESUME_AWARDS",
+    "RESUME_WORK_EXPERIENCE",
     "RESUME_SUMMARY",
     "SKILL_ANALYSIS",
     "DASHBOARD_DATA",

@@ -50,6 +50,8 @@ def db_connection(monkeypatch):
         DROP TABLE IF EXISTS RESUME;
         DROP TABLE IF EXISTS RESUME_PROJECT;
         DROP TABLE IF EXISTS RESUME_SKILLS;
+        DROP TABLE IF EXISTS RESUME_AWARDS;
+        DROP TABLE IF EXISTS RESUME_WORK_EXPERIENCE;
 
         CREATE TABLE USER_PREFERENCES (
             user_id INTEGER PRIMARY KEY,
@@ -106,6 +108,18 @@ def db_connection(monkeypatch):
         CREATE TABLE RESUME_SKILLS (
             resume_id INTEGER PRIMARY KEY,
             skills JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE RESUME_AWARDS (
+            resume_id INTEGER PRIMARY KEY,
+            awards JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE RESUME_WORK_EXPERIENCE (
+            resume_id INTEGER PRIMARY KEY,
+            work_experience JSON,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -449,6 +463,104 @@ def test_save_resume_edits_update_resume_skills(db_connection):
         "Proficient": ["Python", "Flask"],
         "Familiar": ["GraphQL"],
     }
+
+
+def test_save_resume_edits_update_resume_awards(db_connection):
+    """Test that save_resume_edits updates RESUME_AWARDS and load_saved_resume reflects it."""
+    cursor = db_connection.cursor()
+
+    # Create a tailored resume shell (non-master) with one project snapshot row
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom Resume')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            2,
+            "p1",
+            "Alpha_Project",
+            "2024-01-01",
+            "2024-06-01",
+            json.dumps(["Python"]),
+            json.dumps(["Did stuff"]),
+            1,
+        ),
+    )
+
+    # Commit before calling save_resume_edits() which opens a new connection.
+    db_connection.commit()
+
+    payload_awards = {
+        "awards": [
+            {
+                "title": "Hackathon Winner",
+                "issuer": "Tech Challenge Inc.",
+                "date": "2025-03",
+                "details": ["Won first place", "Presented demo to judges"],
+            }
+        ]
+    }
+
+    save_resume_edits(2, payload_awards)
+
+    resume = load_saved_resume(2)
+    assert len(resume.get("awards", [])) == 1
+    assert resume["awards"][0]["title"] == "Hackathon Winner"
+    assert resume["awards"][0]["issuer"] == "Tech Challenge Inc."
+    assert resume["awards"][0]["date"] == "2025-03"
+    assert "Won first place" in resume["awards"][0]["details"]
+
+
+def test_save_resume_edits_update_resume_work_experience(db_connection):
+    """Test that save_resume_edits updates RESUME_WORK_EXPERIENCE and load_saved_resume reflects it."""
+    cursor = db_connection.cursor()
+
+    # Create a tailored resume shell (non-master) with one project snapshot row
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom Resume')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            2,
+            "p1",
+            "Alpha_Project",
+            "2024-01-01",
+            "2024-06-01",
+            json.dumps(["Python"]),
+            json.dumps(["Did stuff"]),
+            1,
+        ),
+    )
+
+    # Commit before calling save_resume_edits() which opens a new connection.
+    db_connection.commit()
+
+    payload_work = {
+        "work_experience": [
+            {
+                "role": "Software Engineer",
+                "company": "Tech Challenge Inc.",
+                "start_date": "2024-01",
+                "end_date": "2024-06",
+                "details": ["Built backend services", "Led collaboration efforts"],
+            }
+        ]
+    }
+
+    save_resume_edits(2, payload_work)
+
+    resume = load_saved_resume(2)
+    assert len(resume.get("work_experience", [])) == 1
+    assert resume["work_experience"][0]["role"] == "Software Engineer"
+    assert resume["work_experience"][0]["company"] == "Tech Challenge Inc."
+    assert resume["work_experience"][0]["start_date"] == "2024-01"
+    assert resume["work_experience"][0]["end_date"] == "2024-06"
+    assert "Built backend services" in resume["work_experience"][0]["details"]
 
 def test_resume_exists_true_and_false(db_connection):
     """

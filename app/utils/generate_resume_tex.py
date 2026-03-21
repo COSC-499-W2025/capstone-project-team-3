@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+from datetime import datetime
 import tempfile
 import os
 import json
@@ -138,11 +139,156 @@ def render_education(education_list: List[Dict[str, Any]]) -> str:
         gpa_line = rf"{{\sl GPA: {gpa}}}\\" if gpa else ""
         
         block = rf"""{school} \hfill {dates}\\
-{{\sl {degree}}}\\
+{degree}\\
 {gpa_line}"""
         blocks.append(block.strip())
     
     return "\n\n".join(blocks)
+
+
+def format_month_year(value: str) -> str:
+    """
+    Convert "YYYY-MM" or "YYYY-MM-01" into "Mon YYYY".
+    Returns empty string for invalid inputs.
+    """
+    if not value:
+        return ""
+    try:
+        # Accept YYYY-MM
+        if len(value) == 7 and value[4] == "-":
+            dt = datetime.fromisoformat(value + "-01")
+        else:
+            dt = datetime.fromisoformat(value)
+        return dt.strftime("%b %Y")
+    except Exception:
+        return ""
+
+
+def render_awards(awards: Any) -> str:
+    """Return LaTeX blocks for awards/honours."""
+    if not awards or not isinstance(awards, list):
+        return ""
+
+    # Filter to dict entries with at least a title.
+    normalized = [
+        a for a in awards
+        if isinstance(a, dict) and str(a.get("title", "")).strip()
+    ]
+    if not normalized:
+        return ""
+
+    items_tex: List[str] = []
+    for award in normalized:
+        title = escape_latex(str(award.get("title", "")).strip())
+        issuer_raw = str(award.get("issuer", "")).strip() if award.get("issuer") else ""
+        issuer = escape_latex(issuer_raw) if issuer_raw else ""
+        date_raw = str(award.get("date", "")).strip() if award.get("date") else ""
+        date = escape_latex(format_month_year(date_raw)) if date_raw else ""
+
+        details_raw = award.get("details", []) or []
+        if isinstance(details_raw, str):
+            details_list = [line.strip() for line in details_raw.splitlines() if line.strip()]
+        elif isinstance(details_raw, list):
+            details_list = [str(d).strip() for d in details_raw if str(d).strip()]
+        else:
+            details_list = []
+
+        details_block = ""
+        if details_list:
+            details_items = "\n".join(
+                rf"\item {escape_latex(d)}" for d in details_list
+            )
+            details_block = (
+                "\n" +
+                rf"\begin{{itemize}}[leftmargin=1.8em]" + "\n" +
+                details_items + "\n" +
+                r"\end{itemize}"
+            )
+
+        header_line = rf"\textbf{{{title}}}"
+        if date:
+            header_line += rf" \hfill {date}"
+
+        issuer_line = rf"{issuer}\\" if issuer else ""
+
+        block = rf"{header_line}\\{issuer_line}{details_block}"
+        items_tex.append(block)
+
+    awards_body = "\n\n".join(items_tex)
+    return (
+        r"\header{Awards \& Honours}" "\n"
+        r"\vspace{2mm}" "\n"
+        f"{awards_body}\n"
+    )
+
+
+def render_work_experience(work_experience: Any) -> str:
+    """Return LaTeX blocks for work experience."""
+    if not work_experience or not isinstance(work_experience, list):
+        return ""
+
+    normalized = [
+        e
+        for e in work_experience
+        if isinstance(e, dict) and str(e.get("role", "")).strip()
+    ]
+    if not normalized:
+        return ""
+
+    items_tex: List[str] = []
+    for entry in normalized:
+        role_raw = str(entry.get("role", "")).strip()
+        role = escape_latex(role_raw)
+
+        company_raw = str(entry.get("company", "")).strip() if entry.get("company") else ""
+        company = escape_latex(company_raw) if company_raw else ""
+
+        start_raw = str(entry.get("start_date", "")).strip() if entry.get("start_date") else ""
+        end_raw = str(entry.get("end_date", "")).strip() if entry.get("end_date") else ""
+        start_fmt = escape_latex(format_month_year(start_raw)) if start_raw else ""
+        end_fmt = escape_latex(format_month_year(end_raw)) if end_raw else ""
+
+        date_range = ""
+        if start_fmt:
+            if end_fmt:
+                date_range = f"{start_fmt} – {end_fmt}"
+            else:
+                date_range = f"{start_fmt} – Present"
+
+        details_raw = entry.get("details", []) or []
+        if isinstance(details_raw, str):
+            details_list = [line.strip() for line in details_raw.splitlines() if line.strip()]
+        elif isinstance(details_raw, list):
+            details_list = [str(d).strip() for d in details_raw if str(d).strip()]
+        else:
+            details_list = []
+
+        details_block = ""
+        if details_list:
+            details_items = "\n".join(rf"\item {escape_latex(d)}" for d in details_list)
+            details_block = (
+                "\n" + rf"\begin{{itemize}}[leftmargin=1.8em]" + "\n" +
+                details_items + "\n" +
+                r"\end{itemize}"
+            )
+
+        if company:
+            header_text = rf"\textbf{{{company} | {role}}}"
+        else:
+            header_text = rf"\textbf{{{role}}}"
+        header_line = header_text
+        if date_range:
+            header_line += rf" \hfill {date_range}"
+
+        block = rf"{header_line}\\{details_block}"
+        items_tex.append(block)
+
+    work_body = "\n\n".join(items_tex)
+    return (
+        r"\header{Work Experience}" "\n"
+        r"\vspace{2mm}" "\n"
+        f"{work_body}\n"
+    )
     
 def generate_resume_tex(resume: Dict[str, Any]) -> str:
     """Return LaTeX resume document rendered from the resume model."""
@@ -172,6 +318,8 @@ def generate_resume_tex(resume: Dict[str, Any]) -> str:
     tex = tex.replace("{education_section}", education_block)
 
     tex = tex.replace("{skills_table}", render_skills(resume["skills"]))
+    tex = tex.replace("{work_experience_section}", render_work_experience(resume.get("work_experience", [])))
     tex = tex.replace("{projects}", render_projects(resume["projects"]))
+    tex = tex.replace("{awards_section}", render_awards(resume.get("awards", [])))
 
     return tex

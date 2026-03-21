@@ -341,10 +341,5 @@
   }
 }
 
-/* ── Dark mode ── */
-[data-theme="dark"] .upload-page                { background: var(--color-page-bg); }
-[data-theme="dark"] .upload-title               { color: var(--color-text-heading); }
-[data-theme="dark"] .upload-subtitle            { color: var(--color-text-secondary); }
-[data-theme="dark"] .upload-card                { background: var(--color-card-bg); }
-[data-theme="dark"] .upload-help-trigger        { background: var(--color-card-bg); color: var(--color-text-body); }
-[data-theme="dark"] .upload-help-tooltip        { background: var(--color-card-bg); color: var(--color-text-body); border-color: var(--color-border); }
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
+

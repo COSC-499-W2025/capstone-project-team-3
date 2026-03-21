@@ -929,7 +929,5 @@
   }
 }
 
-/* ── Dark mode  ── */
-[data-theme="dark"] .sor-metric-readonly {
-  background: var(--color-page-bg) !important;
-}
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
+

@@ -200,13 +200,5 @@
   font-weight: 500;
 }
 
-/* ── Dark mode  ── */
-[data-theme="dark"] .project-selection-container { background-color: var(--color-page-bg); }
-[data-theme="dark"] .project-selection__back     { color: var(--color-text-body); }
-[data-theme="dark"] .project-selection__back:hover { color: var(--color-text-heading); }
-[data-theme="dark"] .table-container             { background-color: var(--color-card-bg); }
-[data-theme="dark"] .project-row td              { color: var(--color-text-body); }
-[data-theme="dark"] .project-row:hover           { background-color: var(--color-bg-light); }
-[data-theme="dark"] .project-row:hover td        { color: var(--color-text-heading); }
-[data-theme="dark"] .empty-state                 { color: var(--color-text-secondary); }
-[data-theme="dark"] .loading-state               { color: var(--color-text-secondary); }
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
+

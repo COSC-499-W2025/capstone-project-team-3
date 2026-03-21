@@ -350,12 +350,13 @@ button:disabled {
 @media (hover: none) and (pointer: coarse) {
   /* Touch device users get tap feedback instead */
   button:active {
-    transform: scale(0.98)
-  
+    transform: scale(0.98);
+  }
+
   h1 {
     font-size: 1.2rem;
   }
-  
+
   h2 {
     font-size: 1.1rem;
   }

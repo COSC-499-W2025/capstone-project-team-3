@@ -190,6 +190,28 @@
   line-height: 1.4;
 }
 
+.upload-ai-key-missing {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.upload-ai-key-missing p {
+  margin: 0 0 10px;
+}
+
+.upload-ai-key-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .upload-label-row {
   display: inline-flex;
   align-items: center;

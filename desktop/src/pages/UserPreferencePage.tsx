@@ -740,7 +740,7 @@ export default function UserPreferencePage() {
           <div className="profile-picture-actions">
             <button
               type="button"
-              className="btn-secondary"
+              className="btn btn-secondary"
               onClick={() => fileInputRef.current?.click()}
               disabled={pictureUploading}
             >
@@ -749,7 +749,7 @@ export default function UserPreferencePage() {
             {profilePicture && (
               <button
                 type="button"
-                className="btn-danger-outline"
+                className="btn btn-danger-outline"
                 onClick={handleRemovePicture}
                 disabled={pictureUploading}
               >

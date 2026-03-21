@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import patch
@@ -253,3 +255,44 @@ def test_project_exclude_name_prefixes_filters_readme_files(
     # README.md and README.txt should be gone; CONTRIBUTING.md should remain
     assert all("readme" not in p.lower().split("/")[-1].split(".")[0] for p in remaining)
     assert any("contributing" in p.lower() for p in remaining)
+
+
+# ---------------------------------------------------------------------------
+# all_files_excluded skip path
+# ---------------------------------------------------------------------------
+
+@patch("app.api.routes.analysis.check_gemini_api_key", return_value=(False, "missing key"))
+@patch(
+    "app.api.routes.analysis.extract_and_list_projects",
+    return_value={
+        "status": "ok",
+        "projects": ["/tmp/proj"],
+        "extracted_dir": "/tmp",
+    },
+)
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+@patch(
+    "app.api.routes.analysis.run_scan_flow",
+    return_value={
+        "files": [Path("/tmp/proj/README.md"), Path("/tmp/proj/notes.md")],
+        "skip_analysis": False,
+        "signature": "sig-all-excl",
+    },
+)
+def test_all_files_excluded_returns_skipped(mock_scan, mock_exists, mock_extract, mock_api_key):
+    """When exclusions remove every file the project must be skipped with reason all_files_excluded."""
+    response = client.post(
+        "/api/analysis/run",
+        json={
+            "upload_id": "upload-all-excl",
+            "project_exclude_extensions": {"/tmp/proj": [".md"]},
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["analyzed_projects"] == 0
+    assert data["skipped_projects"] == 1
+    assert data["failed_projects"] == 0
+    result = data["results"][0]
+    assert result["status"] == "skipped"
+    assert result["reason"] == "all_files_excluded"

@@ -182,6 +182,41 @@ describe("UploadPage", () => {
     expect(body.project_exclude_extensions["/tmp/proj-a"]).toContain(".md");
   });
 
+  test("result banner shows all-files-excluded note for affected projects", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          analyzed_projects: 0,
+          skipped_projects: 1,
+          failed_projects: 0,
+          results: [
+            { project_name: "proj-a", status: "skipped", reason: "all_files_excluded" },
+          ],
+        }),
+      } as Response);
+
+    const { container } = render(<BrowserRouter><UploadPage /></BrowserRouter>);
+    fireEvent.change(
+      container.querySelector("input[type='file']") as HTMLInputElement,
+      { target: { files: [new File(["x"], "p.zip", { type: "application/zip" })] } },
+    );
+    await screen.findByText("proj-a");
+    fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
+
+    expect(await screen.findByText(/Analysis complete/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/all files were excluded by your filters/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/proj-a/)).toBeInTheDocument();
+  });
+
   test("successful run clears upload form state to avoid stale upload_id reruns", async () => {
     mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
 

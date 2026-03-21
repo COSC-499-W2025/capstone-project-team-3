@@ -240,6 +240,20 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                 if not any(f.stem.lower().startswith(p.lower()) for p in exclude_prefixes)
             ]
 
+        if not files:
+            results.append(
+                ProjectAnalysisResult(
+                    project_name=project_name,
+                    project_path=project_path,
+                    project_signature=project_signature,
+                    requested_analysis_type=requested_analysis_type,
+                    effective_analysis_type="local",
+                    status="skipped",
+                    reason="all_files_excluded",
+                )
+            )
+            continue
+
         username, email = _get_preferred_author_email()
         non_code_result = classify_non_code_files_with_user_verification(project_path, email, username)
 

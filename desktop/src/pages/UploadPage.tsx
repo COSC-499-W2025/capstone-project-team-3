@@ -32,10 +32,17 @@ interface Project {
   mode: string;
 }
 
+interface ProjectResult {
+  project_name: string;
+  status: "analyzed" | "skipped" | "failed";
+  reason: string | null;
+}
+
 interface RunResult {
   analyzed_projects: number;
   skipped_projects: number;
   failed_projects: number;
+  results: ProjectResult[];
 }
 
 type SimilarityAction = "create_new" | "update_existing";
@@ -316,6 +323,7 @@ export function UploadPage() {
         analyzed_projects: data.analyzed_projects ?? 0,
         skipped_projects: data.skipped_projects ?? 0,
         failed_projects: data.failed_projects ?? 0,
+        results: data.results ?? [],
       });
       setUploadId(null);
       setUploadedFileName(null);
@@ -643,6 +651,20 @@ export function UploadPage() {
                   )}
                 </span>
               </div>
+              {runResult.results.filter((r) => r.reason === "all_files_excluded").length > 0 && (
+                <p className="ar-result-excluded-note">
+                  <strong>
+                    {runResult.results
+                      .filter((r) => r.reason === "all_files_excluded")
+                      .map((r) => r.project_name)
+                      .join(", ")}
+                  </strong>{" "}
+                  {runResult.results.filter((r) => r.reason === "all_files_excluded").length === 1
+                    ? "was skipped"
+                    : "were skipped"}{" "}
+                  — all files were excluded by your filters.
+                </p>
+              )}
               <button
                 type="button"
                 className="ar-btn ar-btn--primary ar-result-insights-btn"

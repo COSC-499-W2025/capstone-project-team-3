@@ -2,13 +2,24 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { API_BASE_URL } from "../config/api";
+import { SimilarityIndicator } from "../components/SimilarityIndicator";
 import "../styles/UploadPage.css";
 import "../styles/AnalysisRunnerPage.css";
+import "../styles/SimilarityIndicator.css";
 
 interface Project {
   name: string;
   path: string;
   mode: string;
+  fileCount?: number;
+  similarity?: {
+    jaccard_similarity: number;
+    containment_ratio: number;
+    matched_project_name: string;
+    match_reason: string;
+  } | null;
+  status?: "pending" | "scanning" | "similarity_detected" | "ready" | "analyzing" | "complete";
+  userDecision?: "create_new" | "update_existing" | "skip";
 }
 
 interface RunResult {
@@ -17,18 +28,25 @@ interface RunResult {
   failed_projects: number;
 }
 
-type SimilarityAction = "create_new" | "update_existing";
-
 interface PendingAiSelection {
   type: "default" | "project";
   mode: "local" | "ai";
   projectIndex?: number;
 }
 
-/**
- * Upload + Analysis page — single seamless flow.
- * Step 1: Drop/select a ZIP. Step 2: Configure and run analysis inline.
- */
+interface SimilarityModalData {
+  projectName: string;
+  projectPath: string;
+  projectIndex: number;
+  similarity: {
+    jaccard_similarity: number;
+    containment_ratio: number;
+    matched_project_name: string;
+    match_reason: string;
+  };
+  existingDecision?: "create_new" | "update_existing";
+}
+
 export function UploadPage() {
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
@@ -39,10 +57,6 @@ export function UploadPage() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [defaultMode, setDefaultMode] = useState<"local" | "ai">("local");
-  const [similarityAction, setSimilarityAction] =
-    useState<SimilarityAction>("create_new");
-  const [projectSimilarityActions, setProjectSimilarityActions] =
-    useState<Record<string, SimilarityAction>>({});
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -50,8 +64,9 @@ export function UploadPage() {
   const [runError, setRunError] = useState<string | null>(null);
   const [aiConsentAccepted, setAiConsentAccepted] = useState(false);
   const [showAiConsentModal, setShowAiConsentModal] = useState(false);
-  const [pendingAiSelection, setPendingAiSelection] =
-    useState<PendingAiSelection | null>(null);
+  const [pendingAiSelection, setPendingAiSelection] = useState<PendingAiSelection | null>(null);
+  const [similarityModalData, setSimilarityModalData] = useState<SimilarityModalData | null>(null);
+  const [hasRunAnalysis, setHasRunAnalysis] = useState(false);
 
   useEffect(() => {
     if (!uploadId) return;
@@ -69,16 +84,10 @@ export function UploadPage() {
             name: p.name,
             path: p.path,
             mode: "local",
+            similarity: null,
+            status: "pending",
+            userDecision: "create_new",
           })),
-        );
-        setProjectSimilarityActions(
-          (data.projects || []).reduce(
-            (acc: Record<string, SimilarityAction>, p: { path: string }) => {
-              acc[p.path] = similarityAction;
-              return acc;
-            },
-            {},
-          ),
         );
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Failed to load projects");
@@ -94,6 +103,7 @@ export function UploadPage() {
     setUploadError(null);
     setRunResult(null);
     setRunError(null);
+    setHasRunAnalysis(false);
     try {
       const result = await uploadZipFile(file);
       setUploadedFileName(file.name);
@@ -141,8 +151,6 @@ export function UploadPage() {
     setUploadedFileName(null);
     setUploadError(null);
     setDefaultMode("local");
-    setSimilarityAction("create_new");
-    setProjectSimilarityActions({});
     setProjects([]);
     setRunResult(null);
     setRunError(null);
@@ -150,6 +158,8 @@ export function UploadPage() {
     setAiConsentAccepted(false);
     setShowAiConsentModal(false);
     setPendingAiSelection(null);
+    setSimilarityModalData(null);
+    setHasRunAnalysis(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -204,38 +214,115 @@ export function UploadPage() {
     setShowAiConsentModal(false);
   };
 
-  const handleSimilarityActionChange = (action: SimilarityAction) => {
-    setSimilarityAction(action);
-    setProjectSimilarityActions((prev) => {
-      const next = { ...prev };
-      projects.forEach((project) => {
-        next[project.path] = action;
-      });
-      return next;
-    });
+  const handleSimilarityDecision = (decision: "create_new" | "update_existing") => {
+    if (!similarityModalData) return;
+
+    setProjects((prev) =>
+      prev.map((p, idx) =>
+        idx === similarityModalData.projectIndex
+          ? { ...p, userDecision: decision, status: "ready" }
+          : p
+      )
+    );
+
+    setSimilarityModalData(null);
+    processNextProject(similarityModalData.projectIndex + 1);
   };
 
-  const handleProjectSimilarityActionChange = (
-    projectPath: string,
-    action: SimilarityAction,
-  ) => {
-    setProjectSimilarityActions((prev) => ({
-      ...prev,
-      [projectPath]: action,
-    }));
+  const processNextProject = async (startIndex: number) => {
+    for (let i = startIndex; i < projects.length; i++) {
+      const project = projects[i];
+      
+      if (project.status !== "pending") continue;
+
+      setProjects((prev) =>
+        prev.map((p, idx) => (idx === i ? { ...p, status: "scanning" } : p))
+      );
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project_path: project.path }),
+          }
+        );
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || "Scan failed");
+
+        // Handle exact match (100%) - auto-skip
+        if (data.exact_match) {
+          setProjects((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? { 
+                    ...p, 
+                    similarity: data.similarity, 
+                    fileCount: data.file_count,
+                    status: "ready",
+                    userDecision: "skip"
+                  }
+                : p
+            )
+          );
+          // Continue to next project without showing modal
+          continue;
+        }
+
+        // Handle similarity detected (show modal)
+        if (data.similarity) {
+          setProjects((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? { ...p, similarity: data.similarity, fileCount: data.file_count, status: "similarity_detected" }
+                : p
+            )
+          );
+
+          setSimilarityModalData({
+            projectName: project.name,
+            projectPath: project.path,
+            projectIndex: i,
+            similarity: data.similarity,
+          });
+          return;
+        } else {
+          // No similarity - proceed
+          setProjects((prev) =>
+            prev.map((p, idx) =>
+              idx === i ? { ...p, fileCount: data.file_count, status: "ready", userDecision: "create_new" } : p
+            )
+          );
+        }
+      } catch (err) {
+        console.error(`Scan failed for ${project.name}:`, err);
+        setProjects((prev) =>
+          prev.map((p, idx) =>
+            idx === i ? { ...p, status: "ready", userDecision: "create_new" } : p
+          )
+        );
+      }
+    }
+
+    runActualAnalysis();
   };
 
-  const handleRunAnalysis = async () => {
+  const runActualAnalysis = async () => {
     if (!uploadId) return;
 
     const project_analysis_types: Record<string, string> = {};
+    const project_similarity_actions: Record<string, string> = {};
+
     projects.forEach((p) => {
-      project_analysis_types[p.path] = p.mode;
+      // Only include projects that should be analyzed (not skipped)
+      if (p.userDecision !== "skip") {
+        project_analysis_types[p.path] = p.mode;
+        project_similarity_actions[p.path] = p.userDecision || "create_new";
+      }
     });
 
-    setRunning(true);
-    setRunResult(null);
-    setRunError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
         method: "POST",
@@ -244,39 +331,47 @@ export function UploadPage() {
           upload_id: uploadId,
           default_analysis_type: defaultMode,
           project_analysis_types,
-          similarity_action: similarityAction,
-          project_similarity_actions: projectSimilarityActions,
+          similarity_action: "create_new",
+          project_similarity_actions,
           cleanup_zip: true,
           cleanup_extracted: true,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed");
+      
+      const skippedCount = projects.filter(p => p.userDecision === "skip").length;
+      
       setRunResult({
         analyzed_projects: data.analyzed_projects ?? 0,
-        skipped_projects: data.skipped_projects ?? 0,
+        skipped_projects: (data.skipped_projects ?? 0) + skippedCount,
         failed_projects: data.failed_projects ?? 0,
       });
-      setUploadId(null);
-      setUploadedFileName(null);
-      setProjects([]);
-      setProjectSimilarityActions({});
-      setDefaultMode("local");
-      setSimilarityAction("create_new");
-      setLoadError(null);
-      setAiConsentAccepted(false);
-      setShowAiConsentModal(false);
-      setPendingAiSelection(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      // Keep the projects table visible with all similarity info
+      setRunning(false);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
-    } finally {
       setRunning(false);
     }
   };
 
+  const handleRunAnalysis = async () => {
+    if (!uploadId) return;
+
+    setRunning(true);
+    setRunResult(null);
+    setRunError(null);
+    setHasRunAnalysis(true);
+
+    setProjects((prev) =>
+      prev.map((p) => ({ ...p, status: "pending" as const, similarity: null }))
+    );
+
+    processNextProject(0);
+  };
+
   const hasUpload = !!uploadId;
-  const analysisDisabled = !hasUpload || loadingProjects || running;
+  const analysisDisabled = !hasUpload || loadingProjects || running || hasRunAnalysis;
   const isAiSelected =
     defaultMode === "ai" || projects.some((project) => project.mode === "ai");
 
@@ -300,7 +395,9 @@ export function UploadPage() {
         <header className="upload-header">
           <h1 className="upload-title">Upload & Run Analysis</h1>
           <p className="upload-subtitle">
-            Upload a ZIP, review detected projects, set analysis mode, and run everything from this page.
+            {runResult 
+              ? "Analysis complete! Review the results below or upload another ZIP."
+              : "Upload a ZIP, configure analysis settings, and run. Similarity detection happens automatically during analysis."}
           </p>
         </header>
 
@@ -378,52 +475,21 @@ export function UploadPage() {
         <div className="ar-container upload-analysis-container">
           <div className="ar-card">
             <h2 className="ar-section-title">Settings</h2>
-            <div className="ar-settings-row">
-              <div className="ar-field">
-                <label className="ar-label" htmlFor="defaultMode">Default Analysis Type</label>
-                <select
-                  id="defaultMode"
-                  className="ar-select"
-                  value={defaultMode}
-                  onChange={(e) => handleDefaultModeChange(e.target.value as "local" | "ai")}
-                  disabled={analysisDisabled}
-                >
-                  <option value="local">Local (rule-based)</option>
-                  <option value="ai">AI (language model)</option>
-                </select>
-              </div>
-
-              <div className="ar-field">
-                <div className="upload-label-row">
-                  <label className="ar-label" htmlFor="similarityAction">Similarity Action</label>
-                  <span className="upload-help-wrap">
-                    <button
-                      type="button"
-                      className="upload-help-trigger"
-                      aria-label="Similarity action help"
-                    >
-                      ?
-                    </button>
-                    <span className="upload-help-tooltip" role="tooltip">
-                      Update existing: if similarity is 70%+, update the matching project.
-                      Create new: keep separate entries when similar. If an exact same project
-                      (100% match) was already analyzed before, it is skipped instead of added again.
-                    </span>
-                  </span>
-                </div>
-                <select
-                  id="similarityAction"
-                  className="ar-select"
-                  value={similarityAction}
-                  onChange={(e) =>
-                    handleSimilarityActionChange(e.target.value as SimilarityAction)
-                  }
-                  disabled={analysisDisabled}
-                >
-                  <option value="create_new">Create new</option>
-                  <option value="update_existing">Update existing</option>
-                </select>
-              </div>
+            <div className="ar-field">
+              <label className="ar-label" htmlFor="defaultMode">Default Analysis Type</label>
+              <select
+                id="defaultMode"
+                className="ar-select"
+                value={defaultMode}
+                onChange={(e) => handleDefaultModeChange(e.target.value as "local" | "ai")}
+                disabled={analysisDisabled}
+              >
+                <option value="local">Local (rule-based)</option>
+                <option value="ai">AI (language model)</option>
+              </select>
+              <p className="ar-field-hint">
+                Choose the default analysis method. You can override this per project below.
+              </p>
             </div>
 
             {isAiSelected && (
@@ -452,48 +518,115 @@ export function UploadPage() {
               <table className="ar-table">
                 <thead>
                   <tr>
+                    <th>Status</th>
                     <th>Project Name</th>
+                    <th>Files</th>
+                    <th>Similarity Score</th>
+                    <th>Matched Project</th>
                     <th>Analysis Type</th>
-                    <th>Similarity Action</th>
+                    <th>Decision</th>
                   </tr>
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="ar-table-empty">No projects found.</td>
+                      <td colSpan={7} className="ar-table-empty">No projects found.</td>
                     </tr>
                   ) : (
                     projects.map((project, index) => (
-                      <tr key={project.name}>
+                      <tr 
+                        key={project.name} 
+                        className={project.status === "similarity_detected" ? "ar-table-row--similarity" : ""}
+                      >
+                        <td style={{ textAlign: "center" }}>
+                          {project.status === "pending" && (
+                            <span className="project-status project-status--pending" title="Pending analysis">⏳</span>
+                          )}
+                          {project.status === "scanning" && (
+                            <span className="project-status project-status--scanning analyzing-spinner" title="Scanning for similarity">⟳</span>
+                          )}
+                          {(project.status === "similarity_detected" || project.status === "ready") && project.similarity && (
+                            <button
+                              type="button"
+                              className="similarity-indicator-btn"
+                              onClick={() => {
+                                if (project.similarity && !hasRunAnalysis) {
+                                  setSimilarityModalData({
+                                    projectName: project.name,
+                                    projectPath: project.path,
+                                    projectIndex: index,
+                                    similarity: project.similarity,
+                                    existingDecision: project.userDecision as "create_new" | "update_existing" | undefined,
+                                  });
+                                }
+                              }}
+                              title={hasRunAnalysis ? "Analysis complete - cannot change decision" : `Click to view/change decision for: ${project.similarity.matched_project_name}`}
+                              disabled={hasRunAnalysis}
+                            >
+                              <SimilarityIndicator
+                                similarity={project.similarity}
+                                projectName={project.name}
+                              />
+                            </button>
+                          )}
+                          {project.status === "ready" && !project.similarity && (
+                            <SimilarityIndicator similarity={null} projectName={project.name} />
+                          )}
+                        </td>
                         <td className="ar-table-name">{project.name}</td>
+                        <td className="ar-table-files" style={{ textAlign: "center" }}>
+                          {project.status === "scanning" ? "..." : (project.fileCount ?? "—")}
+                        </td>
+                        <td className="ar-table-similarity" style={{ textAlign: "center" }}>
+                          {project.similarity ? (
+                            <span className={project.similarity.jaccard_similarity >= 70 ? "similarity-high" : project.similarity.jaccard_similarity >= 30 ? "similarity-medium" : "similarity-low"}>
+                              {project.similarity.jaccard_similarity.toFixed(1)}%
+                            </span>
+                          ) : (
+                            <span className="similarity-none">—</span>
+                          )}
+                        </td>
+                        <td className="ar-table-matched">
+                          {project.similarity ? (
+                            <span className="matched-project-name">{project.similarity.matched_project_name}</span>
+                          ) : (
+                            <span className="similarity-none">—</span>
+                          )}
+                        </td>
                         <td>
                           <select
                             className="ar-select ar-select--inline"
                             value={project.mode}
                             onChange={(e) => handleProjectModeChange(index, e.target.value)}
                             aria-label={`Analysis type for ${project.name}`}
-                            disabled={analysisDisabled}
+                            disabled={analysisDisabled || running}
                           >
                             <option value="local">Local</option>
                             <option value="ai">AI</option>
                           </select>
                         </td>
                         <td>
-                          <select
-                            className="ar-select ar-select--inline"
-                            value={projectSimilarityActions[project.path] ?? similarityAction}
-                            onChange={(e) =>
-                              handleProjectSimilarityActionChange(
-                                project.path,
-                                e.target.value as SimilarityAction,
-                              )
-                            }
-                            aria-label={`Similarity action for ${project.name}`}
-                            disabled={analysisDisabled}
-                          >
-                            <option value="create_new">Create new</option>
-                            <option value="update_existing">Update existing</option>
-                          </select>
+                          {project.userDecision === "skip" ? (
+                            <span className="ar-table-decision ar-table-decision--skip">⏭️ Skip (100% match)</span>
+                          ) : project.status === "similarity_detected" && !hasRunAnalysis ? (
+                            <span className="ar-table-decision ar-table-decision--pending" onClick={() => {
+                              if (project.similarity) {
+                                setSimilarityModalData({
+                                  projectName: project.name,
+                                  projectPath: project.path,
+                                  projectIndex: index,
+                                  similarity: project.similarity,
+                                  existingDecision: project.userDecision as "create_new" | "update_existing" | undefined,
+                                });
+                              }
+                            }} style={{ cursor: "pointer", color: "#f59e0b", fontWeight: 600 }}>
+                              ⚠️ Similar to "{project.similarity?.matched_project_name}" - Click to decide
+                            </span>
+                          ) : project.userDecision === "update_existing" && project.similarity ? (
+                            <span className="ar-table-decision ar-table-decision--update">↻ Update "{project.similarity.matched_project_name}"</span>
+                          ) : project.userDecision === "create_new" ? (
+                            <span className="ar-table-decision">+ New project</span>
+                          ) : null}
                         </td>
                       </tr>
                     ))
@@ -505,18 +638,19 @@ export function UploadPage() {
 
           <div className="ar-actions">
             <button
-              className="ar-btn ar-btn--primary"
+              className={`ar-btn ar-btn--primary ${hasRunAnalysis ? "ar-btn--disabled" : ""}`}
               onClick={handleRunAnalysis}
               disabled={analysisDisabled || projects.length === 0}
+              title={hasRunAnalysis ? "Analysis already run. Upload another ZIP or clear to run again." : ""}
             >
-              {running ? "Running…" : "Run Analysis"}
+              {running ? "Running…" : hasRunAnalysis ? "Analysis Complete" : "Run Analysis"}
             </button>
           </div>
 
           {runResult && (
             <div className="ar-result ar-result--success">
               <div className="ar-result-main">
-                <strong>Analysis complete</strong>
+                <strong>Analysis complete!</strong>
                 <span className="ar-result-stats">
                   <span className="ar-stat ar-stat--ok">
                     {runResult.analyzed_projects} analyzed
@@ -534,7 +668,7 @@ export function UploadPage() {
                 className="ar-btn ar-btn--primary ar-result-insights-btn"
                 onClick={() => navigate("/hubpage")}
               >
-                View insights
+                View Insights
               </button>
             </div>
           )}
@@ -560,6 +694,66 @@ export function UploadPage() {
                 </button>
                 <button type="button" className="upload-select-btn" onClick={handleAcceptAiConsent}>
                   I understand, continue with AI
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {similarityModalData && (
+          <div className="upload-consent-overlay" role="dialog" aria-modal="true" aria-label="Similarity detected">
+            <div className="upload-consent-modal upload-similarity-modal">
+              <h3 className="upload-consent-title">⚠️ Similar Project Detected</h3>
+              <p className="upload-similarity-project-name">
+                <strong>{similarityModalData.projectName}</strong> is similar to an existing project:
+              </p>
+              <div className="upload-similarity-match">
+                <strong>"{similarityModalData.similarity.matched_project_name}"</strong>
+              </div>
+              <div className="upload-similarity-metrics">
+                <div className="upload-similarity-metric">
+                  <span className="upload-similarity-metric-label">Jaccard Similarity:</span>
+                  <span className="upload-similarity-metric-value">
+                    {similarityModalData.similarity.jaccard_similarity.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="upload-similarity-metric">
+                  <span className="upload-similarity-metric-label">Containment Ratio:</span>
+                  <span className="upload-similarity-metric-value">
+                    {similarityModalData.similarity.containment_ratio.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="upload-similarity-metric">
+                  <span className="upload-similarity-metric-label">Match Reason:</span>
+                  <span className="upload-similarity-metric-value">
+                    {similarityModalData.similarity.match_reason}
+                  </span>
+                </div>
+              </div>
+              {similarityModalData.existingDecision ? (
+                <>
+                  <p className="upload-similarity-current-decision">
+                    Current decision: <strong>{similarityModalData.existingDecision === "create_new" ? "Create New Project" : `Update "${similarityModalData.similarity.matched_project_name}"`}</strong>
+                  </p>
+                  <p className="upload-similarity-question">Change to a different option?</p>
+                </>
+              ) : (
+                <p className="upload-similarity-question">What would you like to do?</p>
+              )}
+              <div className="upload-consent-actions">
+                <button
+                  type="button"
+                  className={`upload-clear-btn ${similarityModalData.existingDecision === "create_new" ? "btn--selected" : ""}`}
+                  onClick={() => handleSimilarityDecision("create_new")}
+                >
+                  Create New Project
+                </button>
+                <button
+                  type="button"
+                  className={`upload-select-btn ${similarityModalData.existingDecision === "update_existing" ? "btn--selected" : ""}`}
+                  onClick={() => handleSimilarityDecision("update_existing")}
+                >
+                  Update "{similarityModalData.similarity.matched_project_name}"
                 </button>
               </div>
             </div>

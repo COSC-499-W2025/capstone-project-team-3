@@ -128,6 +128,20 @@ CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     UNIQUE (resume_id, project_id)
 );
 
+-- Cover letter  --
+CREATE TABLE IF NOT EXISTS COVER_LETTER (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    job_title TEXT NOT NULL,
+    company TEXT NOT NULL,
+    job_description TEXT NOT NULL,
+    motivations JSON,           -- JSON array of motivation keys
+    content TEXT NOT NULL,      -- the generated plain-text letter body
+    generation_mode TEXT NOT NULL CHECK (generation_mode IN ('ai', 'local')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
 """
 
 # --- DB Setup Functions ---
@@ -158,6 +172,7 @@ def init_db():
     _ensure_user_preferences_profile_picture_column(cursor)
     _ensure_project_score_constraint(cursor)
     _ensure_resume_project_has_no_project_fk(cursor)
+    _ensure_cover_letter_table(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
@@ -308,6 +323,25 @@ def _ensure_resume_project_has_no_project_fk(cursor: sqlite3.Cursor) -> None:
         ALTER TABLE RESUME_PROJECT_NEW RENAME TO RESUME_PROJECT;
         """
     )
+
+def _ensure_cover_letter_table(cursor: sqlite3.Cursor) -> None:
+    """Ensure COVER_LETTER table exists on existing DBs (created before this feature)."""
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='COVER_LETTER'")
+    if cursor.fetchone() is None:
+        cursor.execute("""
+            CREATE TABLE COVER_LETTER (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                resume_id INTEGER NOT NULL,
+                job_title TEXT NOT NULL,
+                company TEXT NOT NULL,
+                job_description TEXT NOT NULL,
+                motivations JSON,
+                content TEXT NOT NULL,
+                generation_mode TEXT NOT NULL CHECK (generation_mode IN ('ai', 'local')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+            )
+        """)
 
 def seed_db():
     """Insert test/seed data aligned with new schema."""

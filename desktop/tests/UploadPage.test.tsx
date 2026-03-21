@@ -76,11 +76,11 @@ describe("UploadPage", () => {
     expect(await screen.findByText("project.zip")).toBeInTheDocument();
     expect(await screen.findByText("proj-a")).toBeInTheDocument();
 
-    const similaritySelect = screen.getByLabelText(
-      /Similarity action for proj-a/i,
+    const analysisTypeSelect = screen.getByLabelText(
+      /Analysis type for proj-a/i,
     ) as HTMLSelectElement;
-    expect(similaritySelect).toBeInTheDocument();
-    expect(similaritySelect.value).toBe("create_new");
+    expect(analysisTypeSelect).toBeInTheDocument();
+    expect(analysisTypeSelect.value).toBe("local");
   });
 
   test("selecting AI prompts consent modal and applies AI after acceptance", async () => {
@@ -132,6 +132,14 @@ describe("UploadPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          file_count: 5,
+          similarity: null,
+          exact_match: false,
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
           analyzed_projects: 1,
           skipped_projects: 0,
           failed_projects: 0,
@@ -151,10 +159,8 @@ describe("UploadPage", () => {
     await screen.findByText("proj-a");
     fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
 
-    expect(await screen.findByText(/Analysis complete/i)).toBeInTheDocument();
-    expect(screen.getByText(/No file selected/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Upload a ZIP to load projects for configuration/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/1 analyzed/i)).toBeInTheDocument();
+    expect(screen.getByText("project.zip")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Analysis Complete/i })).toBeDisabled();
   });
 });

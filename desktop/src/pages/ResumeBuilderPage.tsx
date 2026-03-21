@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Resume, Skills, Project, Award, WorkExperience } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
@@ -10,6 +10,8 @@ import {
   getResumeById,
   previewResume,
   deleteResume,
+  duplicateResume,
+  renameResume,
   deleteProjectFromResume,
   addProjectsToResume,
   downloadResumePDF,
@@ -49,6 +51,7 @@ export function ResumeBuilderPage() {
   const [addProjectModalLoading, setAddProjectModalLoading] = useState(false);
   const [addProjectModalSubmitting, setAddProjectModalSubmitting] = useState(false);
   const [addProjectModalError, setAddProjectModalError] = useState<string | null>(null);
+  const openEditAfterContentLoad = useRef(false);
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -146,9 +149,32 @@ export function ResumeBuilderPage() {
     }
   }, [baseResumeList, activeIndex, isPreviewMode]);
 
+  useEffect(() => {
+    if (!openEditAfterContentLoad.current || !activeContent || isPreviewMode) return;
+    const selected = baseResumeList[activeIndex];
+    if (!selected || selected.is_master || selected.id === 1) {
+      openEditAfterContentLoad.current = false;
+      return;
+    }
+    setIsEditing(true);
+    setEditedSections(new Set());
+    openEditAfterContentLoad.current = false;
+  }, [activeContent, activeIndex, baseResumeList, isPreviewMode]);
+
   const handleEditResume = () => {
     setIsEditing(true);
     setEditedSections(new Set()); // Clear edited sections when entering edit mode
+  };
+
+  const handleEditResumeAt = (index: number) => {
+    const row = resumeList[index];
+    if (!row || row.is_master || row.id == null || row.id === 1) return;
+    if (!isPreviewMode && index === activeIndex && activeContent) {
+      handleEditResume();
+      return;
+    }
+    openEditAfterContentLoad.current = true;
+    handleSelectResume(index);
   };
 
   const hasAwards =
@@ -206,6 +232,43 @@ export function ResumeBuilderPage() {
       }
       // Normal selection when not in preview mode
       setActiveIndex(index);
+    }
+  };
+
+  const handleDuplicateResume = async (resumeId: number) => {
+    try {
+      const { resume_id } = await duplicateResume(resumeId);
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+      const newIndex = updatedList.findIndex((r) => r.id === resume_id);
+      if (newIndex >= 0) {
+        setIsEditing(false);
+        setEditedSections(new Set());
+        if (isPreviewMode) {
+          navigate("/resumebuilderpage", { replace: true });
+        }
+        setActiveIndex(newIndex);
+      }
+    } catch (error) {
+      console.error("Failed to duplicate resume:", error);
+      alert(error instanceof Error ? error.message : "Failed to duplicate resume.");
+    }
+  };
+
+  const handleRenameResume = async (resumeId: number, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      alert("Name cannot be empty.");
+      throw new Error("Name cannot be empty.");
+    }
+    try {
+      await renameResume(resumeId, trimmed);
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+    } catch (error) {
+      console.error("Failed to rename resume:", error);
+      alert(error instanceof Error ? error.message : "Failed to rename resume.");
+      throw error;
     }
   };
 
@@ -601,9 +664,11 @@ export function ResumeBuilderPage() {
             onTailorNew={() => navigate('/projectselectionpage')}
             onSelect={handleSelectResume}
             onDelete={handleDeleteResume}
+            onDuplicateResume={handleDuplicateResume}
+            onRenameResume={handleRenameResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
-            onEdit={handleEditResume}
+            onEditResume={handleEditResumeAt}
             hasProjects={hasProjects}
           />
         </div>

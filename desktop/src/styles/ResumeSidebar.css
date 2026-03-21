@@ -135,6 +135,25 @@
   text-overflow: ellipsis;
 }
 
+.resume-sidebar__item-rename-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--color-navy);
+  padding: 2px 6px;
+  border: 1px solid rgba(10, 30, 61, 0.35);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.resume-sidebar__item-rename-input:focus {
+  outline: none;
+  border-color: var(--color-navy, #0a1e3d);
+  box-shadow: 0 0 0 2px rgba(10, 30, 61, 0.15);
+}
+
 .resume-sidebar__actions {
   display: flex;
   align-items: center;
@@ -189,7 +208,9 @@
   background: transparent;
   border: none;
   cursor: pointer;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
+  color: var(--color-navy);
   white-space: nowrap;
 }
 

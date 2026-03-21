@@ -7,17 +7,34 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.client.llm_client import GeminiLLMClient
-from app.cli.git_code_parsing import _get_preferred_author_email, run_git_parsing_from_files
+from app.cli.git_code_parsing import (
+    _get_preferred_author_email,
+    run_git_parsing_from_files,
+)
 from app.utils.analysis_merger_utils import merge_analysis_results
-from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
+from app.utils.code_analysis.code_analysis_utils import (
+    analyze_github_project,
+    analyze_parsed_project,
+)
 from app.utils.env_utils import check_gemini_api_key
 from app.utils.non_code_analysis.non_3rd_party_analysis import analyze_project_clean
 from app.utils.non_code_analysis.non_code_analysis_utils import analyze_non_code_files
-from app.utils.non_code_analysis.non_code_file_checker import classify_non_code_files_with_user_verification
+from app.utils.non_code_analysis.non_code_file_checker import (
+    classify_non_code_files_with_user_verification,
+)
 from app.utils.code_analysis.parse_code_utils import parse_code_flow
 from app.utils.non_code_parsing.document_parser import parsed_input_text
-from app.utils.project_extractor import extract_and_list_projects, get_project_top_level_dirs
-from app.utils.scan_utils import run_scan_flow
+from app.utils.project_extractor import (
+    extract_and_list_projects,
+    get_project_top_level_dirs,
+)
+from app.utils.scan_utils import (
+    run_scan_flow,
+    scan_project_files,
+    extract_file_signature,
+    get_project_signature,
+    find_similar_project,
+)
 from app.utils.git_utils import detect_git
 from app.utils.clean_up import cleanup_upload
 from app.data.db import get_connection
@@ -25,7 +42,9 @@ from app.data.db import get_connection
 router = APIRouter()
 
 
-def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any]]) -> None:
+def _persist_git_history(
+    project_signature: str, git_commits: List[Dict[str, Any]]
+) -> None:
     """Replace stored git history only when there is valid parsed commit data."""
     if not project_signature:
         return
@@ -33,7 +52,9 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
     valid_commits: List[Dict[str, str]] = []
     for commit in git_commits:
         commit_hash = commit.get("hash") or commit.get("commit_hash")
-        commit_date = commit.get("authored_datetime") or commit.get("committed_datetime")
+        commit_date = commit.get("authored_datetime") or commit.get(
+            "committed_datetime"
+        )
         if not commit_hash or not commit_date:
             continue
         valid_commits.append(
@@ -42,7 +63,9 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
                 "commit_date": str(commit_date),
                 "author_name": str(commit.get("author_name") or ""),
                 "author_email": str(commit.get("author_email") or ""),
-                "message": str(commit.get("message_summary") or commit.get("message") or ""),
+                "message": str(
+                    commit.get("message_summary") or commit.get("message") or ""
+                ),
             }
         )
 
@@ -52,7 +75,9 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
     conn = get_connection()
     cur = conn.cursor()
     try:
-        cur.execute("DELETE FROM GIT_HISTORY WHERE project_id = ?", (project_signature,))
+        cur.execute(
+            "DELETE FROM GIT_HISTORY WHERE project_id = ?", (project_signature,)
+        )
 
         for commit in valid_commits:
             cur.execute(
@@ -79,9 +104,13 @@ def _persist_git_history(project_signature: str, git_commits: List[Dict[str, Any
 class AnalyzeUploadRequest(BaseModel):
     upload_id: str = Field(..., min_length=1)
     default_analysis_type: Literal["local", "ai"] = "local"
-    project_analysis_types: Dict[str, Literal["local", "ai"]] = Field(default_factory=dict)
+    project_analysis_types: Dict[str, Literal["local", "ai"]] = Field(
+        default_factory=dict
+    )
     similarity_action: Literal["create_new", "update_existing"] = "create_new"
-    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]] = Field(default_factory=dict)
+    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]] = (
+        Field(default_factory=dict)
+    )
     cleanup_zip: bool = True
     cleanup_extracted: bool = True
     scan_only: bool = False
@@ -102,11 +131,16 @@ def _load_projects_from_upload(upload_id: str) -> Dict[str, Any]:
     zip_path = os.path.join(upload_dir, f"{upload_id}.zip")
 
     if not os.path.exists(zip_path):
-        raise HTTPException(status_code=404, detail="Upload not found for provided upload_id")
+        raise HTTPException(
+            status_code=404, detail="Upload not found for provided upload_id"
+        )
 
     extract_result = extract_and_list_projects(zip_path)
     if extract_result.get("status") != "ok":
-        raise HTTPException(status_code=400, detail=extract_result.get("reason", "Failed to extract uploaded zip"))
+        raise HTTPException(
+            status_code=400,
+            detail=extract_result.get("reason", "Failed to extract uploaded zip"),
+        )
 
     project_paths = extract_result.get("projects", [])
     if not project_paths:
@@ -173,7 +207,9 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
         similarity_decision = requested_similarity_action == "update_existing"
 
         try:
-            scan_result = run_scan_flow(project_path, similarity_decision=similarity_decision)
+            scan_result = run_scan_flow(
+                project_path, similarity_decision=similarity_decision
+            )
         except Exception as exc:
             results.append(
                 ProjectAnalysisResult(
@@ -220,7 +256,9 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
         top_level_dirs = get_project_top_level_dirs(project_path)
 
         username, email = _get_preferred_author_email()
-        non_code_result = classify_non_code_files_with_user_verification(project_path, email, username)
+        non_code_result = classify_non_code_files_with_user_verification(
+            project_path, email, username
+        )
 
         try:
             parsed_non_code = parsed_input_text(
@@ -245,7 +283,9 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                     include_merges=False,
                     max_commits=None,
                 )
-                parsed_history = json.loads(code_git_history_json) if code_git_history_json else []
+                parsed_history = (
+                    json.loads(code_git_history_json) if code_git_history_json else []
+                )
                 if isinstance(parsed_history, list):
                     git_commits = parsed_history
                     try:
@@ -267,20 +307,28 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
         try:
             if effective_analysis_type == "ai":
                 try:
-                    non_code_analysis_results = analyze_non_code_files(parsed_non_code=parsed_non_code)
+                    non_code_analysis_results = analyze_non_code_files(
+                        parsed_non_code=parsed_non_code
+                    )
                 except Exception:
                     non_code_analysis_results = analyze_project_clean(parsed_non_code)
 
                 try:
                     if is_git_repo:
-                        code_analysis_results = analyze_github_project(git_commits, llm_client)
+                        code_analysis_results = analyze_github_project(
+                            git_commits, llm_client
+                        )
                     else:
-                        code_analysis_results = analyze_parsed_project(parsed_code_files, llm_client)
+                        code_analysis_results = analyze_parsed_project(
+                            parsed_code_files, llm_client
+                        )
                 except Exception:
                     if is_git_repo:
                         code_analysis_results = analyze_github_project(git_commits)
                     else:
-                        code_analysis_results = analyze_parsed_project(parsed_code_files)
+                        code_analysis_results = analyze_parsed_project(
+                            parsed_code_files
+                        )
             else:
                 try:
                     non_code_analysis_results = analyze_project_clean(parsed_non_code)
@@ -377,4 +425,89 @@ def list_upload_projects(upload_id: str) -> Dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list uploaded projects: {exc}",
+        )
+
+
+class ScanProjectRequest(BaseModel):
+    project_path: str = Field(..., min_length=1)
+
+
+@router.post("/analysis/uploads/{upload_id}/scan-project")
+def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str, Any]:
+    """Scan a single project and return similarity info WITHOUT storing in DB."""
+    try:
+        project_path = payload.project_path
+        project_name = Path(project_path).name
+
+        files = scan_project_files(project_path)
+        if not files:
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": 0,
+                "similarity": None,
+                "reason": "no_files",
+            }
+
+        file_signatures = [extract_file_signature(f, project_path) for f in files]
+        project_signature = get_project_signature(file_signatures)
+        file_count = len(files)
+
+        # Check if exact match (100%)
+        from app.utils.scan_utils import project_signature_exists
+
+        if project_signature_exists(project_signature):
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": file_count,
+                "exact_match": True,
+                "similarity": {
+                    "jaccard_similarity": 100.0,
+                    "containment_ratio": 100.0,
+                    "matched_project_name": project_name,
+                    "match_reason": "Exact match (100%)",
+                },
+                "reason": "exact_match",
+            }
+
+        # Check for similar projects
+        match_info = find_similar_project(
+            current_signatures=file_signatures,
+            new_project_sig=project_signature,
+            file_count=file_count,
+        )
+
+        if match_info:
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": file_count,
+                "similarity": {
+                    "jaccard_similarity": match_info["similarity_percentage"],
+                    "containment_ratio": match_info["containment_percentage"],
+                    "matched_project_name": match_info["project_name"],
+                    "match_reason": match_info["match_reason"],
+                },
+            }
+        else:
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": file_count,
+                "similarity": None,
+                "reason": "no_match",
+            }
+
+    except Exception as exc:
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to scan project: {exc}",
         )

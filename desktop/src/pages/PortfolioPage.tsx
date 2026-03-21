@@ -1618,6 +1618,11 @@ const PortfolioPage: React.FC = () => {
           el.classList.remove("editable-field");
         });
 
+      // Remove thumbnail upload buttons from exported HTML
+      mainClone
+        .querySelectorAll(".thumbnail-button-section")
+        .forEach((el) => el.remove());
+
       // Inline thumbnails as data URLs for offline export
       const thumbnailImages = Array.from(
         mainClone.querySelectorAll("img.project-thumbnail"),

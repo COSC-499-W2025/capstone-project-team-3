@@ -997,6 +997,44 @@ const NODE_COLORS = [
   "#eab308", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6",
 ];
 
+/* Theme palettes for canvas rendering */
+const GRAPH_THEMES = {
+  dark: {
+    primaryGrad0: "#334155",
+    primaryGrad1: "#0f172a",
+    primaryLabel: "#fff",
+    primaryLabelDim: "rgba(255,255,255,0.4)",
+    labelBg: "rgba(30,41,59,0.7)",
+    labelBgDim: "rgba(30,41,59,0.3)",
+    labelText: "#e2e8f0",
+    labelTextDim: "rgba(255,255,255,0.3)",
+    badgeBg: (a: number) => `rgba(30,41,59,${a})`,
+    badgeStroke: (hi: boolean) => hi ? "rgba(99,102,241,0.6)" : "rgba(99,102,241,0.2)",
+    badgeText: (hi: boolean) => hi ? "#fff" : "rgba(255,255,255,0.7)",
+    gloss: "rgba(255,255,255,0.13)",
+    commitBadge: "rgba(255,255,255,0.9)",
+    ringHighlight: "#fff",
+  },
+  light: {
+    primaryGrad0: "#e2e8f0",
+    primaryGrad1: "#94a3b8",
+    primaryLabel: "#1e293b",
+    primaryLabelDim: "rgba(30,41,59,0.35)",
+    labelBg: "rgba(255,255,255,0.85)",
+    labelBgDim: "rgba(255,255,255,0.4)",
+    labelText: "#334155",
+    labelTextDim: "rgba(51,65,85,0.35)",
+    badgeBg: (a: number) => `rgba(255,255,255,${a})`,
+    badgeStroke: (hi: boolean) => hi ? "rgba(99,102,241,0.7)" : "rgba(99,102,241,0.25)",
+    badgeText: (hi: boolean) => hi ? "#1e293b" : "rgba(30,41,59,0.6)",
+    gloss: "rgba(255,255,255,0.25)",
+    commitBadge: "#1e293b",
+    ringHighlight: "#1e293b",
+  },
+} as const;
+
+type GraphThemeMode = keyof typeof GRAPH_THEMES;
+
 function CollaborationNetwork({
   network,
 }: {
@@ -1017,13 +1055,23 @@ function CollaborationNetwork({
   const hoveredRef = useRef<NetworkNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<NetworkNode | null>(null);
   const sizeRef = useRef({ w: 800, h: 480 });
+  const scaleRef = useRef(1);
+
+  /* ---- Theme toggle ---- */
+  const [graphTheme, setGraphTheme] = useState<GraphThemeMode>("dark");
+  const themeRef = useRef<GraphThemeMode>("dark");
+  useEffect(() => { themeRef.current = graphTheme; }, [graphTheme]);
 
   /* ---- Helpers ---- */
-  const nodeRadius = (n: NetworkNode) =>
-    n.is_primary ? 28 : 12 + Math.min(n.commits, 80) * 0.15;
+  const nodeRadius = (n: NetworkNode) => {
+    const s = scaleRef.current;
+    return n.is_primary ? 32 * s : (14 + Math.min(n.commits, 80) * 0.18) * s;
+  };
 
   const nodeColor = (n: NetworkNode, i: number) =>
-    n.is_primary ? "#1e293b" : NODE_COLORS[i % NODE_COLORS.length];
+    n.is_primary
+      ? (themeRef.current === "dark" ? "#1e293b" : "#cbd5e1")
+      : NODE_COLORS[i % NODE_COLORS.length];
 
   const hitTest = (mx: number, my: number): NetworkNode | null => {
     for (let i = nodesRef.current.length - 1; i >= 0; i--) {
@@ -1043,7 +1091,7 @@ function CollaborationNetwork({
         const w = Math.floor(entry.contentRect.width);
         if (w > 100) {
           sizeRef.current.w = w;
-          sizeRef.current.h = Math.max(400, Math.min(520, Math.floor(w * 0.52)));
+          sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.55)));
         }
       }
     });
@@ -1052,7 +1100,7 @@ function CollaborationNetwork({
     const w = container.clientWidth;
     if (w > 100) {
       sizeRef.current.w = w;
-      sizeRef.current.h = Math.max(400, Math.min(520, Math.floor(w * 0.52)));
+      sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.55)));
     }
     return () => ro.disconnect();
   }, []);
@@ -1065,8 +1113,12 @@ function CollaborationNetwork({
     const H = sizeRef.current.h;
     const cx = W / 2;
     const cy = H / 2;
-    const scaleFactor = Math.min(W, H) / 480;
-    const repulsion = 4500 * scaleFactor;
+    // Dynamic scale: bigger canvas + fewer nodes → larger visuals
+    const rawDimScale = Math.min(W, H) / 480;
+    const nodeAdj = Math.max(0.8, Math.min(1.5, 8 / Math.max(nds.length, 1)));
+    const sizeScale = Math.max(0.9, Math.min(1.7, rawDimScale * nodeAdj));
+    scaleRef.current = sizeScale;
+    const repulsion = 5200 * sizeScale;
     const attraction = 0.005;
     const centerPull = 0.012;
     const damping = 0.82;
@@ -1094,7 +1146,7 @@ function CollaborationNetwork({
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const idealLen = 140 * scaleFactor;
+      const idealLen = 150 * sizeScale;
       const displacement = dist - idealLen;
       const force = displacement * attraction * (1 + edge.weight * 0.3);
       const fx = (dx / dist) * force;
@@ -1135,8 +1187,11 @@ function CollaborationNetwork({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const th = GRAPH_THEMES[themeRef.current];
+
     const W = sizeRef.current.w;
     const H = sizeRef.current.h;
+    const sc = scaleRef.current;
     const dpr = window.devicePixelRatio || 1;
     if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
       canvas.width = W * dpr;
@@ -1182,15 +1237,15 @@ function CollaborationNetwork({
       const mx = (s.x + t.x) / 2;
       const my = (s.y + t.y) / 2;
       const badgeAlpha = isHighlighted ? 0.92 : 0.6;
-      ctx.fillStyle = `rgba(30,41,59,${badgeAlpha})`;
+      ctx.fillStyle = th.badgeBg(badgeAlpha);
       ctx.beginPath();
-      ctx.arc(mx, my, 9, 0, Math.PI * 2);
+      ctx.arc(mx, my, Math.round(9 * sc), 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = isHighlighted ? "rgba(99,102,241,0.6)" : "rgba(99,102,241,0.2)";
+      ctx.strokeStyle = th.badgeStroke(!!isHighlighted);
       ctx.lineWidth = 1;
       ctx.stroke();
-      ctx.fillStyle = isHighlighted ? "#fff" : "rgba(255,255,255,0.7)";
-      ctx.font = "bold 8px Inter, system-ui, sans-serif";
+      ctx.fillStyle = th.badgeText(!!isHighlighted);
+      ctx.font = `bold ${Math.round(8 * sc)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(String(edge.projects.length), mx, my);
@@ -1216,7 +1271,7 @@ function CollaborationNetwork({
 
       // Glow (hovered, connected, or primary)
       if (isHovered || isConnected || node.is_primary) {
-        const glowStrength = isHovered ? 10 : isConnected ? 8 : 6;
+        const glowStrength = (isHovered ? 10 : isConnected ? 8 : 6) * sc;
         ctx.beginPath();
         ctx.arc(node.x, node.y, r + glowStrength, 0, Math.PI * 2);
         const glow = ctx.createRadialGradient(
@@ -1238,8 +1293,8 @@ function CollaborationNetwork({
         node.x, node.y, r
       );
       if (node.is_primary) {
-        bodyGrad.addColorStop(0, "#334155");
-        bodyGrad.addColorStop(1, "#0f172a");
+        bodyGrad.addColorStop(0, th.primaryGrad0);
+        bodyGrad.addColorStop(1, th.primaryGrad1);
       } else {
         bodyGrad.addColorStop(0, lighten(color, 20));
         bodyGrad.addColorStop(1, color);
@@ -1251,9 +1306,9 @@ function CollaborationNetwork({
       ctx.strokeStyle = dim
         ? hexWithAlpha(color, 0.2)
         : isHovered
-          ? "#fff"
+          ? th.ringHighlight
           : isConnected
-            ? hexWithAlpha("#fff", 0.7)
+            ? hexWithAlpha(th.ringHighlight, 0.7)
             : hexWithAlpha(lighten(color, 30), 0.6);
       ctx.lineWidth = isHovered ? 2.5 : isConnected ? 2.2 : node.is_primary ? 2 : 1.5;
       ctx.stroke();
@@ -1262,37 +1317,51 @@ function CollaborationNetwork({
       if (!dim) {
         ctx.beginPath();
         ctx.arc(node.x - r * 0.2, node.y - r * 0.25, r * 0.45, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.13)";
+        ctx.fillStyle = th.gloss;
         ctx.fill();
       }
 
       // Label
-      const label = node.name.length > 16 ? node.name.slice(0, 15) + "…" : node.name;
-      ctx.font = node.is_primary
-        ? "bold 11px Inter, system-ui, sans-serif"
-        : "500 9px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       if (node.is_primary) {
-        ctx.fillStyle = dim ? "rgba(255,255,255,0.4)" : "#fff";
+        // Auto-shrink label to fit inside the node
+        const maxW = r * 1.7;
+        let fontSize = Math.round(11 * sc);
+        let label = node.name.length > 16 ? node.name.slice(0, 15) + "…" : node.name;
+        ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+        while (ctx.measureText(label).width > maxW && fontSize > Math.max(6, Math.round(7 * sc))) {
+          fontSize--;
+          ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+        }
+        if (ctx.measureText(label).width > maxW) {
+          // Still too wide — truncate more aggressively
+          while (label.length > 3 && ctx.measureText(label + "…").width > maxW) {
+            label = label.slice(0, -1).replace(/…$/, "");
+          }
+          label = label + "…";
+        }
+        ctx.fillStyle = dim ? th.primaryLabelDim : th.primaryLabel;
         ctx.fillText(label, node.x, node.y);
       } else {
-        const labelY = node.y + r + 13;
+        const label = node.name.length > 16 ? node.name.slice(0, 15) + "…" : node.name;
+        ctx.font = `500 ${Math.round(9 * sc)}px Inter, system-ui, sans-serif`;
+        const labelY = node.y + r + Math.round(13 * sc);
         const metrics = ctx.measureText(label);
-        const lw = metrics.width + 8;
-        ctx.fillStyle = dim ? "rgba(30,41,59,0.3)" : "rgba(30,41,59,0.7)";
+        const lw = metrics.width + 8 * sc;
+        ctx.fillStyle = dim ? th.labelBgDim : th.labelBg;
         ctx.beginPath();
-        ctx.roundRect(node.x - lw / 2, labelY - 7, lw, 14, 4);
+        ctx.roundRect(node.x - lw / 2, labelY - Math.round(7 * sc), lw, Math.round(14 * sc), 4);
         ctx.fill();
-        ctx.fillStyle = dim ? "rgba(255,255,255,0.3)" : "#e2e8f0";
+        ctx.fillStyle = dim ? th.labelTextDim : th.labelText;
         ctx.fillText(label, node.x, labelY);
       }
 
       // Commit count badge
       if (r >= 14 && !node.is_primary && !dim) {
-        ctx.font = "bold 8px Inter, system-ui, sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.font = `bold ${Math.round(8 * sc)}px Inter, system-ui, sans-serif`;
+        ctx.fillStyle = th.commitBadge;
         ctx.fillText(String(node.commits), node.x, node.y);
       }
     });
@@ -1309,8 +1378,8 @@ function CollaborationNetwork({
 
     const nodes: NetworkNode[] = network.nodes.map((n, i) => {
       const angle = (2 * Math.PI * i) / network.nodes.length;
-      const spread = Math.min(W, H) * 0.3;
-      const radius = n.is_primary ? 0 : spread + Math.random() * 50;
+      const spread = Math.min(W, H) * 0.35;
+      const radius = n.is_primary ? 0 : spread + Math.random() * 60;
       return {
         ...n,
         x: cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 30,
@@ -1407,8 +1476,15 @@ function CollaborationNetwork({
   }
 
   return (
-    <div className="network-graph-container">
-      <div className="network-canvas-wrap" ref={containerRef}>
+    <div className="network-graph-container" data-graph-theme={graphTheme}>
+      <div className={`network-canvas-wrap ${graphTheme === "light" ? "network-canvas-wrap--light" : ""}`} ref={containerRef}>
+        <button
+          className={`network-theme-toggle ${graphTheme === "light" ? "network-theme-toggle--light" : ""}`}
+          onClick={() => setGraphTheme(graphTheme === "dark" ? "light" : "dark")}
+          title={`Switch to ${graphTheme === "dark" ? "light" : "dark"} mode`}
+        >
+          {graphTheme === "dark" ? "☀️" : "🌙"}
+        </button>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -1418,7 +1494,7 @@ function CollaborationNetwork({
         />
       </div>
       {/* Info panel below the canvas — never covers the graph */}
-      <div className={`network-info-panel ${hoveredNode ? "network-info-panel--active" : ""}`}>
+      <div className={`network-info-panel ${graphTheme === "light" ? "network-info-panel--light" : ""} ${hoveredNode ? "network-info-panel--active" : ""}`}>
         {hoveredNode ? (
           <>
             <div className="network-info-name">{hoveredNode.name}</div>
@@ -2161,6 +2237,9 @@ const PortfolioPage: React.FC = () => {
         // Remove the React canvas — we'll recreate it via JS in the export
         const cloneCanvas = cloneCanvasWrap.querySelector("canvas");
         if (cloneCanvas) cloneCanvas.remove();
+        // Remove the theme toggle button — theme is baked in at export time
+        const cloneToggle = cloneCanvasWrap.querySelector(".network-theme-toggle");
+        if (cloneToggle) cloneToggle.remove();
         // Add a placeholder div that the export script will target
         const placeholder = document.createElement("div");
         placeholder.id = "networkGraphTarget";
@@ -2228,6 +2307,8 @@ const PortfolioPage: React.FC = () => {
         ? JSON.stringify(portfolio.collaboration_network).replace(/<\//g, "<\\/")
         : "null";
 
+      const activeGraphTheme = document.querySelector('.network-graph-container[data-graph-theme]')?.getAttribute('data-graph-theme') || 'dark';
+
       const networkScript = `
 (function() {
   var NET = ${networkData};
@@ -2236,13 +2317,47 @@ const PortfolioPage: React.FC = () => {
   if (!target) return;
 
   var COLORS = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f97316","#eab308","#22c55e","#14b8a6","#06b6d4","#3b82f6"];
+  var THEMES = {
+    dark: {
+      primaryGrad0:'#334155', primaryGrad1:'#0f172a', primaryLabel:'#fff', primaryLabelDim:'rgba(255,255,255,0.4)',
+      labelBg:'rgba(30,41,59,0.7)', labelBgDim:'rgba(30,41,59,0.3)', labelText:'#e2e8f0', labelTextDim:'rgba(255,255,255,0.3)',
+      gloss:'rgba(255,255,255,0.13)', commitBadge:'rgba(255,255,255,0.9)', ringHi:'#fff',
+      canvasBg:'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', canvasShadow:'inset 0 1px 30px rgba(0,0,0,0.3)',
+      badgeBg:function(a){return 'rgba(30,41,59,'+a+')';},
+      badgeStroke:function(hi){return hi?'rgba(99,102,241,0.6)':'rgba(99,102,241,0.2)';},
+      badgeText:function(hi){return hi?'#fff':'rgba(255,255,255,0.7)';},
+      nodeColorPrimary:'#1e293b',
+      panelBg:'#1e293b', panelBorder:'#334155', panelActiveBg:'#0f172a',
+      infoName:'#f1f5f9', infoCommits:'#a78bfa', infoTag:'#38bdf8',
+      infoTagBg:'rgba(56,189,248,0.1)', infoTagBorder:'rgba(56,189,248,0.2)', infoHint:'#e2e8f0'
+    },
+    light: {
+      primaryGrad0:'#e2e8f0', primaryGrad1:'#94a3b8', primaryLabel:'#1e293b', primaryLabelDim:'rgba(30,41,59,0.35)',
+      labelBg:'rgba(255,255,255,0.85)', labelBgDim:'rgba(255,255,255,0.4)', labelText:'#334155', labelTextDim:'rgba(51,65,85,0.35)',
+      gloss:'rgba(255,255,255,0.25)', commitBadge:'#1e293b', ringHi:'#1e293b',
+      canvasBg:'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', canvasShadow:'inset 0 1px 30px rgba(0,0,0,0.04)',
+      badgeBg:function(a){return 'rgba(255,255,255,'+a+')';},
+      badgeStroke:function(hi){return hi?'rgba(99,102,241,0.7)':'rgba(99,102,241,0.25)';},
+      badgeText:function(hi){return hi?'#1e293b':'rgba(30,41,59,0.6)';},
+      nodeColorPrimary:'#cbd5e1',
+      panelBg:'#f1f5f9', panelBorder:'#cbd5e1', panelActiveBg:'#e2e8f0',
+      infoName:'#1e293b', infoCommits:'#7c3aed', infoTag:'#0284c7',
+      infoTagBg:'rgba(2,132,199,0.1)', infoTagBorder:'rgba(2,132,199,0.2)', infoHint:'#475569'
+    }
+  };
+  var T = THEMES['${activeGraphTheme}'] || THEMES.dark;
+
   function ha(h,a){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return 'rgba('+r+','+g+','+b+','+a+')';}
   function lt(h,n){var r=Math.min(255,parseInt(h.slice(1,3),16)+n),g=Math.min(255,parseInt(h.slice(3,5),16)+n),b=Math.min(255,parseInt(h.slice(5,7),16)+n);return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');}
-  function nc(n,i){return n.is_primary?'#1e293b':COLORS[i%COLORS.length];}
-  function nr(n){return n.is_primary?26:11+Math.min(n.commits,80)*0.14;}
+  function nc(n,i){return n.is_primary?T.nodeColorPrimary:COLORS[i%COLORS.length];}
+  var sc=1;
+  function nr(n){return n.is_primary?32*sc:(14+Math.min(n.commits,80)*0.18)*sc;}
+
+  target.style.position = 'relative';
 
   var canvas = document.createElement('canvas');
   canvas.style.width='100%'; canvas.style.borderRadius='12px'; canvas.style.display='block'; canvas.style.cursor='default';
+  canvas.style.background=T.canvasBg; canvas.style.boxShadow=T.canvasShadow;
   target.appendChild(canvas);
   var W=target.clientWidth, H=Math.max(440,target.clientHeight);
   var dpr=window.devicePixelRatio||1;
@@ -2251,20 +2366,35 @@ const PortfolioPage: React.FC = () => {
   var ctx=canvas.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
   var cx=W/2, cy=H/2;
+  sc=(function(){var raw=Math.min(W,H)/480;var adj=Math.max(0.8,Math.min(1.5,8/Math.max(NET.nodes.length,1)));return Math.max(0.9,Math.min(1.7,raw*adj));}());
 
-  var nodes=NET.nodes.map(function(n,i){var a=(2*Math.PI*i)/NET.nodes.length;var r=n.is_primary?0:130+Math.random()*50;return {id:n.id,name:n.name,commits:n.commits,is_primary:n.is_primary,projects:n.projects,x:cx+Math.cos(a)*r+(Math.random()-0.5)*30,y:cy+Math.sin(a)*r+(Math.random()-0.5)*30,vx:0,vy:0,fx:null,fy:null};});
+  var nodes=NET.nodes.map(function(n,i){var a=(2*Math.PI*i)/NET.nodes.length;var r=n.is_primary?0:(150*sc+Math.random()*50*sc);return {id:n.id,name:n.name,commits:n.commits,is_primary:n.is_primary,projects:n.projects,x:cx+Math.cos(a)*r+(Math.random()-0.5)*30,y:cy+Math.sin(a)*r+(Math.random()-0.5)*30,vx:0,vy:0,fx:null,fy:null};});
   var edges=NET.edges;
   var hovered=null, drag={node:null,ox:0,oy:0,active:false};
 
   var infoPanel=target.closest('.network-graph-container').querySelector('.network-info-panel');
 
+  function applyPanelTheme() {
+    if(!infoPanel) return;
+    infoPanel.style.background = hovered ? T.panelActiveBg : T.panelBg;
+    infoPanel.style.borderColor = hovered ? 'rgba(99,102,241,0.35)' : T.panelBorder;
+    var nameEl = infoPanel.querySelector('.network-info-name');
+    if(nameEl) nameEl.style.color = T.infoName;
+    var comEl = infoPanel.querySelector('.network-info-commits');
+    if(comEl) comEl.style.color = T.infoCommits;
+    var tags = infoPanel.querySelectorAll('.network-info-project-tag');
+    tags.forEach(function(t){t.style.color=T.infoTag;t.style.background=T.infoTagBg;t.style.borderColor=T.infoTagBorder;});
+    var hint = infoPanel.querySelector('.network-info-hint');
+    if(hint) hint.style.color = T.infoHint;
+  }
+
   function hitTest(mx,my){for(var i=nodes.length-1;i>=0;i--){var n=nodes[i],r=nr(n)+4;if((n.x-mx)*(n.x-mx)+(n.y-my)*(n.y-my)<=r*r)return n;}return null;}
 
   function simulate(){
-    var rep=4500,att=0.006,cp=0.012,damp=0.82,pad=35;
+    var rep=5200*sc,att=0.006,cp=0.012,damp=0.82,pad=35;
     for(var i=0;i<nodes.length;i++){for(var j=i+1;j<nodes.length;j++){var dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,d=Math.sqrt(dx*dx+dy*dy)||1,f=rep/(d*d),fx=dx/d*f,fy=dy/d*f;nodes[i].vx-=fx;nodes[i].vy-=fy;nodes[j].vx+=fx;nodes[j].vy+=fy;}}
     var nm={}; nodes.forEach(function(n){nm[n.id]=n;});
-    edges.forEach(function(e){var s=nm[e.source],t=nm[e.target];if(!s||!t)return;var dx=t.x-s.x,dy=t.y-s.y,d=Math.sqrt(dx*dx+dy*dy)||1,disp=d-130,f=disp*att*(1+e.weight*0.3),fx=dx/d*f,fy=dy/d*f;s.vx+=fx;s.vy+=fy;t.vx-=fx;t.vy-=fy;});
+    edges.forEach(function(e){var s=nm[e.source],t=nm[e.target];if(!s||!t)return;var dx=t.x-s.x,dy=t.y-s.y,d=Math.sqrt(dx*dx+dy*dy)||1,disp=d-150*sc,f=disp*att*(1+e.weight*0.3),fx=dx/d*f,fy=dy/d*f;s.vx+=fx;s.vy+=fy;t.vx-=fx;t.vy-=fy;});
     nodes.forEach(function(n){n.vx+=(cx-n.x)*cp;n.vy+=(cy-n.y)*cp;if(n.fx!==null){n.x=n.fx;n.y=n.fy;n.vx=0;n.vy=0;}else{n.vx*=damp;n.vy*=damp;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(pad,Math.min(W-pad,n.x));n.y=Math.max(pad,Math.min(H-pad,n.y));}});
   }
 
@@ -2284,8 +2414,9 @@ const PortfolioPage: React.FC = () => {
       ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(t.x,t.y);
       ctx.strokeStyle=grad;ctx.lineWidth=hi?2.5+e.weight*0.5:1.2+e.weight*0.4;ctx.stroke();
       var mx2=(s.x+t.x)/2,my2=(s.y+t.y)/2;
-      ctx.fillStyle=hi?'rgba(30,41,59,0.85)':'rgba(30,41,59,0.55)';ctx.beginPath();ctx.arc(mx2,my2,10,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=hi?'#fff':'rgba(255,255,255,0.6)';ctx.font='bold 9px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(e.projects.length),mx2,my2);
+      ctx.fillStyle=T.badgeBg(hi?0.85:0.55);ctx.beginPath();ctx.arc(mx2,my2,Math.round(10*sc),0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=T.badgeStroke(!!hi);ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle=T.badgeText(!!hi);ctx.font='bold '+Math.round(9*sc)+'px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(e.projects.length),mx2,my2);
     });
 
     nodes.forEach(function(node,i){
@@ -2294,21 +2425,20 @@ const PortfolioPage: React.FC = () => {
       var isConn=hovered&&connSet[node.id];
       var dim=hovered&&!isH&&!isConn&&!drag.active;
 
-      if(isH||isConn||node.is_primary){ctx.beginPath();ctx.arc(node.x,node.y,r+(isH?10:6),0,Math.PI*2);var gl=ctx.createRadialGradient(node.x,node.y,r*0.5,node.x,node.y,r+(isH?14:8));gl.addColorStop(0,ha(col,isH?0.35:0.18));gl.addColorStop(1,ha(col,0));ctx.fillStyle=gl;ctx.fill();}
+      if(isH||isConn||node.is_primary){ctx.beginPath();ctx.arc(node.x,node.y,r+(isH?10*sc:6*sc),0,Math.PI*2);var gl=ctx.createRadialGradient(node.x,node.y,r*0.5,node.x,node.y,r+(isH?14*sc:8*sc));gl.addColorStop(0,ha(col,isH?0.35:0.18));gl.addColorStop(1,ha(col,0));ctx.fillStyle=gl;ctx.fill();}
 
       ctx.beginPath();ctx.arc(node.x,node.y,r,0,Math.PI*2);
       var bg=ctx.createRadialGradient(node.x-r*0.3,node.y-r*0.3,r*0.1,node.x,node.y,r);
-      if(node.is_primary){bg.addColorStop(0,'#334155');bg.addColorStop(1,'#0f172a');}else{bg.addColorStop(0,lt(col,20));bg.addColorStop(1,col);}
+      if(node.is_primary){bg.addColorStop(0,T.primaryGrad0);bg.addColorStop(1,T.primaryGrad1);}else{bg.addColorStop(0,lt(col,20));bg.addColorStop(1,col);}
       ctx.fillStyle=dim?ha(col,0.35):bg;ctx.fill();
-      ctx.strokeStyle=dim?ha(col,0.2):isH?'#fff':isConn?ha('#fff',0.7):ha(lt(col,30),0.6);ctx.lineWidth=isH?2.5:node.is_primary?2:1.5;ctx.stroke();
+      ctx.strokeStyle=dim?ha(col,0.2):isH?T.ringHi:isConn?ha(T.ringHi,0.7):ha(lt(col,30),0.6);ctx.lineWidth=isH?2.5:node.is_primary?2:1.5;ctx.stroke();
 
-      if(!dim){ctx.beginPath();ctx.arc(node.x-r*0.2,node.y-r*0.25,r*0.45,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.13)';ctx.fill();}
+      if(!dim){ctx.beginPath();ctx.arc(node.x-r*0.2,node.y-r*0.25,r*0.45,0,Math.PI*2);ctx.fillStyle=T.gloss;ctx.fill();}
 
-      var lbl=node.name.length>14?node.name.slice(0,13)+'\\u2026':node.name;
-      ctx.font=node.is_primary?'bold 10px Inter,system-ui,sans-serif':'500 9px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      if(node.is_primary){ctx.fillStyle=dim?'rgba(255,255,255,0.4)':'#fff';ctx.fillText(lbl,node.x,node.y);}
-      else{var ly=node.y+r+12;var m=ctx.measureText(lbl);var lw=m.width+8;ctx.fillStyle=dim?'rgba(30,41,59,0.3)':'rgba(30,41,59,0.7)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(node.x-lw/2,ly-7,lw,14,4);else{ctx.rect(node.x-lw/2,ly-7,lw,14);}ctx.fill();ctx.fillStyle=dim?'rgba(255,255,255,0.3)':'#e2e8f0';ctx.fillText(lbl,node.x,ly);}
-      if(r>=14&&!node.is_primary&&!dim){ctx.font='bold 8px Inter,system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.9)';ctx.fillText(String(node.commits),node.x,node.y);}
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      if(node.is_primary){var maxW=r*1.7;var fs=Math.round(11*sc);var lbl=node.name.length>16?node.name.slice(0,15)+'\\u2026':node.name;ctx.font='bold '+fs+'px Inter,system-ui,sans-serif';while(ctx.measureText(lbl).width>maxW&&fs>Math.max(6,Math.round(7*sc))){fs--;ctx.font='bold '+fs+'px Inter,system-ui,sans-serif';}if(ctx.measureText(lbl).width>maxW){while(lbl.length>3&&ctx.measureText(lbl.replace(/\\u2026$/,'')+'\\u2026').width>maxW){lbl=lbl.replace(/\\u2026$/,'').slice(0,-1);}lbl=lbl.replace(/\\u2026$/,'')+'\\u2026';}ctx.fillStyle=dim?T.primaryLabelDim:T.primaryLabel;ctx.fillText(lbl,node.x,node.y);}
+      else{var lbl=node.name.length>14?node.name.slice(0,13)+'\\u2026':node.name;ctx.font='500 '+Math.round(9*sc)+'px Inter,system-ui,sans-serif';var ly=node.y+r+Math.round(12*sc);var m=ctx.measureText(lbl);var lw=m.width+8*sc;ctx.fillStyle=dim?T.labelBgDim:T.labelBg;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc),4);else{ctx.rect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc));}ctx.fill();ctx.fillStyle=dim?T.labelTextDim:T.labelText;ctx.fillText(lbl,node.x,ly);}
+      if(r>=14&&!node.is_primary&&!dim){ctx.font='bold '+Math.round(8*sc)+'px Inter,system-ui,sans-serif';ctx.fillStyle=T.commitBadge;ctx.fillText(String(node.commits),node.x,node.y);}
     });
   }
 
@@ -2316,16 +2446,19 @@ const PortfolioPage: React.FC = () => {
     if(!infoPanel)return;
     if(n){
       infoPanel.className='network-info-panel network-info-panel--active';
-      var h='<div class=\"network-info-name\">'+n.name+'</div><div class=\"network-info-commits\">'+n.commits.toLocaleString()+' commits</div><div class=\"network-info-projects\">';
-      n.projects.forEach(function(p){h+='<span class=\"network-info-project-tag\">'+p+'</span>';});
+      infoPanel.style.background=T.panelActiveBg; infoPanel.style.borderColor='rgba(99,102,241,0.35)';
+      var h='<div class=\"network-info-name\" style=\"color:'+T.infoName+'\">'+n.name+'</div><div class=\"network-info-commits\" style=\"color:'+T.infoCommits+'\">'+n.commits.toLocaleString()+' commits</div><div class=\"network-info-projects\">';
+      n.projects.forEach(function(p){h+='<span class=\"network-info-project-tag\" style=\"color:'+T.infoTag+';background:'+T.infoTagBg+';border-color:'+T.infoTagBorder+'\">'+p+'</span>';});
       h+='</div>'; infoPanel.innerHTML=h;
     } else {
       infoPanel.className='network-info-panel';
-      infoPanel.innerHTML='<div class=\"network-info-hint\"><span class=\"network-info-hint-icon\">\ud83d\udc46</span>Hover over a node to see details \\u00b7 Drag to rearrange</div>';
+      infoPanel.style.background=T.panelBg; infoPanel.style.borderColor=T.panelBorder;
+      infoPanel.innerHTML='<div class=\"network-info-hint\" style=\"color:'+T.infoHint+'\"><span class=\"network-info-hint-icon\">\ud83d\udc46</span>Hover over a node to see details \\u00b7 Drag to rearrange</div>';
     }
   }
 
   function tick(){simulate();draw();requestAnimationFrame(tick);}
+  applyPanelTheme();
   requestAnimationFrame(tick);
 
   canvas.addEventListener('mousedown',function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var n=hitTest(mx,my);if(n){drag={node:n,ox:mx-n.x,oy:my-n.y,active:true};n.fx=n.x;n.fy=n.y;}});

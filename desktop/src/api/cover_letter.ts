@@ -9,8 +9,14 @@ const API_BASE = API_BASE_URL;
 export const MOTIVATION_OPTIONS = [
   { key: "strong_company_culture", label: "Strong Company Culture" },
   { key: "personal_growth", label: "Personal Growth & Career Advancement" },
-  { key: "meaningful_work", label: "Meaningful Work/Company Mission" },
+  { key: "meaningful_work", label: "Meaningful Work / Company Mission" },
   { key: "reputation_stability", label: "Reputation & Stability" },
+  { key: "innovation", label: "Innovation & Cutting-Edge Technology" },
+  { key: "work_life_balance", label: "Work-Life Balance" },
+  { key: "social_impact", label: "Social Impact" },
+  { key: "compensation", label: "Competitive Compensation & Benefits" },
+  { key: "team_collaboration", label: "Collaborative Team Environment" },
+  { key: "learning_opportunities", label: "Learning & Development Opportunities" },
 ] as const;
 
 export type MotivationKey = (typeof MOTIVATION_OPTIONS)[number]["key"];
@@ -21,7 +27,8 @@ export interface CoverLetterRequest {
   job_title: string;
   company: string;
   job_description: string;
-  motivations: MotivationKey[];
+  /** Preset motivation keys plus any custom free-text values */
+  motivations: string[];
   mode: GenerationMode;
 }
 
@@ -31,7 +38,7 @@ export interface CoverLetterResponse {
   job_title: string;
   company: string;
   job_description: string;
-  motivations: MotivationKey[];
+  motivations: string[];
   content: string;
   generation_mode: GenerationMode;
   created_at: string;
@@ -110,6 +117,23 @@ export async function deleteCoverLetter(
 ): Promise<{ success: boolean; deleted_id: number }> {
   const res = await fetch(`${API_BASE}/api/cover-letter/${id}`, {
     method: "DELETE",
+  });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/** Save edited content back to the server. */
+export async function updateCoverLetter(
+  id: number,
+  content: string
+): Promise<CoverLetterResponse> {
+  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
   });
   if (!res.ok) {
     const message = await parseErrorDetail(res);

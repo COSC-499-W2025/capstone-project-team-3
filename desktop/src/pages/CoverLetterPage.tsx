@@ -4,12 +4,12 @@ import {
   generateCoverLetter,
   listCoverLetters,
   deleteCoverLetter,
+  updateCoverLetter,
   coverLetterPdfUrl,
   MOTIVATION_OPTIONS,
   type CoverLetterResponse,
   type CoverLetterSummary,
   type GenerationMode,
-  type MotivationKey,
 } from "../api/cover_letter";
 import "../styles/CoverLetterPage.css";
 
@@ -105,14 +105,15 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDescription, setJobDescription] = useState("");
-  const [motivations, setMotivations] = useState<MotivationKey[]>([]);
+  const [motivations, setMotivations] = useState<string[]>([]);
+  const [customMotivation, setCustomMotivation] = useState("");
   const [mode, setMode] = useState<GenerationMode>("local");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const savedResumes = resumes.filter((r) => r.id !== null);
 
-  function toggleMotivation(key: MotivationKey) {
+  function toggleMotivation(key: string) {
     setMotivations((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
@@ -125,13 +126,17 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
     }
     setError(null);
     setLoading(true);
+    // Combine preset keys + trimmed custom motivation (if provided)
+    const allMotivations = customMotivation.trim()
+      ? [...motivations, customMotivation.trim()]
+      : motivations;
     try {
       const result = await generateCoverLetter({
         resume_id: resumeId as number,
         job_title: jobTitle.trim(),
         company: company.trim(),
         job_description: jobDescription.trim(),
-        motivations,
+        motivations: allMotivations,
         mode,
       });
       onGenerated(result);
@@ -247,6 +252,20 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
             </button>
           ))}
         </div>
+        <div className="cl-field" style={{ marginTop: "0.75rem" }}>
+          <label className="cl-label" htmlFor="cl-custom-motivation">
+            Custom motivation (optional)
+          </label>
+          <input
+            id="cl-custom-motivation"
+            className="cl-input"
+            type="text"
+            placeholder="e.g. the team's focus on open-source contributions"
+            value={customMotivation}
+            onChange={(e) => setCustomMotivation(e.target.value)}
+            data-testid="cl-custom-motivation"
+          />
+        </div>
       </section>
 
       {/* Step 4 — Generation mode */}
@@ -309,9 +328,48 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
 interface PreviewTabProps {
   coverLetter: CoverLetterResponse;
   onRegenerate: () => void;
+  onSaved: (updated: CoverLetterResponse) => void;
 }
 
-function PreviewTab({ coverLetter, onRegenerate }: PreviewTabProps) {
+function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
+  const [editedContent, setEditedContent] = useState(coverLetter.content);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Sync if a new letter is loaded into this tab
+  useEffect(() => {
+    setEditedContent(coverLetter.content);
+    setIsDirty(false);
+    setSaveError(null);
+  }, [coverLetter.id, coverLetter.content]);
+
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setEditedContent(e.target.value);
+    setIsDirty(e.target.value !== coverLetter.content);
+    setSaveError(null);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await updateCoverLetter(coverLetter.id, editedContent);
+      setIsDirty(false);
+      onSaved(updated);
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : "Save failed. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleDiscard() {
+    setEditedContent(coverLetter.content);
+    setIsDirty(false);
+    setSaveError(null);
+  }
+
   return (
     <div className="cl-card">
       <div className="cl-preview-header">
@@ -321,6 +379,11 @@ function PreviewTab({ coverLetter, onRegenerate }: PreviewTabProps) {
           </h2>
           <div className="cl-preview-meta" style={{ marginTop: "0.35rem" }}>
             <ModeBadge mode={coverLetter.generation_mode} />
+            {isDirty && (
+              <span className="cl-unsaved-badge" data-testid="cl-unsaved-badge">
+                &nbsp;· Unsaved changes
+              </span>
+            )}
           </div>
         </div>
         <div className="cl-preview-actions">
@@ -342,12 +405,42 @@ function PreviewTab({ coverLetter, onRegenerate }: PreviewTabProps) {
         </div>
       </div>
 
-      <pre
-        className="cl-preview-content"
+      <textarea
+        className="cl-preview-editor"
+        value={editedContent}
+        onChange={handleChange}
         data-testid="cl-preview-content"
-      >
-        {coverLetter.content}
-      </pre>
+        aria-label="Cover letter content — edit directly"
+        spellCheck
+      />
+
+      {saveError && (
+        <p className="cl-error" role="alert" data-testid="cl-save-error">
+          {saveError}
+        </p>
+      )}
+
+      {isDirty && (
+        <div className="cl-actions cl-actions--edit">
+          <button
+            className="cl-btn cl-btn--secondary"
+            onClick={handleDiscard}
+            disabled={saving}
+            data-testid="cl-discard-btn"
+          >
+            Discard changes
+          </button>
+          <button
+            className="cl-btn cl-btn--primary"
+            onClick={handleSave}
+            disabled={saving || !editedContent.trim()}
+            data-testid="cl-save-btn"
+          >
+            {saving && <span className="cl-spinner" aria-hidden />}
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -529,6 +622,7 @@ export default function CoverLetterPage() {
           <PreviewTab
             coverLetter={generatedLetter}
             onRegenerate={() => setActiveTab("generate")}
+            onSaved={(updated) => setGeneratedLetter(updated)}
           />
         ) : (
           <div className="cl-card">

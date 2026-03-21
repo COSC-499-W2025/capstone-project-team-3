@@ -29,6 +29,7 @@ from app.utils.cover_letter_utils import (
     get_cover_letter,
     list_cover_letters,
     save_cover_letter,
+    update_cover_letter_content,
 )
 from app.utils.generate_resume import load_user
 from app.data.db import get_connection
@@ -78,6 +79,10 @@ class CoverLetterSummary(BaseModel):
     company: str
     generation_mode: str
     created_at: str
+
+
+class CoverLetterUpdateRequest(BaseModel):
+    content: str = Field(..., min_length=1, description="Updated cover letter text")
 
 
 # ---------------------------------------------------------------------------
@@ -167,8 +172,8 @@ async def generate_and_save_cover_letter(request: CoverLetterRequest):
     if mode not in VALID_MODES:
         raise HTTPException(status_code=422, detail=f"mode must be one of {sorted(VALID_MODES)}")
 
-    # Filter out any unrecognised motivation keys
-    valid_motivations = [m for m in request.motivations if m in VALID_MOTIVATIONS]
+    # Accept known motivation keys AND any non-empty custom free-text values
+    cleaned_motivations = [m.strip() for m in request.motivations if m and m.strip()]
 
     try:
         content = await run_in_threadpool(
@@ -177,7 +182,7 @@ async def generate_and_save_cover_letter(request: CoverLetterRequest):
             job_title=request.job_title,
             company=request.company,
             job_description=request.job_description,
-            motivations=valid_motivations,
+            motivations=cleaned_motivations,
             mode=mode,
         )
     except CoverLetterServiceError as exc:
@@ -190,7 +195,7 @@ async def generate_and_save_cover_letter(request: CoverLetterRequest):
             job_title=request.job_title,
             company=request.company,
             job_description=request.job_description,
-            motivations=valid_motivations,
+            motivations=cleaned_motivations,
             content=content,
             generation_mode=mode,
         )
@@ -232,6 +237,20 @@ async def get_one_cover_letter(cover_letter_id: int):
     except CoverLetterServiceError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
     return CoverLetterResponse(**cl)
+
+
+@router.patch("/cover-letter/{cover_letter_id}", response_model=CoverLetterResponse)
+async def update_one_cover_letter(cover_letter_id: int, request: CoverLetterUpdateRequest):
+    """Update the editable content of a saved cover letter."""
+    try:
+        updated = await run_in_threadpool(
+            update_cover_letter_content, cover_letter_id, request.content
+        )
+    except CoverLetterNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Cover letter {cover_letter_id} not found")
+    except CoverLetterServiceError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    return CoverLetterResponse(**updated)
 
 
 @router.get("/cover-letter/{cover_letter_id}/pdf")

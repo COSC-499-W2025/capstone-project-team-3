@@ -541,3 +541,120 @@
   font-weight: 700;
   color: var(--color-blue-dark);
 }
+
+/* ---- Profile Picture Upload ---- */
+.profile-picture-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.profile-picture-avatar {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  border: 3px solid var(--color-bg-light, #e5e7eb);
+  background: var(--color-bg-light, #f3f4f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.profile-picture-avatar:hover {
+  border-color: var(--color-primary, #6366f1);
+}
+
+.profile-picture-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-picture-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #9ca3af);
+  width: 100%;
+  height: 100%;
+}
+
+.profile-picture-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 50%;
+}
+
+.profile-picture-avatar:hover .profile-picture-overlay {
+  opacity: 1;
+}
+
+.profile-picture-actions {
+  display: flex;
+  gap: var(--spacing-xs, 8px);
+  align-items: center;
+}
+
+.btn-secondary {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--color-primary, #6366f1);
+  background: transparent;
+  color: var(--color-primary, #6366f1);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-danger-outline {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--color-error, #ef4444);
+  background: transparent;
+  color: var(--color-error, #ef4444);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--color-error, #ef4444);
+  color: #fff;
+}
+
+.btn-danger-outline:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.profile-picture-error {
+  font-size: 0.8rem;
+  color: var(--color-error, #ef4444);
+  margin: 0;
+  text-align: center;
+}

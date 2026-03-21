@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS USER_PREFERENCES (
     job_title TEXT,
     personal_summary TEXT,
     education_details JSON,
+    profile_picture_path TEXT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -154,6 +155,7 @@ def init_db():
     )
     _ensure_project_override_exclusions_column(cursor)
     _ensure_user_preferences_linkedin_column(cursor)
+    _ensure_user_preferences_profile_picture_column(cursor)
     _ensure_project_score_constraint(cursor)
     _ensure_resume_project_has_no_project_fk(cursor)
     conn.commit()
@@ -175,6 +177,13 @@ def _ensure_user_preferences_linkedin_column(cursor: sqlite3.Cursor) -> None:
         cursor.execute("ALTER TABLE USER_PREFERENCES RENAME COLUMN linkden TO linkedin")
     elif "linkedin" not in existing_columns:
         cursor.execute("ALTER TABLE USER_PREFERENCES ADD COLUMN linkedin TEXT")
+
+def _ensure_user_preferences_profile_picture_column(cursor: sqlite3.Cursor) -> None:
+    """Ensure USER_PREFERENCES has profile_picture_path column on existing DBs."""
+    cursor.execute("PRAGMA table_info(USER_PREFERENCES)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "profile_picture" not in existing_columns:
+        cursor.execute("ALTER TABLE USER_PREFERENCES ADD COLUMN profile_picture_path TEXT")
 
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:
     """Enforce score range [0, 1] on existing DBs via triggers."""

@@ -5,6 +5,7 @@ import { getHealth } from "./api/health";
 import { getConsentStatus } from "./api/consent";
 import { useState, useEffect } from "react";
 import { NavBar } from "./NavBar";
+import { ProfilePictureProvider } from "./ProfilePictureContext";
 
 function AppLayout() {
   const location = useLocation();
@@ -47,7 +48,9 @@ function App() {
 
   return (
     <Router>
-      <AppLayout />
+      <ProfilePictureProvider>
+        <AppLayout />
+      </ProfilePictureProvider>
     </Router>
   );
 }

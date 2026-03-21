@@ -32,6 +32,11 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
         }
 
+[data-theme="dark"] .formula-text {
+    color: var(--text-primary, #dce8f0);
+    background: var(--secondary-bg, #1a2535);
+}
+
         * {
             margin: 0;
             padding: 0;

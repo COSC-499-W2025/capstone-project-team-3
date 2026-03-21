@@ -49,7 +49,10 @@ def test_run_analysis_upload_not_found(mock_exists):
 
 
 @patch("app.api.routes.analysis.merge_analysis_results")
-@patch("app.api.routes.analysis.analyze_parsed_project", return_value={"Metrics": {}, "Resume_bullets": []})
+@patch(
+    "app.api.routes.analysis.analyze_parsed_project",
+    return_value={"Metrics": {}, "Resume_bullets": []},
+)
 @patch("app.api.routes.analysis.analyze_project_clean", return_value={"Metrics": {}})
 @patch("app.api.routes.analysis.parse_code_flow", return_value=[])
 @patch("app.api.routes.analysis.get_project_top_level_dirs", return_value=[])
@@ -81,7 +84,9 @@ def test_run_analysis_upload_not_found(mock_exists):
         },
     ],
 )
-@patch("app.api.routes.analysis.check_gemini_api_key", return_value=(False, "missing key"))
+@patch(
+    "app.api.routes.analysis.check_gemini_api_key", return_value=(False, "missing key")
+)
 @patch(
     "app.api.routes.analysis.extract_and_list_projects",
     return_value={
@@ -138,3 +143,131 @@ def test_run_analysis_non_interactive_flow(
     first_call, second_call = mock_run_scan.call_args_list
     assert first_call.kwargs.get("similarity_decision") is False
     assert second_call.kwargs.get("similarity_decision") is True
+
+
+# Tests for /scan-project endpoint
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.get_project_signature")
+@patch("app.api.routes.analysis.find_similar_project", return_value=None)
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_no_similarity_new_project(
+    mock_exists, mock_find_similar, mock_get_sig, mock_extract_sig, mock_scan_files
+):
+    """Test scanning a project with no similar existing project."""
+    mock_scan_files.return_value = ["/tmp/proj/main.py", "/tmp/proj/app.py"]
+    mock_extract_sig.return_value = "sig123"
+    mock_get_sig.return_value = "project_sig_abc"
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["project_name"] == "my-project"
+    assert data["project_path"] == "/tmp/extracted/my-project"
+    assert data["file_count"] == 2
+    assert data["similarity"] is None
+    assert data.get("exact_match") is None
+
+
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.get_project_signature")
+@patch("app.api.routes.analysis.find_similar_project")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_with_similarity_detected(
+    mock_exists, mock_find_similar, mock_get_sig, mock_extract_sig, mock_scan_files
+):
+    """Test scanning a project with a similar existing project."""
+    mock_scan_files.return_value = ["/tmp/proj/main.py", "/tmp/proj/app.py"]
+    mock_extract_sig.return_value = "sig123"
+    mock_get_sig.return_value = "project_sig_abc"
+    mock_find_similar.return_value = {
+        "project_name": "existing-project",
+        "project_signature": "existing_sig_xyz",
+        "similarity_percentage": 75.5,
+        "containment_percentage": 82.3,
+        "match_reason": "Jaccard similarity",
+    }
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["project_name"] == "my-project"
+    assert data["file_count"] == 2
+    assert data["similarity"] is not None
+    assert data["similarity"]["jaccard_similarity"] == 75.5
+    assert data["similarity"]["containment_ratio"] == 82.3
+    assert data["similarity"]["matched_project_name"] == "existing-project"
+    assert data["similarity"]["match_reason"] == "Jaccard similarity"
+    assert data.get("exact_match") is None
+
+
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.get_project_signature")
+@patch("app.utils.scan_utils.project_signature_exists")
+@patch("app.api.routes.analysis.find_similar_project")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_exact_match(
+    mock_exists,
+    mock_find_similar,
+    mock_sig_exists,
+    mock_get_sig,
+    mock_extract_sig,
+    mock_scan_files,
+):
+    """Test scanning a project that exactly matches an existing project."""
+    mock_scan_files.return_value = ["/tmp/proj/main.py", "/tmp/proj/app.py"]
+    mock_extract_sig.return_value = "sig123"
+    mock_get_sig.return_value = "exact_sig_match"
+    mock_sig_exists.return_value = True
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["project_name"] == "my-project"
+    assert data["file_count"] == 2
+    assert data["exact_match"] is True
+    assert data["similarity"]["jaccard_similarity"] == 100.0
+    assert data["similarity"]["containment_ratio"] == 100.0
+    assert data["similarity"]["match_reason"] == "Exact match (100%)"
+
+
+@patch("app.api.routes.analysis.scan_project_files", return_value=[])
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_no_files(mock_exists, mock_scan_files):
+    """Test scanning a project with no files."""
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/empty-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["project_name"] == "empty-project"
+    assert data["file_count"] == 0
+    assert data["similarity"] is None
+    assert data["reason"] == "no_files"
+
+
+def test_scan_project_missing_project_path():
+    """Test scanning without providing project_path."""
+    response = client.post("/api/analysis/uploads/upload-123/scan-project", json={})
+
+    assert response.status_code == 422  # Validation error

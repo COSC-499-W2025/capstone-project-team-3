@@ -32,6 +32,20 @@ export interface CoverLetterRequest {
   mode: GenerationMode;
 }
 
+/**
+ * Returned by /generate — letter content ready to preview, not yet saved to DB.
+ * Has no `id` or `created_at` until explicitly saved via saveCoverLetter().
+ */
+export interface CoverLetterDraft {
+  resume_id: number;
+  job_title: string;
+  company: string;
+  job_description: string;
+  motivations: string[];
+  content: string;
+  generation_mode: GenerationMode;
+}
+
 export interface CoverLetterResponse {
   id: number;
   resume_id: number;
@@ -75,14 +89,42 @@ async function parseErrorDetail(res: Response): Promise<string> {
 // API functions
 // ---------------------------------------------------------------------------
 
-/** Generate and persist a new cover letter. */
+/** Generate a cover letter preview — does not yet persist to DB. */
 export async function generateCoverLetter(
   request: CoverLetterRequest
-): Promise<CoverLetterResponse> {
+): Promise<CoverLetterDraft> {
   const res = await fetch(`${API_BASE}/api/cover-letter/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/**
+ * Persist a cover letter draft (or edited content) to the database.
+ * Returns the saved record with its assigned `id` and `created_at` timestamp.
+ * Only letters saved via this call will appear in history.
+ */
+export async function saveCoverLetter(
+  draft: CoverLetterDraft
+): Promise<CoverLetterResponse> {
+  const res = await fetch(`${API_BASE}/api/cover-letter/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      resume_id: draft.resume_id,
+      job_title: draft.job_title,
+      company: draft.company,
+      job_description: draft.job_description,
+      motivations: draft.motivations,
+      content: draft.content,
+      generation_mode: draft.generation_mode,
+    }),
   });
   if (!res.ok) {
     const message = await parseErrorDetail(res);

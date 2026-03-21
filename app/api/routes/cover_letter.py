@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re as _re
 import shutil
 import subprocess
 import tempfile
@@ -86,6 +87,27 @@ class CoverLetterUpdateRequest(BaseModel):
     content: str = Field(..., min_length=1, description="Updated cover letter text")
 
 
+class CoverLetterSaveRequest(BaseModel):
+    resume_id: int
+    job_title: str = Field(..., min_length=1)
+    company: str = Field(..., min_length=1)
+    job_description: str = Field(..., min_length=10)
+    motivations: List[str] = Field(default_factory=list)
+    content: str = Field(..., min_length=1)
+    generation_mode: str = Field("local", description="'ai' or 'local'")
+
+
+class CoverLetterGenerateResponse(BaseModel):
+    """Returned by /generate — letter content only, not yet persisted."""
+    resume_id: int
+    job_title: str
+    company: str
+    job_description: str
+    motivations: List[str]
+    content: str
+    generation_mode: str
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -94,10 +116,82 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     """Wrap plain-text cover letter content in a minimal LaTeX document."""
     from app.utils.generate_resume_tex import escape_latex
 
-    escaped_content = escape_latex(content)
-    # Preserve paragraph breaks
-    escaped_content = escaped_content.replace("\n\n", "\n\n\\medskip\n\n")
-    escaped_content = escaped_content.replace("\n", " \\\\\n")
+    # ── Split into header block and letter body ────────────────────────────
+    body_match = _re.search(r"Dear\s+(?:\S+\s+)?Hiring", content, _re.IGNORECASE)
+    if body_match:
+        header_block = content[: body_match.start()].strip()
+        body_text    = content[body_match.start():].strip()
+    else:
+        header_block = ""
+        body_text    = content.strip()
+    # ── Parse contact lines from the header block ─────────────────────────
+    # Expected lines: name, email, [linkedin], date, blank, application-line
+    header_lines = [ln.rstrip() for ln in header_block.splitlines()]
+
+    # Extract LinkedIn URL if present (starts with http or linkedin.com)
+    linkedin_url  = ""
+    linkedin_line_idx = None
+    for i, ln in enumerate(header_lines):
+        if ln.startswith("http") or "linkedin.com" in ln.lower():
+            linkedin_url = ln.strip()
+            linkedin_line_idx = i
+            break
+
+    # Remove the linkedin line so remaining lines are: name, email, date, blank, app-line
+    if linkedin_line_idx is not None:
+        header_lines.pop(linkedin_line_idx)
+
+    # Remove blank lines and the "Job Title Application — Company" line
+    # (we render that ourselves below)
+    filtered = [
+        ln for ln in header_lines
+        if ln.strip() and "Application" not in ln and "—" not in ln and "---" not in ln
+    ]
+    # filtered[0] = name, filtered[1] = email, filtered[2] = date  (best-effort)
+    tex_name  = escape_latex(filtered[0]) if len(filtered) > 0 else escape_latex(name)
+    tex_email = escape_latex(filtered[1]) if len(filtered) > 1 else ""
+    tex_date  = escape_latex(filtered[2]) if len(filtered) > 2 else ""
+
+    # ── LinkedIn contact line ──────────────────────────────────────────────
+    if linkedin_url:
+        safe_url = linkedin_url.replace("%", "\\%").replace("#", "\\#").replace("_", "\\_")
+        linkedin_tex = (
+            r" \textbar{} \href{" + safe_url + r"}{LinkedIn}"
+        )
+    else:
+        linkedin_tex = ""
+
+    # ── Escape and format the letter body ─────────────────────────────────
+    # Split on paragraph boundaries, escape each paragraph, then re-join.
+    # The sign-off ("Sincerely,\nName") is separated with extra vertical space.
+    paragraphs = body_text.split("\n\n")
+    escaped_paragraphs = []
+    for para in paragraphs:
+        lines = [escape_latex(line) for line in para.splitlines()]
+        if len(lines) > 1 and lines[0].strip().lower().startswith("sincerely"):
+            escaped_paragraphs.append(" \\\\\n".join(lines))
+        else:
+            escaped_paragraphs.append(" ".join(lines))
+
+    # Detect the sign-off paragraph (starts with "Sincerely")
+    sincerely_idx = None
+    for i, p in enumerate(escaped_paragraphs):
+        if p.strip().lower().startswith("sincerely"):
+            sincerely_idx = i
+            break
+
+    # Build the body LaTeX — join with a blank line (normal parskip spacing)
+    # but insert \medskip after the greeting line and \bigskip before sign-off.
+    body_parts: list[str] = []
+    for i, p in enumerate(escaped_paragraphs):
+        if i == sincerely_idx:
+            body_parts.append(r"\bigskip" + "\n\n" + p)
+        elif i == 0:
+            # Greeting paragraph — add extra space after it before the body opens
+            body_parts.append(p + "\n\n" + r"\medskip")
+        else:
+            body_parts.append(p)
+    escaped_body = "\n\n".join(body_parts)
 
     return rf"""
 \documentclass[a4paper,11pt]{{article}}
@@ -105,20 +199,28 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
 \usepackage[T1]{{fontenc}}
 \usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{{geometry}}
 \usepackage{{parskip}}
+\usepackage{{hyperref}}
+\hypersetup{{colorlinks=true,urlcolor=blue,linkcolor=black}}
+\setlength{{\parskip}}{{8pt}}
 \pagestyle{{empty}}
 \begin{{document}}
 
 \begin{{center}}
-{{\Large \textbf{{{escape_latex(name)}}}}}
+{{\Large \textbf{{{tex_name}}}}}\\[0.3em]
+{tex_email}{linkedin_tex}
 \end{{center}}
 
-\vspace{{1em}}
+\vspace{{0.6em}}
 
-\textbf{{{escape_latex(job_title)}}} --- {escape_latex(company)}
+{tex_date}
 
-\vspace{{1em}}
+\vspace{{0.3em}}
 
-{escaped_content}
+\textbf{{Re: {escape_latex(job_title)} Application --- {escape_latex(company)}}}
+
+\medskip
+
+{escaped_body}
 
 \end{{document}}
 """
@@ -163,22 +265,21 @@ def _cached_pdf_path(content_hash: str) -> str:
 # Routes
 # ---------------------------------------------------------------------------
 
-@router.post("/cover-letter/generate", response_model=CoverLetterResponse)
-async def generate_and_save_cover_letter(request: CoverLetterRequest):
+@router.post("/cover-letter/generate", response_model=CoverLetterGenerateResponse)
+async def generate_cover_letter_preview(request: CoverLetterRequest):
     """
-    Generate a cover letter from the given inputs and persist it to the database.
+    Generate a cover letter from the given inputs WITHOUT persisting it.
 
-    - **resume_id**: must reference an existing saved resume (not master resume id 1 only
-      when used as a base — master resume IS allowed here for context).
+    The caller receives the letter content and the original request metadata
+    so it can be displayed for review before the user explicitly saves it.
+    Use POST /api/cover-letter/save to persist the letter.
+
     - **mode**: `'ai'` uses Gemini (falls back to local if no API key); `'local'` is offline.
-    - **motivations**: array of motivation keys from
-      `['strong_company_culture', 'personal_growth', 'meaningful_work', 'reputation_stability']`.
     """
     mode = request.mode.lower()
     if mode not in VALID_MODES:
         raise HTTPException(status_code=422, detail=f"mode must be one of {sorted(VALID_MODES)}")
 
-    # Accept known motivation keys AND any non-empty custom free-text values
     cleaned_motivations = [m.strip() for m in request.motivations if m and m.strip()]
 
     try:
@@ -194,6 +295,28 @@ async def generate_and_save_cover_letter(request: CoverLetterRequest):
     except CoverLetterServiceError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+    return CoverLetterGenerateResponse(
+        resume_id=request.resume_id,
+        job_title=request.job_title,
+        company=request.company,
+        job_description=request.job_description,
+        motivations=cleaned_motivations,
+        content=content,
+        generation_mode=mode,
+    )
+
+
+@router.post("/cover-letter/save", response_model=CoverLetterResponse)
+async def save_cover_letter_route(request: CoverLetterSaveRequest):
+    """
+    Persist a cover letter (generated or manually edited) to the database.
+    """
+    mode = request.generation_mode.lower()
+    if mode not in VALID_MODES:
+        raise HTTPException(status_code=422, detail=f"generation_mode must be one of {sorted(VALID_MODES)}")
+
+    cleaned_motivations = [m.strip() for m in request.motivations if m and m.strip()]
+
     try:
         cover_letter_id = await run_in_threadpool(
             save_cover_letter,
@@ -202,7 +325,7 @@ async def generate_and_save_cover_letter(request: CoverLetterRequest):
             company=request.company,
             job_description=request.job_description,
             motivations=cleaned_motivations,
-            content=content,
+            content=request.content,
             generation_mode=mode,
         )
     except CoverLetterServiceError as exc:

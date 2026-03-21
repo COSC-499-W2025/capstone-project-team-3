@@ -198,7 +198,7 @@ _LOCAL_TEMPLATE = """\
 
 {job_title} Application — {company}
 
-Dear Hiring Manager,
+Dear {company} Hiring Team,
 
 I am writing to express my strong interest in the {role} position at {company}. {education_line} with a background in {industry} and hands-on experience across a range of technical projects, I am confident in my ability to contribute meaningfully to your team.
 
@@ -217,7 +217,7 @@ Sincerely,
 """
 
 _MOTIVATION_PARAGRAPH_TEMPLATE = (
-    "I am particularly drawn to {company} because of your {motivation_text}. "
+    "I am particularly drawn to {company} because of {motivation_text}. "
     "This aligns closely with my own professional aspirations and is what initially drew me to the role."
 )
 
@@ -353,13 +353,14 @@ def generate_local(
 import re as _re
 
 
-def _postprocess_ai_body(raw: str, *, name: str) -> str:
+def _postprocess_ai_body(raw: str, *, name: str, company: str) -> str:
     """
     Extract just the letter body from raw LLM output and ensure the
     candidate's name follows "Sincerely,".
 
     Finds "Dear Hiring Manager," (start) and "Sincerely," (end), keeps only
-    that slice, strips any name the LLM may have appended after "Sincerely,",
+    that slice, replaces the generic greeting with "Dear {company} Hiring Team,",
+    strips any name the LLM may have appended after "Sincerely,",
     then appends the real name from the user's profile.  If either boundary
     is missing the raw text is returned stripped so generation still succeeds.
     """
@@ -370,6 +371,14 @@ def _postprocess_ai_body(raw: str, *, name: str) -> str:
 
     if start_match and end_match and end_match.start() > start_match.start():
         text = text[start_match.start(): end_match.end()].strip()
+
+    # Replace generic greeting with company-specific one
+    text = _re.sub(
+        r"Dear Hiring Manager,",
+        f"Dear {company} Hiring Team,",
+        text,
+        flags=_re.IGNORECASE,
+    )
 
     # Always close with the real name — remove whatever the LLM put there
     text = _re.sub(r"(Sincerely,)[\s\S]*$", r"\1", text, flags=_re.IGNORECASE).strip()
@@ -481,7 +490,7 @@ Instructions:
                 motivations=motivations,
             )
 
-        body = _postprocess_ai_body(raw, name=name)
+        body = _postprocess_ai_body(raw, name=name, company=company)
 
         # ── Assemble: pre-built header + AI body ──────────────────────────
         header = (

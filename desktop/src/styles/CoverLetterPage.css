@@ -386,6 +386,14 @@
   font-family: var(--font-sans);
 }
 
+/* Saved confirmation indicator */
+.cl-saved-badge {
+  font-size: 0.78rem;
+  color: #2f855a;
+  font-style: italic;
+  font-family: var(--font-sans);
+}
+
 /* Edit action row */
 .cl-actions--edit {
   justify-content: flex-end;
@@ -558,6 +566,7 @@
 [data-theme="dark"] .cl-preview-content    { background: var(--color-page-bg); border-color: var(--color-border); color: var(--color-text-body); }
 [data-theme="dark"] .cl-preview-editor     { background: var(--color-page-bg); border-color: var(--color-border); color: var(--color-text-body); }
 [data-theme="dark"] .cl-unsaved-badge      { color: var(--color-text-secondary); }
+[data-theme="dark"] .cl-saved-badge        { color: #68d391; }
 [data-theme="dark"] .cl-badge--ai          { background: var(--color-bg-lighter); color: var(--color-blue-darker); }
 [data-theme="dark"] .cl-badge--local       { background: var(--color-bg-light); color: var(--color-navy); }
 [data-theme="dark"] .cl-history-empty      { color: var(--color-text-secondary); }

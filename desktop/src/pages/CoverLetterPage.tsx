@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { getResumes, type ResumeListItem } from "../api/resume";
 import {
   generateCoverLetter,
+  saveCoverLetter,
   listCoverLetters,
   deleteCoverLetter,
   updateCoverLetter,
   downloadCoverLetterPdf,
-  coverLetterPdfUrl,
   MOTIVATION_OPTIONS,
+  type CoverLetterDraft,
   type CoverLetterResponse,
   type CoverLetterSummary,
   type GenerationMode,
@@ -91,7 +92,7 @@ function HistoryCard({
           className="cl-btn cl-btn--secondary"
           onClick={() => onView(entry.id)}
         >
-          View
+          Edit
         </button>
         <button
           className="cl-btn cl-btn--secondary"
@@ -119,7 +120,7 @@ function HistoryCard({
 
 interface GenerateTabProps {
   resumes: ResumeListItem[];
-  onGenerated: (cl: CoverLetterResponse) => void;
+  onGenerated: (cl: CoverLetterDraft) => void;
 }
 
 function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
@@ -348,9 +349,9 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
 // ---------------------------------------------------------------------------
 
 interface PreviewTabProps {
-  coverLetter: CoverLetterResponse;
+  coverLetter: CoverLetterDraft | CoverLetterResponse;
   onRegenerate: () => void;
-  onSaved: (updated: CoverLetterResponse) => void;
+  onSaved: (saved: CoverLetterResponse) => void;
 }
 
 function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
@@ -358,16 +359,18 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [savedBadge, setSavedBadge] = useState(false);
+
+  // Determine whether this draft has already been persisted
+  const isSaved = "id" in coverLetter;
 
   // Sync if a new letter is loaded into this tab
   useEffect(() => {
     setEditedContent(coverLetter.content);
     setIsDirty(false);
     setSaveError(null);
-    setPdfError(null);
-  }, [coverLetter.id, coverLetter.content]);
+    setSavedBadge(false);
+  }, [coverLetter]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setEditedContent(e.target.value);
@@ -375,28 +378,23 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
     setSaveError(null);
   }
 
-  async function handlePdfDownload() {
-    setPdfError(null);
-    setPdfLoading(true);
-    try {
-      await downloadCoverLetterPdf(
-        coverLetter.id,
-        `cover_letter_${coverLetter.job_title}_${coverLetter.company}.pdf`
-      );
-    } catch (e: unknown) {
-      setPdfError(e instanceof Error ? e.message : "PDF download failed.");
-    } finally {
-      setPdfLoading(false);
-    }
-  }
-
-  async function handleSave() {
+  async function handleSaveCoverLetter() {
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await updateCoverLetter(coverLetter.id, editedContent);
+      const draft: CoverLetterDraft = {
+        resume_id: coverLetter.resume_id,
+        job_title: coverLetter.job_title,
+        company: coverLetter.company,
+        job_description: coverLetter.job_description,
+        motivations: coverLetter.motivations,
+        content: editedContent,
+        generation_mode: coverLetter.generation_mode,
+      };
+      const saved = await saveCoverLetter(draft);
       setIsDirty(false);
-      onSaved(updated);
+      setSavedBadge(true);
+      onSaved(saved);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Save failed. Please try again.");
     } finally {
@@ -424,6 +422,11 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
                 &nbsp;· Unsaved changes
               </span>
             )}
+            {savedBadge && !isDirty && (
+              <span className="cl-saved-badge" data-testid="cl-saved-badge">
+                &nbsp;· ✓ Saved
+              </span>
+            )}
           </div>
         </div>
         <div className="cl-preview-actions">
@@ -434,20 +437,23 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
           >
             ↺ Regenerate
           </button>
-          <button
-            className="cl-btn cl-btn--primary"
-            onClick={handlePdfDownload}
-            disabled={pdfLoading}
-            data-testid="cl-download-btn"
-          >
-            {pdfLoading ? "Generating…" : "⬇ Download PDF"}
-          </button>
+          {!isSaved && (
+            <button
+              className="cl-btn cl-btn--primary"
+              onClick={handleSaveCoverLetter}
+              disabled={saving || !editedContent.trim()}
+              data-testid="cl-save-cl-btn"
+            >
+              {saving && <span className="cl-spinner" aria-hidden />}
+              {saving ? "Saving…" : "💾 Save Cover Letter"}
+            </button>
+          )}
         </div>
       </div>
 
-      {pdfError && (
+      {saveError && (
         <p className="cl-error cl-pdf-error" role="alert" data-testid="cl-pdf-error">
-          ⚠ {pdfError}
+          ⚠ {saveError}
         </p>
       )}
 
@@ -460,13 +466,7 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
         spellCheck
       />
 
-      {saveError && (
-        <p className="cl-error" role="alert" data-testid="cl-save-error">
-          {saveError}
-        </p>
-      )}
-
-      {isDirty && (
+      {isSaved && isDirty && (
         <div className="cl-actions cl-actions--edit">
           <button
             className="cl-btn cl-btn--secondary"
@@ -478,7 +478,22 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
           </button>
           <button
             className="cl-btn cl-btn--primary"
-            onClick={handleSave}
+            onClick={async () => {
+              setSaving(true);
+              setSaveError(null);
+              try {
+                const updated = await updateCoverLetter(
+                  (coverLetter as CoverLetterResponse).id,
+                  editedContent
+                );
+                setIsDirty(false);
+                onSaved(updated);
+              } catch (e: unknown) {
+                setSaveError(e instanceof Error ? e.message : "Save failed. Please try again.");
+              } finally {
+                setSaving(false);
+              }
+            }}
             disabled={saving || !editedContent.trim()}
             data-testid="cl-save-btn"
           >
@@ -566,8 +581,8 @@ type Tab = "generate" | "preview" | "history";
 export default function CoverLetterPage() {
   const [activeTab, setActiveTab] = useState<Tab>("generate");
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [generatedLetter, setGeneratedLetter] =
-    useState<CoverLetterResponse | null>(null);
+  const [currentLetter, setCurrentLetter] =
+    useState<CoverLetterDraft | CoverLetterResponse | null>(null);
   const [history, setHistory] = useState<CoverLetterSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -599,19 +614,16 @@ export default function CoverLetterPage() {
     if (activeTab === "history") loadHistory();
   }, [activeTab, loadHistory]);
 
-  function handleGenerated(cl: CoverLetterResponse) {
-    setGeneratedLetter(cl);
+  function handleGenerated(cl: CoverLetterDraft) {
+    setCurrentLetter(cl);
     setActiveTab("preview");
   }
 
   function handleView(id: number) {
-    const found = history.find((h) => h.id === id);
-    if (!found) return;
-    // Fetch full content then switch to preview
     import("../api/cover_letter")
       .then(({ getCoverLetter }) => getCoverLetter(id))
       .then((full) => {
-        setGeneratedLetter(full);
+        setCurrentLetter(full);
         setActiveTab("preview");
       })
       .catch(() => {});
@@ -622,7 +634,10 @@ export default function CoverLetterPage() {
     try {
       await deleteCoverLetter(id);
       setHistory((prev) => prev.filter((h) => h.id !== id));
-      if (generatedLetter?.id === id) setGeneratedLetter(null);
+      // If the currently previewed letter is the one being deleted, clear it
+      if (currentLetter && "id" in currentLetter && currentLetter.id === id) {
+        setCurrentLetter(null);
+      }
     } catch {
       // keep history as-is on failure
     }
@@ -630,10 +645,7 @@ export default function CoverLetterPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "generate", label: "Generate" },
-    {
-      key: "preview",
-      label: generatedLetter ? "Preview" : "Preview",
-    },
+    { key: "preview", label: "Preview" },
     { key: "history", label: `History${history.length > 0 ? ` (${history.length})` : ""}` },
   ];
 
@@ -664,11 +676,15 @@ export default function CoverLetterPage() {
       )}
 
       {activeTab === "preview" &&
-        (generatedLetter ? (
+        (currentLetter ? (
           <PreviewTab
-            coverLetter={generatedLetter}
+            coverLetter={currentLetter}
             onRegenerate={() => setActiveTab("generate")}
-            onSaved={(updated) => setGeneratedLetter(updated)}
+            onSaved={(saved) => {
+              setCurrentLetter(saved);
+              // Refresh history so the new card appears with the correct timestamp
+              loadHistory();
+            }}
           />
         ) : (
           <div className="cl-card">

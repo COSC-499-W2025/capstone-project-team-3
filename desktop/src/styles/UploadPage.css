@@ -133,6 +133,13 @@
   opacity: 0.8;
 }
 
+.upload-dropzone--disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.55;
+  border-color: var(--color-bg-lighter);
+}
+
 .upload-icon {
   color: var(--color-blue-dark);
   display: flex;
@@ -464,12 +471,6 @@
 
 .ar-table tbody tr:hover {
   background-color: #f9fafb;
-}
-
-.ar-table-files {
-  font-size: 13px;
-  color: #6b7280;
-  font-family: monospace;
 }
 
 .ar-table-similarity {

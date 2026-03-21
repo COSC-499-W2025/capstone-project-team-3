@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { API_BASE_URL } from "../config/api";
@@ -95,7 +95,6 @@ export function UploadPage() {
   const [pendingAiSelection, setPendingAiSelection] = useState<PendingAiSelection | null>(null);
   const [similarityModalData, setSimilarityModalData] = useState<SimilarityModalData | null>(null);
   const [hasRunAnalysis, setHasRunAnalysis] = useState(false);
-
   // Per-project file type exclusions
   const [projectExcludeGroups, setProjectExcludeGroups] =
     useState<Record<string, Set<string>>>({});
@@ -165,7 +164,7 @@ export function UploadPage() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (uploading) return;
+    if (uploading || running) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
       setUploadError(null);
@@ -177,7 +176,7 @@ export function UploadPage() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = uploading ? "none" : "copy";
+    e.dataTransfer.dropEffect = uploading || running ? "none" : "copy";
   };
 
   const handleResetUpload = () => {
@@ -346,33 +345,19 @@ export function UploadPage() {
   };
 
   const runActualAnalysis = async () => {
-  const toggleExcludeGroup = (projectPath: string, groupId: string) => {
-    setProjectExcludeGroups((prev) => {
-      const current = new Set(prev[projectPath] ?? []);
-      current.has(groupId) ? current.delete(groupId) : current.add(groupId);
-      return { ...prev, [projectPath]: current };
-    });
-  };
-
-  const toggleExpandExclude = (projectPath: string) => {
-    setExpandedExclude((prev) => {
-      const next = new Set(prev);
-      next.has(projectPath) ? next.delete(projectPath) : next.add(projectPath);
-      return next;
-    });
-  };
-
-  const handleRunAnalysis = async () => {
     if (!uploadId) return;
 
     const project_analysis_types: Record<string, string> = {};
     const project_similarity_actions: Record<string, string> = {};
 
     projects.forEach((p) => {
-      // Only include projects that should be analyzed (not skipped)
       if (p.userDecision !== "skip") {
         project_analysis_types[p.path] = p.mode;
-        project_similarity_actions[p.path] = p.userDecision || "create_new";
+        if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
+          project_similarity_actions[p.path] = p.userDecision;
+        } else {
+          project_similarity_actions[p.path] = "create_new";
+        }
       }
     });
 
@@ -400,8 +385,8 @@ export function UploadPage() {
           upload_id: uploadId,
           default_analysis_type: defaultMode,
           project_analysis_types,
-          similarity_action: similarityAction,
-          project_similarity_actions: projectSimilarityActions,
+          similarity_action: "create_new",
+          project_similarity_actions,
           project_exclude_extensions,
           project_exclude_name_prefixes,
           cleanup_zip: true,
@@ -410,43 +395,46 @@ export function UploadPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed");
-      
-      const skippedCount = projects.filter(p => p.userDecision === "skip").length;
-      
+
+      const skippedCount = projects.filter((p) => p.userDecision === "skip").length;
+
       setRunResult({
         analyzed_projects: data.analyzed_projects ?? 0,
         skipped_projects: (data.skipped_projects ?? 0) + skippedCount,
         failed_projects: data.failed_projects ?? 0,
         results: data.results ?? [],
       });
-      // Keep the projects table visible with all similarity info
+      setSimilarityModalData(null);
       setRunning(false);
-      setUploadId(null);
-      setUploadedFileName(null);
-      setProjects([]);
-      setProjectSimilarityActions({});
-      setDefaultMode("local");
-      setSimilarityAction("create_new");
-      setLoadError(null);
-      setAiConsentAccepted(false);
-      setShowAiConsentModal(false);
-      setPendingAiSelection(null);
-      setProjectExcludeGroups({});
-      setExpandedExclude(new Set());
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setHasRunAnalysis(true);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
       setRunning(false);
     }
   };
 
+  const toggleExcludeGroup = (projectPath: string, groupId: string) => {
+    setProjectExcludeGroups((prev) => {
+      const current = new Set(prev[projectPath] ?? []);
+      current.has(groupId) ? current.delete(groupId) : current.add(groupId);
+      return { ...prev, [projectPath]: current };
+    });
+  };
+
+  const toggleExpandExclude = (projectPath: string) => {
+    setExpandedExclude((prev) => {
+      const next = new Set(prev);
+      next.has(projectPath) ? next.delete(projectPath) : next.add(projectPath);
+      return next;
+    });
+  };
+
   const handleRunAnalysis = async () => {
-    if (!uploadId) return;
+    if (!uploadId || running || hasRunAnalysis) return;
 
     setRunning(true);
     setRunResult(null);
     setRunError(null);
-    setHasRunAnalysis(true);
 
     setProjects((prev) =>
       prev.map((p) => ({ ...p, status: "pending" as const, similarity: null }))
@@ -497,8 +485,8 @@ export function UploadPage() {
               <button
                 type="button"
                 className="upload-select-btn"
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                disabled={uploading}
+                onClick={() => !uploading && !running && fileInputRef.current?.click()}
+                disabled={uploading || running}
               >
                 {uploading ? "Uploading…" : hasUpload ? "Upload another ZIP" : "Choose ZIP file"}
               </button>
@@ -516,14 +504,14 @@ export function UploadPage() {
           </div>
 
           <div
-            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}`}
+            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}${running ? " upload-dropzone--disabled" : ""}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onClick={() => !uploading && fileInputRef.current?.click()}
+            onClick={() => !uploading && !running && fileInputRef.current?.click()}
             role="button"
             tabIndex={0}
             onKeyDown={(e) =>
-              e.key === "Enter" && !uploading && fileInputRef.current?.click()
+              e.key === "Enter" && !uploading && !running && fileInputRef.current?.click()
             }
             aria-label="Drop or click to select ZIP file"
           >
@@ -547,7 +535,7 @@ export function UploadPage() {
             onChange={handleFileChange}
             className="upload-file-input"
             aria-label="Select ZIP file"
-            disabled={uploading}
+            disabled={uploading || running}
           />
         </section>
 
@@ -605,24 +593,25 @@ export function UploadPage() {
                   <tr>
                     <th>Status</th>
                     <th>Project Name</th>
-                    <th>Files</th>
-                    <th>Similarity Score</th>
                     <th>Matched Project</th>
                     <th>Analysis Type</th>
                     <th>Decision</th>
-                    <th>Similarity Action</th>
                     <th>Exclude Types</th>
                   </tr>
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="ar-table-empty">No projects found.</td>
+                      <td colSpan={6} className="ar-table-empty">No projects found.</td>
                     </tr>
                   ) : (
-                    projects.map((project, index) => (
+                    projects.map((project, index) => {
+                      const excluded = projectExcludeGroups[project.path];
+                      const excludeCount = excluded?.size ?? 0;
+                      const isExpanded = expandedExclude.has(project.path);
+                      return (
+                        <Fragment key={project.name}>
                       <tr 
-                        key={project.name} 
                         className={project.status === "similarity_detected" ? "ar-table-row--similarity" : ""}
                       >
                         <td style={{ textAlign: "center" }}>
@@ -661,18 +650,6 @@ export function UploadPage() {
                           )}
                         </td>
                         <td className="ar-table-name">{project.name}</td>
-                        <td className="ar-table-files" style={{ textAlign: "center" }}>
-                          {project.status === "scanning" ? "..." : (project.fileCount ?? "—")}
-                        </td>
-                        <td className="ar-table-similarity" style={{ textAlign: "center" }}>
-                          {project.similarity ? (
-                            <span className={project.similarity.jaccard_similarity >= 70 ? "similarity-high" : project.similarity.jaccard_similarity >= 30 ? "similarity-medium" : "similarity-low"}>
-                              {project.similarity.jaccard_similarity.toFixed(1)}%
-                            </span>
-                          ) : (
-                            <span className="similarity-none">—</span>
-                          )}
-                        </td>
                         <td className="ar-table-matched">
                           {project.similarity ? (
                             <span className="matched-project-name">{project.similarity.matched_project_name}</span>
@@ -686,7 +663,7 @@ export function UploadPage() {
                             value={project.mode}
                             onChange={(e) => handleProjectModeChange(index, e.target.value)}
                             aria-label={`Analysis type for ${project.name}`}
-                            disabled={analysisDisabled || running}
+                            disabled={analysisDisabled}
                           >
                             <option value="local">Local</option>
                             <option value="ai">AI</option>
@@ -710,73 +687,36 @@ export function UploadPage() {
                               ⚠️ Similar to "{project.similarity?.matched_project_name}" - Click to decide
                             </span>
                           ) : project.userDecision === "update_existing" && project.similarity ? (
-                            <span className="ar-table-decision ar-table-decision--update">↻ Update "{project.similarity.matched_project_name}"</span>
+                            <span
+                              className="ar-table-decision ar-table-decision--update"
+                              title={`Update existing: ${project.similarity.matched_project_name}`}
+                            >
+                              ↻ Update
+                            </span>
                           ) : project.userDecision === "create_new" ? (
                             <span className="ar-table-decision">+ New project</span>
                           ) : null}
                         </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`ar-exclude-btn${isExpanded ? " ar-exclude-btn--open" : ""}`}
+                            onClick={() => toggleExpandExclude(project.path)}
+                            disabled={analysisDisabled}
+                            aria-expanded={isExpanded}
+                            aria-label={`Exclude file types for ${project.name}`}
+                          >
+                            {excludeCount > 0
+                              ? <span className="ar-exclude-badge">{excludeCount} type{excludeCount !== 1 ? "s" : ""}</span>
+                              : "None"
+                            }
+                            <span className="ar-exclude-chevron">{isExpanded ? "▴" : "▾"}</span>
+                          </button>
+                        </td>
                       </tr>
-                    ))
-                      <td colSpan={4} className="ar-table-empty">No projects found.</td>
-                    </tr>
-                  ) : (
-                    projects.map((project, index) => {
-                      const excluded = projectExcludeGroups[project.path];
-                      const excludeCount = excluded?.size ?? 0;
-                      const isExpanded = expandedExclude.has(project.path);
-                      return (
-                        <>
-                          <tr key={project.name}>
-                            <td className="ar-table-name">{project.name}</td>
-                            <td>
-                              <select
-                                className="ar-select ar-select--inline"
-                                value={project.mode}
-                                onChange={(e) => handleProjectModeChange(index, e.target.value)}
-                                aria-label={`Analysis type for ${project.name}`}
-                                disabled={analysisDisabled}
-                              >
-                                <option value="local">Local</option>
-                                <option value="ai">AI</option>
-                              </select>
-                            </td>
-                            <td>
-                              <select
-                                className="ar-select ar-select--inline"
-                                value={projectSimilarityActions[project.path] ?? similarityAction}
-                                onChange={(e) =>
-                                  handleProjectSimilarityActionChange(
-                                    project.path,
-                                    e.target.value as SimilarityAction,
-                                  )
-                                }
-                                aria-label={`Similarity action for ${project.name}`}
-                                disabled={analysisDisabled}
-                              >
-                                <option value="create_new">Create new</option>
-                                <option value="update_existing">Update existing</option>
-                              </select>
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className={`ar-exclude-btn${isExpanded ? " ar-exclude-btn--open" : ""}`}
-                                onClick={() => toggleExpandExclude(project.path)}
-                                disabled={analysisDisabled}
-                                aria-expanded={isExpanded}
-                                aria-label={`Exclude file types for ${project.name}`}
-                              >
-                                {excludeCount > 0
-                                  ? <span className="ar-exclude-badge">{excludeCount} type{excludeCount !== 1 ? "s" : ""}</span>
-                                  : "None"
-                                }
-                                <span className="ar-exclude-chevron">{isExpanded ? "▴" : "▾"}</span>
-                              </button>
-                            </td>
-                          </tr>
                           {isExpanded && (
-                            <tr key={`${project.name}-exclude`} className="ar-exclude-row">
-                              <td colSpan={4} className="ar-exclude-cell">
+                            <tr className="ar-exclude-row">
+                              <td colSpan={6} className="ar-exclude-cell">
                                 <div className="ar-exclude-panel">
                                   <p className="ar-exclude-hint">
                                     Check types to <strong>exclude</strong> from analysis for this project.
@@ -793,7 +733,11 @@ export function UploadPage() {
                                             disabled={analysisDisabled}
                                           />
                                           <span className="ar-exclude-label">{group.label}</span>
-                                          <span className="ar-exclude-exts">{group.exts.join(", ")}</span>
+                                          {group.exts.length > 0 ? (
+                                            <span className="ar-exclude-exts">{group.exts.join(", ")}</span>
+                                          ) : group.namePrefix ? (
+                                            <span className="ar-exclude-exts">filename: {group.namePrefix}*</span>
+                                          ) : null}
                                         </label>
                                       );
                                     })}
@@ -802,7 +746,7 @@ export function UploadPage() {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </Fragment>
                       );
                     })
                   )}
@@ -813,10 +757,16 @@ export function UploadPage() {
 
           <div className="ar-actions">
             <button
-              className={`ar-btn ar-btn--primary ${hasRunAnalysis ? "ar-btn--disabled" : ""}`}
+              className={`ar-btn ar-btn--primary ${running || hasRunAnalysis ? "ar-btn--disabled" : ""}`}
               onClick={handleRunAnalysis}
               disabled={analysisDisabled || projects.length === 0}
-              title={hasRunAnalysis ? "Analysis already run. Upload another ZIP or clear to run again." : ""}
+              title={
+                hasRunAnalysis
+                  ? "Analysis already run. Upload another ZIP or clear to run again."
+                  : running
+                    ? "Analysis in progress…"
+                    : ""
+              }
             >
               {running ? "Running…" : hasRunAnalysis ? "Analysis Complete" : "Run Analysis"}
             </button>

@@ -254,6 +254,8 @@
   color: #6b7280;
   margin-top: 12px;
   font-style: italic;
+}
+
 .ar-result-excluded-note {
   width: 100%;
   margin: 4px 0 0;
@@ -331,12 +333,18 @@
 .ar-exclude-cell {
   padding: 0 !important;
   border-top: none !important;
+  vertical-align: top;
 }
 
 .ar-exclude-panel {
-  padding: 0.85rem 1rem 1rem;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  margin: 4px 8px 10px 12px;
+  padding: 0.75rem 0.9rem 0.95rem;
+  border: 1px solid #90cdf4;
+  border-radius: 8px;
+  background: #f0f9ff;
+  box-shadow: 0 1px 2px rgba(49, 130, 206, 0.08);
+  width: calc(100% - 20px);
+  box-sizing: border-box;
 }
 
 .ar-exclude-hint {

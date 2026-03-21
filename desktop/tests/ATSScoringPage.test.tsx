@@ -97,9 +97,11 @@ describe('ATSScoringPage', () => {
     expect(screen.getByRole('tab', { name: /History/i })).toBeDefined();
   });
 
-  test('renders job description textarea', () => {
+  test('renders job description textarea', async () => {
     render(<ATSScoringPage />);
-    expect(screen.getByPlaceholderText(/Paste the full job description here/i)).toBeDefined();
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/Paste the full job description here/i)).toBeDefined()
+    );
   });
 
   test('renders resume dropdown with master option after resumes load', async () => {
@@ -353,5 +355,28 @@ describe('ATSScoringPage', () => {
       const select = screen.getByRole('combobox') as HTMLSelectElement;
       expect(select.value).toBe('2');
     });
+  });
+
+  // -----------------------------------------------------------------------
+  // Empty state (no resumes / DB wiped)
+  // -----------------------------------------------------------------------
+  test('shows empty state with upload CTA when no resumes exist', async () => {
+    mockGetResumes.mockResolvedValue([]);
+    render(<ATSScoringPage />);
+    await waitFor(() =>
+      expect(screen.getByText(/No resume available/i)).toBeDefined()
+    );
+    expect(screen.getByRole('button', { name: /Upload Projects/i })).toBeDefined();
+    expect(screen.queryByPlaceholderText(/Paste the full job description here/i)).toBeNull();
+  });
+
+  test('clears localStorage history when no resumes are returned', async () => {
+    localStorage.setItem('ats_history', JSON.stringify([makeHistoryEntry()]));
+    mockGetResumes.mockResolvedValue([]);
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(localStorage.getItem('ats_history')).toBeNull()
+    );
   });
 });

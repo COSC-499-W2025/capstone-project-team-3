@@ -657,6 +657,53 @@
   line-height: 1.5;
 }
 
+/* Empty state (no resumes / DB wiped) */
+.ats-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.ats-empty-icon {
+  opacity: 0.35;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.ats-empty-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--color-text, #1a1a2e);
+  margin: 0;
+}
+
+.ats-empty-body {
+  max-width: 380px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ats-empty-btn {
+  margin-top: 8px;
+  padding: 10px 24px;
+  border-radius: var(--radius-md, 8px);
+  border: none;
+  background: var(--color-primary, #4361ee);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ats-empty-btn:hover {
+  background: var(--color-primary-dark, #3651d4);
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .ats-layout {

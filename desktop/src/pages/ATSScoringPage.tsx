@@ -232,15 +232,31 @@ export function ATSScoringPage() {
     try {
       const list = await getResumes();
       setResumes(list);
-      // If master resume doesn't exist and we're defaulting to it, switch to first available
-      const hasMaster = list.some((r) => r.is_master);
-      if (!hasMaster) {
-        setSelectedResumeId((prev) => {
-          if (prev !== null) return prev;
-          const first = list.find((r) => !r.is_master && r.id !== null);
-          return first?.id ?? null;
-        });
+
+      if (list.length === 0) {
+        // No resumes means the DB was wiped — clear stale localStorage data
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(HISTORY_KEY);
+        setHistory([]);
+        setJobDescription("");
+        setResult(null);
+        setSelectedResumeId(null);
+        return;
       }
+
+      const hasMaster = list.some((r) => r.is_master);
+      setSelectedResumeId((prev) => {
+        if (prev === null) {
+          // Was using master resume — keep if still exists, else pick first non-master
+          if (hasMaster) return null;
+          return list.find((r) => !r.is_master && r.id !== null)?.id ?? null;
+        }
+        // Was using a specific resume — check it still exists in the new list
+        if (list.some((r) => r.id === prev)) return prev;
+        // Resume was deleted — fall back gracefully
+        if (hasMaster) return null;
+        return list.find((r) => !r.is_master && r.id !== null)?.id ?? null;
+      });
     } catch {
       // keep current selection on error
     } finally {
@@ -389,9 +405,35 @@ export function ATSScoringPage() {
       </div>
 
       {/* ================================================================
+          EMPTY STATE — no resumes (DB wiped / no projects uploaded yet)
+      ================================================================ */}
+      {!resumesLoading && resumes.length === 0 && (
+        <div className="ats-empty-state">
+          <div className="ats-empty-icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="6" />
+              <circle cx="12" cy="12" r="2" />
+            </svg>
+          </div>
+          <h2 className="ats-empty-title">No resume available</h2>
+          <p className="ats-empty-body">
+            Upload projects first so a resume can be generated, then come back to check your job match score.
+          </p>
+          <button
+            type="button"
+            className="ats-empty-btn"
+            onClick={() => navigate("/uploadpage")}
+          >
+            Upload Projects
+          </button>
+        </div>
+      )}
+
+      {/* ================================================================
           SCORE TAB
       ================================================================ */}
-      {activeTab === "score" && (
+      {activeTab === "score" && resumes.length > 0 && (
         <div className="ats-layout">
           {/* ---- Input panel ---- */}
           <div className="ats-input-panel">
@@ -553,7 +595,7 @@ export function ATSScoringPage() {
       {/* ================================================================
           HISTORY TAB
       ================================================================ */}
-      {activeTab === "history" && (
+      {activeTab === "history" && resumes.length > 0 && (
         <div className="ats-history-panel">
           <div className="ats-history-toolbar">
             <p className="ats-history-count">

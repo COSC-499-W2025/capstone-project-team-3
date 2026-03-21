@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, duplicate_resume, rename_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel, Field
@@ -53,6 +53,10 @@ class WorkExperienceFilter(BaseModel):
 
 class AddProjectsToResumeBody(BaseModel):
     project_ids: list[str] = Field(..., description="List of project IDs to add to the resume")
+
+
+class ResumeRenameBody(BaseModel):
+    name: str = Field(..., min_length=1, description="New display name for the resume")
 
 def tex_hash(tex: str) -> str:
     """Creates a unique hash of the LaTex source for futurer caching """
@@ -140,6 +144,38 @@ def list_resumes_endpoint():
         return {"resumes": list_resumes()}
     except ResumeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/resume/{resume_id}/duplicate")
+def duplicate_resume_endpoint(resume_id: int):
+    """Clone a resume (including master) into a new tailored resume."""
+    try:
+        new_id = duplicate_resume(resume_id)
+        return {"resume_id": new_id, "message": "Resume duplicated successfully"}
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ResumePersistenceError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/resume/{resume_id}")
+def rename_resume_endpoint(resume_id: int, body: ResumeRenameBody):
+    """Rename a saved resume (not the master resume)."""
+    try:
+        rename_resume(resume_id, body.name)
+        return {"status": "ok", "message": "Resume renamed"}
+    except ResumeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ResumePersistenceError as e:
+        detail = str(e)
+        if "Master" in detail:
+            raise HTTPException(status_code=400, detail=detail)
+        raise HTTPException(status_code=409, detail=detail)
+    except ResumeServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/resume/{id}/edit")
 def save_edited_resume(id: int, payload: Dict[str, Any]):

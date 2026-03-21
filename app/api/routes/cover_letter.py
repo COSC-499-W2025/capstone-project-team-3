@@ -9,7 +9,6 @@ DELETE /api/cover-letter/{id}           – Delete a cover letter
 """
 from __future__ import annotations
 
-import hashlib
 import os
 import re as _re
 import shutil
@@ -37,9 +36,6 @@ from app.utils.generate_resume import load_user
 from app.data.db import get_connection
 
 router = APIRouter()
-
-PDF_CACHE_DIR = os.getenv("PDF_CACHE_DIR", "app/data/resume_pdf_cache")
-os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 
 LATEX_BUILD_DIR = os.getenv("LATEX_BUILD_DIR", "app/data/latex_build")
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
@@ -257,10 +253,6 @@ def _compile_tex_to_pdf(tex_source: str) -> bytes:
             return f.read()
 
 
-def _cached_pdf_path(content_hash: str) -> str:
-    return os.path.join(PDF_CACHE_DIR, f"cover_letter_{content_hash}.pdf")
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -386,7 +378,7 @@ async def update_one_cover_letter(cover_letter_id: int, request: CoverLetterUpda
 async def download_cover_letter_pdf(cover_letter_id: int):
     """
     Compile the cover letter to PDF and return it as a download.
-    Results are cached by content hash.
+    PDF is compiled fresh on every request.
     """
     try:
         cl = await run_in_threadpool(get_cover_letter, cover_letter_id)
@@ -395,39 +387,28 @@ async def download_cover_letter_pdf(cover_letter_id: int):
     except CoverLetterServiceError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
-    content_hash = hashlib.sha256(cl["content"].encode("utf-8")).hexdigest()[:16]
-    cached_path = _cached_pdf_path(content_hash)
-
-    if os.path.exists(cached_path):
-        with open(cached_path, "rb") as f:
-            pdf_bytes = f.read()
-    else:
-        # Load user name for the LaTeX header
+    try:
+        conn = get_connection()
         try:
-            conn = get_connection()
-            try:
-                user = load_user(conn.cursor())
-            finally:
-                conn.close()
-            name = user.get("name") or "Applicant"
-        except Exception:
-            name = "Applicant"
+            user = load_user(conn.cursor())
+        finally:
+            conn.close()
+        name = user.get("name") or "Applicant"
+    except Exception:
+        name = "Applicant"
 
-        tex = _build_cover_letter_tex(
-            content=cl["content"],
-            job_title=cl["job_title"],
-            company=cl["company"],
-            name=name,
-        )
-        try:
-            pdf_bytes = await run_in_threadpool(_compile_tex_to_pdf, tex)
-        except RuntimeError as exc:
-            msg = str(exc)
-            status = 503 if "not installed" in msg else 500
-            raise HTTPException(status_code=status, detail=msg)
-
-        with open(cached_path, "wb") as f:
-            f.write(pdf_bytes)
+    tex = _build_cover_letter_tex(
+        content=cl["content"],
+        job_title=cl["job_title"],
+        company=cl["company"],
+        name=name,
+    )
+    try:
+        pdf_bytes = await run_in_threadpool(_compile_tex_to_pdf, tex)
+    except RuntimeError as exc:
+        msg = str(exc)
+        status = 503 if "not installed" in msg else 500
+        raise HTTPException(status_code=status, detail=msg)
 
     filename = f"cover_letter_{cl['company'].replace(' ', '_')}_{cl['job_title'].replace(' ', '_')}.pdf"
     return Response(

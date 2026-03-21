@@ -458,17 +458,17 @@
   border-color: #f56565;
 }
 
-[data-theme="dark"] [contenteditable="true"] {
+[data-theme="dark"] .resume-preview__page [contenteditable="true"] {
   outline-color: var(--color-border);
-  background-color: var(--color-card-bg);
+  color: inherit;
 }
 
-[data-theme="dark"] [contenteditable="true"]:focus {
+[data-theme="dark"] .resume-preview__page [contenteditable="true"]:focus {
   outline-color: var(--color-blue-medium);
-  background-color: var(--color-card-bg);
 }
 
 [data-theme="dark"] .resume-preview__project-date-input:focus,
 [data-theme="dark"] .resume-preview__project-date-input:not(:placeholder-shown) {
-  background: var(--color-card-bg);
+  background: #fff;
+  color: #000;
 }

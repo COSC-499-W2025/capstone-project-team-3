@@ -976,9 +976,9 @@ function ActivityHeatmap({
                   <div
                     key={cell.key}
                     className={`activity-cell activity-cell-level-${cell.level} ${
-                      weekIndex <= 1
+                      weekIndex <= 10
                         ? "activity-cell-tooltip-right"
-                        : weekIndex >= totalWeeks - 2
+                        : weekIndex >= totalWeeks - 11
                           ? "activity-cell-tooltip-left"
                           : "activity-cell-tooltip-center"
                     }`}

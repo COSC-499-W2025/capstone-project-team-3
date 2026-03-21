@@ -1351,8 +1351,10 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 22px;
+            padding-top: 40px;
             box-shadow: var(--shadow);
             transition: all 0.2s ease;
+            overflow: visible;
         }
 
         .activity-heatmap-card:hover {
@@ -1396,6 +1398,7 @@
             grid-template-columns: 36px 1fr;
             gap: 10px;
             align-items: start;
+            overflow: visible;
         }
 
         .activity-heatmap-weekdays {
@@ -1413,7 +1416,7 @@
             overflow-x: auto;
             overflow-y: visible;
             position: relative;
-            padding-top: 36px;
+            padding-top: 40px;
             margin-top: -36px;
             padding-bottom: 2px;
         }

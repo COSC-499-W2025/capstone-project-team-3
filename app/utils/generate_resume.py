@@ -76,35 +76,46 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
     try:
         try:
-            # Extended query — includes industry, personal_summary, and linkedin
+            # Extended query — includes industry, personal_summary, linkedin, profile_picture_path
             cursor.execute(
                 """
                 SELECT name, email, github_user, education, job_title, education_details,
-                       industry, personal_summary, linkedin
+                       industry, personal_summary, linkedin, profile_picture_path
                 FROM USER_PREFERENCES
                 ORDER BY updated_at DESC LIMIT 1
                 """
             )
         except sqlite3.OperationalError:
             try:
-                # Fallback: without linkedin (older schema)
+                # Fallback: without profile_picture_path (older schema)
                 cursor.execute(
                     """
                     SELECT name, email, github_user, education, job_title, education_details,
-                           industry, personal_summary
+                           industry, personal_summary, linkedin
                     FROM USER_PREFERENCES
                     ORDER BY updated_at DESC LIMIT 1
                     """
                 )
             except sqlite3.OperationalError:
-                # Fallback for older DB schemas that do not yet have industry/personal_summary
-                cursor.execute(
-                    """
-                    SELECT name, email, github_user, education, job_title, education_details
-                    FROM USER_PREFERENCES
-                    ORDER BY updated_at DESC LIMIT 1
-                    """
-                )
+                try:
+                    # Fallback: without linkedin (older schema)
+                    cursor.execute(
+                        """
+                        SELECT name, email, github_user, education, job_title, education_details,
+                               industry, personal_summary
+                        FROM USER_PREFERENCES
+                        ORDER BY updated_at DESC LIMIT 1
+                        """
+                    )
+                except sqlite3.OperationalError:
+                    # Fallback for oldest DB schemas without industry/personal_summary
+                    cursor.execute(
+                        """
+                        SELECT name, email, github_user, education, job_title, education_details
+                        FROM USER_PREFERENCES
+                        ORDER BY updated_at DESC LIMIT 1
+                        """
+                    )
         row = cursor.fetchone()
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading user") from e
@@ -120,6 +131,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
             "github_user": None,
             "industry": None,
             "personal_summary": None,
+            "profile_picture_path": None,
         }
 
     links = []
@@ -148,6 +160,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "industry": row[6] if len(row) > 6 else None,
         "personal_summary": row[7] if len(row) > 7 else None,
         "linkedin": linkedin,
+        "profile_picture_path": row[9] if len(row) > 9 else None,
     }
 
 def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:

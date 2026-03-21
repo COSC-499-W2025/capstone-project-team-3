@@ -53,6 +53,7 @@ interface UserInfo {
   github_user?: string | null;
   industry?: string | null;
   personal_summary?: string | null;
+  profile_picture_path?: string | null;
 }
 
 interface PortfolioData {
@@ -269,6 +270,11 @@ function UserProfileCard({ user }: { user: UserInfo }) {
   const initials = getInitials(name);
   const avatarBg = getAvatarBackground(name);
 
+  // Build the profile picture URL if a path is stored
+  const profilePictureUrl = user.profile_picture_path
+    ? `${API_BASE_URL}/api/user-preferences/profile-picture`
+    : null;
+
   // education_details arrives as a JSON string from the API
   let bestEdu: { institution?: string; degree?: string } | null = null;
   if (user.education_details) {
@@ -295,9 +301,18 @@ function UserProfileCard({ user }: { user: UserInfo }) {
 
   return (
     <div className="profile-hero">
-      <div className="profile-avatar" style={{ background: avatarBg }}>
-        {initials}
-      </div>
+      {profilePictureUrl ? (
+        <img
+          src={profilePictureUrl}
+          alt={name}
+          className="profile-avatar profile-avatar--photo"
+          style={{ objectFit: "cover", background: avatarBg }}
+        />
+      ) : (
+        <div className="profile-avatar" style={{ background: avatarBg }}>
+          {initials}
+        </div>
+      )}
 
       <div className="profile-info">
         <div className="profile-name">{name}</div>

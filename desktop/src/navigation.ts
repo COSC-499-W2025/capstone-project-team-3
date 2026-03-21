@@ -7,6 +7,7 @@ export const mainNavItems: { path: string; label: string }[] = [
   { path: "/uploadpage", label: "Upload" },
   { path: "/datamanagementpage", label: "Projects" },
   { path: "/resumebuilderpage", label: "Resume" },
+  { path: "/coverletterpage", label: "Cover Letter" },
   { path: "/portfoliopage", label: "Portfolio" },
   { path: "/atsscoringpage", label: "ATS Score" },
 ];

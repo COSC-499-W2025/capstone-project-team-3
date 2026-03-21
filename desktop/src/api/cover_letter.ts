@@ -1,0 +1,124 @@
+import { API_BASE_URL } from "../config/api";
+
+const API_BASE = API_BASE_URL;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export const MOTIVATION_OPTIONS = [
+  { key: "strong_company_culture", label: "Strong Company Culture" },
+  { key: "personal_growth", label: "Personal Growth & Career Advancement" },
+  { key: "meaningful_work", label: "Meaningful Work/Company Mission" },
+  { key: "reputation_stability", label: "Reputation & Stability" },
+] as const;
+
+export type MotivationKey = (typeof MOTIVATION_OPTIONS)[number]["key"];
+export type GenerationMode = "ai" | "local";
+
+export interface CoverLetterRequest {
+  resume_id: number;
+  job_title: string;
+  company: string;
+  job_description: string;
+  motivations: MotivationKey[];
+  mode: GenerationMode;
+}
+
+export interface CoverLetterResponse {
+  id: number;
+  resume_id: number;
+  job_title: string;
+  company: string;
+  job_description: string;
+  motivations: MotivationKey[];
+  content: string;
+  generation_mode: GenerationMode;
+  created_at: string;
+}
+
+export interface CoverLetterSummary {
+  id: number;
+  resume_id: number;
+  job_title: string;
+  company: string;
+  generation_mode: GenerationMode;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function parseErrorDetail(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (body?.detail != null) {
+      if (typeof body.detail === "string") return body.detail;
+      if (Array.isArray(body.detail))
+        return body.detail.map((d: { msg?: string }) => d?.msg ?? String(d)).join("; ");
+    }
+  } catch {
+    // ignore
+  }
+  return "Request failed: " + res.statusText;
+}
+
+// ---------------------------------------------------------------------------
+// API functions
+// ---------------------------------------------------------------------------
+
+/** Generate and persist a new cover letter. */
+export async function generateCoverLetter(
+  request: CoverLetterRequest
+): Promise<CoverLetterResponse> {
+  const res = await fetch(`${API_BASE}/api/cover-letter/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/** List all saved cover letters (summary only). */
+export async function listCoverLetters(): Promise<CoverLetterSummary[]> {
+  const res = await fetch(`${API_BASE}/api/cover-letter`);
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/** Retrieve a single cover letter with full content. */
+export async function getCoverLetter(id: number): Promise<CoverLetterResponse> {
+  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`);
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/** Delete a cover letter by id. */
+export async function deleteCoverLetter(
+  id: number
+): Promise<{ success: boolean; deleted_id: number }> {
+  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/** Return the URL for downloading a cover letter as PDF. */
+export function coverLetterPdfUrl(id: number): string {
+  return `${API_BASE}/api/cover-letter/${id}/pdf`;
+}

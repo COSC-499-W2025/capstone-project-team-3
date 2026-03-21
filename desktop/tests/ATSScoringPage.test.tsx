@@ -80,9 +80,9 @@ describe('ATSScoringPage', () => {
   // -----------------------------------------------------------------------
   // Rendering
   // -----------------------------------------------------------------------
-  test('renders ATS Scoring title', async () => {
+  test('renders Check Job Match title', async () => {
     render(<ATSScoringPage />);
-    const headings = screen.getAllByText('ATS Scoring');
+    const headings = screen.getAllByText('Check Job Match');
     expect(headings.length).toBeGreaterThan(0);
   });
 
@@ -111,12 +111,6 @@ describe('ATSScoringPage', () => {
     });
   });
 
-  test('renders Manage Resumes link', async () => {
-    render(<ATSScoringPage />);
-    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
-    expect(screen.getByText(/Manage Resumes/i)).toBeDefined();
-  });
-
   // -----------------------------------------------------------------------
   // Calculate button state
   // -----------------------------------------------------------------------
@@ -135,16 +129,6 @@ describe('ATSScoringPage', () => {
       { target: { value: LONG_JD } }
     );
     expect(screen.getByRole('button', { name: /Calculate ATS Score/i }).hasAttribute('disabled')).toBe(false);
-  });
-
-  // -----------------------------------------------------------------------
-  // Manage Resumes navigation link (Fix 2)
-  // -----------------------------------------------------------------------
-  test('Manage Resumes link navigates to /resumebuilderpage', async () => {
-    render(<ATSScoringPage />);
-    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
-    fireEvent.click(screen.getByText(/Manage Resumes/i));
-    expect(mockNavigate).toHaveBeenCalledWith('/resumebuilderpage');
   });
 
   // -----------------------------------------------------------------------

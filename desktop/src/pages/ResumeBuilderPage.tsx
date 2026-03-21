@@ -411,6 +411,13 @@ export function ResumeBuilderPage() {
           <span className="nav-current">Résumé</span>
         </div>
         <div className="resume-builder__actions">
+          <button
+            className="btn btn--ats"
+            onClick={() => navigate('/atsscoringpage')}
+            title="Check ATS compatibility score for this resume"
+          >
+            Check Job Match
+          </button>
           {showSaveButton && (
             <button 
               className="btn btn--secondary" 
@@ -420,13 +427,6 @@ export function ResumeBuilderPage() {
               {saving ? 'Saving...' : 'Save'}
             </button>
           )}
-          <button
-            className="btn btn--ats"
-            onClick={() => navigate('/atsscoringpage')}
-            title="Check ATS compatibility score for this resume"
-          >
-            ATS Score
-          </button>
           <div className="dropdown">
             <button 
               className="btn btn--primary"

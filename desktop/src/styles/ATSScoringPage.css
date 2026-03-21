@@ -47,6 +47,7 @@
   color: #6c757d;
   background: none;
   border: none;
+  border-radius: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   cursor: pointer;
@@ -99,14 +100,15 @@
 
 /* ---- Input panel ---- */
 .ats-input-panel {
-  flex: 0 0 480px;
+  flex: 0 0 40%;
   min-width: 0;
   background: #fff;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 4px var(--color-shadow);
-  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 10px var(--color-shadow);
+  padding: var(--spacing-lg) 0.75rem;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: var(--spacing-md);
 }
 
@@ -121,34 +123,13 @@
   font-weight: 600;
   color: #374151;
   font-family: var(--font-sans);
+  text-align: center;
 }
 
-.ats-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.ats-manage-resumes-link {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #3b82f6;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.ats-manage-resumes-link:hover {
-  color: #2563eb;
-  text-decoration: underline;
-}
 
 .ats-select {
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.4rem 0.6rem;
   font-size: 0.9rem;
   border: 1px solid #d1d5db;
@@ -168,19 +149,23 @@
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.875rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.9rem;
   font-family: var(--font-sans);
   color: #374151;
-  border: 1px solid #d1d5db;
+  border: 1.5px solid #d1d5db;
   border-radius: var(--radius-sm);
-  line-height: 1.55;
-  min-height: 320px;
+  line-height: 1.65;
+  min-height: 480px;
+  background: #fafafa;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .ats-textarea:focus {
-  outline: 2px solid var(--color-blue-light);
-  outline-offset: 1px;
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: #fff;
 }
 
 .ats-char-count {

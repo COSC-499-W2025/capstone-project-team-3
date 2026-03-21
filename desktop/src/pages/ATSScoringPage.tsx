@@ -357,10 +357,10 @@ export function ATSScoringPage() {
           Home
         </button>
         <span className="page-home-separator">›</span>
-        <span className="page-home-current">ATS Scoring</span>
+        <span className="page-home-current">Check Job Match</span>
       </div>
 
-      <h1 className="ats-title">ATS Scoring</h1>
+      <h1 className="ats-title">Check Job Match</h1>
       <p className="ats-description">
         Paste a job description and choose a resume to see how well it matches
         applicant tracking system requirements.
@@ -394,18 +394,9 @@ export function ATSScoringPage() {
       {activeTab === "score" && (
         <div className="ats-layout">
           {/* ---- Input panel ---- */}
-          <div className="ats-input-panel frame">
+          <div className="ats-input-panel">
             <div className="ats-field">
-              <div className="ats-label-row">
-                <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
-                <button
-                  type="button"
-                  className="ats-manage-resumes-link"
-                  onClick={() => navigate("/resumebuilderpage")}
-                >
-                  Manage Resumes →
-                </button>
-              </div>
+              <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
               {resumesLoading ? (
                 <p className="ats-loading-small">Loading resumes…</p>
               ) : (
@@ -442,7 +433,7 @@ export function ATSScoringPage() {
                   setJobDescription(e.target.value);
                   setResult(null);
                 }}
-                rows={20}
+                rows={26}
               />
               <p className="ats-char-count">
                 {jobDescription.trim().split(/\s+/).filter(Boolean).length} words
@@ -515,18 +506,6 @@ export function ATSScoringPage() {
                   ))}
                 </div>
 
-                {/* Tips */}
-                {result.tips.length > 0 && (
-                  <div className="ats-section frame ats-tips-section">
-                    <h2 className="ats-section-title">Improvement Tips</h2>
-                    <ul className="ats-tips-list">
-                      {result.tips.map((tip, i) => (
-                        <li key={i} className="ats-tip-item">{tip}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 {/* Merged keyword + skills section */}
                 {(mergedMatched.length > 0 || mergedMissing.length > 0) && (
                   <div className="ats-section frame">
@@ -551,6 +530,18 @@ export function ATSScoringPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Tips */}
+                {result.tips.length > 0 && (
+                  <div className="ats-section frame ats-tips-section">
+                    <h2 className="ats-section-title">Improvement Tips</h2>
+                    <ul className="ats-tips-list">
+                      {result.tips.map((tip, i) => (
+                        <li key={i} className="ats-tip-item">{tip}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </>

@@ -591,23 +591,23 @@ describe('ResumeBuilderPage', () => {
     });
   });
 
-  // ATS Score link
-  test('ATS Score button is rendered in the header', async () => {
+  // Check Job Match link
+  test('Check Job Match button is rendered in the header', async () => {
     render(<ResumeBuilderPage />);
 
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    expect(screen.getByRole('button', { name: 'ATS Score' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Check Job Match' })).toBeDefined();
   });
 
-  test('clicking ATS Score button navigates to /atsscoringpage', async () => {
+  test('clicking Check Job Match button navigates to /atsscoringpage', async () => {
     render(<ResumeBuilderPage />);
 
     await screen.findByText('Master Resume');
     await waitFor(() => expect(mockBuildResume).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole('button', { name: 'ATS Score' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Check Job Match' }));
     expect(mockNavigate).toHaveBeenCalledWith('/atsscoringpage');
   });
 

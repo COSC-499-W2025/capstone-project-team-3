@@ -82,14 +82,14 @@ test('renders Data Management card', () => {
   expect(screen.getByText(/Review and edit project dates/i)).toBeInTheDocument();
 });
 
-test('renders ATS Scoring card', () => {
+test('renders Check Job Match card', () => {
   render(
     <BrowserRouter>
       <HubPage />
     </BrowserRouter>
   );
 
-  expect(screen.getByText('ATS Scoring')).toBeInTheDocument();
+  expect(screen.getByText('Check Job Match')).toBeInTheDocument();
   expect(screen.getByText(/Check how well your resume matches a job description/i)).toBeInTheDocument();
 });
 
@@ -171,7 +171,7 @@ test('navigates to ATS scoring on card click', () => {
     </BrowserRouter>
   );
 
-  const card = screen.getByLabelText('Go to ATS Scoring');
+  const card = screen.getByLabelText('Go to Check Job Match');
   fireEvent.click(card);
   expect(mockNavigate).toHaveBeenCalledWith('/atsscoringpage');
 });
@@ -187,6 +187,6 @@ test('each card has an accessible aria-label', () => {
   expect(screen.getByLabelText('Go to Resume Builder')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Portfolio')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Data Management')).toBeInTheDocument();
-  expect(screen.getByLabelText('Go to ATS Scoring')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Check Job Match')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Settings')).toBeInTheDocument();
 });

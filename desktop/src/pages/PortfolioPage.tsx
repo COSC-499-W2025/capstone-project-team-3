@@ -1581,6 +1581,9 @@ const PortfolioPage: React.FC = () => {
       mainClone
         .querySelectorAll(".portfolio-owner-only")
         .forEach((el) => el.remove());
+      mainClone
+        .querySelectorAll(".page-home-nav")
+        .forEach((el) => el.remove());
 
       // Inline thumbnails as data URLs for offline export
       const thumbnailImages = Array.from(

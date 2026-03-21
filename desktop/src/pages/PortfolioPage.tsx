@@ -1442,7 +1442,6 @@ function ProjectCard({
               <p
                 className={`summary-text ${!showFullSummary && shouldTruncateSummary(summary) ? "truncated" : ""} editable-field`}
                 onClick={() => startEdit("summary")}
-                title="Click to edit"
                 style={
                   !summary
                     ? { color: "var(--text-muted)", fontStyle: "italic" }
@@ -1603,6 +1602,21 @@ const PortfolioPage: React.FC = () => {
       mainClone
         .querySelectorAll(".page-home-nav")
         .forEach((el) => el.remove());
+
+      // Wire up Show More buttons for the static HTML export
+      mainClone
+        .querySelectorAll(".show-more-btn")
+        .forEach((btn) => {
+          btn.setAttribute("onclick", "window.toggleSummary(this)");
+        });
+
+      // Remove edit-related attributes that don't apply in exported HTML
+      mainClone
+        .querySelectorAll(".editable-field")
+        .forEach((el) => {
+          el.removeAttribute("title");
+          el.classList.remove("editable-field");
+        });
 
       // Inline thumbnails as data URLs for offline export
       const thumbnailImages = Array.from(

@@ -1146,20 +1146,27 @@
         }
 
         .show-more-btn {
-            background: none;
-            border: none;
+            all: unset;
             color: var(--accent);
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
-            padding: 4px 0;
-            margin-top: 8px;
-            text-decoration: underline;
-            transition: color 0.2s ease;
+            padding: 2px 0;
+            margin-top: 6px;
+            display: inline-block;
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent);
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
 
         .show-more-btn:hover {
-            color: var(--accent-secondary);
+            color: var(--secondary-bg);
+            border-bottom-color: transparent;
+            background: var(--accent);
+            border-radius: 4px;
+            padding: 4px 10px;
+            transform: none;
+            box-shadow: none;
         }
 
         .contribution-details {

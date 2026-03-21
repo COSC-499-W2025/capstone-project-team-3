@@ -671,6 +671,7 @@ interface HeatmapCell {
 interface HeatmapModel {
   weeks: HeatmapCell[][];
   monthLabels: Array<{ label: string; col: number }>;
+  yearLabels: Array<{ label: string; col: number }>;
   maxValue: number;
   totalSignal: number;
   activeDays: number;
@@ -716,8 +717,27 @@ const buildHeatmapModel = (
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const start = new Date(today);
-  start.setDate(start.getDate() - 364);
+  // Find the earliest project date to determine how far back to show
+  let earliest: Date | null = null;
+  const consider = (d: Date | null) => {
+    if (d && (!earliest || d < earliest)) earliest = d;
+  };
+
+  (projects || []).forEach((p) => {
+    consider(parseDateLike(p.created_at || p.start_date));
+    consider(parseDateLike(p.last_modified || p.end_date));
+  });
+
+  // Start from Jan 1 of the earliest project year, but always show at least the current year
+  const currentYear = today.getFullYear();
+  let startYear = currentYear; // default: show current year
+
+  if (earliest) {
+    const earliestYear = earliest.getFullYear();
+    if (earliestYear < currentYear) startYear = earliestYear;
+  }
+
+  const start = new Date(startYear, 0, 1); // Jan 1 of the start year
 
   const calendarStart = new Date(start);
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
@@ -828,6 +848,23 @@ const buildHeatmapModel = (
     }
   });
 
+  const yearLabels: Array<{ label: string; col: number }> = [];
+  let lastYear = -1;
+  weeks.forEach((week, col) => {
+    const firstDay = week[0];
+    if (!firstDay) return;
+    const y = firstDay.date.getFullYear();
+    if (y !== lastYear) {
+      // Skip a partial trailing week from the previous year at the start
+      if (yearLabels.length === 0 && col === 0 && firstDay.date.getMonth() === 11) {
+        lastYear = y;
+        return;
+      }
+      yearLabels.push({ label: String(y), col });
+      lastYear = y;
+    }
+  });
+
   const activeCells = cells.filter((cell) => cell.value > 0);
   const activeDays = activeCells.length;
   const totalSignal = cells.reduce((sum, cell) => sum + cell.value, 0);
@@ -841,6 +878,7 @@ const buildHeatmapModel = (
   return {
     weeks,
     monthLabels,
+    yearLabels,
     maxValue,
     totalSignal,
     activeDays,
@@ -894,6 +932,24 @@ function ActivityHeatmap({
         </div>
 
         <div className="activity-heatmap-scroll">
+          {model.yearLabels.length > 1 && (
+            <div
+              className="activity-heatmap-years"
+              style={{ width: `${calendarWidth}px` }}
+              aria-hidden
+            >
+              {model.yearLabels.map((yr) => (
+                <span
+                  key={`yr-${yr.label}`}
+                  className="activity-heatmap-year"
+                  style={{ left: `${yr.col * HEATMAP_CELL_STEP}px` }}
+                >
+                  {yr.label}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div
             className="activity-heatmap-months"
             style={{ width: `${calendarWidth}px` }}

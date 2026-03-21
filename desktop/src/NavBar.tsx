@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { mainNavItems, footerNavItems } from "./navigation";
 import { getResumes } from "./api/resume";
-import { useProfilePicture } from "./ProfilePictureContext";
 import "./styles/NavBar.css";
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -68,7 +67,6 @@ const settingsIcon = (
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [hasMasterResume, setHasMasterResume] = useState(true);
-  const { profilePicture } = useProfilePicture();
 
   useEffect(() => {
     getResumes()
@@ -141,19 +139,7 @@ export function NavBar() {
               }
               title={label}
             >
-              {path === "/userpreferencepage" ? (
-                profilePicture ? (
-                  <img
-                    src={profilePicture}
-                    alt="Profile"
-                    className="app-sidebar__avatar"
-                  />
-                ) : (
-                  <span className="app-sidebar__link-icon">{navIcons[path]}</span>
-                )
-              ) : (
-                <span className="app-sidebar__link-icon">{path === "/settingspage" ? settingsIcon : navIcons[path]}</span>
-              )}
+              <span className="app-sidebar__link-icon">{path === "/settingspage" ? settingsIcon : navIcons[path]}</span>
             </NavLink>
           ))}
           <button

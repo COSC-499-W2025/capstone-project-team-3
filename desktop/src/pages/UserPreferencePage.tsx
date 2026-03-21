@@ -8,13 +8,13 @@ import {
   saveUserPreferences,
   uploadProfilePicture,
   deleteProfilePicture,
+  getProfilePictureUrl,
   getAllInstitutions,
   type UserPreferences, 
   type EducationDetail,
   type Institution 
 } from '../api/userPreferences';
 import { getConsentStatus } from '../api/consent';
-import { useProfilePicture } from '../ProfilePictureContext';
 
 const INDUSTRIES = [
   "Technology",
@@ -517,10 +517,10 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
 
 export default function UserPreferencePage() {
   const navigate = useNavigate();
-  const { profilePicture, refreshProfilePicture } = useProfilePicture();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pictureUploading, setPictureUploading] = useState(false);
   const [pictureError, setPictureError] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   const [profileData, setProfileData] = useState<ProfileData>({
     fullName: "",
@@ -569,6 +569,10 @@ export default function UserPreferencePage() {
         const backendData = await getUserPreferences();
         const frontendData = convertToFrontend(backendData);
         setProfileData(frontendData);
+        // Load profile picture — if a path is stored in the DB, use the API endpoint as img src
+        if (backendData.profile_picture) {
+          setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
+        }
         // Has saved preferences → definitely a returning user
         setIsFirstTimeUser(false);
       } catch (err: any) {
@@ -634,8 +638,8 @@ export default function UserPreferencePage() {
     setPictureUploading(true);
     try {
       await uploadProfilePicture(file);
-      // Refresh context so NavBar and avatar update immediately with the new server URL
-      await refreshProfilePicture();
+      // Cache the URL so the browser fetches the new file from the server
+      setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
     } catch (err: any) {
       setPictureError(err?.message ?? "Failed to upload picture. Please try again.");
     } finally {
@@ -649,7 +653,7 @@ export default function UserPreferencePage() {
     setPictureUploading(true);
     try {
       await deleteProfilePicture();
-      await refreshProfilePicture();
+      setProfilePicture(null);
     } catch (err: any) {
       setPictureError(err?.message ?? "Failed to remove picture.");
     } finally {

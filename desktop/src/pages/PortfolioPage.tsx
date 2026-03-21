@@ -1842,8 +1842,13 @@ ${mainClone.outerHTML}
   return (
     <div className="portfolio-layout">
       <div className="sidebar">
-        <h2>📋 Project Selection</h2>
-        <div className="project-selection">
+        <div className="sidebar-header">
+          <div className="sidebar-title-row">
+            <h2>Projects</h2>
+            <span className="sidebar-count">
+              {selectedProjects.size}/{allProjects.length}
+            </span>
+          </div>
           <button
             className="select-all-btn"
             onClick={() => void toggleAllProjects()}
@@ -1853,38 +1858,38 @@ ${mainClone.outerHTML}
               ? "Deselect All"
               : "Select All"}
           </button>
-          <div id="projectList">
-            {allProjects.map((p) => {
+        </div>
+        <div className="project-list">
+          {allProjects.length === 0 ? (
+            <div className="project-list-empty">
+              No projects found
+            </div>
+          ) : (
+            allProjects.map((p) => {
               const checked = selectedProjects.has(p.id);
-              const tags = (p.skills || []).slice(0, 3);
+              const score = getDisplayScore(p);
+              const scoreClass =
+                score >= 0.7
+                  ? "score-high"
+                  : score >= 0.4
+                    ? "score-mid"
+                    : "score-low";
               return (
                 <div
                   key={String(p.id)}
                   className={`project-item ${checked ? "selected" : ""}`}
                   onClick={() => void toggleProject(p.id)}
+                  title={sidebarProjectName(p)}
                 >
-                  <input
-                    className="project-checkbox"
-                    type="checkbox"
-                    checked={checked}
-                    onClick={(e) => e.stopPropagation()}
-                    readOnly
-                  />
-                  <div className="project-name">{sidebarProjectName(p)}</div>
-                  <div className="project-score">
-                    Score: {formatScorePercent(getDisplayScore(p))}
-                  </div>
-                  <div className="project-skills">
-                    {tags.map((t) => (
-                      <span key={t} className="skill-tag">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                  <span className="project-check">✓</span>
+                  <span className="project-name">{sidebarProjectName(p)}</span>
+                  <span className={`project-score ${scoreClass}`}>
+                    {formatScorePercent(score)}
+                  </span>
                 </div>
               );
-            })}
-          </div>
+            })
+          )}
         </div>
       </div>
       <div className="main-content">

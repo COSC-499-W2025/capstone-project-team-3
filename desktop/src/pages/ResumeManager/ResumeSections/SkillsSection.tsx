@@ -76,26 +76,32 @@ export function SkillsSection({
       <div className="resume-preview__skills-row">
         {isEditing ? (
           <div className="resume-preview__skills-editors">
-            <p
-              key="skills-edit-proficient"
-              ref={proficientRef}
-              className="resume-preview__skills-list resume-preview__skills-editor"
-              contentEditable={true}
-              onBlur={commitProficient}
-              onInput={commitProficient}
-              suppressContentEditableWarning={true}
-              data-placeholder="Enter Proficient skills separated by commas..."
-            />
-            <p
-              key="skills-edit-familiar"
-              ref={familiarRef}
-              className="resume-preview__skills-list resume-preview__skills-editor"
-              contentEditable={true}
-              onBlur={commitFamiliar}
-              onInput={commitFamiliar}
-              suppressContentEditableWarning={true}
-              data-placeholder="Enter Familiar skills separated by commas..."
-            />
+            <div className="resume-preview__skills-bucket-row">
+              <span className="resume-preview__skills-bucket-label">Proficient:</span>
+              <p
+                key="skills-edit-proficient"
+                ref={proficientRef}
+                className="resume-preview__skills-list resume-preview__skills-editor resume-preview__skills-bucket-items"
+                contentEditable={true}
+                onBlur={commitProficient}
+                onInput={commitProficient}
+                suppressContentEditableWarning={true}
+                data-placeholder="Enter Proficient skills separated by commas..."
+              />
+            </div>
+            <div className="resume-preview__skills-bucket-row">
+              <span className="resume-preview__skills-bucket-label">Familiar:</span>
+              <p
+                key="skills-edit-familiar"
+                ref={familiarRef}
+                className="resume-preview__skills-list resume-preview__skills-editor resume-preview__skills-bucket-items"
+                contentEditable={true}
+                onBlur={commitFamiliar}
+                onInput={commitFamiliar}
+                suppressContentEditableWarning={true}
+                data-placeholder="Enter Familiar skills separated by commas..."
+              />
+            </div>
           </div>
         ) : (
           <div key="skills-display" className="resume-preview__skills-list">

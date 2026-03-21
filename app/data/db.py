@@ -182,7 +182,7 @@ def _ensure_user_preferences_profile_picture_column(cursor: sqlite3.Cursor) -> N
     """Ensure USER_PREFERENCES has profile_picture_path column on existing DBs."""
     cursor.execute("PRAGMA table_info(USER_PREFERENCES)")
     existing_columns = {row[1] for row in cursor.fetchall()}
-    if "profile_picture" not in existing_columns:
+    if "profile_picture_path" not in existing_columns:
         cursor.execute("ALTER TABLE USER_PREFERENCES ADD COLUMN profile_picture_path TEXT")
 
 def _ensure_project_score_constraint(cursor: sqlite3.Cursor) -> None:

@@ -19,7 +19,7 @@ export interface UserPreferences {
   industry: string;
   job_title: string;
   education_details?: EducationDetail[] | null;
-  profile_picture?: string | null; //path stored in DB e.g. "data/thumbnails/profile_picture.png"
+  profile_picture_path?: string | null; //path stored in DB e.g. "data/thumbnails/profile_picture.png"
 }
 
 export interface Institution {

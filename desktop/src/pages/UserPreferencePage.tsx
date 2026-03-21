@@ -570,7 +570,7 @@ export default function UserPreferencePage() {
         const frontendData = convertToFrontend(backendData);
         setProfileData(frontendData);
         // Load profile picture — if a path is stored in the DB, use the API endpoint as img src
-        if (backendData.profile_picture) {
+        if (backendData.profile_picture_path) {
           setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
         }
         // Has saved preferences → definitely a returning user

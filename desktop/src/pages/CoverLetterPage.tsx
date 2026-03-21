@@ -5,6 +5,7 @@ import {
   listCoverLetters,
   deleteCoverLetter,
   updateCoverLetter,
+  downloadCoverLetterPdf,
   coverLetterPdfUrl,
   MOTIVATION_OPTIONS,
   type CoverLetterResponse,
@@ -47,6 +48,9 @@ function HistoryCard({
   onView: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   const date = new Date(entry.created_at).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -54,6 +58,18 @@ function HistoryCard({
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  async function handlePdfDownload() {
+    setPdfError(null);
+    setPdfLoading(true);
+    try {
+      await downloadCoverLetterPdf(entry.id, `cover_letter_${entry.job_title}_${entry.company}.pdf`);
+    } catch (e: unknown) {
+      setPdfError(e instanceof Error ? e.message : "PDF download failed.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   return (
     <div className="cl-history-card" data-testid="cl-history-card">
@@ -64,6 +80,11 @@ function HistoryCard({
         <span className="cl-history-card-sub">
           <ModeBadge mode={entry.generation_mode} /> &nbsp;·&nbsp; {date}
         </span>
+        {pdfError && (
+          <span className="cl-pdf-error" role="alert" data-testid="cl-history-pdf-error">
+            ⚠ {pdfError}
+          </span>
+        )}
       </div>
       <div className="cl-history-card-actions">
         <button
@@ -72,13 +93,14 @@ function HistoryCard({
         >
           View
         </button>
-        <a
+        <button
           className="cl-btn cl-btn--secondary"
-          href={coverLetterPdfUrl(entry.id)}
-          download
+          onClick={handlePdfDownload}
+          disabled={pdfLoading}
+          data-testid="cl-history-pdf-btn"
         >
-          PDF
-        </a>
+          {pdfLoading ? "…" : "PDF"}
+        </button>
         <button
           className="cl-btn cl-btn--danger"
           onClick={() => onDelete(entry.id)}
@@ -336,18 +358,36 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Sync if a new letter is loaded into this tab
   useEffect(() => {
     setEditedContent(coverLetter.content);
     setIsDirty(false);
     setSaveError(null);
+    setPdfError(null);
   }, [coverLetter.id, coverLetter.content]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setEditedContent(e.target.value);
     setIsDirty(e.target.value !== coverLetter.content);
     setSaveError(null);
+  }
+
+  async function handlePdfDownload() {
+    setPdfError(null);
+    setPdfLoading(true);
+    try {
+      await downloadCoverLetterPdf(
+        coverLetter.id,
+        `cover_letter_${coverLetter.job_title}_${coverLetter.company}.pdf`
+      );
+    } catch (e: unknown) {
+      setPdfError(e instanceof Error ? e.message : "PDF download failed.");
+    } finally {
+      setPdfLoading(false);
+    }
   }
 
   async function handleSave() {
@@ -394,16 +434,22 @@ function PreviewTab({ coverLetter, onRegenerate, onSaved }: PreviewTabProps) {
           >
             ↺ Regenerate
           </button>
-          <a
+          <button
             className="cl-btn cl-btn--primary"
-            href={coverLetterPdfUrl(coverLetter.id)}
-            download
+            onClick={handlePdfDownload}
+            disabled={pdfLoading}
             data-testid="cl-download-btn"
           >
-            ⬇ Download PDF
-          </a>
+            {pdfLoading ? "Generating…" : "⬇ Download PDF"}
+          </button>
         </div>
       </div>
+
+      {pdfError && (
+        <p className="cl-error cl-pdf-error" role="alert" data-testid="cl-pdf-error">
+          ⚠ {pdfError}
+        </p>
+      )}
 
       <textarea
         className="cl-preview-editor"

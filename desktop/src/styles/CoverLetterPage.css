@@ -475,6 +475,17 @@
   padding: 0.75rem 1rem;
 }
 
+/* Compact inline variant used inside history cards and preview header */
+.cl-pdf-error {
+  display: block;
+  color: #c53030;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 .cl-spinner {
   display: inline-block;
   width: 18px;
@@ -553,3 +564,4 @@
 [data-theme="dark"] .cl-history-card       { background: var(--color-card-bg); border-color: var(--color-border); }
 [data-theme="dark"] .cl-history-card-title { color: var(--color-text-heading); }
 [data-theme="dark"] .cl-history-card-sub   { color: var(--color-text-secondary); }
+[data-theme="dark"] .cl-pdf-error          { color: #fc8181; }

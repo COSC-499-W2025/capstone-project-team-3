@@ -146,3 +146,25 @@ export async function updateCoverLetter(
 export function coverLetterPdfUrl(id: number): string {
   return `${API_BASE}/api/cover-letter/${id}/pdf`;
 }
+
+/**
+ * Fetch the PDF for a cover letter and trigger a browser download.
+ * Throws an Error if the server cannot
+ * produce a PDF (e.g. pdflatex not installed).
+ */
+export async function downloadCoverLetterPdf(id: number, filename?: string): Promise<void> {
+  const res = await fetch(coverLetterPdfUrl(id));
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename ?? `cover_letter_${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

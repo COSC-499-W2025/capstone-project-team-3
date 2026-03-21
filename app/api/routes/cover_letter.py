@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 import subprocess
 import tempfile
 from typing import List, Optional
@@ -125,6 +126,11 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
 
 def _compile_tex_to_pdf(tex_source: str) -> bytes:
     """Compile a LaTeX string to PDF bytes. Raises RuntimeError on failure."""
+    if not shutil.which("pdflatex"):
+        raise RuntimeError(
+            "pdflatex is not installed on this system. "
+            "Install BasicTeX to enable PDF export."
+        )
     with tempfile.TemporaryDirectory() as tmpdir:
         tex_path = os.path.join(tmpdir, "cover_letter.tex")
         with open(tex_path, "w", encoding="utf-8") as f:
@@ -293,10 +299,9 @@ async def download_cover_letter_pdf(cover_letter_id: int):
         try:
             pdf_bytes = await run_in_threadpool(_compile_tex_to_pdf, tex)
         except RuntimeError as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=f"PDF compilation failed. Ensure pdflatex is installed. Details: {exc}",
-            )
+            msg = str(exc)
+            status = 503 if "not installed" in msg else 500
+            raise HTTPException(status_code=status, detail=msg)
 
         with open(cached_path, "wb") as f:
             f.write(pdf_bytes)

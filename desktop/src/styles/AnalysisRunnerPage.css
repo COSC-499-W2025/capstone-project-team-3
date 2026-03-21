@@ -100,6 +100,11 @@
   border-bottom: 1px solid var(--color-bg-lighter);
 }
 
+.ar-table th:first-child {
+  width: 60px;
+  text-align: center;
+}
+
 .ar-table td {
   padding: 10px 8px;
   border-bottom: 1px solid var(--color-bg-lighter);
@@ -235,6 +240,20 @@
 .ar-result-insights-btn {
   margin-left: auto;
   padding-inline: 16px;
+}
+
+.ar-result-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.upload-results-note {
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 12px;
+  font-style: italic;
 }
 
 @media (max-width: 640px) {

@@ -1083,7 +1083,7 @@ function ProjectCard({
     } else if (field === "name") {
       setEditing({ field, value: title });
     } else if (field === "score") {
-      setEditing({ field, value: getDisplayScore(project).toFixed(2) });
+      setEditing({ field, value: Math.round(getDisplayScore(project) * 100).toString() });
     } else if (field === "dates") {
       setEditing({
         field,
@@ -1114,12 +1114,12 @@ function ProjectCard({
         editData.project_name = editing.value.trim();
       } else if (editing.field === "score") {
         const parsed = Number(editing.value);
-        if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
-          alert("Score must be a number between 0 and 1.");
+        if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+          alert("Score must be a number between 0 and 100.");
           setSaving(false);
           return;
         }
-        editData.score_overridden_value = parsed;
+        editData.score_overridden_value = parsed / 100;
       } else if (editing.field === "dates") {
         if (editing.createdAt) editData.created_at = editing.createdAt;
         if (editing.lastModified) editData.last_modified = editing.lastModified;

@@ -108,11 +108,11 @@ class AnalyzeUploadRequest(BaseModel):
         default_factory=dict
     )
     similarity_action: Literal["create_new", "update_existing"] = "create_new"
-    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]] = (
-        Field(default_factory=dict)
-    )
-    cleanup_zip: bool = True
-    cleanup_extracted: bool = True
+    project_similarity_actions: Dict[str, Literal["create_new", "update_existing"]] = Field(default_factory=dict)
+    project_exclude_extensions: Dict[str, List[str]] = Field(default_factory=dict)
+    project_exclude_name_prefixes: Dict[str, List[str]] = Field(default_factory=dict)
+    cleanup_zip: bool = False
+    cleanup_extracted: bool = False
     scan_only: bool = False
 
 
@@ -255,10 +255,58 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
         files = scan_result.get("files", [])
         top_level_dirs = get_project_top_level_dirs(project_path)
 
+        # Resolve per-project extension exclusions (match by path or name)
+        exclude_exts: set = set(
+            payload.project_exclude_extensions.get(project_path, [])
+            + payload.project_exclude_extensions.get(project_name, [])
+        )
+        if exclude_exts:
+            files = [f for f in files if f.suffix.lower() not in exclude_exts]
+
+        # Resolve per-project filename-prefix exclusions (e.g. "readme" catches README.md, README.txt, README)
+        exclude_prefixes: list = (
+            payload.project_exclude_name_prefixes.get(project_path, [])
+            + payload.project_exclude_name_prefixes.get(project_name, [])
+        )
+        if exclude_prefixes:
+            files = [
+                f for f in files
+                if not any(f.stem.lower().startswith(p.lower()) for p in exclude_prefixes)
+            ]
+
+        if not files:
+            results.append(
+                ProjectAnalysisResult(
+                    project_name=project_name,
+                    project_path=project_path,
+                    project_signature=project_signature,
+                    requested_analysis_type=requested_analysis_type,
+                    effective_analysis_type="local",
+                    status="skipped",
+                    reason="all_files_excluded",
+                )
+            )
+            continue
+
         username, email = _get_preferred_author_email()
         non_code_result = classify_non_code_files_with_user_verification(
             project_path, email, username
         )
+
+        # Apply the same extension and prefix exclusions to non-code file lists
+        if exclude_exts or exclude_prefixes:
+            for key in ("collaborative", "non_collaborative"):
+                filtered = []
+                for p in non_code_result.get(key, []):
+                    p_path = Path(p)
+                    if exclude_exts and p_path.suffix.lower() in exclude_exts:
+                        continue
+                    if exclude_prefixes and any(
+                        p_path.stem.lower().startswith(pfx.lower()) for pfx in exclude_prefixes
+                    ):
+                        continue
+                    filtered.append(p)
+                non_code_result[key] = filtered
 
         try:
             parsed_non_code = parsed_input_text(

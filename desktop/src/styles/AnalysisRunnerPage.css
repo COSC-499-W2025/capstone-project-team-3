@@ -254,9 +254,144 @@
   color: #6b7280;
   margin-top: 12px;
   font-style: italic;
+.ar-result-excluded-note {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 640px) {
   .ar-settings-row { flex-direction: column; }
   .ar-field { min-width: unset; }
+}
+
+/* ========================================================
+   Per-project File Type Exclusion
+   ======================================================== */
+
+.ar-exclude-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.8rem;
+  color: #718096;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.ar-exclude-btn:hover:not(:disabled) {
+  border-color: #3182ce;
+  color: #2b6cb0;
+  background: #ebf8ff;
+}
+
+.ar-exclude-btn--open {
+  border-color: #3182ce;
+  color: #2b6cb0;
+  background: #ebf8ff;
+}
+
+.ar-exclude-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ar-exclude-badge {
+  background: #3182ce;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.ar-exclude-chevron {
+  font-size: 0.65rem;
+  color: inherit;
+}
+
+/* Collapsible exclude panel row */
+
+.ar-exclude-row {
+  background: #f8fafc;
+}
+
+.ar-exclude-cell {
+  padding: 0 !important;
+  border-top: none !important;
+}
+
+.ar-exclude-panel {
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ar-exclude-hint {
+  font-size: 0.8rem;
+  color: #718096;
+  margin: 0 0 0.65rem;
+}
+
+.ar-exclude-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+}
+
+.ar-exclude-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  color: #4a5568;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+  user-select: none;
+}
+
+.ar-exclude-group:hover {
+  border-color: #bee3f8;
+  background: #ebf8ff;
+}
+
+.ar-exclude-group--checked {
+  border-color: #e53e3e;
+  background: #fff5f5;
+  color: #c53030;
+}
+
+.ar-exclude-group input[type="checkbox"] {
+  accent-color: #e53e3e;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.ar-exclude-label {
+  font-weight: 500;
+}
+
+.ar-exclude-exts {
+  font-family: "SFMono-Regular", "Consolas", monospace;
+  font-size: 0.7rem;
+  color: #a0aec0;
+  margin-left: 0.1rem;
 }

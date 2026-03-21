@@ -109,6 +109,24 @@ CREATE TABLE IF NOT EXISTS RESUME_SKILLS (
     FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
 );
 
+-- Table for edited resume awards/honours (tailored resumes only)
+CREATE TABLE IF NOT EXISTS RESUME_AWARDS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL UNIQUE,
+    awards JSON NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
+-- Table for edited resume work experience (tailored resumes only)
+CREATE TABLE IF NOT EXISTS RESUME_WORK_EXPERIENCE (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL UNIQUE,
+    work_experience JSON NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES RESUME(id) ON DELETE CASCADE
+);
+
 --Table to edited resume details. project_id has no FK to PROJECT so we snapshot on delete and keep rows.
 CREATE TABLE IF NOT EXISTS RESUME_PROJECT (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -523,6 +541,35 @@ def seed_db():
         1,  # resume_id (should match an existing RESUME)
         "Python,Flask,Backend, Java,Team Collaboration,Git,Agile Methodologies"
     ))
+
+    # --- RESUME_AWARDS ---
+    awards_data = [
+        {
+            "title": "Hackathon Winner",
+            "issuer": "Tech Challenge Inc.",
+            "date": "2024-03",
+            "details": ["Won first place in 24-hour coding competition", "Led team of 3 developers"],
+        }
+    ]
+    cursor.execute("""
+        INSERT OR REPLACE INTO RESUME_AWARDS (resume_id, awards)
+        VALUES (?, ?)
+    """, (1, json.dumps(awards_data)))
+
+    # --- RESUME_WORK_EXPERIENCE ---
+    work_exp_data = [
+        {
+            "role": "Software Engineer",
+            "company": "Tech Corp",
+            "start_date": "2023-06",
+            "end_date": "2024-12",
+            "details": ["Developed backend services", "Collaborated with cross-functional teams"],
+        }
+    ]
+    cursor.execute("""
+        INSERT OR REPLACE INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience)
+        VALUES (?, ?)
+    """, (1, json.dumps(work_exp_data)))
 
     conn.commit()
     conn.close()

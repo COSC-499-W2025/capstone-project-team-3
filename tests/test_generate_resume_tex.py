@@ -4,6 +4,8 @@ from app.utils.generate_resume_tex import (
     render_skills,
     render_projects,
     render_links,
+    render_awards,
+    render_work_experience,
     generate_resume_tex,
 )
 from app.utils.latex_template import ResumeTemplate
@@ -44,9 +46,9 @@ def test_render_skills_basic():
 
     rendered = render_skills(skills)
 
-    assert "Languages:" in rendered
+    assert r"\textbf{Languages:}" in rendered
     assert "Python, C++" in rendered
-    assert "Frameworks:" in rendered
+    assert r"\textbf{Frameworks:}" in rendered
     assert "Flask, Django" in rendered
     assert r"\\" in rendered
 
@@ -238,3 +240,80 @@ def test_generate_resume_tex_multiple_education():
     assert "College B" in tex
     assert "BSc Mathematics" in tex
     assert "GPA: 3.7" in tex
+
+
+def test_render_awards_empty_returns_empty_string():
+    assert render_awards([]) == ""
+    assert render_awards(None) == ""
+
+
+def test_render_awards_renders_month_year_and_details():
+    awards = [
+        {
+            "title": "Hackathon Winner",
+            "issuer": "Tech Challenge Inc.",
+            "date": "2025-03",
+            "details": ["Won first place", "Presented demo to judges"],
+        },
+    ]
+    rendered = render_awards(awards)
+    assert r"\header{Awards \& Honours}" in rendered
+    assert r"\textbf{Hackathon Winner}" in rendered
+    assert "Mar 2025" in rendered
+    assert "Tech Challenge Inc." in rendered
+    assert r"\item Won first place" in rendered
+
+
+def test_render_work_experience_empty_returns_empty_string():
+    assert render_work_experience([]) == ""
+    assert render_work_experience(None) == ""
+
+
+def test_render_work_experience_renders_role_company_date_and_details():
+    work_experience = [
+        {
+            "role": "Software Engineer",
+            "company": "Tech Challenge Inc.",
+            "start_date": "2024-01",
+            "end_date": "2024-06",
+            "details": ["Built backend services", "Led collaboration efforts"],
+        },
+    ]
+    rendered = render_work_experience(work_experience)
+
+    assert r"\header{Work Experience}" in rendered
+    # UI format: Company | Role (both bold) on same line as date
+    assert r"\textbf{Tech Challenge Inc. | Software Engineer}" in rendered
+    assert "Jan 2024" in rendered
+    assert "Jun 2024" in rendered
+    assert "Tech Challenge Inc." in rendered
+    assert r"\item Built backend services" in rendered
+    assert r"\item Led collaboration efforts" in rendered
+
+
+def test_generate_resume_tex_renders_work_experience_section():
+    resume = {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "links": [],
+        "education": [],
+        "skills": {"Skills": ["Python"]},
+        "projects": [],
+        "work_experience": [
+            {
+                "role": "Software Engineer",
+                "company": "Tech Challenge Inc.",
+                "start_date": "2024-01",
+                "end_date": "2024-06",
+                "details": ["Built backend services"],
+            }
+        ],
+        "awards": [],
+    }
+
+    tex = generate_resume_tex(resume)
+    assert r"\header{Work Experience}" in tex
+    # UI format: Company | Role (both bold)
+    assert r"\textbf{Tech Challenge Inc. | Software Engineer}" in tex
+    assert "Tech Challenge Inc." in tex
+    assert r"\item Built backend services" in tex

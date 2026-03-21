@@ -23,6 +23,32 @@ os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
     project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")
+    # Optional: persist user-selected/edited skill buckets for tailored resumes.
+    skills: Optional[Dict[str, List[str]]] = None
+    # Optional: persist awards/honours entries for tailored resumes.
+    awards: Optional[List["AwardFilter"]] = None
+    # Optional: persist work experience entries for tailored resumes.
+    work_experience: Optional[List["WorkExperienceFilter"]] = None
+
+class AwardFilter(BaseModel):
+    """Structured awards/honours entry for tailored resumes."""
+    title: str = Field(..., min_length=1, description="Award title/name")
+    issuer: Optional[str] = Field(None, description="Awarding organization/institution")
+    # Month-year string ("YYYY-MM")
+    date: Optional[str] = Field(None, description="Month-year in YYYY-MM format")
+    # Optional detail lines (rendered as bullet sub-items)
+    details: Optional[List[str]] = Field(None, description="One line per detail")
+
+
+class WorkExperienceFilter(BaseModel):
+    """Structured work experience entry for tailored resumes."""
+    role: str = Field(..., min_length=1, description="Work role title")
+    company: Optional[str] = Field(None, description="Company / organization")
+    # Month-year string ("YYYY-MM")
+    start_date: Optional[str] = Field(None, description="Month-year in YYYY-MM format")
+    end_date: Optional[str] = Field(None, description="Month-year in YYYY-MM format")
+    details: Optional[List[str]] = Field(None, description="One line per responsibility/detail")
+
 
 
 class AddProjectsToResumeBody(BaseModel):
@@ -59,6 +85,21 @@ def create_tailored_resume(filter: ResumeFilter):
     try:
         resume_id = create_resume(name=filter.name)
         attach_projects_to_resume(resume_id, filter.project_ids)
+        if filter.skills is not None:
+            # Persist resume-level skills buckets for the new tailored resume.
+            save_resume_edits(resume_id, {"skills": filter.skills})
+        if filter.awards is not None:
+            # Persist tailored-resume awards entries.
+            save_resume_edits(
+                resume_id,
+                {"awards": [a.model_dump() for a in filter.awards]},
+            )
+        if filter.work_experience is not None:
+            # Persist tailored-resume work experience entries.
+            save_resume_edits(
+                resume_id,
+                {"work_experience": [w.model_dump() for w in filter.work_experience]},
+            )
         return {
             "resume_id": resume_id,
             "message": "Resume created successfully"

@@ -274,11 +274,10 @@ export function ResumeBuilderPage() {
       setSaving(true);
       
       // Build payload with only edited sections
-      const payload: { skills?: string[], projects?: any[] } = {};
+      const payload: { skills?: Skills, projects?: any[] } = {};
       
       if (editedSections.has('skills')) {
-        // Transform { Skills: [...] } to [...]
-        payload.skills = activeContent.skills.Skills;
+        payload.skills = activeContent.skills;
       }
       
       // If projects were edited, include them
@@ -323,7 +322,7 @@ export function ResumeBuilderPage() {
 
     try {
       setSaving(true);
-      const result = await saveNewResume(saveResumeName, previewProjectIds);
+      const result = await saveNewResume(saveResumeName, previewProjectIds, activeContent?.skills ?? undefined);
       // console.log('Resume saved with ID:', result.resume_id);
       
       // Reload resume list

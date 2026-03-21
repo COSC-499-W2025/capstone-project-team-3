@@ -1,4 +1,4 @@
-import type { Resume } from "./resume_types";
+import type { Resume, Skills, Award, WorkExperience } from "./resume_types";
 import { API_BASE_URL } from "../config/api";
 
 const API_BASE = API_BASE_URL;
@@ -92,11 +92,23 @@ export async function addProjectsToResume(
   return res.json();
 }
 // Save new resume with selected projects
-export async function saveNewResume(name: string, projectIds: string[]): Promise<{ resume_id: number }> {
+export async function saveNewResume(
+  name: string,
+  projectIds: string[],
+  skills?: Skills,
+  awards?: Award[],
+  work_experience?: WorkExperience[]
+): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, project_ids: projectIds })
+    body: JSON.stringify({
+      name,
+      project_ids: projectIds,
+      ...(skills ? { skills } : {}),
+      ...(awards !== undefined ? { awards } : {}),
+      ...(work_experience !== undefined ? { work_experience } : {}),
+    }),
   });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<{ resume_id: number }>;
@@ -105,7 +117,7 @@ export async function saveNewResume(name: string, projectIds: string[]): Promise
 // Update existing saved resume with partial edits
 export async function updateResume(
   id: number, 
-  payload: { skills?: string[], projects?: any[] }
+  payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] }
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
     method: "POST",

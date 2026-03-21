@@ -85,7 +85,7 @@ describe('HeaderSection', () => {
       email: 'john.doe@example.com',
       links: [],
       education: [],
-      skills: { Skills: [] },
+      skills: { Proficient: [], Familiar: [] },
       projects: []
     };
 
@@ -104,7 +104,7 @@ describe('HeaderSection', () => {
         { label: 'LinkedIn', url: 'https://linkedin.com/in/janesmith' }
       ],
       education: [],
-      skills: { Skills: [] },
+      skills: { Proficient: [], Familiar: [] },
       projects: []
     };
 
@@ -124,7 +124,7 @@ describe('HeaderSection', () => {
       email: 'test@example.com',
       links: [],
       education: [],
-      skills: { Skills: [] },
+      skills: { Proficient: [], Familiar: [] },
       projects: []
     };
 
@@ -141,7 +141,7 @@ describe('HeaderSection', () => {
       email: 'test@example.com',
       links: [],
       education: [],
-      skills: { Skills: [] },
+      skills: { Proficient: [], Familiar: [] },
       projects: []
     };
 
@@ -155,7 +155,8 @@ describe('HeaderSection', () => {
 describe('SkillsSection', () => {
   test('renders skills list', () => {
     const skills: Skills = {
-      Skills: ['Python', 'JavaScript', 'React', 'Node.js', 'SQL']
+      Proficient: ['Python', 'JavaScript', 'React', 'Node.js', 'SQL'],
+      Familiar: [],
     };
 
     render(<SkillsSection skills={skills} />);
@@ -170,7 +171,8 @@ describe('SkillsSection', () => {
 
   test('renders empty skills list', () => {
     const skills: Skills = {
-      Skills: []
+      Proficient: [],
+      Familiar: []
     };
 
     const { container } = render(<SkillsSection skills={skills} />);

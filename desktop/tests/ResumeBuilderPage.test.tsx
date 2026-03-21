@@ -148,7 +148,7 @@ const mockMasterResume: Resume = {
     dates: 'Sept 2020 – May 2024',
     gpa: '3.8'
   }],
-  skills: { Skills: ['Python', 'JavaScript', 'React'] },
+  skills: { Proficient: ['Python', 'JavaScript', 'React'], Familiar: [] },
   projects: [
     {
       title: 'Project Alpha',
@@ -168,7 +168,7 @@ const mockSavedResume: Resume = {
     degree: 'BSc Computer Science',
     dates: 'Sept 2020 – May 2024'
   }],
-  skills: { Skills: ['JavaScript', 'TypeScript', 'Node.js'] },
+  skills: { Proficient: ['JavaScript', 'TypeScript', 'Node.js'], Familiar: [] },
   projects: [
     {
       project_id: 'proj-saved-1',
@@ -189,7 +189,7 @@ const mockPreviewResumeData: Resume = {
     degree: 'BSc Computer Science',
     dates: 'Sept 2020 – May 2024'
   }],
-  skills: { Skills: ['Python', 'Django', 'PostgreSQL'] },
+  skills: { Proficient: ['Python', 'Django', 'PostgreSQL'], Familiar: [] },
   projects: [
     {
       title: 'Preview Project',
@@ -907,7 +907,11 @@ describe('ResumeBuilderPage', () => {
 
     // Should call saveNewResume with correct params
     await waitFor(() => {
-      expect(mockSaveNewResume).toHaveBeenCalledWith('Frontend Resume', ['proj1', 'proj2']);
+      expect(mockSaveNewResume).toHaveBeenCalledWith(
+        'Frontend Resume',
+        ['proj1', 'proj2'],
+        mockPreviewResumeData.skills
+      );
     });
 
     // Should reload resume list

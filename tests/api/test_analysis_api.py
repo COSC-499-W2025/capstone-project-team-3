@@ -166,7 +166,7 @@ def test_run_analysis_non_interactive_flow(
 @patch(
     "app.api.routes.analysis.run_scan_flow",
     return_value={
-        "files": [],
+        "files": [Path("/tmp/proj/main.py")],
         "skip_analysis": False,
         "signature": "sig-ext",
     },
@@ -221,7 +221,7 @@ def test_project_exclude_extensions_filters_non_code_files(
 @patch(
     "app.api.routes.analysis.run_scan_flow",
     return_value={
-        "files": [],
+        "files": [Path("/tmp/proj/main.py")],
         "skip_analysis": False,
         "signature": "sig-prefix",
     },

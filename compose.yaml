@@ -16,10 +16,11 @@ services:
     volumes:
       - ./app/data:/app/app/data
       - ./htmlcov:/app/htmlcov
+      # UI-saved Gemini key persists here (gitignored); no project .env required to clone & run.
+      - ./local-config:/app/local-config
     environment:
       - PROMPT_ROOT=1
-    env_file:
-      - .env
+      - PROJECT_INSIGHTS_CONFIG_DIR=/app/local-config
     working_dir: /app
     stdin_open: true
     tty: true

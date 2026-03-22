@@ -37,7 +37,7 @@ test('renders settings page with subtitle', () => {
   expect(screen.getByText(/What would you like to manage/i)).toBeInTheDocument();
 });
 
-test('renders two settings cards', () => {
+test('renders three settings cards', () => {
   const { container } = render(
     <BrowserRouter>
       <SettingsPage />
@@ -45,7 +45,7 @@ test('renders two settings cards', () => {
   );
 
   const cards = container.querySelectorAll('.settings-card');
-  expect(cards.length).toBe(2);
+  expect(cards.length).toBe(3);
 });
 
 test('renders Profile card', () => {
@@ -70,6 +70,19 @@ test('renders Privacy card', () => {
   expect(screen.getByText(/Review and manage your data consent settings/i)).toBeInTheDocument();
 });
 
+test('renders Gemini API key card', () => {
+  render(
+    <BrowserRouter>
+      <SettingsPage />
+    </BrowserRouter>
+  );
+
+  expect(screen.getByText('Gemini API key')).toBeInTheDocument();
+  expect(
+    screen.getByText(/Add your Google Gemini key for AI analysis, or review setup instructions/i),
+  ).toBeInTheDocument();
+});
+
 test('navigates to user preference page on Profile card click', () => {
   render(
     <BrowserRouter>
@@ -92,6 +105,18 @@ test('navigates to consent page on Privacy card click', () => {
   const card = screen.getByLabelText('Go to Privacy');
   fireEvent.click(card);
   expect(mockNavigate).toHaveBeenCalledWith('/consentpage');
+});
+
+test('navigates to Gemini API key page on Gemini card click', () => {
+  render(
+    <BrowserRouter>
+      <SettingsPage />
+    </BrowserRouter>
+  );
+
+  const card = screen.getByLabelText('Go to Gemini API key');
+  fireEvent.click(card);
+  expect(mockNavigate).toHaveBeenCalledWith('/geminiapikeypage');
 });
 
 test('renders back button', () => {
@@ -125,4 +150,5 @@ test('each settings card has an accessible aria-label', () => {
 
   expect(screen.getByLabelText('Go to Profile')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Privacy')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Gemini API key')).toBeInTheDocument();
 });

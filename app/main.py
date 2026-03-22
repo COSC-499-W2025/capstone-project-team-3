@@ -27,11 +27,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.post_thumbnail import router as thumbnail_router
 from app.api.routes.chronological import router as chronological_router
 from app.api.routes.ats import router as ats_router
+from app.api.routes.gemini_settings import router as gemini_settings_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
 from app.utils.analysis_merger_utils import merge_analysis_results
 from app.utils.code_analysis.code_analysis_utils import analyze_github_project, analyze_parsed_project
-from app.utils.env_utils import check_gemini_api_key
+from app.utils.env_utils import check_gemini_api_key, load_gemini_key_from_store_into_environ
 from app.utils.scan_utils import run_scan_flow
 from app.utils.delete_insights_utils import get_projects
 from app.cli.retrieve_insights_cli import lookup_past_insights, display_specific_projects, get_portfolio_resume_insights
@@ -55,6 +56,7 @@ import threading
 import json
 
 load_dotenv()
+load_gemini_key_from_store_into_environ()
 
 # Create FastAPI app
 app = FastAPI(title="Project Insights")
@@ -84,6 +86,7 @@ app.include_router(health_router)
 app.include_router(thumbnail_router, prefix="/api")
 app.include_router(chronological_router, prefix="/api")
 app.include_router(ats_router, prefix="/api")
+app.include_router(gemini_settings_router, prefix="/api")
 
 
 def display_startup_info():

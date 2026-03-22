@@ -106,7 +106,7 @@ export function NavBar() {
               <span
                 key={path}
                 className="app-sidebar__link app-sidebar__link--disabled"
-                title="Upload a project to enable ATS Scoring"
+                title="Upload projects to generate a resume for Job Match"
               >
                 <span className="app-sidebar__link-icon">{navIcons[path]}</span>
                 {!collapsed && <span className="app-sidebar__link-label">{label}</span>}

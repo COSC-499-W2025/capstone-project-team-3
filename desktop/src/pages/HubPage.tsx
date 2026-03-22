@@ -61,7 +61,7 @@ export function HubPage() {
       path: "/datamanagementpage",
     },
     {
-      title: "ATS Scoring",
+      title: "Check Job Match",
       description: "Check how well your resume matches a job description.",
       icon: (
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

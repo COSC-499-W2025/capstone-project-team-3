@@ -109,6 +109,18 @@ body {
   background: var(--bg-page);
 }
 
+.btn--ats {
+  background: var(--bg-card);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.btn--ats:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
 .btn--primary {
   background:  var(--color-navy);
   border-color: var(--color-navy);
@@ -442,4 +454,13 @@ body {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 4px;
+}
+
+/* ── Dark mode ── */
+[data-theme="dark"] {
+  --bg-page: var(--color-page-bg);
+  --bg-card: var(--color-card-bg);
+  --border-light: var(--color-border);
+  --text-primary: var(--color-text-heading);
+  --text-secondary: var(--color-text-secondary);
 }

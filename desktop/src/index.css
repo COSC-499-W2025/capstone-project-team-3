@@ -11,6 +11,14 @@
   --color-text-light: #ffffff;
   --color-shadow: rgba(0, 0, 0, 0.1);
 
+  /* page-level colours  */
+  --color-page-bg: #f7fafc;        /* page/section background */
+  --color-card-bg: #ffffff;        /* card / panel / modal background */
+  --color-border: #e5e7eb;         /* subtle dividers */
+  --color-text-heading: #2c3e50;   /* dark headings (replaces #2c3e50) */
+  --color-text-secondary: #6c757d; /* muted / secondary text */
+  --color-text-body: #374151;      /* body-level text */
+
   /* Typography */
   --font-serif: 'Georgia', 'Times New Roman', serif;
   --font-sans: 'Arial', 'Helvetica Neue', sans-serif;
@@ -250,7 +258,40 @@ button:disabled {
   font-weight: 500;
 }
 
-/* Responsive Breakpoints */
+/*
+   Dark Theme Applied when <html data-theme="dark"> is set.
+    */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --color-bg-light: #1e2d3d;
+  --color-bg-lighter: #243447;
+
+  --color-blue-light: #5fa3bc;
+  --color-blue-medium: #2aafe0;
+  --color-blue-dark: #3a9fd0;
+  --color-blue-darker: #60b8e0;
+  
+  --color-navy: #a8c8e0;
+
+  /* Text */
+  --color-text-dark: #dce8f0;
+  --color-text-light: #0f1923;
+
+  /* Semantic page-level overrides */
+  --color-page-bg: #0f1923;        /* deep dark page background */
+  --color-card-bg: #1a2535;        /* slightly lighter for cards/panels */
+  --color-border: #2d3f52;         /* dark-mode dividers */
+  --color-text-heading: #dce8f0;   /* light headings */
+  --color-text-secondary: #8fa8bb; /* muted secondary text */
+  --color-text-body: #c0d0dc;      /* body-level text */
+
+  --color-shadow: rgba(0, 0, 0, 0.45);
+}
+
+/* ============================================================
+   Responsive Breakpoints */
 @media (max-width: 768px) {
   :root {
     --spacing-lg: 30px;

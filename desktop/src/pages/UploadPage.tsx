@@ -116,8 +116,6 @@ export function UploadPage() {
   const [pendingAiSelection, setPendingAiSelection] = useState<PendingAiSelection | null>(null);
   const [similarityModalData, setSimilarityModalData] = useState<SimilarityModalData | null>(null);
   const [hasRunAnalysis, setHasRunAnalysis] = useState(false);
-  const [pendingAiSelection, setPendingAiSelection] =
-    useState<PendingAiSelection | null>(null);
 
   const [geminiStatus, setGeminiStatus] = useState<Awaited<
     ReturnType<typeof getGeminiKeyStatus>

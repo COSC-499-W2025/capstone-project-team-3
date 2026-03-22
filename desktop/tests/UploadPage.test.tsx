@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { UploadPage } from "../src/pages/UploadPage";
 import { test, expect, jest, beforeEach, afterEach } from "@jest/globals";
 import "@testing-library/jest-dom";
@@ -242,6 +242,79 @@ describe("UploadPage", () => {
     expect(
       screen.getByText("proj-a", { selector: ".ar-result-excluded-note strong" }),
     ).toBeInTheDocument();
+  });
+
+  test("similarity detected → modal → choose Update → project_similarity_actions included in run payload", async () => {
+    mockUploadZipFile.mockResolvedValue({ status: "ok", upload_id: "abc-123" });
+
+    const scanProjectSimilarityResponse = {
+      ok: true,
+      json: async () => ({
+        status: "ok",
+        file_count: 5,
+        similarity: {
+          jaccard_similarity: 75.5,
+          containment_ratio: 82.3,
+          matched_project_name: "Existing Project",
+          match_reason: "high_overlap",
+        },
+        reason: "similar_match",
+      }),
+    } as Response;
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce(scanProjectSimilarityResponse)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          analyzed_projects: 1,
+          skipped_projects: 0,
+          failed_projects: 0,
+        }),
+      } as Response);
+
+    const { container } = render(
+      <BrowserRouter>
+        <UploadPage />
+      </BrowserRouter>,
+    );
+
+    const file = new File(["content"], "project.zip", { type: "application/zip" });
+    const fileInput = container.querySelector("input[type='file']") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await screen.findByText("proj-a");
+
+    fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
+
+    const modal = await screen.findByRole("dialog", { name: /Similarity detected/i });
+    expect(modal).toBeInTheDocument();
+    expect(within(modal).getByText(/Similar Project Detected/i)).toBeInTheDocument();
+    expect(within(modal).getByText(/75\.5%/)).toBeInTheDocument();
+    expect(within(modal).getByText(/82\.3%/)).toBeInTheDocument();
+
+    fireEvent.click(
+      within(modal).getByRole("button", { name: /Update "Existing Project"/i }),
+    );
+
+    await waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some((c) => String(c[0]).includes("/api/analysis/run")),
+      ).toBe(true);
+    });
+
+    const runCall = mockFetch.mock.calls.find((c) =>
+      String(c[0]).includes("/api/analysis/run"),
+    );
+    const body = JSON.parse((runCall![1] as RequestInit).body as string);
+    expect(body.project_similarity_actions["/tmp/proj-a"]).toBe("update_existing");
+    expect(body.project_similarity_actions["proj-a"]).toBe("update_existing");
   });
 
   test("successful run clears upload form state to avoid stale upload_id reruns", async () => {

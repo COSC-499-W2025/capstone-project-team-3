@@ -9,7 +9,7 @@ export const mainNavItems: { path: string; label: string }[] = [
   { path: "/resumebuilderpage", label: "Resume" },
   { path: "/coverletterpage", label: "Cover Letter" },
   { path: "/portfoliopage", label: "Portfolio" },
-  { path: "/atsscoringpage", label: "ATS Score" },
+  { path: "/atsscoringpage", label: "Job Match" },
 ];
 
 /**

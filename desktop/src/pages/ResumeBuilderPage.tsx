@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Resume, Skills, Project } from "../api/resume_types";
+import { Resume, Skills, Project, Award, WorkExperience } from "../api/resume_types";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
@@ -10,6 +10,8 @@ import {
   getResumeById,
   previewResume,
   deleteResume,
+  duplicateResume,
+  renameResume,
   deleteProjectFromResume,
   addProjectsToResume,
   downloadResumePDF,
@@ -49,6 +51,7 @@ export function ResumeBuilderPage() {
   const [addProjectModalLoading, setAddProjectModalLoading] = useState(false);
   const [addProjectModalSubmitting, setAddProjectModalSubmitting] = useState(false);
   const [addProjectModalError, setAddProjectModalError] = useState<string | null>(null);
+  const openEditAfterContentLoad = useRef(false);
 
   // Computed: inject preview resume into sidebar if in preview mode
   const isPreviewMode = previewProjectIds.length > 0;
@@ -146,12 +149,52 @@ export function ResumeBuilderPage() {
     }
   }, [baseResumeList, activeIndex, isPreviewMode]);
 
+  useEffect(() => {
+    if (!openEditAfterContentLoad.current || !activeContent || isPreviewMode) return;
+    const selected = baseResumeList[activeIndex];
+    if (!selected || selected.is_master || selected.id === 1) {
+      openEditAfterContentLoad.current = false;
+      return;
+    }
+    setIsEditing(true);
+    setEditedSections(new Set());
+    openEditAfterContentLoad.current = false;
+  }, [activeContent, activeIndex, baseResumeList, isPreviewMode]);
+
   const handleEditResume = () => {
     setIsEditing(true);
     setEditedSections(new Set()); // Clear edited sections when entering edit mode
   };
 
-  const handleSectionChange = (section: "skills" | "projects", data: Skills | Project[]) => {
+  const handleEditResumeAt = (index: number) => {
+    const row = resumeList[index];
+    if (!row || row.is_master || row.id == null || row.id === 1) return;
+    if (!isPreviewMode && index === activeIndex && activeContent) {
+      handleEditResume();
+      return;
+    }
+    openEditAfterContentLoad.current = true;
+    handleSelectResume(index);
+  };
+
+  const hasAwards =
+    activeContent?.awards?.some((a) => (a.title ?? "").trim().length > 0) ?? false;
+  const showAwardsSection =
+    !isMasterResume && (hasAwards || (isEditing && editedSections.has("awards")));
+  const allowAddAwardsSection =
+    !isMasterResume && isEditing && !hasAwards && !editedSections.has("awards");
+
+  const hasWorkExperience =
+    activeContent?.work_experience?.some((we) => (we.role ?? "").trim().length > 0) ?? false;
+  const showWorkExperienceSection =
+    !isMasterResume && (hasWorkExperience || (isEditing && editedSections.has("work_experience")));
+  const allowAddWorkExperienceSection =
+    !isMasterResume && isEditing && !hasWorkExperience && !editedSections.has("work_experience");
+
+  const handleSectionChange = (
+    section: "skills" | "projects" | "awards" | "work_experience",
+    data: Skills | Project[] | Award[] | WorkExperience[],
+  ) => {
     setActiveContent(prev => (prev ? { ...prev, [section]: data } : prev));
     setEditedSections(prev => new Set(prev).add(section));
   };
@@ -189,6 +232,43 @@ export function ResumeBuilderPage() {
       }
       // Normal selection when not in preview mode
       setActiveIndex(index);
+    }
+  };
+
+  const handleDuplicateResume = async (resumeId: number) => {
+    try {
+      const { resume_id } = await duplicateResume(resumeId);
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+      const newIndex = updatedList.findIndex((r) => r.id === resume_id);
+      if (newIndex >= 0) {
+        setIsEditing(false);
+        setEditedSections(new Set());
+        if (isPreviewMode) {
+          navigate("/resumebuilderpage", { replace: true });
+        }
+        setActiveIndex(newIndex);
+      }
+    } catch (error) {
+      console.error("Failed to duplicate resume:", error);
+      alert(error instanceof Error ? error.message : "Failed to duplicate resume.");
+    }
+  };
+
+  const handleRenameResume = async (resumeId: number, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      alert("Name cannot be empty.");
+      throw new Error("Name cannot be empty.");
+    }
+    try {
+      await renameResume(resumeId, trimmed);
+      const updatedList = await getResumes();
+      setBaseResumeList(updatedList);
+    } catch (error) {
+      console.error("Failed to rename resume:", error);
+      alert(error instanceof Error ? error.message : "Failed to rename resume.");
+      throw error;
     }
   };
 
@@ -274,7 +354,7 @@ export function ResumeBuilderPage() {
       setSaving(true);
       
       // Build payload with only edited sections
-      const payload: { skills?: Skills, projects?: any[] } = {};
+      const payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] } = {};
       
       if (editedSections.has('skills')) {
         payload.skills = activeContent.skills;
@@ -302,6 +382,14 @@ export function ResumeBuilderPage() {
           };
         });
       }
+
+      if (editedSections.has("awards")) {
+        payload.awards = activeContent.awards;
+      }
+
+      if (editedSections.has("work_experience")) {
+        payload.work_experience = activeContent.work_experience ?? [];
+      }
       
       await updateResume(currentResume.id, payload);
       setIsEditing(false); // Exit edit mode after save
@@ -322,7 +410,13 @@ export function ResumeBuilderPage() {
 
     try {
       setSaving(true);
-      const result = await saveNewResume(saveResumeName, previewProjectIds, activeContent?.skills ?? undefined);
+      const result = await saveNewResume(
+        saveResumeName,
+        previewProjectIds,
+        activeContent?.skills ?? undefined,
+        activeContent?.awards ?? undefined,
+        activeContent?.work_experience ?? undefined,
+      );
       // console.log('Resume saved with ID:', result.resume_id);
       
       // Reload resume list
@@ -410,6 +504,13 @@ export function ResumeBuilderPage() {
           <span className="nav-current">Résumé</span>
         </div>
         <div className="resume-builder__actions">
+          <button
+            className="btn btn--ats"
+            onClick={() => navigate('/atsscoringpage')}
+            title="Check ATS compatibility score for this resume"
+          >
+            Check Job Match
+          </button>
           {showSaveButton && (
             <button 
               className="btn btn--secondary" 
@@ -570,9 +671,11 @@ export function ResumeBuilderPage() {
             onTailorNew={() => navigate('/projectselectionpage')}
             onSelect={handleSelectResume}
             onDelete={handleDeleteResume}
+            onDuplicateResume={handleDuplicateResume}
+            onRenameResume={handleRenameResume}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
-            onEdit={handleEditResume}
+            onEditResume={handleEditResumeAt}
             hasProjects={hasProjects}
           />
         </div>
@@ -592,6 +695,12 @@ export function ResumeBuilderPage() {
                     resume={activeContent}
                     isEditing={isEditing}
                     onSectionChange={handleSectionChange}
+                    showAwards={showAwardsSection}
+                    allowAddAwards={allowAddAwardsSection}
+                    {...({
+                      showWorkExperience: showWorkExperienceSection,
+                      allowAddWorkExperience: allowAddWorkExperienceSection,
+                    } as any)}
                     onProjectDelete={!isMasterResume && currentResume?.id != null ? handleProjectDelete : undefined}
                     onAddProjectClick={
                       isEditing && !isMasterResume && currentResume?.id != null

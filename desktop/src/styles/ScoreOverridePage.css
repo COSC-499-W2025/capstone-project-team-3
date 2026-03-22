@@ -4,71 +4,36 @@
 
 /* ---------- Page shell ---------- */
 .sor-page {
-  min-height: 100vh;
-  background: linear-gradient(150deg, var(--color-bg-light) 0%, var(--color-bg-lighter) 100%);
-  display: flex;
-  flex-direction: column;
-  font-family: var(--font-sans);
-  color: var(--color-text-dark);
-}
-
-/* ---------- Header ---------- */
-.sor-header {
-  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-blue-darker) 100%);
-  color: var(--color-text-light);
-  padding: var(--spacing-md) var(--spacing-lg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.sor-header-inner {
-  max-width: 1300px;
-  margin: 0 auto;
-  display: flex;
+  background: var(--color-bg-lighter);
+  gap: 0;
+  position: relative;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  overflow: auto;
+}
+
+/* ---------- Header section ---------- */
+.sor-header-section {
+  width: 100%;
+  max-width: 1300px;
+  text-align: center;
+  margin-bottom: var(--spacing-md);
 }
 
 .sor-title {
   font-family: var(--font-serif);
-  font-size: 1.8rem;
-  font-weight: 400;
-  color: var(--color-text-light);
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
-}
-
-.sor-context-link {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 10px;
-  color: rgba(255, 255, 255, 0.88);
-  text-decoration: none;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.sor-context-link:hover {
-  color: white;
-  text-decoration: underline;
+  font-weight: 300;
+  color: var(--color-navy);
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .sor-subtitle {
-  font-size: 0.9rem;
-  opacity: 0.8;
-  max-width: 560px;
-  line-height: 1.6;
-}
-
-.sor-context-note {
-  margin-top: 10px;
-  font-size: 0.82rem;
-  opacity: 0.92;
+  font-size: 1rem;
+  color: var(--color-text-dark);
   max-width: 620px;
   line-height: 1.6;
+  margin: 0 auto var(--spacing-sm);
 }
 
 /* ---------- Status toast ---------- */
@@ -79,7 +44,8 @@
   font-weight: 500;
   animation: slideUp 0.25s ease;
   white-space: nowrap;
-  align-self: center;
+  margin-top: var(--spacing-sm);
+  display: inline-block;
 }
 .sor-status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
 .sor-status-error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -87,11 +53,9 @@
 
 /* ---------- Main content ---------- */
 .sor-main {
-  flex: 1;
-  max-width: 1300px;
   width: 100%;
-  margin: 0 auto;
-  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-xl);
+  max-width: 1300px;
+  padding: 0 var(--spacing-lg) var(--spacing-xl);
 }
 
 /* ---------- Project selector ---------- */
@@ -436,6 +400,37 @@
   text-align: center;
 }
 
+/* ---------- Info banner ---------- */
+.sor-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sor-info-banner-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sor-info-banner-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  margin-bottom: 4px;
+}
+
+.sor-info-banner-text {
+  font-size: 0.82rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
 /* ---------- Action buttons ---------- */
 .sor-actions {
   display: flex;
@@ -583,6 +578,18 @@
   padding: 8px 0 4px;
   border-top: 1px solid var(--color-bg-lighter);
   margin-top: 4px;
+}
+
+.sor-saturation-note {
+  text-align: center;
+  font-size: 0.82rem;
+  color: #b7791f;
+  background: #fffff0;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  line-height: 1.4;
 }
 
 /* ---------- Opportunities panel ---------- */
@@ -890,10 +897,6 @@
 
 @media (max-width: 600px) {
   .sor-main {
-    padding: var(--spacing-sm);
-  }
-
-  .sor-header {
     padding: var(--spacing-sm);
   }
 

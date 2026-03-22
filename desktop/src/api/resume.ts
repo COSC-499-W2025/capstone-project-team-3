@@ -1,4 +1,4 @@
-import type { Resume, Skills } from "./resume_types";
+import type { Resume, Skills, Award, WorkExperience } from "./resume_types";
 import { API_BASE_URL } from "../config/api";
 
 const API_BASE = API_BASE_URL;
@@ -60,6 +60,27 @@ export async function deleteResume(id: number): Promise<{ success: boolean; mess
   return res.json();
 }
 
+export async function duplicateResume(id: number): Promise<{ resume_id: number }> {
+  const res = await fetch(`${API_BASE}/resume/${id}/duplicate`, { method: "POST" });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+  return res.json() as Promise<{ resume_id: number }>;
+}
+
+export async function renameResume(id: number, name: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/resume/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+}
+
 /** Remove a project from a saved resume (does not delete the project from the project list). */
 export async function deleteProjectFromResume(
   resumeId: number,
@@ -95,7 +116,9 @@ export async function addProjectsToResume(
 export async function saveNewResume(
   name: string,
   projectIds: string[],
-  skills?: Skills
+  skills?: Skills,
+  awards?: Award[],
+  work_experience?: WorkExperience[]
 ): Promise<{ resume_id: number }> {
   const res = await fetch(`${API_BASE}/resume`, {
     method: "POST",
@@ -104,6 +127,8 @@ export async function saveNewResume(
       name,
       project_ids: projectIds,
       ...(skills ? { skills } : {}),
+      ...(awards !== undefined ? { awards } : {}),
+      ...(work_experience !== undefined ? { work_experience } : {}),
     }),
   });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
@@ -113,7 +138,7 @@ export async function saveNewResume(
 // Update existing saved resume with partial edits
 export async function updateResume(
   id: number, 
-  payload: { skills?: Skills, projects?: any[] }
+  payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] }
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
     method: "POST",

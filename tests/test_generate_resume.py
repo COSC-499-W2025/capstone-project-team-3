@@ -22,6 +22,8 @@ from app.utils.generate_resume import (
     remove_project_from_resume,
     list_resumes,
     snapshot_project_into_resume_rows,
+    duplicate_resume,
+    rename_resume,
     ResumeServiceError,
     ResumeNotFoundError,
     ResumePersistenceError,
@@ -50,6 +52,8 @@ def db_connection(monkeypatch):
         DROP TABLE IF EXISTS RESUME;
         DROP TABLE IF EXISTS RESUME_PROJECT;
         DROP TABLE IF EXISTS RESUME_SKILLS;
+        DROP TABLE IF EXISTS RESUME_AWARDS;
+        DROP TABLE IF EXISTS RESUME_WORK_EXPERIENCE;
 
         CREATE TABLE USER_PREFERENCES (
             user_id INTEGER PRIMARY KEY,
@@ -106,6 +110,18 @@ def db_connection(monkeypatch):
         CREATE TABLE RESUME_SKILLS (
             resume_id INTEGER PRIMARY KEY,
             skills JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE RESUME_AWARDS (
+            resume_id INTEGER PRIMARY KEY,
+            awards JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE RESUME_WORK_EXPERIENCE (
+            resume_id INTEGER PRIMARY KEY,
+            work_experience JSON,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -450,6 +466,104 @@ def test_save_resume_edits_update_resume_skills(db_connection):
         "Familiar": ["GraphQL"],
     }
 
+
+def test_save_resume_edits_update_resume_awards(db_connection):
+    """Test that save_resume_edits updates RESUME_AWARDS and load_saved_resume reflects it."""
+    cursor = db_connection.cursor()
+
+    # Create a tailored resume shell (non-master) with one project snapshot row
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom Resume')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            2,
+            "p1",
+            "Alpha_Project",
+            "2024-01-01",
+            "2024-06-01",
+            json.dumps(["Python"]),
+            json.dumps(["Did stuff"]),
+            1,
+        ),
+    )
+
+    # Commit before calling save_resume_edits() which opens a new connection.
+    db_connection.commit()
+
+    payload_awards = {
+        "awards": [
+            {
+                "title": "Hackathon Winner",
+                "issuer": "Tech Challenge Inc.",
+                "date": "2025-03",
+                "details": ["Won first place", "Presented demo to judges"],
+            }
+        ]
+    }
+
+    save_resume_edits(2, payload_awards)
+
+    resume = load_saved_resume(2)
+    assert len(resume.get("awards", [])) == 1
+    assert resume["awards"][0]["title"] == "Hackathon Winner"
+    assert resume["awards"][0]["issuer"] == "Tech Challenge Inc."
+    assert resume["awards"][0]["date"] == "2025-03"
+    assert "Won first place" in resume["awards"][0]["details"]
+
+
+def test_save_resume_edits_update_resume_work_experience(db_connection):
+    """Test that save_resume_edits updates RESUME_WORK_EXPERIENCE and load_saved_resume reflects it."""
+    cursor = db_connection.cursor()
+
+    # Create a tailored resume shell (non-master) with one project snapshot row
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Custom Resume')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT (
+            resume_id, project_id, project_name, start_date, end_date, skills, bullets, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            2,
+            "p1",
+            "Alpha_Project",
+            "2024-01-01",
+            "2024-06-01",
+            json.dumps(["Python"]),
+            json.dumps(["Did stuff"]),
+            1,
+        ),
+    )
+
+    # Commit before calling save_resume_edits() which opens a new connection.
+    db_connection.commit()
+
+    payload_work = {
+        "work_experience": [
+            {
+                "role": "Software Engineer",
+                "company": "Tech Challenge Inc.",
+                "start_date": "2024-01",
+                "end_date": "2024-06",
+                "details": ["Built backend services", "Led collaboration efforts"],
+            }
+        ]
+    }
+
+    save_resume_edits(2, payload_work)
+
+    resume = load_saved_resume(2)
+    assert len(resume.get("work_experience", [])) == 1
+    assert resume["work_experience"][0]["role"] == "Software Engineer"
+    assert resume["work_experience"][0]["company"] == "Tech Challenge Inc."
+    assert resume["work_experience"][0]["start_date"] == "2024-01"
+    assert resume["work_experience"][0]["end_date"] == "2024-06"
+    assert "Built backend services" in resume["work_experience"][0]["details"]
+
 def test_resume_exists_true_and_false(db_connection):
     """
     Tests that resume_exists returns True for an existing resume and False for a non-existent one.
@@ -469,6 +583,76 @@ def test_create_resume_with_name(db_connection):
     row = cursor.fetchone()
     assert row is not None
     assert row[0] == "My Resume"
+
+
+def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
+    """duplicate_resume inserts a new RESUME and copies RESUME_PROJECT + RESUME_SKILLS from source."""
+    new_id = duplicate_resume(1)
+    assert new_id != 1
+
+    cursor = db_connection.cursor()
+    cursor.execute("SELECT name FROM RESUME WHERE id = ?", (new_id,))
+    row = cursor.fetchone()
+    assert row is not None
+    # Seeded resume 1 has NULL name → base "Resume-1"
+    assert row[0] == "Resume-1 copy"
+
+    cursor.execute(
+        """
+        SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+        FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order
+        """,
+        (new_id,),
+    )
+    copy_rows = cursor.fetchall()
+    cursor.execute(
+        """
+        SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+        FROM RESUME_PROJECT WHERE resume_id = 1 ORDER BY display_order
+        """
+    )
+    source_rows = cursor.fetchall()
+    assert copy_rows == source_rows
+
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
+    sk_new = cursor.fetchone()
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
+    sk_src = cursor.fetchone()
+    assert sk_new is not None and sk_src is not None
+    assert sk_new[0] == sk_src[0]
+
+
+def test_duplicate_resume_not_found(db_connection):
+    with pytest.raises(ResumeNotFoundError):
+        duplicate_resume(99999)
+
+
+def test_rename_resume_trims_and_updates(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Old Name')")
+    cursor.execute(
+        "INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order) VALUES (2, 'p1', 1)"
+    )
+    db_connection.commit()
+
+    rename_resume(2, "  Tailored A  ")
+    cursor.execute("SELECT name FROM RESUME WHERE id = 2")
+    assert cursor.fetchone()[0] == "Tailored A"
+
+
+def test_rename_resume_master_forbidden(db_connection):
+    with pytest.raises(ResumePersistenceError) as exc_info:
+        rename_resume(1, "Anything")
+    assert "Master" in str(exc_info.value)
+
+
+def test_rename_resume_empty_name(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'X')")
+    db_connection.commit()
+    with pytest.raises(ResumePersistenceError):
+        rename_resume(2, "   ")
+
     
 def test_attach_projects_to_resume(db_connection):
     """

@@ -297,7 +297,8 @@ function UserProfileCard({ user }: { user: UserInfo }) {
     : user.education || "";
 
   const githubLink = user.links?.find((l) => l.label === "GitHub");
-  const hasContacts = !!(githubLink || user.email);
+  const linkedinLink = user.links?.find((l) => l.label === "LinkedIn");
+  const hasContacts = !!(githubLink || user.email || linkedinLink);
 
   return (
     <div className="profile-hero">
@@ -372,6 +373,24 @@ function UserProfileCard({ user }: { user: UserInfo }) {
                 <polyline points="2,4 12,13 22,4" />
               </svg>
               {user.email}
+            </a>
+          )}
+          {linkedinLink && (
+            <a
+              href={linkedinLink.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="profile-contact-link"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+              LinkedIn
             </a>
           )}
         </div>
@@ -667,6 +686,7 @@ interface HeatmapCell {
 interface HeatmapModel {
   weeks: HeatmapCell[][];
   monthLabels: Array<{ label: string; col: number }>;
+  yearLabels: Array<{ label: string; col: number }>;
   maxValue: number;
   totalSignal: number;
   activeDays: number;
@@ -712,8 +732,38 @@ const buildHeatmapModel = (
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const start = new Date(today);
-  start.setDate(start.getDate() - 364);
+  // Find the earliest date across projects, daily activity, and monthly activity
+  let earliest: Date | null = null;
+  const consider = (d: Date | null) => {
+    if (d && (!earliest || d < earliest)) earliest = d;
+  };
+
+  (projects || []).forEach((p) => {
+    consider(parseDateLike(p.created_at || p.start_date));
+    consider(parseDateLike(p.last_modified || p.end_date));
+  });
+
+  // Also consider daily activity dates so the calendar range covers them
+  Object.keys(dailyActivity || {}).forEach((dayKey) => {
+    consider(parseDateLike(dayKey));
+  });
+
+  // Also consider monthly activity dates
+  Object.keys(monthlyActivity || {}).forEach((monthKey) => {
+    const m = monthKey.match(/^(\d{4})-(\d{2})/);
+    if (m) consider(new Date(Number(m[1]), Number(m[2]) - 1, 1));
+  });
+
+  // Start from Jan 1 of the earliest project year, but always show at least a full year
+  const currentYear = today.getFullYear();
+  let startYear = currentYear - 1; // default: at least one full year back
+
+  if (earliest) {
+    const earliestYear = earliest.getFullYear();
+    if (earliestYear < startYear) startYear = earliestYear;
+  }
+
+  const start = new Date(startYear, 0, 1); // Jan 1 of the start year
 
   const calendarStart = new Date(start);
   calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
@@ -824,6 +874,23 @@ const buildHeatmapModel = (
     }
   });
 
+  const yearLabels: Array<{ label: string; col: number }> = [];
+  let lastYear = -1;
+  weeks.forEach((week, col) => {
+    const firstDay = week[0];
+    if (!firstDay) return;
+    const y = firstDay.date.getFullYear();
+    if (y !== lastYear) {
+      // Skip a partial trailing week from the previous year at the start
+      if (yearLabels.length === 0 && col === 0 && firstDay.date.getMonth() === 11) {
+        lastYear = y;
+        return;
+      }
+      yearLabels.push({ label: String(y), col });
+      lastYear = y;
+    }
+  });
+
   const activeCells = cells.filter((cell) => cell.value > 0);
   const activeDays = activeCells.length;
   const totalSignal = cells.reduce((sum, cell) => sum + cell.value, 0);
@@ -837,6 +904,7 @@ const buildHeatmapModel = (
   return {
     weeks,
     monthLabels,
+    yearLabels,
     maxValue,
     totalSignal,
     activeDays,
@@ -890,6 +958,24 @@ function ActivityHeatmap({
         </div>
 
         <div className="activity-heatmap-scroll">
+          {model.yearLabels.length > 1 && (
+            <div
+              className="activity-heatmap-years"
+              style={{ width: `${calendarWidth}px` }}
+              aria-hidden
+            >
+              {model.yearLabels.map((yr) => (
+                <span
+                  key={`yr-${yr.label}`}
+                  className="activity-heatmap-year"
+                  style={{ left: `${yr.col * HEATMAP_CELL_STEP}px` }}
+                >
+                  {yr.label}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div
             className="activity-heatmap-months"
             style={{ width: `${calendarWidth}px` }}
@@ -916,9 +1002,9 @@ function ActivityHeatmap({
                   <div
                     key={cell.key}
                     className={`activity-cell activity-cell-level-${cell.level} ${
-                      weekIndex <= 1
+                      weekIndex <= 10
                         ? "activity-cell-tooltip-right"
-                        : weekIndex >= totalWeeks - 2
+                        : weekIndex >= totalWeeks - 11
                           ? "activity-cell-tooltip-left"
                           : "activity-cell-tooltip-center"
                     }`}
@@ -1079,7 +1165,7 @@ function ProjectCard({
     } else if (field === "name") {
       setEditing({ field, value: title });
     } else if (field === "score") {
-      setEditing({ field, value: getDisplayScore(project).toFixed(2) });
+      setEditing({ field, value: Math.round(getDisplayScore(project) * 100).toString() });
     } else if (field === "dates") {
       setEditing({
         field,
@@ -1110,12 +1196,12 @@ function ProjectCard({
         editData.project_name = editing.value.trim();
       } else if (editing.field === "score") {
         const parsed = Number(editing.value);
-        if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
-          alert("Score must be a number between 0 and 1.");
+        if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+          alert("Score must be a number between 0 and 100.");
           setSaving(false);
           return;
         }
-        editData.score_overridden_value = parsed;
+        editData.score_overridden_value = parsed / 100;
       } else if (editing.field === "dates") {
         if (editing.createdAt) editData.created_at = editing.createdAt;
         if (editing.lastModified) editData.last_modified = editing.lastModified;
@@ -1438,7 +1524,6 @@ function ProjectCard({
               <p
                 className={`summary-text ${!showFullSummary && shouldTruncateSummary(summary) ? "truncated" : ""} editable-field`}
                 onClick={() => startEdit("summary")}
-                title="Click to edit"
                 style={
                   !summary
                     ? { color: "var(--text-muted)", fontStyle: "italic" }
@@ -1546,9 +1631,11 @@ const PortfolioPage: React.FC = () => {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
 
   const loadPortfolio = async (selectedIds?: Array<string | number>) => {
+    if (!selectedIds || selectedIds.length === 0) {
+      setPortfolio(null);
+      return;
+    }
     const query =
-      selectedIds &&
-      selectedIds.length > 0 &&
       selectedIds.length < allProjects.length
         ? `?project_ids=${selectedIds.join(",")}`
         : "";
@@ -1595,6 +1682,29 @@ const PortfolioPage: React.FC = () => {
         .forEach((el) => el.remove());
       mainClone
         .querySelectorAll(".portfolio-owner-only")
+        .forEach((el) => el.remove());
+      mainClone
+        .querySelectorAll(".page-home-nav")
+        .forEach((el) => el.remove());
+
+      // Wire up Show More buttons for the static HTML export
+      mainClone
+        .querySelectorAll(".show-more-btn")
+        .forEach((btn) => {
+          btn.setAttribute("onclick", "window.toggleSummary(this)");
+        });
+
+      // Remove edit-related attributes that don't apply in exported HTML
+      mainClone
+        .querySelectorAll(".editable-field")
+        .forEach((el) => {
+          el.removeAttribute("title");
+          el.classList.remove("editable-field");
+        });
+
+      // Remove thumbnail upload buttons from exported HTML
+      mainClone
+        .querySelectorAll(".thumbnail-button-section")
         .forEach((el) => el.remove());
 
       // Inline thumbnails as data URLs for offline export
@@ -1751,13 +1861,11 @@ ${mainClone.outerHTML}
   };
 
   const displayedProjects = useMemo(() => {
-    const src = (
-      portfolio?.projects?.length ? portfolio.projects : allProjects
-    ).slice();
+    const src = (portfolio?.projects || []).slice();
     return src
       .sort((a, b) => getDisplayScore(b) - getDisplayScore(a))
       .slice(0, 6);
-  }, [portfolio?.projects, allProjects]);
+  }, [portfolio?.projects]);
 
   const graphs = portfolio?.graphs || {};
   const complexity = {
@@ -1784,6 +1892,7 @@ ${mainClone.outerHTML}
     let totalFunctions = 0;
     let totalClasses = 0;
     let totalComponents = 0;
+    let totalCommits = 0;
     let githubProjects = 0;
     let localProjects = 0;
     let totalCompleteness = 0;
@@ -1797,6 +1906,7 @@ ${mainClone.outerHTML}
       totalFunctions += metrics.functions || 0;
       totalClasses += metrics.classes || 0;
       totalComponents += metrics.components || 0;
+      totalCommits += metrics.total_commits || 0;
       if (project.type === "GitHub") githubProjects += 1;
       else localProjects += 1;
       if (metrics.completeness_score)
@@ -1822,6 +1932,7 @@ ${mainClone.outerHTML}
       totalFunctions,
       totalClasses,
       totalComponents,
+      totalCommits,
       githubProjects,
       localProjects,
       avgCompleteness,
@@ -1857,8 +1968,13 @@ ${mainClone.outerHTML}
   return (
     <div className="portfolio-layout">
       <div className="sidebar">
-        <h2>📋 Project Selection</h2>
-        <div className="project-selection">
+        <div className="sidebar-header">
+          <div className="sidebar-title-row">
+            <h2>Projects</h2>
+            <span className="sidebar-count">
+              {selectedProjects.size}/{allProjects.length}
+            </span>
+          </div>
           <button
             className="select-all-btn"
             onClick={() => void toggleAllProjects()}
@@ -1868,38 +1984,38 @@ ${mainClone.outerHTML}
               ? "Deselect All"
               : "Select All"}
           </button>
-          <div id="projectList">
-            {allProjects.map((p) => {
+        </div>
+        <div className="project-list">
+          {allProjects.length === 0 ? (
+            <div className="project-list-empty">
+              No projects found
+            </div>
+          ) : (
+            allProjects.map((p) => {
               const checked = selectedProjects.has(p.id);
-              const tags = (p.skills || []).slice(0, 3);
+              const score = getDisplayScore(p);
+              const scoreClass =
+                score >= 0.7
+                  ? "score-high"
+                  : score >= 0.4
+                    ? "score-mid"
+                    : "score-low";
               return (
                 <div
                   key={String(p.id)}
                   className={`project-item ${checked ? "selected" : ""}`}
                   onClick={() => void toggleProject(p.id)}
+                  title={sidebarProjectName(p)}
                 >
-                  <input
-                    className="project-checkbox"
-                    type="checkbox"
-                    checked={checked}
-                    onClick={(e) => e.stopPropagation()}
-                    readOnly
-                  />
-                  <div className="project-name">{sidebarProjectName(p)}</div>
-                  <div className="project-score">
-                    Score: {formatScorePercent(getDisplayScore(p))}
-                  </div>
-                  <div className="project-skills">
-                    {tags.map((t) => (
-                      <span key={t} className="skill-tag">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                  <span className="project-check">✓</span>
+                  <span className="project-name">{sidebarProjectName(p)}</span>
+                  <span className={`project-score ${scoreClass}`}>
+                    {formatScorePercent(score)}
+                  </span>
                 </div>
               );
-            })}
-          </div>
+            })
+          )}
         </div>
       </div>
       <div className="main-content">
@@ -1925,6 +2041,7 @@ ${mainClone.outerHTML}
             <button
               className="download-html-btn"
               onClick={() => void downloadPortfolioInteractiveHTML()}
+              disabled={selectedProjects.size === 0}
             >
               ⚡ Download Interactive HTML
             </button>
@@ -1936,7 +2053,7 @@ ${mainClone.outerHTML}
         <div className="overview-cards" id="overviewCards">
           <div className="overview-card">
             <div className="overview-card-value">
-              {portfolio?.overview?.total_projects ?? allProjects.length}
+              {portfolio?.overview?.total_projects ?? 0}
             </div>
             <div className="overview-card-label">Total Projects</div>
           </div>
@@ -2058,24 +2175,36 @@ ${mainClone.outerHTML}
                       {analysis.totalTestFiles}
                     </span>
                   </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Functions Created:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalFunctions}
-                    </span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Classes Created:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalClasses}
-                    </span>
-                  </div>
-                  <div className="analysis-item">
-                    <span className="analysis-label">Components Built:</span>{" "}
-                    <span className="analysis-value">
-                      {analysis.totalComponents}
-                    </span>
-                  </div>
+                  {analysis.githubProjects > 0 && (
+                    <div className="analysis-item">
+                      <span className="analysis-label">Total Commits:</span>{" "}
+                      <span className="analysis-value">
+                        {analysis.totalCommits.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {analysis.localProjects > 0 && (
+                    <>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Functions Created:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalFunctions}
+                        </span>
+                      </div>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Classes Created:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalClasses}
+                        </span>
+                      </div>
+                      <div className="analysis-item">
+                        <span className="analysis-label">Components Built:</span>{" "}
+                        <span className="analysis-value">
+                          {analysis.totalComponents}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="analysis-card">
                   <h4>📊 Project Distribution</h4>

@@ -71,6 +71,56 @@ def parse_education_details(education_details_json: Optional[str], fallback_educ
         }]
     
     return []
+
+
+def load_awards(cursor: sqlite3.Cursor, resume_id: int) -> List[Dict[str, Any]]:
+    """Load awards/honours for a saved tailored resume."""
+    cursor.execute(
+        "SELECT awards FROM RESUME_AWARDS WHERE resume_id = ? LIMIT 1",
+        (resume_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return []
+
+    awards_raw = row[0]
+    if not awards_raw:
+        return []
+
+    try:
+        parsed = json.loads(awards_raw) if isinstance(awards_raw, str) else awards_raw
+        if isinstance(parsed, list):
+            # Keep only dict entries to avoid template renderer issues.
+            return [a for a in parsed if isinstance(a, dict)]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return []
+
+
+def load_work_experience(cursor: sqlite3.Cursor, resume_id: int) -> List[Dict[str, Any]]:
+    """Load work experience entries for a saved tailored resume."""
+    cursor.execute(
+        "SELECT work_experience FROM RESUME_WORK_EXPERIENCE WHERE resume_id = ? LIMIT 1",
+        (resume_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return []
+
+    work_raw = row[0]
+    if not work_raw:
+        return []
+
+    try:
+        parsed = json.loads(work_raw) if isinstance(work_raw, str) else work_raw
+        if isinstance(parsed, list):
+            # Keep only dict entries to avoid template renderer issues.
+            return [e for e in parsed if isinstance(e, dict)]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return []
     
 def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
@@ -425,11 +475,24 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
             fallback_job_title=user.get("job_title", "")
         )
         
+        # Parse awards/honours (tailored-resume only)
+        awards_list = load_awards(cursor, resume_id)
+        if resume_id == 1:
+            # Master resume should never include awards.
+            awards_list = []
+
+        work_experience_list = load_work_experience(cursor, resume_id)
+        if resume_id == 1:
+            # Master resume should never include work experience.
+            work_experience_list = []
+        
         return {
             "name": user["name"],
             "email": user["email"],
             "links": user["links"],
             "education": education_list,
+            "awards": awards_list,
+            "work_experience": work_experience_list,
             "skills": {
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
@@ -490,6 +553,9 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
             "email": user["email"],
             "links": user["links"],
             "education": education_list,
+            # Awards are tailored-resume only; preview/master don't load them.
+            "awards": [],
+            "work_experience": [],
             "skills": {
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
@@ -546,6 +612,128 @@ def resume_exists(resume_id: int) -> bool:
     finally:
         conn.close()
 
+
+def duplicate_resume(source_id: int) -> int:
+    """Clone a resume (including master id=1) into a new row with copied projects and optional sidecar tables."""
+    if not resume_exists(source_id):
+        raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (source_id,))
+        src_row = cursor.fetchone()
+        if not src_row:
+            raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+        raw_name = (src_row[0] or "").strip()
+        base = raw_name if raw_name else f"Resume-{source_id}"
+        new_name = f"{base} copy"
+
+        cursor.execute("INSERT INTO RESUME (name) VALUES (?)", (new_name,))
+        new_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+            FROM RESUME_PROJECT
+            WHERE resume_id = ?
+            ORDER BY display_order
+            """,
+            (source_id,),
+        )
+        for (
+            project_id,
+            project_name,
+            start_date,
+            end_date,
+            skills,
+            bullets,
+            display_order,
+        ) in cursor.fetchall():
+            cursor.execute(
+                """
+                INSERT INTO RESUME_PROJECT (
+                    resume_id, project_id, project_name, start_date, end_date,
+                    skills, bullets, display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id,
+                    project_id,
+                    project_name,
+                    start_date,
+                    end_date,
+                    skills,
+                    bullets,
+                    display_order,
+                ),
+            )
+
+        cursor.execute(
+            "SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        sk_row = cursor.fetchone()
+        if sk_row and sk_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_SKILLS (resume_id, skills) VALUES (?, ?)",
+                (new_id, sk_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT awards FROM RESUME_AWARDS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        aw_row = cursor.fetchone()
+        if aw_row and aw_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_AWARDS (resume_id, awards) VALUES (?, ?)",
+                (new_id, aw_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT work_experience FROM RESUME_WORK_EXPERIENCE WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        we_row = cursor.fetchone()
+        if we_row and we_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience) VALUES (?, ?)",
+                (new_id, we_row[0]),
+            )
+
+        conn.commit()
+        return new_id
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to duplicate resume") from e
+    finally:
+        conn.close()
+
+
+def rename_resume(resume_id: int, name: str) -> None:
+    """Rename a saved resume. Master resume (id=1) cannot be renamed."""
+    trimmed = (name or "").strip()
+    if not trimmed:
+        raise ResumePersistenceError("Resume name cannot be empty")
+    if resume_id == 1:
+        raise ResumePersistenceError("Cannot rename the Master Resume")
+    if not resume_exists(resume_id):
+        raise ResumeNotFoundError(f"Resume with ID {resume_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE RESUME SET name = ? WHERE id = ?", (trimmed, resume_id))
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to rename resume") from e
+    finally:
+        conn.close()
+
+
 def save_resume_edits(resume_id: int, payload: dict):
     """ Save or update edits made to the resume in the DB """
     conn = get_connection()
@@ -578,6 +766,97 @@ def save_resume_edits(resume_id: int, payload: dict):
                     skills = excluded.skills,
                     updated_at = CURRENT_TIMESTAMP
             """, (resume_id, json.dumps(skills_payload)))
+
+        # Update tailored-resume awards (if provided)
+        if "awards" in payload:
+            awards_payload = payload.get("awards") or []
+
+            normalized_awards: List[Dict[str, Any]] = []
+            if isinstance(awards_payload, list):
+                for a in awards_payload:
+                    if not isinstance(a, dict):
+                        continue
+                    title = str(a.get("title", "")).strip()
+                    if not title:
+                        continue
+                    issuer = str(a.get("issuer", "")).strip() if a.get("issuer") else ""
+                    date = str(a.get("date", "")).strip() if a.get("date") else ""
+
+                    details_raw = a.get("details", []) or []
+                    details: List[str] = []
+                    if isinstance(details_raw, list):
+                        details = [str(d).strip() for d in details_raw if str(d).strip()]
+                    elif isinstance(details_raw, str):
+                        # Accept newline-separated details for robustness.
+                        details = [line.strip() for line in details_raw.splitlines() if line.strip()]
+
+                    normalized_awards.append(
+                        {
+                            "title": title,
+                            "issuer": issuer,
+                            "date": date,
+                            "details": details,
+                        }
+                    )
+
+            cursor.execute(
+                """
+                INSERT INTO RESUME_AWARDS (resume_id, awards)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    awards = excluded.awards,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (resume_id, json.dumps(normalized_awards)),
+            )
+
+        # Update tailored-resume work experience (if provided)
+        if "work_experience" in payload:
+            work_payload = payload.get("work_experience") or []
+
+            normalized_work: List[Dict[str, Any]] = []
+            if isinstance(work_payload, list):
+                for e in work_payload:
+                    if not isinstance(e, dict):
+                        continue
+                    role = str(e.get("role", "")).strip()
+                    if not role:
+                        continue
+
+                    company = str(e.get("company", "")).strip() if e.get("company") else ""
+                    start_date = str(e.get("start_date", "")).strip() if e.get("start_date") else ""
+                    end_date = str(e.get("end_date", "")).strip() if e.get("end_date") else ""
+
+                    details_raw = e.get("details", []) or []
+                    details: List[str] = []
+                    if isinstance(details_raw, list):
+                        details = [str(d).strip() for d in details_raw if str(d).strip()]
+                    elif isinstance(details_raw, str):
+                        # Accept newline-separated details for robustness.
+                        details = [line.strip() for line in details_raw.splitlines() if line.strip()]
+
+                    normalized_work.append(
+                        {
+                            "role": role,
+                            "company": company,
+                            "start_date": start_date,
+                            "end_date": end_date,
+                            "details": details,
+                        }
+                    )
+
+            cursor.execute(
+                """
+                INSERT INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience)
+                VALUES (?, ?)
+                ON CONFLICT(resume_id)
+                DO UPDATE SET
+                    work_experience = excluded.work_experience,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (resume_id, json.dumps(normalized_work)),
+            )
 
         for project in payload.get("projects", []):
             cursor.execute("""

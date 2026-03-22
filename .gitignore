@@ -44,6 +44,9 @@ pip-wheel-metadata/
 /secrets*.yaml
 .env*
 
+# Local app config (e.g. Gemini key saved from the UI in Docker)
+local-config/
+
 # Node
 node_modules/
 npm-debug.log

@@ -1,11 +1,16 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
+import { getGeminiKeyStatus } from "../api/geminiKey";
+import { GeminiApiKeyModal } from "../components/gemini/GeminiApiKeyModal";
 import { API_BASE_URL } from "../config/api";
 import { SimilarityIndicator } from "../components/SimilarityIndicator";
 import "../styles/UploadPage.css";
 import "../styles/AnalysisRunnerPage.css";
 import "../styles/SimilarityIndicator.css";
+import "../styles/GeminiApiKey.css";
+
+const GEMINI_BANNER_DISMISS_KEY = "upload-gemini-key-banner-dismissed";
 
 interface FileTypeGroup {
   id: string;
@@ -47,6 +52,9 @@ interface ProjectResult {
   project_name: string;
   status: "analyzed" | "skipped" | "failed";
   reason: string | null;
+  /** Present when returned from POST /api/analysis/run */
+  requested_analysis_type?: "local" | "ai";
+  effective_analysis_type?: "local" | "ai";
 }
 
 interface RunResult {
@@ -108,11 +116,28 @@ export function UploadPage() {
   const [pendingAiSelection, setPendingAiSelection] = useState<PendingAiSelection | null>(null);
   const [similarityModalData, setSimilarityModalData] = useState<SimilarityModalData | null>(null);
   const [hasRunAnalysis, setHasRunAnalysis] = useState(false);
+  const [pendingAiSelection, setPendingAiSelection] =
+    useState<PendingAiSelection | null>(null);
+
+  const [geminiStatus, setGeminiStatus] = useState<Awaited<
+    ReturnType<typeof getGeminiKeyStatus>
+  > | null>(null);
+  const [geminiBannerDismissed, setGeminiBannerDismissed] = useState(
+    () => sessionStorage.getItem(GEMINI_BANNER_DISMISS_KEY) === "1",
+  );
+  const [showGeminiKeyModal, setShowGeminiKeyModal] = useState(false);
+
   // Per-project file type exclusions
   const [projectExcludeGroups, setProjectExcludeGroups] =
     useState<Record<string, Set<string>>>({});
   const [expandedExclude, setExpandedExclude] =
     useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getGeminiKeyStatus()
+      .then(setGeminiStatus)
+      .catch(() => setGeminiStatus(null));
+  }, []);
 
   useEffect(() => {
     if (!uploadId) return;
@@ -464,6 +489,33 @@ export function UploadPage() {
   const isAiSelected =
     defaultMode === "ai" || projects.some((project) => project.mode === "ai");
 
+  const showGeminiBanner =
+    geminiStatus !== null &&
+    !geminiStatus.valid &&
+    !geminiBannerDismissed;
+
+  /** Shown whenever AI is selected but the key is missing/invalid (not dismissible). */
+  const showAiWithoutKeyWarning =
+    isAiSelected && geminiStatus !== null && !geminiStatus.valid;
+
+  const projectsRanAsLocalDespiteAiRequest =
+    runResult?.results.filter(
+      (r) =>
+        r.requested_analysis_type === "ai" &&
+        r.effective_analysis_type === "local",
+    ) ?? [];
+
+  const dismissGeminiBanner = () => {
+    sessionStorage.setItem(GEMINI_BANNER_DISMISS_KEY, "1");
+    setGeminiBannerDismissed(true);
+  };
+
+  const refreshGeminiStatus = () => {
+    getGeminiKeyStatus()
+      .then(setGeminiStatus)
+      .catch(() => setGeminiStatus(null));
+  };
+
   return (
     <div className="upload-page">
       <div className="upload-page-nav" aria-label="Page navigation">
@@ -489,6 +541,29 @@ export function UploadPage() {
               : "Upload a ZIP, configure analysis settings, and run. Similarity detection happens automatically during analysis."}
           </p>
         </header>
+
+        {showGeminiBanner && (
+          <div className="upload-gemini-banner" role="status">
+            <p>
+              Add a Gemini API key to use <strong>AI</strong> analysis. Local analysis works without a key.
+            </p>
+            <div className="upload-gemini-banner-actions">
+              <button
+                type="button"
+                className="upload-select-btn"
+                onClick={() => setShowGeminiKeyModal(true)}
+              >
+                Add API key
+              </button>
+              <Link to="/geminiapikeypage" className="upload-clear-btn upload-gemini-banner-link">
+                Full instructions
+              </Link>
+              <button type="button" className="upload-clear-btn" onClick={dismissGeminiBanner}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         <section className="upload-card" aria-label="Upload zip section">
           <div className="upload-card-main">
@@ -586,6 +661,28 @@ export function UploadPage() {
                 AI mode notice: When analysis type is set to AI, selected project content may
                 be sent to our configured LLM provider to generate insights. Avoid uploading
                 sensitive, personal, or confidential data unless you have permission to share it.
+              </div>
+            )}
+
+            {showAiWithoutKeyWarning && (
+              <div className="upload-ai-key-missing" role="alert" aria-live="polite">
+                <p>
+                  <strong>No valid Gemini API key is configured.</strong> Any project set to{" "}
+                  <strong>AI</strong> will run as <strong>local (rule-based)</strong> analysis instead.
+                  Add a key to use the language model.
+                </p>
+                <div className="upload-ai-key-missing-actions">
+                  <button
+                    type="button"
+                    className="upload-select-btn"
+                    onClick={() => setShowGeminiKeyModal(true)}
+                  >
+                    Add API key
+                  </button>
+                  <Link to="/geminiapikeypage" className="upload-clear-btn upload-gemini-banner-link">
+                    Open settings
+                  </Link>
+                </div>
               </div>
             )}
 
@@ -818,6 +915,17 @@ export function UploadPage() {
                   — all files were excluded by your filters.
                 </p>
               )}
+              {projectsRanAsLocalDespiteAiRequest.length > 0 && (
+                <p className="ar-result-fallback-note" role="status">
+                  You chose <strong>AI</strong>, but no valid Gemini API key was available, so{" "}
+                  {projectsRanAsLocalDespiteAiRequest.length === 1 ? "this project ran" : "these projects ran"}{" "}
+                  as <strong>local (rule-based)</strong> analysis:{" "}
+                  <strong>
+                    {projectsRanAsLocalDespiteAiRequest.map((r) => r.project_name).join(", ")}
+                  </strong>
+                  .
+                </p>
+              )}
               <button
                 type="button"
                 className="ar-btn ar-btn--primary ar-result-insights-btn"
@@ -914,6 +1022,11 @@ export function UploadPage() {
             </div>
           </div>
         )}
+        <GeminiApiKeyModal
+          open={showGeminiKeyModal}
+          onClose={() => setShowGeminiKeyModal(false)}
+          onSaved={refreshGeminiStatus}
+        />
       </div>
     </div>
   );

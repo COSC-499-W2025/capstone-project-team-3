@@ -6,6 +6,13 @@ import { BrowserRouter } from "react-router-dom";
 import * as uploadApi from "../src/api/upload";
 
 jest.mock("../src/api/upload");
+jest.mock("../src/api/geminiKey", () => ({
+  getGeminiKeyStatus: jest.fn().mockResolvedValue({
+    configured: true,
+    valid: true,
+    masked_suffix: null,
+  }),
+}));
 
 const mockUploadZipFile = uploadApi.uploadZipFile as jest.MockedFunction<
   typeof uploadApi.uploadZipFile

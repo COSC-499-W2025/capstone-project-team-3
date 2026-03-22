@@ -43,7 +43,7 @@ function makeBreakdown(
     score_original: 0.7,
     score_overridden: true,
     score_overridden_value: 0.7,
-    exclude_metrics: ["total_lines"],
+    exclude_metrics: [],
     breakdown: {
       code: {
         type: "git",
@@ -62,8 +62,15 @@ function makeBreakdown(
             weight: 0.3,
             contribution: 0.072,
           },
+          code_files_changed: {
+            raw: 5,
+            cap: 20,
+            normalized: 0.25,
+            weight: 0.2,
+            contribution: 0.05,
+          },
         },
-        subtotal: 0.102,
+        subtotal: 0.152,
       },
       non_code: {
         metrics: {},
@@ -149,7 +156,7 @@ describe("ScoreOverridePage", () => {
     await waitFor(() =>
       expect(mockPreviewScoreOverride).toHaveBeenCalledWith(
         "sig_alpha_project/hash",
-        expect.arrayContaining(["total_lines", "total_commits"])
+        expect.arrayContaining(["total_commits"])
       )
     );
     expect(await screen.findByText("+12.0%")).toBeInTheDocument();
@@ -165,7 +172,7 @@ describe("ScoreOverridePage", () => {
     });
 
     await waitFor(() =>
-      expect(mockApplyScoreOverride).toHaveBeenCalledWith("sig_alpha_project/hash", ["total_lines"])
+      expect(mockApplyScoreOverride).toHaveBeenCalledWith("sig_alpha_project/hash", [])
     );
     await waitFor(() => expect(mockGetScoreBreakdown).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("Score override applied successfully")).toBeInTheDocument();
@@ -207,7 +214,7 @@ describe("ScoreOverridePage", () => {
     await waitFor(() =>
       expect(mockPreviewScoreOverride).toHaveBeenLastCalledWith(
         "sig_alpha_project/hash",
-        ["total_lines"]
+        []
       )
     );
   });
@@ -215,9 +222,153 @@ describe("ScoreOverridePage", () => {
   test("preselects the requested project when opened from portfolio", async () => {
     renderPage("/scoreoverridepage?project=sig_alpha_project%2Fhash&from=portfoliopage");
 
-    expect(await screen.findByText("Back to Portfolio")).toBeInTheDocument();
     await waitFor(() =>
       expect(mockGetScoreBreakdown).toHaveBeenCalledWith("sig_alpha_project/hash")
     );
+  });
+
+  test("always shows back button regardless of entry path", async () => {
+    renderPage();
+
+    const backButton = await screen.findByRole("button", { name: /go back/i });
+    expect(backButton).toBeInTheDocument();
+    expect(backButton).toHaveTextContent("Back");
+  });
+
+  test("shows info banner when project has no code metrics", async () => {
+    mockGetScoreBreakdown.mockResolvedValue(
+      makeBreakdown({
+        breakdown: {
+          code: { type: "git", metrics: {}, subtotal: 0 },
+          non_code: { metrics: {}, subtotal: 0 },
+          blend: {
+            code_percentage: 1,
+            non_code_percentage: 0,
+            code_lines: 0,
+            doc_word_count: 0,
+            doc_line_equiv: 0,
+          },
+          final_score: 0,
+        },
+      })
+    );
+
+    renderPage();
+    await selectProject();
+
+    expect(await screen.findByText("No code metrics available")).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not have overrideable code metrics/i)
+    ).toBeInTheDocument();
+  });
+
+  test("shows info banner when breakdown fails to load", async () => {
+    mockGetScoreBreakdown.mockRejectedValue(new Error("Server error"));
+
+    renderPage();
+    await selectProject();
+
+    expect(await screen.findByText("Unable to load score breakdown")).toBeInTheDocument();
+  });
+
+  test("shows saturation note when all remaining metrics are at max", async () => {
+    mockGetScoreBreakdown.mockResolvedValue(
+      makeBreakdown({
+        exclude_metrics: [],
+        breakdown: {
+          code: {
+            type: "git",
+            metrics: {
+              total_commits: {
+                raw: 100,
+                cap: 50,
+                normalized: 1.0,
+                weight: 0.5,
+                contribution: 0.5,
+              },
+              total_lines: {
+                raw: 10000,
+                cap: 5000,
+                normalized: 1.0,
+                weight: 0.5,
+                contribution: 0.5,
+              },
+            },
+            subtotal: 1.0,
+          },
+          non_code: { metrics: {}, subtotal: 0 },
+          blend: {
+            code_percentage: 1,
+            non_code_percentage: 0,
+            code_lines: 10000,
+            doc_word_count: 0,
+            doc_line_equiv: 0,
+          },
+          final_score: 1.0,
+        },
+      })
+    );
+
+    mockPreviewScoreOverride.mockResolvedValue({
+      project_signature: "sig_alpha_project/hash",
+      name: "Alpha Project",
+      exclude_metrics: ["total_lines"],
+      current_score: 1.0,
+      preview_score: 1.0,
+      breakdown: makeBreakdown().breakdown,
+    });
+
+    renderPage();
+    await selectProject();
+    await screen.findByRole("heading", { name: "Score Preview" });
+
+    const linesCheckbox = getMetricCheckbox("Lines of Code");
+    await act(async () => {
+      fireEvent.click(linesCheckbox);
+    });
+
+    expect(
+      await screen.findByText(
+        /all remaining metrics are at 100%/i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test("prevents excluding the last remaining code metric", async () => {
+    mockGetScoreBreakdown.mockResolvedValue(
+      makeBreakdown({
+        exclude_metrics: ["total_lines", "code_files_changed"],
+      })
+    );
+
+    renderPage();
+    await selectProject();
+    await screen.findByRole("heading", { name: "Score Preview" });
+
+    // total_lines and code_files_changed are already excluded, try to also exclude total_commits (the last one)
+    const commitsCheckbox = getMetricCheckbox("Total Commits");
+    await act(async () => {
+      fireEvent.click(commitsCheckbox);
+    });
+
+    expect(
+      await screen.findByText(/at least one code metric must remain/i)
+    ).toBeInTheDocument();
+
+    // Preview should NOT have been called for this toggle
+    expect(mockPreviewScoreOverride).not.toHaveBeenCalled();
+  });
+
+  test("displays hint text about code metric rules and documentation metrics", async () => {
+    renderPage();
+    await selectProject();
+    await screen.findByRole("heading", { name: "Score Preview" });
+
+    expect(
+      screen.getByText(/only code metrics can be excluded/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/at least one must remain included/i)
+    ).toBeInTheDocument();
   });
 });

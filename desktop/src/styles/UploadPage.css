@@ -197,6 +197,28 @@
   line-height: 1.4;
 }
 
+.upload-ai-key-missing {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.upload-ai-key-missing p {
+  margin: 0 0 10px;
+}
+
+.upload-ai-key-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .upload-label-row {
   display: inline-flex;
   align-items: center;
@@ -535,3 +557,10 @@
   border: 3px solid #059669 !important;
   box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
 }
+/* ── Dark mode ── */
+[data-theme="dark"] .upload-page                { background: var(--color-page-bg); }
+[data-theme="dark"] .upload-title               { color: var(--color-text-heading); }
+[data-theme="dark"] .upload-subtitle            { color: var(--color-text-secondary); }
+[data-theme="dark"] .upload-card                { background: var(--color-card-bg); }
+[data-theme="dark"] .upload-help-trigger        { background: var(--color-card-bg); color: var(--color-text-body); }
+[data-theme="dark"] .upload-help-tooltip        { background: var(--color-card-bg); color: var(--color-text-body); border-color: var(--color-border); }

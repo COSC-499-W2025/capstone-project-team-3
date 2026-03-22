@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   OverridePreview,
   Project,
@@ -44,9 +44,9 @@ interface ImprovementHint {
 }
 
 export default function ScoreOverridePage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedProjectId = searchParams.get("project") ?? "";
-  const fromPortfolio = searchParams.get("from") === "portfoliopage";
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedId, setSelectedId] = useState<string>(preselectedProjectId);
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null);
@@ -150,6 +150,14 @@ export default function ScoreOverridePage() {
       const next = new Set(prev);
       if (nowExcluded) next.add(name);
       else next.delete(name);
+
+      // At least one code metric must remain
+      const totalCodeMetrics = Object.keys(codeMetrics).length;
+      if (next.size >= totalCodeMetrics) {
+        showStatus("error", "At least one code metric must remain included.");
+        return prev;
+      }
+
       if (selectedId) schedulePreview(selectedId, next);
       return next;
     });
@@ -224,33 +232,49 @@ export default function ScoreOverridePage() {
     JSON.stringify(Array.from(excludedMetrics).sort()) !==
       JSON.stringify((breakdown.exclude_metrics ?? []).slice().sort());
 
+  const remainingMetrics = Object.entries(codeMetrics).filter(
+    ([name]) => !excludedMetrics.has(name)
+  );
+  const allRemainingAtMax =
+    hasChanges &&
+    Math.abs(scoreDiff) < 0.0001 &&
+    remainingMetrics.length > 0 &&
+    remainingMetrics.every(([, m]) => m.normalized >= 1.0);
+
+  // Show info message when excluding a metric doesn't change the score
+  useEffect(() => {
+    if (preview && allRemainingAtMax) {
+      showStatus(
+        "info",
+        "The score hasn't changed because all remaining metrics are already at their maximum (100% normalized)."
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview]);
+
   return (
-    <div className="sor-page">
-      {/* Header */}
-      <header className="sor-header">
-        <div className="sor-header-inner">
-          <div>
-            {fromPortfolio && (
-              <Link to="/portfoliopage" className="sor-context-link">
-                Back to Portfolio
-              </Link>
-            )}
-            <h1 className="sor-title">Score Override</h1>
-            <p className="sor-subtitle">
-              Adjust which metrics contribute to a project's score. Excluded metrics are removed
-              and the remaining weights are renormalized automatically.
-            </p>
-            {fromPortfolio && (
-              <p className="sor-context-note">
-                Changes applied here will be reflected in the portfolio view and in the downloaded portfolio export.
-              </p>
-            )}
-          </div>
-          {status && (
-            <div className={`sor-status sor-status-${status.type}`}>{status.text}</div>
-          )}
-        </div>
-      </header>
+    <div className="page-container flex-column sor-page">
+      <button
+        className="settings-back-btn"
+        onClick={() => navigate(-1)}
+        aria-label="Go back"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back
+      </button>
+
+      <div className="sor-header-section">
+        <h1 className="sor-title">Score Override</h1>
+        <p className="sor-subtitle">
+          Adjust which metrics contribute to a project's score. Excluded metrics are removed
+          and the remaining weights are renormalized automatically.
+        </p>
+        {status && (
+          <div className={`sor-status sor-status-${status.type}`}>{status.text}</div>
+        )}
+      </div>
 
       <main className="sor-main">
         {/* Project Selector */}
@@ -299,6 +323,25 @@ export default function ScoreOverridePage() {
           </div>
         )}
 
+        {selectedId && !loadingBreakdown && !breakdown && (
+          <div className="sor-info-banner" style={{ marginTop: "var(--spacing-md)" }}>
+            <div className="sor-info-banner-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            </div>
+            <div>
+              <p className="sor-info-banner-title">Unable to load score breakdown</p>
+              <p className="sor-info-banner-text">
+                The score breakdown for this project could not be loaded. Try selecting the
+                project again or check if it has been analyzed.
+              </p>
+            </div>
+          </div>
+        )}
+
         {breakdown && !loadingBreakdown && (
           <div className="sor-content">
             {/* Left: Metrics panel */}
@@ -307,7 +350,8 @@ export default function ScoreOverridePage() {
                 <div className="sor-panel-header">
                   <h2 className="sor-panel-title">Code Metrics</h2>
                   <p className="sor-panel-hint">
-                    Uncheck a metric to exclude it from the score calculation
+                    Uncheck a metric to exclude it from the score calculation.
+                    Only code metrics can be excluded — at least one must remain included.
                   </p>
                 </div>
                 <div className="sor-scoring-guide">
@@ -328,7 +372,22 @@ export default function ScoreOverridePage() {
                 </div>
 
                 {Object.keys(codeMetrics).length === 0 ? (
-                  <p className="sor-no-metrics">No overrideable code metrics found for this project.</p>
+                  <div className="sor-info-banner">
+                    <div className="sor-info-banner-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="sor-info-banner-title">No code metrics available</p>
+                      <p className="sor-info-banner-text">
+                        This project does not have overrideable code metrics. It may need to be
+                        re-analyzed, or it may be a documentation-only project.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="sor-metrics-list">
                     {Object.entries(codeMetrics).map(([name, metric]) => (
@@ -348,7 +407,9 @@ export default function ScoreOverridePage() {
                 {Object.keys(breakdown.breakdown?.non_code?.metrics ?? {}).length > 0 && (
                   <div className="sor-non-code-section">
                     <h3 className="sor-non-code-title">Documentation Metrics</h3>
-                    <p className="sor-panel-hint">These metrics cannot be excluded</p>
+                    <p className="sor-panel-hint">
+                      Shown for reference only — documentation metrics cannot be excluded from the score.
+                    </p>
                     {Object.entries(breakdown.breakdown.non_code.metrics).map(([name, metric]) => (
                       <div key={name} className="sor-metric-row sor-metric-readonly">
                         <label className="sor-metric-label">
@@ -445,6 +506,12 @@ export default function ScoreOverridePage() {
                     Original (unoverridden) score:{" "}
                     <strong>{pct(breakdown.score_original)}</strong>
                   </div>
+                )}
+
+                {allRemainingAtMax && (
+                  <p className="sor-saturation-note">
+                    All remaining metrics are at 100% — excluding a metric won't change the score.
+                  </p>
                 )}
 
                 {excludedMetrics.size > 0 && (

@@ -294,3 +294,28 @@
   }
 }
 
+/* ── Dark mode ── */
+[data-theme="dark"] .resume-sidebar {
+  background-color: var(--color-card-bg);
+  border-right-color: var(--color-border);
+}
+
+[data-theme="dark"] .resume-sidebar__dropdown {
+  background: var(--color-card-bg);
+  border-color: var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .resume-sidebar__dropdown-item:hover {
+  background: var(--color-bg-lighter);
+}
+
+[data-theme="dark"] .resume-sidebar__tailor-btn--disabled,
+[data-theme="dark"] .resume-sidebar__tailor-btn:disabled {
+  background-color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .resume-sidebar__tailor-btn--disabled:hover,
+[data-theme="dark"] .resume-sidebar__tailor-btn:disabled:hover {
+  background-color: var(--color-text-secondary);
+}

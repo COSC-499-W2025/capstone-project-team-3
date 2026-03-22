@@ -16,9 +16,7 @@ import textstat
 import json
 import spacy
 
-# Load environment variables
-load_dotenv(find_dotenv())  # Finds .env file anywhere up the tree
-KEY = os.environ.get("GEMINI_API_KEY")
+load_dotenv(find_dotenv())
 
 # Send non code parsed content using Sumy LSA Local Pre-processing IF the file exceeds token limit 
 #  *This step uses Sumy LSA summarizer (runs locally, no external API calls needed)
@@ -505,7 +503,7 @@ def generate_non_code_insights(PROMPT):
     Returns Response
     """
     # Create Client for LLM2 (Gemini)
-    LLM2 = GeminiLLMClient(api_key=KEY)
+    LLM2 = GeminiLLMClient(api_key=os.getenv("GEMINI_API_KEY"))
     response = LLM2.generate(PROMPT)
     
     response = clean_response(response)
@@ -534,7 +532,7 @@ def clean_response(response):
                 return result
             except json.JSONDecodeError:
                 # Call LLM2 again to reformat response as JSON
-                LLM2 = GeminiLLMClient(api_key=KEY)
+                LLM2 = GeminiLLMClient(api_key=os.getenv("GEMINI_API_KEY"))
                 response = LLM2.generate(response)  
     raise ValueError("Failed to parse LLM2 response as JSON")
 

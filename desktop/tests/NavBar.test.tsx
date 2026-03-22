@@ -1,8 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect, jest } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { NavBar } from '../src/NavBar';
+
+// ── Theme Mock
+const mockToggleTheme = jest.fn();
+let mockTheme = 'light';
+
+jest.mock('../src/context/ThemeContext', () => ({
+  useTheme: () => ({ theme: mockTheme, toggleTheme: mockToggleTheme }),
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 function renderNavBar() {
   return render(
@@ -60,5 +69,28 @@ describe('NavBar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /expand sidebar/i }));
     expect(aside).not.toHaveClass('app-sidebar--collapsed');
+  });
+
+  test('renders theme toggle button with moon icon in light mode', () => {
+    mockTheme = 'light';
+    renderNavBar();
+    const toggleBtn = screen.getByRole('button', { name: /switch to dark mode/i });
+    expect(toggleBtn).toBeInTheDocument();
+  });
+
+  test('clicking theme toggle calls toggleTheme', () => {
+    mockTheme = 'light';
+    mockToggleTheme.mockClear();
+    renderNavBar();
+    const toggleBtn = screen.getByRole('button', { name: /switch to dark mode/i });
+    fireEvent.click(toggleBtn);
+    expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+  });
+
+  test('renders sun icon when theme is dark', () => {
+    mockTheme = 'dark';
+    renderNavBar();
+    const toggleBtn = screen.getByRole('button', { name: /switch to light mode/i });
+    expect(toggleBtn).toBeInTheDocument();
   });
 });

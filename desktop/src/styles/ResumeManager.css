@@ -455,3 +455,12 @@ body {
   gap: 12px;
   margin-top: 4px;
 }
+
+/* ── Dark mode ── */
+[data-theme="dark"] {
+  --bg-page: var(--color-page-bg);
+  --bg-card: var(--color-card-bg);
+  --border-light: var(--color-border);
+  --text-primary: var(--color-text-heading);
+  --text-secondary: var(--color-text-secondary);
+}

@@ -5,6 +5,7 @@ import { getHealth } from "./api/health";
 import { getConsentStatus } from "./api/consent";
 import { useState, useEffect } from "react";
 import { NavBar } from "./NavBar";
+import { ThemeProvider } from "./context/ThemeContext";
 
 function AppLayout() {
   const location = useLocation();
@@ -46,9 +47,11 @@ function App() {
   }
 
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AppLayout />
+      </Router>
+    </ThemeProvider>
   );
 }
 

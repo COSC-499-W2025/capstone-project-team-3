@@ -126,35 +126,46 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
     """Return user info dict from USER_PREFERENCES."""
     try:
         try:
-            # Extended query — includes industry, personal_summary, and linkedin
+            # Extended query — includes industry, personal_summary, linkedin, profile_picture_path
             cursor.execute(
                 """
                 SELECT name, email, github_user, education, job_title, education_details,
-                       industry, personal_summary, linkedin
+                       industry, personal_summary, linkedin, profile_picture_path
                 FROM USER_PREFERENCES
                 ORDER BY updated_at DESC LIMIT 1
                 """
             )
         except sqlite3.OperationalError:
             try:
-                # Fallback: without linkedin (older schema)
+                # Fallback: without profile_picture_path (older schema)
                 cursor.execute(
                     """
                     SELECT name, email, github_user, education, job_title, education_details,
-                           industry, personal_summary
+                           industry, personal_summary, linkedin
                     FROM USER_PREFERENCES
                     ORDER BY updated_at DESC LIMIT 1
                     """
                 )
             except sqlite3.OperationalError:
-                # Fallback for older DB schemas that do not yet have industry/personal_summary
-                cursor.execute(
-                    """
-                    SELECT name, email, github_user, education, job_title, education_details
-                    FROM USER_PREFERENCES
-                    ORDER BY updated_at DESC LIMIT 1
-                    """
-                )
+                try:
+                    # Fallback: without linkedin (older schema)
+                    cursor.execute(
+                        """
+                        SELECT name, email, github_user, education, job_title, education_details,
+                               industry, personal_summary
+                        FROM USER_PREFERENCES
+                        ORDER BY updated_at DESC LIMIT 1
+                        """
+                    )
+                except sqlite3.OperationalError:
+                    # Fallback for oldest DB schemas without industry/personal_summary
+                    cursor.execute(
+                        """
+                        SELECT name, email, github_user, education, job_title, education_details
+                        FROM USER_PREFERENCES
+                        ORDER BY updated_at DESC LIMIT 1
+                        """
+                    )
         row = cursor.fetchone()
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading user") from e
@@ -170,6 +181,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
             "github_user": None,
             "industry": None,
             "personal_summary": None,
+            "profile_picture_path": None,
         }
 
     links = []
@@ -198,6 +210,7 @@ def load_user(cursor: sqlite3.Cursor) -> Dict[str, Any]:
         "industry": row[6] if len(row) > 6 else None,
         "personal_summary": row[7] if len(row) > 7 else None,
         "linkedin": linkedin,
+        "profile_picture_path": row[9] if len(row) > 9 else None,
     }
 
 def load_projects(cursor: sqlite3.Cursor, project_ids: Optional[List[str]] = None) -> List[Tuple[str, str, float, str, str]]:
@@ -598,6 +611,128 @@ def resume_exists(resume_id: int) -> bool:
         raise ResumeServiceError("Failed checking resume existence") from e
     finally:
         conn.close()
+
+
+def duplicate_resume(source_id: int) -> int:
+    """Clone a resume (including master id=1) into a new row with copied projects and optional sidecar tables."""
+    if not resume_exists(source_id):
+        raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT name FROM RESUME WHERE id = ?", (source_id,))
+        src_row = cursor.fetchone()
+        if not src_row:
+            raise ResumeNotFoundError(f"Resume with ID {source_id} not found")
+        raw_name = (src_row[0] or "").strip()
+        base = raw_name if raw_name else f"Resume-{source_id}"
+        new_name = f"{base} copy"
+
+        cursor.execute("INSERT INTO RESUME (name) VALUES (?)", (new_name,))
+        new_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+            FROM RESUME_PROJECT
+            WHERE resume_id = ?
+            ORDER BY display_order
+            """,
+            (source_id,),
+        )
+        for (
+            project_id,
+            project_name,
+            start_date,
+            end_date,
+            skills,
+            bullets,
+            display_order,
+        ) in cursor.fetchall():
+            cursor.execute(
+                """
+                INSERT INTO RESUME_PROJECT (
+                    resume_id, project_id, project_name, start_date, end_date,
+                    skills, bullets, display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id,
+                    project_id,
+                    project_name,
+                    start_date,
+                    end_date,
+                    skills,
+                    bullets,
+                    display_order,
+                ),
+            )
+
+        cursor.execute(
+            "SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        sk_row = cursor.fetchone()
+        if sk_row and sk_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_SKILLS (resume_id, skills) VALUES (?, ?)",
+                (new_id, sk_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT awards FROM RESUME_AWARDS WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        aw_row = cursor.fetchone()
+        if aw_row and aw_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_AWARDS (resume_id, awards) VALUES (?, ?)",
+                (new_id, aw_row[0]),
+            )
+
+        cursor.execute(
+            "SELECT work_experience FROM RESUME_WORK_EXPERIENCE WHERE resume_id = ? LIMIT 1",
+            (source_id,),
+        )
+        we_row = cursor.fetchone()
+        if we_row and we_row[0]:
+            cursor.execute(
+                "INSERT INTO RESUME_WORK_EXPERIENCE (resume_id, work_experience) VALUES (?, ?)",
+                (new_id, we_row[0]),
+            )
+
+        conn.commit()
+        return new_id
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to duplicate resume") from e
+    finally:
+        conn.close()
+
+
+def rename_resume(resume_id: int, name: str) -> None:
+    """Rename a saved resume. Master resume (id=1) cannot be renamed."""
+    trimmed = (name or "").strip()
+    if not trimmed:
+        raise ResumePersistenceError("Resume name cannot be empty")
+    if resume_id == 1:
+        raise ResumePersistenceError("Cannot rename the Master Resume")
+    if not resume_exists(resume_id):
+        raise ResumeNotFoundError(f"Resume with ID {resume_id} not found")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE RESUME SET name = ? WHERE id = ?", (trimmed, resume_id))
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to rename resume") from e
+    finally:
+        conn.close()
+
 
 def save_resume_edits(resume_id: int, payload: dict):
     """ Save or update edits made to the resume in the DB """

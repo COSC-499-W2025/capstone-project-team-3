@@ -136,9 +136,68 @@ def test_seeded_skills_have_dates(isolated_db):
     
     conn.close()
     print(f"Found {len(skills_with_dates)} skills with valid dates")
-    
+
+
+def test_user_preferences_has_profile_picture_column(isolated_db):
+    """
+    Test that USER_PREFERENCES table has the profile_picture_path column
+    added by the migration in init_db().
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(USER_PREFERENCES);")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    assert "profile_picture_path" in columns, (
+        "USER_PREFERENCES table is missing 'profile_picture_path' column"
+    )
+
+    conn.close()
+    print("USER_PREFERENCES table has profile_picture_path column")
+
+
+def test_user_preferences_profile_picture_nullable(isolated_db):
+    """
+    Test that profile_picture_path defaults to NULL and accepts a path value.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Insert a minimal row, no picture
+    cursor.execute(
+        """
+        INSERT INTO USER_PREFERENCES (user_id, name, email, github_user, education, industry, job_title)
+        VALUES (1, ?, ?, ?, ?, ?, ?)
+        """,
+        ("Test User", "test@example.com", "testuser", "Bachelor's", "Technology", "Developer"),
+    )
+    conn.commit()
+
+    cursor.execute("SELECT profile_picture_path FROM USER_PREFERENCES WHERE user_id = 1")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] is None, "profile_picture_path should default to NULL"
+
+    # Now set a path
+    cursor.execute(
+        "UPDATE USER_PREFERENCES SET profile_picture_path = ? WHERE user_id = 1",
+        ("data/thumbnails/profile_picture.png",),
+    )
+    conn.commit()
+
+    cursor.execute("SELECT profile_picture_path FROM USER_PREFERENCES WHERE user_id = 1")
+    row = cursor.fetchone()
+    assert row[0] == "data/thumbnails/profile_picture.png"
+
+    conn.close()
+    print("profile_picture_path column accepts NULL and path values correctly")
+
+
 if __name__ == "__main__":
     test_all_tables_created()
     test_all_tables_populated()
     test_skill_analysis_has_date_column()
     test_seeded_skills_have_dates()
+    test_user_preferences_has_profile_picture_column()
+    test_user_preferences_profile_picture_nullable()

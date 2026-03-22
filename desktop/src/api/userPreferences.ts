@@ -19,6 +19,7 @@ export interface UserPreferences {
   industry: string;
   job_title: string;
   education_details?: EducationDetail[] | null;
+  profile_picture_path?: string | null; //path stored in DB e.g. "data/thumbnails/profile_picture.png"
 }
 
 export interface Institution {
@@ -136,5 +137,51 @@ export async function getAllInstitutions(): Promise<InstitutionSearchResponse> {
     throw new Error("Failed to fetch institutions list: " + res.statusText);
   }
   
+  return res.json();
+}
+
+/**
+ * Returns the URL to fetch the profile picture directly from the backend.
+ */
+export function getProfilePictureUrl(): string {
+  return `${API_BASE}/api/user-preferences/profile-picture`;
+}
+
+/**
+ * Upload a profile picture saved to thumbnails/ on the server; only path is stored in DB.
+ */
+export async function uploadProfilePicture(file: File): Promise<{ status: string; message: string; path: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE}/api/user-preferences/profile-picture`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const err = await res.json();
+      detail = err.detail || detail;
+    } catch { /* ignore */ }
+    throw new Error(`Failed to upload profile picture (${res.status}): ${detail}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Remove the stored profile picture
+ */
+export async function deleteProfilePicture(): Promise<{ status: string; message: string }> {
+  const res = await fetch(`${API_BASE}/api/user-preferences/profile-picture`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete profile picture: " + res.statusText);
+  }
+
   return res.json();
 }

@@ -270,3 +270,19 @@
     min-width: 56px;
   }
 }
+
+/* Profile picture avatar in sidebar footer */
+.app-sidebar__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-bg-lighter);
+  display: block;
+  flex-shrink: 0;
+}
+
+.app-sidebar__profile:hover .app-sidebar__avatar,
+.app-sidebar__profile--active .app-sidebar__avatar {
+  border-color: var(--color-blue-light);
+}

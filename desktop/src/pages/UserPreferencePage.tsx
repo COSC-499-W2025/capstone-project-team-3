@@ -6,6 +6,9 @@ import '../styles/ProjectSelectionPage.css';
 import { 
   getUserPreferences, 
   saveUserPreferences,
+  uploadProfilePicture,
+  deleteProfilePicture,
+  getProfilePictureUrl,
   getAllInstitutions,
   type UserPreferences, 
   type EducationDetail,
@@ -514,6 +517,11 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
 
 export default function UserPreferencePage() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pictureUploading, setPictureUploading] = useState(false);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
   const [profileData, setProfileData] = useState<ProfileData>({
     fullName: "",
     email: "",
@@ -561,6 +569,10 @@ export default function UserPreferencePage() {
         const backendData = await getUserPreferences();
         const frontendData = convertToFrontend(backendData);
         setProfileData(frontendData);
+        // Load profile picture — if a path is stored in the DB, use the API endpoint as img src
+        if (backendData.profile_picture_path) {
+          setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
+        }
         // Has saved preferences → definitely a returning user
         setIsFirstTimeUser(false);
       } catch (err: any) {
@@ -619,6 +631,36 @@ export default function UserPreferencePage() {
     });
   };
 
+  const handlePictureFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPictureError(null);
+    setPictureUploading(true);
+    try {
+      await uploadProfilePicture(file);
+      // Cache the URL so the browser fetches the new file from the server
+      setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
+    } catch (err: any) {
+      setPictureError(err?.message ?? "Failed to upload picture. Please try again.");
+    } finally {
+      setPictureUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    setPictureError(null);
+    setPictureUploading(true);
+    try {
+      await deleteProfilePicture();
+      setProfilePicture(null);
+    } catch (err: any) {
+      setPictureError(err?.message ?? "Failed to remove picture.");
+    } finally {
+      setPictureUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -670,6 +712,60 @@ export default function UserPreferencePage() {
           Back
         </button>
         <h1 className="page-title">Build your Profile</h1>
+
+        {/* Profile Picture Upload */}
+        <div className="profile-picture-section">
+          <div
+            className="profile-picture-avatar"
+            onClick={() => !pictureUploading && fileInputRef.current?.click()}
+            title={profilePicture ? "Click to change photo" : "Click to upload photo"}
+          >
+            {profilePicture ? (
+              <img src={profilePicture} alt="Profile" className="profile-picture-img" />
+            ) : (
+              <div className="profile-picture-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+            )}
+            <div className="profile-picture-overlay">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </div>
+          </div>
+          <div className="profile-picture-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={pictureUploading}
+            >
+              {pictureUploading ? "Uploading..." : profilePicture ? "Change Photo" : "Upload Photo"}
+            </button>
+            {profilePicture && (
+              <button
+                type="button"
+                className="btn btn-danger-outline"
+                onClick={handleRemovePicture}
+                disabled={pictureUploading}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            style={{ display: "none" }}
+            onChange={handlePictureFileChange}
+          />
+          {pictureError && <p className="profile-picture-error">{pictureError}</p>}
+        </div>
 
         {showSuccess && (
           <div className="notification success" role="status">

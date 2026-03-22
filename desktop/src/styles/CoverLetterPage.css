@@ -190,14 +190,28 @@
 
 .cl-motivation-chip:hover {
   border-color: var(--color-blue-medium);
-  color: var(--color-blue-dark);
+  background: var(--color-bg-light);
+  color: var(--color-blue-darker);
+  /* Neutralise the global button:hover override */
+  background-color: var(--color-bg-light);
+  transform: none;
+  box-shadow: none;
 }
 
 .cl-motivation-chip--selected {
   border-color: var(--color-blue-darker);
   background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
   color: var(--color-blue-darker);
   font-weight: 600;
+}
+
+.cl-motivation-chip--selected:hover {
+  background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
+  color: var(--color-blue-darker);
+  transform: none;
+  box-shadow: none;
 }
 
 /* ── Mode selector ────────────────────────────────────────────────── */
@@ -225,11 +239,15 @@
   border-color: var(--color-blue-medium);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px var(--color-shadow);
+  /* Neutralise the global button:hover override */
+  background-color: var(--color-card-bg);
+  color: inherit;
 }
 
 .cl-mode-card--selected {
   border-color: var(--color-blue-darker);
   background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
 }
 
 .cl-mode-card-title {
@@ -574,3 +592,24 @@
 [data-theme="dark"] .cl-history-card-title { color: var(--color-text-heading); }
 [data-theme="dark"] .cl-history-card-sub   { color: var(--color-text-secondary); }
 [data-theme="dark"] .cl-pdf-error          { color: #fc8181; }
+
+[data-theme="dark"] .cl-motivation-chip:hover {
+  background-color: var(--color-bg-lighter);
+  border-color: var(--color-blue-light);
+  color: var(--color-blue-light);
+}
+[data-theme="dark"] .cl-motivation-chip--selected:hover {
+  background-color: var(--color-bg-lighter);
+  border-color: var(--color-blue-darker);
+  color: var(--color-blue-darker);
+}
+[data-theme="dark"] .cl-mode-card:hover {
+  background-color: var(--color-bg-lighter);
+  border-color: var(--color-blue-light);
+  color: var(--color-text-body);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+[data-theme="dark"] .cl-mode-card--selected:hover {
+  background-color: var(--color-bg-lighter);
+  border-color: var(--color-blue-darker);
+}

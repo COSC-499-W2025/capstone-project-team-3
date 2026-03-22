@@ -165,7 +165,7 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     for para in paragraphs:
         lines = [escape_latex(line) for line in para.splitlines()]
         if len(lines) > 1 and lines[0].strip().lower().startswith("sincerely"):
-            escaped_paragraphs.append(" \\\\\n".join(lines))
+            escaped_paragraphs.append(" \\\\\\n".join(lines))
         else:
             escaped_paragraphs.append(" ".join(lines))
 
@@ -202,17 +202,15 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
 \begin{{document}}
 
 \begin{{center}}
-{{\Large \textbf{{{tex_name}}}}}\\[0.3em]
+{{\Large \textbf{{{tex_name}}}}}\\[0.25em]
 {tex_email}{linkedin_tex}
 \end{{center}}
 
 \vspace{{0.6em}}
-
-{tex_date}
+\noindent {tex_date}
 
 \vspace{{0.3em}}
-
-\textbf{{Re: {escape_latex(job_title)} Application --- {escape_latex(company)}}}
+\noindent\textbf{{Re: {escape_latex(job_title)} Application --- {escape_latex(company)}}}
 
 \medskip
 

@@ -504,6 +504,13 @@ export function ResumeBuilderPage() {
           <span className="nav-current">Résumé</span>
         </div>
         <div className="resume-builder__actions">
+          <button
+            className="btn btn--ats"
+            onClick={() => navigate('/atsscoringpage')}
+            title="Check ATS compatibility score for this resume"
+          >
+            Check Job Match
+          </button>
           {showSaveButton && (
             <button 
               className="btn btn--secondary" 

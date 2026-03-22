@@ -614,6 +614,20 @@ def seed_db():
         VALUES (?, ?)
     """, (1, json.dumps(work_exp_data)))
 
+    # --- COVER_LETTER ---
+    cursor.execute("""
+        INSERT OR IGNORE INTO COVER_LETTER (resume_id, job_title, company, job_description, motivations, content, generation_mode)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        1,
+        "Software Engineer",
+        "Acme Corp",
+        "We are looking for a software engineer with Python and Flask experience.",
+        json.dumps(["problem_solving", "growth"]),
+        "Dear Acme Corp Hiring Team,\n\nI am excited to apply for the Software Engineer position.\n\nSincerely,\nJohn User",
+        "local"
+    ))
+
     conn.commit()
     conn.close()
 

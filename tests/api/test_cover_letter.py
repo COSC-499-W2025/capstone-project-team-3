@@ -465,14 +465,7 @@ class TestPdfRoute:
         mock_conn_instance.cursor.return_value = mock_cursor
         mock_conn.return_value = mock_conn_instance
 
-        # Patch PDF_CACHE_DIR to tmp_path so no stale cache hits
-        import app.api.routes.cover_letter as cl_mod
-        original = cl_mod.PDF_CACHE_DIR
-        cl_mod.PDF_CACHE_DIR = str(tmp_path)
-        try:
-            response = client.get("/cover-letter/1/pdf")
-        finally:
-            cl_mod.PDF_CACHE_DIR = original
+        response = client.get("/cover-letter/1/pdf")
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"

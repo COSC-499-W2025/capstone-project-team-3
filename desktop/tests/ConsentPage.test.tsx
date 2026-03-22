@@ -335,11 +335,10 @@ test('buttons remain disabled when consent status fetch fails', async () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
-  // Buttons should be disabled since messages never loaded
-  const buttons = screen.getAllByRole('button');
-  buttons.forEach((button) => {
-    expect(button.getAttribute('disabled')).toBe('');
-  });
+  // Consent action buttons should be disabled since messages never loaded (Back stays enabled)
+  expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'More Info' })).toBeDisabled();
 
   consoleSpy.mockRestore();
 });
@@ -377,11 +376,10 @@ test('buttons remain disabled when consent text fetch fails', async () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
-  // Buttons should be disabled since messages never loaded
-  const buttons = screen.getAllByRole('button');
-  buttons.forEach((button) => {
-    expect(button.getAttribute('disabled')).toBe('');
-  });
+  // Consent action buttons should be disabled since messages never loaded
+  expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'More Info' })).toBeDisabled();
 
   consoleSpy.mockRestore();
 });
@@ -403,10 +401,10 @@ test('network error on initial fetch keeps buttons disabled', async () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
-  const buttons = screen.getAllByRole('button');
-  buttons.forEach((button) => {
-    expect(button.getAttribute('disabled')).toBe('');
-  });
+  // Consent action buttons should be disabled when fetch fails
+  expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'More Info' })).toBeDisabled();
 
   consoleSpy.mockRestore();
 });

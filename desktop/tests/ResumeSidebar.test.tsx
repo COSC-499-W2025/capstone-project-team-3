@@ -6,7 +6,7 @@ import { jest, test, expect, describe, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 
 const defaultResumeList: ResumeListItem[] = [
-  { id: null, name: 'Master Resume', is_master: true },
+  { id: 1, name: 'Master Resume', is_master: true },
   { id: 2, name: 'Software Engineer Resume', is_master: false },
   { id: 3, name: 'Data Analyst Resume', is_master: false },
 ];
@@ -108,16 +108,18 @@ describe('ResumeSidebar', () => {
     expect(container.querySelector('.resume-sidebar')?.classList.contains('resume-sidebar--closed')).toBe(true);
   });
 
-  test('clicking edit or delete does not trigger row selection', () => {
+  test('clicking edit invokes onEditResume with list index and does not trigger row selection', () => {
+    const onEditResume = jest.fn();
     const onDelete = jest.fn();
-    renderSidebar({ onEdit: jest.fn(), onDelete });
+    renderSidebar({ onEditResume, onDelete, onDuplicateResume: jest.fn(), activeIndex: 0 });
 
     fireEvent.click(screen.getAllByLabelText('Edit resume')[0]);
+    expect(onEditResume).toHaveBeenCalledWith(1);
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
 
     // Open the "More actions" dropdown first, then click delete
     const moreActionsButtons = screen.getAllByLabelText('More actions');
-    fireEvent.click(moreActionsButtons[0]);
+    fireEvent.click(moreActionsButtons[1]);
     window.confirm = jest.fn(() => false); // Cancel delete to avoid triggering onDelete
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);
@@ -125,7 +127,7 @@ describe('ResumeSidebar', () => {
   });
 
   test('does not show Edit button for master resume', () => {
-    renderSidebar({ onEdit: jest.fn(), onDelete: jest.fn() });
+    renderSidebar({ onEditResume: jest.fn(), onDelete: jest.fn(), onDuplicateResume: jest.fn() });
 
     const editButtons = screen.getAllByLabelText('Edit resume');
     // Only 2 saved resumes (id != null), so only 2 Edit buttons
@@ -140,7 +142,7 @@ describe('ResumeSidebar', () => {
       { id: null, name: 'Preview Resume (Unsaved)', is_master: false },
       { id: 2, name: 'Saved Resume', is_master: false },
     ];
-    renderSidebar({ resumeList: listWithPreview, onEdit: jest.fn(), onDelete: jest.fn() });
+    renderSidebar({ resumeList: listWithPreview, onEditResume: jest.fn(), onDelete: jest.fn(), onDuplicateResume: jest.fn() });
 
     // Only the saved resume (id 2) has Edit button
     const editButtons = screen.getAllByLabelText('Edit resume');
@@ -151,35 +153,36 @@ describe('ResumeSidebar', () => {
 
   test('delete button only shows for non-master resumes (id > 1)', () => {
     const onDelete = jest.fn();
-    renderSidebar({ onDelete });
+    renderSidebar({ onDelete, onDuplicateResume: jest.fn() });
 
     // Delete is accessed via "More actions" dropdown; count those buttons instead
     const moreActionsButtons = screen.queryAllByLabelText('More actions');
-    // Should have 2 "More actions" buttons (for id=2 and id=3, not for id=null)
-    expect(moreActionsButtons.length).toBe(2);
+    // Master has overflow only when onDuplicateResume is set — 3 menus total
+    expect(moreActionsButtons.length).toBe(3);
   });
 
-  test('master resume does not have delete button', () => {
-    const list: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
-      { id: 1, name: 'Resume with id=1', is_master: false },
-    ];
+  test('master resume overflow has duplicate only, no delete', () => {
     const onDelete = jest.fn();
-    renderSidebar({ resumeList: list, onDelete });
+    const onDup = jest.fn();
+    renderSidebar({ onDelete, onDuplicateResume: onDup });
 
-    // Neither master (id=null) nor id=1 should have delete button
-    const deleteButtons = screen.queryAllByLabelText('Delete resume');
-    expect(deleteButtons.length).toBe(0);
+    const masterMenus = screen.getAllByLabelText('More actions');
+    expect(masterMenus.length).toBe(3);
+    fireEvent.click(masterMenus[0]);
+    expect(screen.getByLabelText('Duplicate resume')).toBeDefined();
+    expect(screen.queryByLabelText('Delete resume')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Duplicate resume'));
+    expect(onDup).toHaveBeenCalledWith(1);
   });
 
   test('clicking delete button shows confirmation dialog', () => {
     const onDelete = jest.fn();
     window.confirm = jest.fn(() => true);
-    renderSidebar({ onDelete });
+    renderSidebar({ onDelete, onDuplicateResume: jest.fn() });
 
-    // Open the "More actions" dropdown first, then click delete
+    // Open the "More actions" dropdown for Software Engineer row (index 1)
     const moreActionsButtons = screen.getAllByLabelText('More actions');
-    fireEvent.click(moreActionsButtons[0]);
+    fireEvent.click(moreActionsButtons[1]);
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);
 
@@ -189,11 +192,11 @@ describe('ResumeSidebar', () => {
   test('clicking delete calls onDelete when user confirms', () => {
     const onDelete = jest.fn();
     window.confirm = jest.fn(() => true);
-    renderSidebar({ onDelete });
+    renderSidebar({ onDelete, onDuplicateResume: jest.fn() });
 
     // Open the "More actions" dropdown first, then click delete
     const moreActionsButtons = screen.getAllByLabelText('More actions');
-    fireEvent.click(moreActionsButtons[0]); // Open menu for second resume (id=2)
+    fireEvent.click(moreActionsButtons[1]); // Menu for second resume (id=2)
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);
 
@@ -204,11 +207,11 @@ describe('ResumeSidebar', () => {
   test('clicking delete does not call onDelete when user cancels', () => {
     const onDelete = jest.fn();
     window.confirm = jest.fn(() => false);
-    renderSidebar({ onDelete });
+    renderSidebar({ onDelete, onDuplicateResume: jest.fn() });
 
     // Open the "More actions" dropdown first, then click delete
     const moreActionsButtons = screen.getAllByLabelText('More actions');
-    fireEvent.click(moreActionsButtons[0]);
+    fireEvent.click(moreActionsButtons[1]);
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);
 
@@ -218,15 +221,14 @@ describe('ResumeSidebar', () => {
 
   test('delete button uses resume name in confirmation or fallback text', () => {
     const list: ResumeListItem[] = [
-      { id: null, name: 'Master Resume', is_master: true },
+      { id: 1, name: 'Master Resume', is_master: true },
       { id: 2, name: '', is_master: false }, // Empty name
     ];
     const onDelete = jest.fn();
     window.confirm = jest.fn(() => false);
-    renderSidebar({ resumeList: list, onDelete });
+    renderSidebar({ resumeList: list, onDelete, onDuplicateResume: jest.fn() });
 
-    // Open the "More actions" dropdown first, then click delete
-    const moreActionsButton = screen.getByLabelText('More actions');
+    const moreActionsButton = screen.getAllByLabelText('More actions')[1];
     fireEvent.click(moreActionsButton);
     const deleteButton = screen.getByLabelText('Delete resume');
     fireEvent.click(deleteButton);

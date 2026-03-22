@@ -1,11 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { EducationSection } from '../src/pages/ResumeManager/ResumeSections/EducationSection';
 import { HeaderSection } from '../src/pages/ResumeManager/ResumeSections/HeaderSection';
 import { SkillsSection } from '../src/pages/ResumeManager/ResumeSections/SkillsSection';
 import { ProjectsSection } from '../src/pages/ResumeManager/ResumeSections/ProjectSections';
+import { WorkExperienceSection } from '../src/pages/ResumeManager/ResumeSections/WorkExperienceSection';
+import { AwardsSection } from '../src/pages/ResumeManager/ResumeSections/AwardsSection';
 import { describe, test, expect } from '@jest/globals';
 import '@testing-library/jest-dom';
-import type { Education, Skills, Project, Resume } from '../src/api/resume_types';
+import type { Education, Skills, Project, Resume, WorkExperience, Award } from '../src/api/resume_types';
 
 describe('EducationSection', () => {
   test('renders education with all fields', () => {
@@ -592,5 +595,174 @@ describe('ProjectsSection', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Add a project' })).toBeNull();
+  });
+});
+
+describe('WorkExperienceSection', () => {
+  test('renders work experience with company, role, date, and details', () => {
+    const workExperience: WorkExperience[] = [
+      {
+        role: 'Software Engineer',
+        company: 'Tech Corp',
+        start_date: '2024-01',
+        end_date: '2024-06',
+        details: ['Built APIs', 'Led team meetings']
+      }
+    ];
+
+    render(<WorkExperienceSection workExperience={workExperience} />);
+
+    expect(screen.getByText('Work Experience')).toBeDefined();
+    expect(screen.getByText('Tech Corp | Software Engineer')).toBeDefined();
+    expect(screen.getByText('Jan 2024 – Jun 2024')).toBeDefined();
+    expect(screen.getByText('Built APIs')).toBeDefined();
+    expect(screen.getByText('Led team meetings')).toBeDefined();
+  });
+
+  test('renders work experience with role only when no company', () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'Intern', start_date: '2023-06', end_date: '2023-08', details: [] }
+    ];
+
+    render(<WorkExperienceSection workExperience={workExperience} />);
+
+    expect(screen.getByText('Intern')).toBeDefined();
+    expect(screen.getByText('Jun 2023 – Aug 2023')).toBeDefined();
+  });
+
+  test('renders empty state when no entries', () => {
+    render(<WorkExperienceSection workExperience={[]} />);
+
+    expect(screen.getByText('Work Experience')).toBeDefined();
+    expect(screen.getByText('No work experience added.')).toBeDefined();
+  });
+
+  test('in edit mode shows Add a role button', () => {
+    const onChange = jest.fn();
+    render(<WorkExperienceSection workExperience={[]} isEditing={true} onChange={onChange} />);
+
+    const addButton = screen.getByRole('button', { name: 'Add a role' });
+    expect(addButton).toBeDefined();
+    fireEvent.click(addButton);
+    expect(onChange).toHaveBeenCalledWith([
+      { role: '', company: '', start_date: '', end_date: '', details: [] }
+    ]);
+  });
+
+  test('in edit mode shows company, role, date inputs and responsibilities textarea', () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'Developer', company: 'Acme', start_date: '2024-01', end_date: '2024-06', details: ['Task 1'] }
+    ];
+
+    render(<WorkExperienceSection workExperience={workExperience} isEditing={true} onChange={jest.fn()} />);
+
+    expect(screen.getByPlaceholderText('Company / organization')).toHaveValue('Acme');
+    expect(screen.getByPlaceholderText('Role title (required)')).toHaveValue('Developer');
+    expect(screen.getByLabelText('Start (month and year)')).toHaveValue('2024-01');
+    expect(screen.getByLabelText('End (month and year)')).toHaveValue('2024-06');
+    expect(screen.getByPlaceholderText(/Responsibility one/)).toBeDefined();
+    expect(screen.getByText('One bullet per line.')).toBeDefined();
+  });
+
+  test('in edit mode remove button calls onChange with entry removed', () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'Dev', company: 'Co', start_date: '2024-01', end_date: '2024-06', details: [] }
+    ];
+    const onChange = jest.fn();
+
+    render(<WorkExperienceSection workExperience={workExperience} isEditing={true} onChange={onChange} />);
+
+    const removeBtn = screen.getByRole('button', { name: 'Remove work experience entry' });
+    fireEvent.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  test('in edit mode updating company calls onChange', async () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'Dev', company: '', start_date: '', end_date: '', details: [] }
+    ];
+    const onChange = jest.fn();
+
+    render(<WorkExperienceSection workExperience={workExperience} isEditing={true} onChange={onChange} />);
+
+    const companyInput = screen.getByPlaceholderText('Company / organization');
+    await userEvent.type(companyInput, 'NewCo');
+    expect(onChange).toHaveBeenCalled();
+  });
+});
+
+describe('AwardsSection', () => {
+  test('renders award with title, issuer, date, and details', () => {
+    const awards: Award[] = [
+      {
+        title: 'Hackathon Winner',
+        issuer: 'Tech Challenge Inc.',
+        date: '2024-03',
+        details: ['Won first place', 'Built AI assistant']
+      }
+    ];
+
+    render(<AwardsSection awards={awards} />);
+
+    expect(screen.getByText('Awards & Honours')).toBeDefined();
+    expect(screen.getByText('Hackathon Winner')).toBeDefined();
+    expect(screen.getByText('Tech Challenge Inc.')).toBeDefined();
+    expect(screen.getByText('Mar 2024')).toBeDefined();
+    expect(screen.getByText('Won first place')).toBeDefined();
+    expect(screen.getByText('Built AI assistant')).toBeDefined();
+  });
+
+  test('renders award with minimal fields', () => {
+    const awards: Award[] = [{ title: 'Employee of the Month' }];
+
+    render(<AwardsSection awards={awards} />);
+
+    expect(screen.getByText('Employee of the Month')).toBeDefined();
+  });
+
+  test('renders empty state when no awards and not editing', () => {
+    render(<AwardsSection awards={[]} />);
+
+    expect(screen.getByText('Awards & Honours')).toBeDefined();
+    expect(screen.getByText('No awards added.')).toBeDefined();
+  });
+
+  test('in edit mode shows Add an award button', () => {
+    const onChange = jest.fn();
+    render(<AwardsSection awards={[]} isEditing={true} onChange={onChange} />);
+
+    expect(screen.getByText('Add your awards & honours below.')).toBeDefined();
+    const addButton = screen.getByRole('button', { name: 'Add an award' });
+    expect(addButton).toBeDefined();
+    fireEvent.click(addButton);
+    expect(onChange).toHaveBeenCalledWith([
+      { title: '', issuer: '', date: '', details: [] }
+    ]);
+  });
+
+  test('in edit mode shows title, issuer, date inputs and details textarea', () => {
+    const awards: Award[] = [
+      { title: 'Best Paper', issuer: 'ACM', date: '2024-01', details: ['Peer reviewed'] }
+    ];
+
+    render(<AwardsSection awards={awards} isEditing={true} onChange={jest.fn()} />);
+
+    expect(screen.getByPlaceholderText('Award title (required)')).toHaveValue('Best Paper');
+    expect(screen.getByPlaceholderText('Issuer / organization')).toHaveValue('ACM');
+    expect(screen.getByLabelText('Award date (month-year)')).toHaveValue('2024-01');
+    expect(screen.getByPlaceholderText('Award details (one per line)')).toBeDefined();
+  });
+
+  test('in edit mode remove button calls onChange with award removed', () => {
+    const awards: Award[] = [
+      { title: 'Award', issuer: 'Org', date: '2024-01', details: [] }
+    ];
+    const onChange = jest.fn();
+
+    render(<AwardsSection awards={awards} isEditing={true} onChange={onChange} />);
+
+    const removeBtn = screen.getByRole('button', { name: 'Remove award' });
+    fireEvent.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 });

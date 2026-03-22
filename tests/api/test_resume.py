@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from app.api.routes.resume import router, compile_pdf, get_or_compile_pdf
-from app.utils.generate_resume import ResumeServiceError, ResumeNotFoundError
+from app.utils.generate_resume import ResumeServiceError, ResumeNotFoundError, ResumePersistenceError
 from app.api.routes import resume as resume_mod
 import os
 
@@ -513,3 +513,42 @@ def test_list_resumes_endpoint_service_error(mock_list_resumes, client):
     assert response.status_code == 500
     assert "Database connection failed" in response.json()["detail"]
     mock_list_resumes.assert_called_once()
+
+
+@patch("app.api.routes.resume.duplicate_resume")
+def test_duplicate_resume_endpoint_success(mock_dup, client):
+    """POST /resume/{id}/duplicate returns new resume_id."""
+    mock_dup.return_value = 99
+    response = client.post("/resume/1/duplicate")
+    assert response.status_code == 200
+    assert response.json()["resume_id"] == 99
+    mock_dup.assert_called_once_with(1)
+
+
+@patch("app.api.routes.resume.duplicate_resume")
+def test_duplicate_resume_endpoint_not_found(mock_dup, client):
+    mock_dup.side_effect = ResumeNotFoundError("Resume with ID 404 not found")
+    response = client.post("/resume/404/duplicate")
+    assert response.status_code == 404
+
+
+@patch("app.api.routes.resume.rename_resume")
+def test_rename_resume_endpoint_success(mock_rename, client):
+    response = client.patch("/resume/2", json={"name": "New Title"})
+    assert response.status_code == 200
+    mock_rename.assert_called_once_with(2, "New Title")
+
+
+@patch("app.api.routes.resume.rename_resume")
+def test_rename_resume_endpoint_master_rejected(mock_rename, client):
+    mock_rename.side_effect = ResumePersistenceError("Cannot rename the Master Resume")
+    response = client.patch("/resume/1", json={"name": "X"})
+    assert response.status_code == 400
+    mock_rename.assert_called_once_with(1, "X")
+
+
+@patch("app.api.routes.resume.rename_resume")
+def test_rename_resume_endpoint_not_found(mock_rename, client):
+    mock_rename.side_effect = ResumeNotFoundError("Resume with ID 99 not found")
+    response = client.patch("/resume/99", json={"name": "Y"})
+    assert response.status_code == 404

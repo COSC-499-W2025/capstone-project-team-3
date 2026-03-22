@@ -208,7 +208,8 @@ export function ResumePreview({
   const sortableWorkIds =
     workExperienceAreaVisible && isEditing ? workExperience.map((_, i) => `work-${i}`) : [];
   const sortableAwardIds = awardsAreaVisible && isEditing ? awards.map((_, i) => `award-${i}`) : [];
-  const sortableItems = [...sortableProjectIds, ...sortableWorkIds, ...sortableAwardIds];
+  // Match document order (same as measure tree + page content): work → projects → awards
+  const sortableItems = [...sortableWorkIds, ...sortableProjectIds, ...sortableAwardIds];
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor)

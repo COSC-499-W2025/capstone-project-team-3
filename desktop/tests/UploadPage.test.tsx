@@ -13,6 +13,17 @@ const mockUploadZipFile = uploadApi.uploadZipFile as jest.MockedFunction<
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
+/** Pre-scan response: no exact match, no similar project → proceeds without modal. */
+const scanProjectNoSimilarityResponse = {
+  ok: true,
+  json: async () => ({
+    status: "ok",
+    file_count: 5,
+    similarity: null,
+    reason: "no_match",
+  }),
+} as Response;
+
 describe("UploadPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -160,6 +171,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ analyzed_projects: 1, skipped_projects: 0, failed_projects: 0 }),
@@ -176,9 +188,12 @@ describe("UploadPage", () => {
     fireEvent.click(await screen.findByLabelText(/Markdown/i));
     fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
 
-    await screen.findByText(/Analysis complete/i);
-    const [, runCall] = mockFetch.mock.calls;
-    const body = JSON.parse((runCall[1] as RequestInit).body as string);
+    await screen.findByText(/Analysis complete/i, { selector: ".ar-result strong" });
+    const runCall = mockFetch.mock.calls.find((c) =>
+      String(c[0]).includes("/api/analysis/run"),
+    );
+    expect(runCall).toBeDefined();
+    const body = JSON.parse((runCall![1] as RequestInit).body as string);
     expect(body.project_exclude_extensions["/tmp/proj-a"]).toContain(".md");
   });
 
@@ -190,6 +205,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -210,11 +226,15 @@ describe("UploadPage", () => {
     await screen.findByText("proj-a");
     fireEvent.click(screen.getByRole("button", { name: /Run Analysis/i }));
 
-    expect(await screen.findByText(/Analysis complete/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Analysis complete/i, { selector: ".ar-result strong" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/all files were excluded by your filters/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/proj-a/)).toBeInTheDocument();
+    expect(
+      screen.getByText("proj-a", { selector: ".ar-result-excluded-note strong" }),
+    ).toBeInTheDocument();
   });
 
   test("successful run clears upload form state to avoid stale upload_id reruns", async () => {

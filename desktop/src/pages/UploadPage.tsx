@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { API_BASE_URL } from "../config/api";
@@ -84,6 +84,19 @@ export function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  /** Latest projects for scan → run; avoids stale React closure so similarity choices reach the API. */
+  const projectsRef = useRef<Project[]>([]);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  /** Apply project state from `projectsRef` synchronously so ref is always current before any await or follow-up call. */
+  const setProjectsWithRef = useCallback((updater: (prev: Project[]) => Project[]) => {
+    const next = updater(projectsRef.current);
+    projectsRef.current = next;
+    setProjects(next);
+  }, []);
+
   const [defaultMode, setDefaultMode] = useState<"local" | "ai">("local");
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -112,16 +125,16 @@ export function UploadPage() {
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Failed to load projects");
-        setProjects(
-          (data.projects || []).map((p: { name: string; path: string }) => ({
-            name: p.name,
-            path: p.path,
-            mode: "local",
-            similarity: null,
-            status: "pending",
-            userDecision: "create_new",
-          })),
-        );
+        const loaded = (data.projects || []).map((p: { name: string; path: string }) => ({
+          name: p.name,
+          path: p.path,
+          mode: "local",
+          similarity: null,
+          status: "pending",
+          userDecision: "create_new",
+        }));
+        projectsRef.current = loaded;
+        setProjects(loaded);
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Failed to load projects");
       } finally {
@@ -184,6 +197,7 @@ export function UploadPage() {
     setUploadedFileName(null);
     setUploadError(null);
     setDefaultMode("local");
+    projectsRef.current = [];
     setProjects([]);
     setRunResult(null);
     setRunError(null);
@@ -201,12 +215,12 @@ export function UploadPage() {
   const applyModeChange = (selection: PendingAiSelection) => {
     if (selection.type === "default") {
       setDefaultMode(selection.mode);
-      setProjects((prev) => prev.map((project) => ({ ...project, mode: selection.mode })));
+      setProjectsWithRef((prev) => prev.map((project) => ({ ...project, mode: selection.mode })));
       return;
     }
 
     if (typeof selection.projectIndex === "number") {
-      setProjects((prev) =>
+      setProjectsWithRef((prev) =>
         prev.map((project, index) =>
           index === selection.projectIndex ? { ...project, mode: selection.mode } : project,
         ),
@@ -252,7 +266,8 @@ export function UploadPage() {
   const handleSimilarityDecision = (decision: "create_new" | "update_existing") => {
     if (!similarityModalData) return;
 
-    setProjects((prev) =>
+    const nextIndex = similarityModalData.projectIndex + 1;
+    setProjectsWithRef((prev) =>
       prev.map((p, idx) =>
         idx === similarityModalData.projectIndex
           ? { ...p, userDecision: decision, status: "ready" }
@@ -261,16 +276,16 @@ export function UploadPage() {
     );
 
     setSimilarityModalData(null);
-    processNextProject(similarityModalData.projectIndex + 1);
+    processNextProject(nextIndex);
   };
 
   const processNextProject = async (startIndex: number) => {
-    for (let i = startIndex; i < projects.length; i++) {
-      const project = projects[i];
-      
+    for (let i = startIndex; i < projectsRef.current.length; i++) {
+      const project = projectsRef.current[i];
+
       if (project.status !== "pending") continue;
 
-      setProjects((prev) =>
+      setProjectsWithRef((prev) =>
         prev.map((p, idx) => (idx === i ? { ...p, status: "scanning" } : p))
       );
 
@@ -289,15 +304,15 @@ export function UploadPage() {
 
         // Handle exact match (100%) - auto-skip
         if (data.exact_match) {
-          setProjects((prev) =>
+          setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i
-                ? { 
-                    ...p, 
-                    similarity: data.similarity, 
+                ? {
+                    ...p,
+                    similarity: data.similarity,
                     fileCount: data.file_count,
                     status: "ready",
-                    userDecision: "skip"
+                    userDecision: "skip",
                   }
                 : p
             )
@@ -308,7 +323,7 @@ export function UploadPage() {
 
         // Handle similarity detected (show modal)
         if (data.similarity) {
-          setProjects((prev) =>
+          setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i
                 ? { ...p, similarity: data.similarity, fileCount: data.file_count, status: "similarity_detected" }
@@ -325,7 +340,7 @@ export function UploadPage() {
           return;
         } else {
           // No similarity - proceed
-          setProjects((prev) =>
+          setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i ? { ...p, fileCount: data.file_count, status: "ready", userDecision: "create_new" } : p
             )
@@ -333,7 +348,7 @@ export function UploadPage() {
         }
       } catch (err) {
         console.error(`Scan failed for ${project.name}:`, err);
-        setProjects((prev) =>
+        setProjectsWithRef((prev) =>
           prev.map((p, idx) =>
             idx === i ? { ...p, status: "ready", userDecision: "create_new" } : p
           )
@@ -350,20 +365,23 @@ export function UploadPage() {
     const project_analysis_types: Record<string, string> = {};
     const project_similarity_actions: Record<string, string> = {};
 
-    projects.forEach((p) => {
+    const latestProjects = projectsRef.current;
+    latestProjects.forEach((p) => {
       if (p.userDecision !== "skip") {
         project_analysis_types[p.path] = p.mode;
         if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
           project_similarity_actions[p.path] = p.userDecision;
+          project_similarity_actions[p.name] = p.userDecision;
         } else {
           project_similarity_actions[p.path] = "create_new";
+          project_similarity_actions[p.name] = "create_new";
         }
       }
     });
 
     const project_exclude_extensions: Record<string, string[]> = {};
     const project_exclude_name_prefixes: Record<string, string[]> = {};
-    projects.forEach((p) => {
+    latestProjects.forEach((p) => {
       const groups = projectExcludeGroups[p.path];
       if (groups?.size) {
         const matched = FILE_TYPE_GROUPS.filter((g) => groups.has(g.id));
@@ -396,11 +414,9 @@ export function UploadPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Analysis failed");
 
-      const skippedCount = projects.filter((p) => p.userDecision === "skip").length;
-
       setRunResult({
         analyzed_projects: data.analyzed_projects ?? 0,
-        skipped_projects: (data.skipped_projects ?? 0) + skippedCount,
+        skipped_projects: data.skipped_projects ?? 0,
         failed_projects: data.failed_projects ?? 0,
         results: data.results ?? [],
       });
@@ -436,7 +452,7 @@ export function UploadPage() {
     setRunResult(null);
     setRunError(null);
 
-    setProjects((prev) =>
+    setProjectsWithRef((prev) =>
       prev.map((p) => ({ ...p, status: "pending" as const, similarity: null }))
     );
 

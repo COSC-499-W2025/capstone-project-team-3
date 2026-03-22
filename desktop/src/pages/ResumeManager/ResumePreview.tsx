@@ -162,17 +162,53 @@ export function ResumePreview({
     (awardsAreaVisible ? 1 : 0) +
     (canShowAddSectionFooter ? 1 : 0); // header, education, skills, work exp, projects, awards, footer
 
+  const workExperience = resume.work_experience ?? [];
+  const awards = resume.awards ?? [];
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const from = Number(active.id);
-    const to = Number(over.id);
-    if (Number.isNaN(from) || Number.isNaN(to) || from < 0 || to < 0 || from >= projects.length || to >= projects.length) return;
-    const newProjects = arrayMove(projects, from, to);
-    onSectionChange?.("projects", newProjects);
+    const activeStr = String(active.id);
+    const overStr = String(over.id);
+
+    const projectFrom = /^project-(\d+)$/.exec(activeStr);
+    const projectTo = /^project-(\d+)$/.exec(overStr);
+    if (projectFrom && projectTo) {
+      const from = Number(projectFrom[1]);
+      const to = Number(projectTo[1]);
+      if (from === to) return;
+      if (from < 0 || to < 0 || from >= projects.length || to >= projects.length) return;
+      onSectionChange?.("projects", arrayMove(projects, from, to));
+      return;
+    }
+
+    const workFrom = /^work-(\d+)$/.exec(activeStr);
+    const workTo = /^work-(\d+)$/.exec(overStr);
+    if (workFrom && workTo) {
+      const from = Number(workFrom[1]);
+      const to = Number(workTo[1]);
+      if (from === to) return;
+      if (from < 0 || to < 0 || from >= workExperience.length || to >= workExperience.length) return;
+      onSectionChange?.("work_experience", arrayMove(workExperience, from, to));
+      return;
+    }
+
+    const awardFrom = /^award-(\d+)$/.exec(activeStr);
+    const awardTo = /^award-(\d+)$/.exec(overStr);
+    if (awardFrom && awardTo) {
+      const from = Number(awardFrom[1]);
+      const to = Number(awardTo[1]);
+      if (from === to) return;
+      if (from < 0 || to < 0 || from >= awards.length || to >= awards.length) return;
+      onSectionChange?.("awards", arrayMove(awards, from, to));
+    }
   };
 
-  const sortableProjectIds = projects.map((_, i) => i);
+  const sortableProjectIds = projects.map((_, i) => `project-${i}`);
+  const sortableWorkIds =
+    workExperienceAreaVisible && isEditing ? workExperience.map((_, i) => `work-${i}`) : [];
+  const sortableAwardIds = awardsAreaVisible && isEditing ? awards.map((_, i) => `award-${i}`) : [];
+  const sortableItems = [...sortableProjectIds, ...sortableWorkIds, ...sortableAwardIds];
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor)
@@ -341,7 +377,7 @@ export function ResumePreview({
           (isEditing ? (
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
               <SortableContext
-                items={sortableProjectIds}
+                items={sortableItems}
                 strategy={verticalListSortingStrategy}
               >
                 {Array.from({ length: pageCount }, (_, pageIndex) => {
@@ -393,6 +429,7 @@ export function ResumePreview({
                             workExperience={resume.work_experience ?? []}
                             isEditing={isEditing}
                             onChange={handleWorkExperienceChange}
+                            enableSortable
                           />
                         )}
                         {pageProjects.length > 0 && (
@@ -413,6 +450,7 @@ export function ResumePreview({
                               awards={resume.awards ?? []}
                               isEditing={isEditing}
                               onChange={handleAwardsChange}
+                              enableSortable
                             />
                           </div>
                         )}

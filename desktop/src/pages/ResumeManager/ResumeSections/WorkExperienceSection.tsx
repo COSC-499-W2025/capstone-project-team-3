@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { WorkExperience } from "../../../api/resume_types";
 
 const MONTH_ABBREV = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -41,14 +43,64 @@ function normalizeDetails(details?: string[]): string[] {
   return details.map((d) => String(d)).filter((d) => d.trim().length > 0);
 }
 
+function SortableWorkExperienceRow({
+  sortableId,
+  children,
+}: {
+  sortableId?: string;
+  children: (dragHandle: ReactNode) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: sortableId ?? "__we_sortable_disabled__",
+    disabled: sortableId === undefined,
+  });
+  const style =
+    sortableId !== undefined
+      ? {
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.5 : 1,
+          marginTop: 10,
+        }
+      : { marginTop: 10 };
+
+  const dragHandle =
+    sortableId !== undefined ? (
+      <span
+        className="resume-preview__project-drag-handle"
+        aria-label="Drag to reorder work experience"
+        {...attributes}
+        {...listeners}
+      >
+        ⋮⋮
+      </span>
+    ) : null;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandle)}
+    </div>
+  );
+}
+
 export function WorkExperienceSection({
   workExperience,
   isEditing = false,
   onChange,
+  enableSortable = false,
 }: {
   workExperience: WorkExperience[];
   isEditing?: boolean;
   onChange?: (workExperience: WorkExperience[]) => void;
+  /** When true and isEditing, each entry shows a drag handle for reordering. */
+  enableSortable?: boolean;
 }) {
   const entries = workExperience ?? [];
 
@@ -106,12 +158,15 @@ export function WorkExperienceSection({
         const dateStart = formatMonthYear(entry.start_date);
         const dateEnd = formatMonthYear(entry.end_date);
         const dateRange = [dateStart, dateEnd].filter(Boolean).join(" – ");
+        const sortableId = enableSortable && isEditing ? `work-${index}` : undefined;
 
         return (
-          <div key={index} style={{ marginTop: 10 }}>
-            {isEditing ? (
+          <SortableWorkExperienceRow key={index} sortableId={sortableId}>
+            {(dragHandle) => (
+              isEditing ? (
               <div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {dragHandle}
                   <input
                     type="text"
                     value={entry.company ?? ""}
@@ -221,8 +276,9 @@ export function WorkExperienceSection({
                   </ul>
                 )}
               </div>
+            )
             )}
-          </div>
+          </SortableWorkExperienceRow>
         );
       })}
     </section>

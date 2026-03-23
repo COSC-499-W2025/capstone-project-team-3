@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from app.data.db import get_connection
 from app.utils.generate_resume import load_user, load_saved_resume, build_resume_model
 from app.client.llm_client import GeminiLLMClient
+from app.utils.env_utils import check_gemini_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -409,9 +410,10 @@ def generate_ai(
 
     Falls back to local generation if no API key is configured.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
+    is_valid, _ = check_gemini_api_key()
+    api_key = os.getenv("GEMINI_API_KEY") if is_valid else None
     if not api_key:
-        logger.warning("GEMINI_API_KEY not set – falling back to local cover letter generation.")
+        logger.warning("GEMINI_API_KEY not set or invalid – falling back to local cover letter generation.")
         return generate_local(
             resume_id=resume_id,
             job_title=job_title,

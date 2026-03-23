@@ -1645,6 +1645,222 @@
             pointer-events: none;
         }
 
+        /* ─── Collaboration Network ─── */
+
+        .network-section {
+            margin-bottom: 36px;
+        }
+
+        .network-graph-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .network-canvas-wrap {
+            position: relative;
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .network-canvas-wrap canvas {
+            display: block;
+            width: 100%;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            box-shadow: inset 0 1px 30px rgba(0, 0, 0, 0.3);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Info panel below canvas — never overlaps the graph */
+        .network-info-panel {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 10px 18px;
+            margin-top: 10px;
+            border-radius: 10px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .network-info-panel--active {
+            background: #0f172a;
+            border-color: rgba(99, 102, 241, 0.35);
+        }
+
+        .network-info-name {
+            font-weight: 700;
+            font-size: 13px;
+            color: #f1f5f9;
+        }
+
+        .network-info-commits {
+            font-weight: 600;
+            font-size: 12px;
+            color: #a78bfa;
+        }
+
+        .network-info-projects {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .network-info-project-tag {
+            font-size: 10px;
+            font-weight: 500;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 2px 8px;
+            border-radius: 9999px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .network-info-hint {
+            font-size: 13px;
+            color: #e2e8f0;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+
+        .network-info-hint-icon {
+            margin-right: 6px;
+            font-size: 15px;
+            vertical-align: middle;
+        }
+
+        .network-legend {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+
+        .network-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .network-stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: -0.02em;
+        }
+
+        .network-stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .network-empty {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .network-empty-hint {
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            opacity: 0.75;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ---- Theme toggle button ---- */
+        .network-theme-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            background: rgba(30, 41, 59, 0.7);
+            color: #e2e8f0;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .network-theme-toggle:hover {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .network-theme-toggle--light {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #334155;
+        }
+
+        .network-theme-toggle--light:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(99, 102, 241, 0.45);
+        }
+
+        /* ---- Light mode overrides ---- */
+        .network-canvas-wrap--light canvas {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-color: rgba(99, 102, 241, 0.18);
+            box-shadow: inset 0 1px 30px rgba(0, 0, 0, 0.04);
+        }
+
+        .network-info-panel--light {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .network-info-panel--light.network-info-panel--active {
+            background: #e2e8f0;
+            border-color: rgba(99, 102, 241, 0.35);
+        }
+
+        .network-info-panel--light .network-info-name {
+            color: #1e293b;
+        }
+
+        .network-info-panel--light .network-info-commits {
+            color: #7c3aed;
+        }
+
+        .network-info-panel--light .network-info-project-tag {
+            color: #0284c7;
+            background: rgba(2, 132, 199, 0.1);
+            border-color: rgba(2, 132, 199, 0.2);
+        }
+
+        .network-info-panel--light .network-info-hint {
+            color: #475569;
+        }
+
         /* Additional Responsive */
         @media (max-width: 768px) {
             .portfolio-layout {

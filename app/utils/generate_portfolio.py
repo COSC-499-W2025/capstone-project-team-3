@@ -1,9 +1,11 @@
 from collections import defaultdict
+from pathlib import Path
 from app.data.db import get_connection
 import sqlite3
-from typing import Any, DefaultDict, Dict, List, Tuple, Optional
+from typing import Any, DefaultDict, Dict, List, Tuple, Optional, Set
 from datetime import datetime
 import json
+import os
 from app.utils.generate_resume import (
     format_dates,
     load_user, 
@@ -73,7 +75,7 @@ def load_project_metrics(cursor: sqlite3.Cursor) -> DefaultDict[str, Dict[str, A
                 metrics[project_id][metric_name] = int(metric_value) if metric_value else 0
             elif metric_name in ['avg_complexity', 'average_function_length', 'average_comment_ratio', 'completeness_score']:
                 metrics[project_id][metric_name] = float(metric_value) if metric_value else 0.0
-            elif metric_name in ['languages', 'roles', 'technical_keywords', 'authors']:
+            elif metric_name in ['languages', 'roles', 'technical_keywords', 'authors', 'collaborators']:
                 # Parse JSON arrays
                 try:
                     metrics[project_id][metric_name] = json.loads(metric_value) if metric_value else []
@@ -475,6 +477,176 @@ def get_daily_activity(
 
     return dict(sorted(daily_activity.items()))
 
+
+def _extract_collaborators_from_git_history(
+    cursor: sqlite3.Cursor,
+    project_id: str,
+    user: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Fallback: derive collaborator list from GIT_HISTORY table.
+
+    GIT_HISTORY stores per-commit author data.  When the `collaborators`
+    DASHBOARD_DATA metric is missing (e.g. project was analysed before the
+    feature was added), we can still recover contributor information from
+    the commit history that *is* stored.
+    """
+    cursor.execute(
+        "SELECT author_name, author_email, COUNT(*) FROM GIT_HISTORY "
+        "WHERE project_id = ? GROUP BY author_name, author_email",
+        (project_id,),
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        return []
+
+    primary_aliases: Set[str] = set()
+    for key in ("name", "github_user", "email"):
+        val = (user.get(key) or "").strip()
+        if val:
+            primary_aliases.add(val.casefold())
+
+    contributors: List[Dict[str, Any]] = []
+    for author_name, author_email, commit_count in rows:
+        name = (author_name or "").strip()
+        email = (author_email or "").strip()
+        is_primary = (
+            name.casefold() in primary_aliases
+            or email.casefold() in primary_aliases
+        ) if (name or email) else False
+        contributors.append({
+            "name": name or email or "Unknown",
+            "email": email,
+            "commits": commit_count,
+            "is_primary": is_primary,
+        })
+    return contributors
+
+
+def _try_live_extraction(
+    project_path: str,
+    user: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Try to extract collaborators directly from a git repo on disk."""
+    try:
+        if not project_path or not os.path.isdir(project_path):
+            return []
+        from app.utils.git_utils import detect_git, extract_all_contributors
+        if not detect_git(project_path):
+            return []
+        aliases: List[str] = []
+        for key in ("github_user", "email", "name"):
+            val = (user.get(key) or "").strip()
+            if val:
+                aliases.append(val)
+        contributors = extract_all_contributors(project_path, aliases or None)
+        return contributors
+    except Exception:
+        return []
+
+
+def _build_collaboration_network(
+    projects: List[Dict[str, Any]],
+    user: Dict[str, Any],
+    cursor: Optional[sqlite3.Cursor] = None,
+) -> Dict[str, Any]:
+    """Build a collaboration network graph from per-project collaborator data.
+
+    Falls back to extracting collaborators from the git repo (if still on
+    disk) or from GIT_HISTORY when the ``collaborators`` DASHBOARD_DATA
+    metric is missing.
+
+    Returns:
+        {
+            "nodes": [{"id": str, "name": str, "commits": int, "is_primary": bool, "projects": [str]}],
+            "edges": [{"source": str, "target": str, "projects": [str], "weight": int}]
+        }
+    """
+    # Aggregate contributors across projects
+    # node_key -> {name, commits, is_primary, projects set}
+    node_map: Dict[str, Dict[str, Any]] = {}
+    # (source_key, target_key) -> {projects set}
+    edge_map: Dict[tuple, set] = {}
+
+    primary_key = user.get("name") or user.get("github_user") or "You"
+
+    for project in projects:
+        collaborators = project.get("metrics", {}).get("collaborators", [])
+        if not collaborators or not isinstance(collaborators, list):
+            # ---- Fallback 1: live extraction from git repo on disk ----
+            project_path = project.get("path", "")
+            collaborators = _try_live_extraction(project_path, user)
+
+            # ---- Fallback 2: derive from GIT_HISTORY table ----
+            if (not collaborators) and cursor:
+                collaborators = _extract_collaborators_from_git_history(
+                    cursor, project.get("id", ""), user,
+                )
+
+        if not collaborators or not isinstance(collaborators, list):
+            continue
+
+        project_title = project.get("title", "Unknown")
+
+        # Collect keys for everyone in this project
+        project_keys: List[str] = []
+        for collab in collaborators:
+            if not isinstance(collab, dict):
+                continue
+            name = collab.get("name", "").strip()
+            if not name:
+                continue
+
+            is_primary = collab.get("is_primary", False)
+            key = primary_key if is_primary else name
+
+            if key not in node_map:
+                node_map[key] = {
+                    "name": key,
+                    "commits": 0,
+                    "is_primary": is_primary,
+                    "projects": set(),
+                }
+            node_map[key]["commits"] += collab.get("commits", 0)
+            node_map[key]["projects"].add(project_title)
+            if is_primary:
+                node_map[key]["is_primary"] = True
+            project_keys.append(key)
+
+        # Create edges between the primary user and each collaborator in this project
+        for key in project_keys:
+            if key == primary_key:
+                continue
+            edge_key = tuple(sorted([primary_key, key]))
+            if edge_key not in edge_map:
+                edge_map[edge_key] = set()
+            edge_map[edge_key].add(project_title)
+
+    # Build output
+    nodes = []
+    for key, data in node_map.items():
+        nodes.append({
+            "id": key,
+            "name": data["name"],
+            "commits": data["commits"],
+            "is_primary": data["is_primary"],
+            "projects": sorted(data["projects"]),
+        })
+
+    edges = []
+    for (source, target), proj_set in edge_map.items():
+        edges.append({
+            "source": source,
+            "target": target,
+            "projects": sorted(proj_set),
+            "weight": len(proj_set),
+        })
+
+    # Sort nodes: primary first, then by commits descending
+    nodes.sort(key=lambda n: (not n["is_primary"], -n["commits"]))
+
+    return {"nodes": nodes, "edges": edges}
+
+
 def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """Return assembled portfolio model built from the database.
     If project_ids are provided, include only those projects.
@@ -504,6 +676,12 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         metrics = project_metrics.get(pid, {})
         project_skills = skills_map.get(pid, [])
         project_summary = project_summaries.get(pid, "")
+
+        # Fetch stored path for live git fallback
+        cursor.execute("SELECT path FROM PROJECT WHERE project_signature = ?", (pid,))
+        _path_row = cursor.fetchone()
+        project_disk_path = (_path_row[0] if _path_row else "") or ""
+
         try:
             parsed_exclusions = json.loads(score_override_exclusions) if score_override_exclusions else []
             if not isinstance(parsed_exclusions, list):
@@ -534,6 +712,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         projects.append({
             "id": pid,
             "title": name,
+            "path": project_disk_path,
             "score": float(score) if score else 0,
             "rank": float(score) if score else 0,
             "score_overridden": bool(score_overridden),
@@ -565,6 +744,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
                 "roles": metrics.get("roles", []),
                 "technical_keywords": metrics.get("technical_keywords", []),
                 "authors": metrics.get("authors", []),
+                "collaborators": metrics.get("collaborators", []),
                 # Complex analysis objects
                 "complexity_analysis": complexity_analysis,
                 "commit_patterns": commit_patterns,
@@ -614,6 +794,10 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         project_type_analysis = {"github": [], "local": []}
         github_stats = local_stats = {}
 
+    # Build collaboration network from per-project collaborator data
+    # (before closing conn so cursor is still usable for fallback queries)
+    collaboration_network = _build_collaboration_network(projects, user, cursor)
+
     conn.close()
 
     return {
@@ -621,6 +805,7 @@ def build_portfolio_model(project_ids: Optional[List[str]] = None) -> Dict[str, 
         "overview": overview_stats,
         "projects": projects,
         "skills_timeline": skills_timeline,
+        "collaboration_network": collaboration_network,
         "project_type_analysis": {
             "github": {
                 "count": len(project_type_analysis["github"]),

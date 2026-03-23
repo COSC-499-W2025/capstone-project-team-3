@@ -575,10 +575,26 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
         project_signature = get_project_signature(file_signatures)
         file_count = eligible_file_count
 
-        # Check if exact match (100%) — based on files that will be analyzed
+        has_user_type_exclusions = bool(payload.exclude_extensions) or bool(
+            payload.exclude_name_prefixes
+        )
+
+        # Exact DB match — do not auto-skip scan UX when user set file-type exclusions
         from app.utils.scan_utils import project_signature_exists
 
         if project_signature_exists(project_signature):
+            if has_user_type_exclusions:
+                return {
+                    "status": "ok",
+                    "project_name": project_name,
+                    "project_path": project_path,
+                    "file_count": file_count,
+                    "total_scanned_files": total_scanned_files,
+                    "eligible_file_count": eligible_file_count,
+                    "exact_match": False,
+                    "similarity": None,
+                    "reason": "reanalyze_with_exclusions",
+                }
             return {
                 "status": "ok",
                 "project_name": project_name,

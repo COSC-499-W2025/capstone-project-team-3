@@ -513,16 +513,30 @@ def run_scan_flow(
     
     # Count files for dynamic threshold calculation
     file_count = len(files)
-    
-    # Check if exact project already exists
+
+    has_user_type_exclusions = bool(exclude_extensions) or bool(exclude_name_prefixes)
+
+    # Check if exact project already exists (skip re-analysis unless user applied type exclusions)
     if project_signature_exists(project_signature):
+        if has_user_type_exclusions:
+            print(
+                "Project signature matches DB, but per-project file-type exclusions are set — "
+                "re-running analysis on the filtered file set."
+            )
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": 100.0,
+                "reason": "reanalyze_with_exclusions",
+                "signature": project_signature,
+            }
         print("100.0% of this Project was analyzed in the past.")
         return {
             "files": files,
             "skip_analysis": True,
             "score": 100.0,
             "reason": "already_analyzed",
-            "signature": project_signature
+            "signature": project_signature,
         }
     
     # Check for similar projects (find only, don't auto-update)

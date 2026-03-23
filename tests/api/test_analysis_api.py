@@ -256,6 +256,41 @@ def test_scan_project_exact_match(
     assert data["similarity"]["match_reason"] == "Exact match (100%)"
 
 
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.get_project_signature")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_reanalyze_with_exclusions_bypasses_exact_match(
+    mock_os_exists,
+    mock_get_sig,
+    mock_extract_sig,
+    mock_scan_files,
+    mock_sig_exists,
+):
+    """With exclusions, do not return exact_match — user must be able to re-run analysis."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/main.py")]
+    mock_extract_sig.return_value = "sig123"
+    mock_get_sig.return_value = "project_sig_abc"
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={
+            "project_path": "/tmp/extracted/my-project",
+            "exclude_extensions": [".md"],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_with_exclusions"
+    assert data.get("exact_match") is False
+    assert data["similarity"] is None
+    assert data["file_count"] == 1
+
+
 @patch("app.api.routes.analysis.scan_project_files", return_value=[])
 @patch("app.api.routes.analysis.os.path.exists", return_value=True)
 def test_scan_project_no_files(mock_exists, mock_scan_files):

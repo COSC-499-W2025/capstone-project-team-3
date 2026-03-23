@@ -541,6 +541,16 @@ def test_run_scan_flow_all_files_excluded_by_user_extensions(tmp_path):
     assert result["files"] == []
 
 
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+def test_run_scan_flow_reanalyze_when_exclusions_and_signature_exists(mock_exists, tmp_path):
+    """Do not skip analysis when signature matches DB if user set file-type exclusions."""
+    (tmp_path / "app.py").write_text("print(1)")
+    result = run_scan_flow(str(tmp_path), exclude_extensions=[".md"])
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "reanalyze_with_exclusions"
+    assert len(result["files"]) == 1
+
+
 # ============================================================================
 # Tests for calculate_dynamic_threshold()
 # ============================================================================

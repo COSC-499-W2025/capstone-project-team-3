@@ -375,6 +375,24 @@
   margin: 0.65rem 0 0;
 }
 
+.ar-exclude-all-types-msg {
+  font-size: 0.78rem;
+  color: #2b6cb0;
+  background: #ebf8ff;
+  border: 1px solid #90cdf4;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin: 0 0 0.65rem;
+  line-height: 1.45;
+}
+
+.ar-exclude-all-types-msg code {
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+}
+
 .ar-exclude-grid {
   display: flex;
   flex-wrap: wrap;

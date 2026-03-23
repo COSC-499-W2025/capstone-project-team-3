@@ -123,6 +123,17 @@
   border-color: rgba(251, 211, 141, 0.35);
 }
 
+[data-theme="dark"] .ar-exclude-all-types-msg {
+  color: #90cdf4;
+  background: rgba(144, 205, 244, 0.12);
+  border-color: rgba(144, 205, 244, 0.35);
+}
+
+[data-theme="dark"] .ar-exclude-all-types-msg code {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-body);
+}
+
 /* ============================================================
    UploadPage
    ============================================================ */

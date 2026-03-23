@@ -363,6 +363,17 @@ export function UploadPage() {
               };
             }
 
+            if (data.reason === "reanalyze_with_exclusions") {
+              return {
+                ...p,
+                similarity: null,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "ready",
+                userDecision: "create_new",
+              };
+            }
+
             if (data.exact_match) {
               return {
                 ...p,
@@ -477,6 +488,25 @@ export function UploadPage() {
                     ...p,
                     similarity: null,
                     fileCount: 0,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision: "create_new",
+                  }
+                : p
+            )
+          );
+          continue;
+        }
+
+        // Same content as DB, but user set exclusions — run analysis on filtered files (no auto-skip)
+        if (data.reason === "reanalyze_with_exclusions") {
+          setProjectsWithRef((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? {
+                    ...p,
+                    similarity: null,
+                    fileCount: eligible,
                     totalScannedFiles: total,
                     status: "ready",
                     userDecision: "create_new",
@@ -1030,6 +1060,14 @@ export function UploadPage() {
                                   <p className="ar-exclude-hint">
                                     Check types to <strong>exclude</strong> from analysis for this project.
                                   </p>
+                                  {excluded && excluded.size === FILE_TYPE_GROUPS.length && (
+                                    <p className="ar-exclude-all-types-msg" role="status">
+                                      All <strong>{FILE_TYPE_GROUPS.length}</strong> listed types are excluded.
+                                      Source code such as{" "}
+                                      <code>.py</code>, <code>.js</code>, <code>.ts</code>, <code>.java</code>{" "}
+                                      is <strong>not</strong> in this list and will still be analyzed if present.
+                                    </p>
+                                  )}
                                   <div className="ar-exclude-grid">
                                     {FILE_TYPE_GROUPS.map((group) => {
                                       const checked = excluded?.has(group.id) ?? false;

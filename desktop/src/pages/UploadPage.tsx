@@ -20,17 +20,43 @@ interface FileTypeGroup {
 }
 
 const FILE_TYPE_GROUPS: FileTypeGroup[] = [
-  { id: "markdown", label: "Markdown",       exts: [".md", ".markdown"] },
-  { id: "readme",   label: "README files",   exts: [], namePrefix: "readme" },
-  { id: "text",     label: "Plain Text",     exts: [".txt"] },
-  { id: "pdf",      label: "PDF",            exts: [".pdf"] },
-  { id: "word",     label: "Word Docs",      exts: [".docx", ".doc"] },
-  { id: "slides",   label: "Presentations",  exts: [".pptx", ".ppt"] },
-  { id: "json",     label: "JSON / Config",  exts: [".json", ".toml", ".ini"] },
-  { id: "yaml",     label: "YAML",           exts: [".yml", ".yaml"] },
-  { id: "html",     label: "HTML",           exts: [".html", ".htm"] },
-  { id: "css",      label: "Stylesheets",    exts: [".css", ".scss", ".sass", ".less"] },
-  { id: "shell",    label: "Shell Scripts",  exts: [".sh", ".bash"] },
+  { id: "markdown", label: "Markdown", exts: [".md", ".markdown"] },
+  { id: "readme", label: "README files", exts: [], namePrefix: "readme" },
+  { id: "text", label: "Plain Text", exts: [".txt"] },
+  { id: "pdf", label: "PDF", exts: [".pdf"] },
+  { id: "word", label: "Word Docs", exts: [".docx", ".doc"] },
+  { id: "slides", label: "Presentations", exts: [".pptx", ".ppt"] },
+  { id: "json", label: "JSON / Config", exts: [".json", ".toml", ".ini"] },
+  { id: "yaml", label: "YAML", exts: [".yml", ".yaml"] },
+  { id: "html", label: "HTML", exts: [".html", ".htm"] },
+  { id: "css", label: "Stylesheets", exts: [".css", ".scss", ".sass", ".less"] },
+  { id: "shell", label: "Shell Scripts", exts: [".sh", ".bash"] },
+  // Source code (same exclusion mechanism as docs)
+  { id: "python", label: "Python", exts: [".py", ".pyw", ".pyi"] },
+  {
+    id: "javascript",
+    label: "JavaScript",
+    exts: [".js", ".jsx", ".mjs", ".cjs"],
+  },
+  {
+    id: "typescript",
+    label: "TypeScript",
+    exts: [".ts", ".tsx", ".mts", ".cts"],
+  },
+  {
+    id: "java_family",
+    label: "Java / Kotlin / Scala",
+    exts: [".java", ".kt", ".kts", ".scala"],
+  },
+  {
+    id: "c_cpp",
+    label: "C / C++",
+    exts: [".c", ".cpp", ".cxx", ".cc", ".h", ".hpp", ".hxx"],
+  },
+  { id: "csharp", label: "C#", exts: [".cs", ".csx"] },
+  { id: "go_rust", label: "Go / Rust", exts: [".go", ".rs"] },
+  { id: "ruby_php", label: "Ruby / PHP", exts: [".rb", ".php"] },
+  { id: "swift", label: "Swift", exts: [".swift"] },
 ];
 
 /** Build API payload for per-project file-type exclusions (same shape as run analysis). */
@@ -1062,10 +1088,9 @@ export function UploadPage() {
                                   </p>
                                   {excluded && excluded.size === FILE_TYPE_GROUPS.length && (
                                     <p className="ar-exclude-all-types-msg" role="status">
-                                      All <strong>{FILE_TYPE_GROUPS.length}</strong> listed types are excluded.
-                                      Source code such as{" "}
-                                      <code>.py</code>, <code>.js</code>, <code>.ts</code>, <code>.java</code>{" "}
-                                      is <strong>not</strong> in this list and will still be analyzed if present.
+                                      All <strong>{FILE_TYPE_GROUPS.length}</strong> categories are excluded
+                                      (documents and code). Files with extensions not listed above may still be
+                                      analyzed.
                                     </p>
                                   )}
                                   <div className="ar-exclude-grid">

@@ -702,7 +702,7 @@ export function UploadPage() {
               <table className="ar-table">
                 <thead>
                   <tr>
-                    <th>Status</th>
+                    <th>Similarity Score</th>
                     <th>Project Name</th>
                     <th>Matched Project</th>
                     <th>Analysis Type</th>

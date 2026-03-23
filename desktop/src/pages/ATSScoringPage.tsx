@@ -200,6 +200,13 @@ export function ATSScoringPage() {
   const [result, setResult] = useState<ATSScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-dismiss error messages after 8 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 8000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   // --- history state ---
   const [history, setHistory] = useState<ATSHistoryEntry[]>(loadHistory);
 

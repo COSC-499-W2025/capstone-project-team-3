@@ -105,6 +105,20 @@ export function DataManagementPage() {
   } | null>(null);
   const [deletingSkill, setDeletingSkill] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Auto-dismiss error banners after 8 seconds
+  useEffect(() => {
+    if (!dateError) return;
+    const t = setTimeout(() => setDateError(null), 8000);
+    return () => clearTimeout(t);
+  }, [dateError]);
+
+  useEffect(() => {
+    if (!saveError) return;
+    const t = setTimeout(() => setSaveError(null), 8000);
+    return () => clearTimeout(t);
+  }, [saveError]);
 
   const fetchProjects = useCallback(() => {
     setLoading(true);
@@ -171,7 +185,7 @@ export function DataManagementPage() {
       );
       setEditing(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
+      setSaveError(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -179,7 +193,7 @@ export function DataManagementPage() {
 
   const handleUpdateProjectName = async (projectSig: string, name: string) => {
     if (!name.trim()) {
-      alert("Project name cannot be empty");
+      setSaveError("Project name cannot be empty");
       return;
     }
     setSaving(true);
@@ -192,7 +206,7 @@ export function DataManagementPage() {
       );
       setEditing(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update project name");
+      setSaveError(e instanceof Error ? e.message : "Failed to update project name");
     } finally {
       setSaving(false);
     }
@@ -227,7 +241,7 @@ export function DataManagementPage() {
       );
       setEditing(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
+      setSaveError(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -235,7 +249,7 @@ export function DataManagementPage() {
 
   const handleUpdateSkillName = async (skillId: number, skill: string) => {
     if (!skill.trim()) {
-      alert("Skill name cannot be empty");
+      setSaveError("Skill name cannot be empty");
       return;
     }
     setSaving(true);
@@ -251,7 +265,7 @@ export function DataManagementPage() {
       );
       setEditing(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
+      setSaveError(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -271,7 +285,7 @@ export function DataManagementPage() {
       );
       setEditing(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update");
+      setSaveError(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -281,11 +295,11 @@ export function DataManagementPage() {
     const add = addingSkill;
     if (!add || add.projectSig !== projectSig) return;
     if (!add.skill.trim()) {
-      alert("Skill name cannot be empty");
+      setSaveError("Skill name cannot be empty");
       return;
     }
     if (!add.source || (add.source !== "code" && add.source !== "non-technical")) {
-      alert("Please select a skill type");
+      setSaveError("Please select a skill type");
       return;
     }
     const proj = projects.find((p) => p.project_signature === projectSig);
@@ -322,7 +336,7 @@ export function DataManagementPage() {
       );
       setAddingSkill(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to add skill");
+      setSaveError(e instanceof Error ? e.message : "Failed to add skill");
     } finally {
       setSaving(false);
     }
@@ -334,7 +348,7 @@ export function DataManagementPage() {
     const expectedName = project.name.toLowerCase();
     const sigPrefix = (project.project_signature || "").slice(0, 4);
     if (deleteModal.typed.trim().toLowerCase() !== `${expectedName}${sigPrefix}`) {
-      alert("Confirmation did not match. Deletion cancelled.");
+      setSaveError("Confirmation did not match. Deletion cancelled.");
       return;
     }
     setDeleting(true);
@@ -343,7 +357,7 @@ export function DataManagementPage() {
       setProjects((prev) => prev.filter((p) => p.project_signature !== project.project_signature));
       setDeleteModal(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete project");
+      setSaveError(e instanceof Error ? e.message : "Failed to delete project");
     } finally {
       setDeleting(false);
     }
@@ -363,7 +377,7 @@ export function DataManagementPage() {
       );
       setDeleteSkillModal(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to delete skill");
+      setSaveError(e instanceof Error ? e.message : "Failed to delete skill");
     } finally {
       setDeletingSkill(false);
     }
@@ -435,9 +449,19 @@ export function DataManagementPage() {
         </div>
       )}
 
+      {saveError && (
+        <div className="data-management-save-error" role="alert">
+          {saveError}
+        </div>
+      )}
+
       <div className="data-management-projects">
         <div className="data-management-section-header">
-          <h2 className="data-management-section-title">Projects</h2>
+          <h2 className="data-management-section-title">
+            Projects{projects.length > 0 && (
+              <span className="data-management-count"> ({projects.length})</span>
+            )}
+          </h2>
           <button
             type="button"
             className="data-management-refresh"
@@ -449,7 +473,14 @@ export function DataManagementPage() {
         </div>
         {projects.length === 0 ? (
           <div className="data-management-empty">
-            No projects found. Upload a ZIP file to add projects.
+            <p>No projects uploaded yet.</p>
+            <button
+              type="button"
+              className="data-management-upload-btn"
+              onClick={() => navigate("/uploadpage")}
+            >
+              Upload Projects
+            </button>
           </div>
         ) : (
           <div className="data-management-table-wrap">

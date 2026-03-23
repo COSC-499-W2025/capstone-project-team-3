@@ -144,7 +144,7 @@ test('renders empty state when no projects', async () => {
     </BrowserRouter>
   );
 
-  const emptyText = await screen.findByText(/No projects found/i);
+  const emptyText = await screen.findByText(/No projects uploaded yet/i);
   expect(emptyText).toBeInTheDocument();
 });
 
@@ -592,4 +592,100 @@ test('delete skill: cancel dismisses confirmation without calling deleteSkill', 
 
   expect(mockDeleteSkill).not.toHaveBeenCalled();
   expect(screen.queryByText(/Are you sure you want to delete/)).not.toBeInTheDocument();
+});
+
+// ── New improvement tests ────────────────────────────────────────────────────
+
+test('empty state shows Upload Projects button when no projects', async () => {
+  mockGetChronologicalProjects.mockResolvedValue([]);
+
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  const btn = await screen.findByRole('button', { name: /upload projects/i });
+  expect(btn).toBeInTheDocument();
+});
+
+test('section header shows project count when projects exist', async () => {
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  // mockProjects has 2 entries
+  await screen.findByText('Project Alpha');
+  expect(screen.getByText('(2)')).toBeInTheDocument();
+});
+
+test('API save failure shows inline error banner instead of alert', async () => {
+  const user = userEvent.setup();
+  mockUpdateProjectName.mockRejectedValue(new Error('Server error'));
+  const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  await screen.findByText('Project Alpha');
+  // The project name is rendered as an editable button — get all buttons and pick the one
+  // whose accessible name is exactly "Project Alpha"
+  const nameBtn = (await screen.findAllByRole('button')).find(
+    (b) => b.textContent === 'Project Alpha'
+  );
+  expect(nameBtn).toBeDefined();
+  await user.click(nameBtn!);
+  const input = screen.getByPlaceholderText('Project name');
+  await user.clear(input);
+  await user.type(input, 'New Name');
+  await user.keyboard('{Enter}');
+
+  await screen.findByText(/Server error/i);
+  expect(alertSpy).not.toHaveBeenCalled();
+  alertSpy.mockRestore();
+});
+
+test('date error auto-dismisses after 8 seconds', async () => {
+  const { act } = await import('react');
+  jest.useFakeTimers();
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+  render(
+    <BrowserRouter>
+      <DataManagementPage />
+    </BrowserRouter>
+  );
+
+  // Wait for projects to load (real timers still used for initial fetch)
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  await screen.findByText('Project Alpha');
+
+  // Click the Created date cell of the first project to open the inline editor
+  const dateBtn = (await screen.findAllByRole('button')).find(
+    (b) => b.textContent === '15-01-2026'
+  );
+  expect(dateBtn).toBeDefined();
+  await user.click(dateBtn!);
+
+  const input = screen.getByPlaceholderText('dd-mm-yyyy');
+  await user.clear(input);
+  await user.type(input, 'bad-date');
+  await user.keyboard('{Enter}');
+
+  expect(await screen.findByText(/Invalid date format/i)).toBeInTheDocument();
+
+  await act(async () => {
+    jest.advanceTimersByTime(8000);
+  });
+  expect(screen.queryByText(/Invalid date format/i)).not.toBeInTheDocument();
+
+  jest.useRealTimers();
 });

@@ -832,3 +832,84 @@
 
 /* ── Dark mode overrides are in src/styles/dark-theme.css ── */
 
+/* ---- Comparison view (left panel) ---- */
+.ats-comparison-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  height: 100%;
+}
+
+.ats-comparison-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ats-comparison-view-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-family: var(--font-sans);
+}
+
+.ats-comparison-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.ats-comparison-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+}
+
+.ats-comparison-row:hover { border-color: #9ca3af; }
+
+.ats-comparison-rank {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #9ca3af;
+  min-width: 1.8rem;
+}
+
+.ats-comparison-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Empty-resume warning ---- */
+.ats-empty-resume-warning {
+  padding: 1rem;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ats-empty-resume-warning p {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #92400e;
+  font-family: var(--font-sans);
+}
+
+.ats-empty-resume-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ---- Per-entry delete button ---- */
+.ats-history-delete-btn { color: #e74c3c; }
+.ats-history-delete-btn:hover { background: rgba(231,76,60,0.08); border-color: #e74c3c; }

@@ -156,6 +156,56 @@
   pointer-events: none;
 }
 
+.resume-preview__summary {
+  font-size: 10pt;
+  font-weight: 400;
+  margin: 4px 0 0 0;
+  line-height: 1.5;
+  color: #222;
+  text-align: left;
+}
+
+.resume-preview__summary-block {
+  margin-top: 6px;
+  text-align: left;
+}
+
+.resume-preview__summary-edit {
+  margin-top: 6px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resume-preview__summary-textarea {
+  font-family: inherit;
+  font-size: 10pt;
+  line-height: 1.5;
+  color: #222;
+  border: 1px dashed #aaa;
+  border-radius: 3px;
+  padding: 4px 6px;
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  background: rgba(27, 159, 200, 0.04);
+  outline: none;
+  min-height: 3.5em;
+}
+
+.resume-preview__summary-textarea:focus {
+  border-color: #1b9fc8;
+  background: rgba(27, 159, 200, 0.07);
+}
+
+.resume-preview__summary-hint {
+  font-size: 8pt;
+  color: #888;
+  text-align: right;
+  line-height: 1;
+}
+
 .resume-preview__section {
   margin-bottom: 10px;
 }
@@ -504,42 +554,8 @@
   font-style: italic;
 }
 
-/* ── Dark mode */
-[data-theme="dark"] .resume-preview {
-  background: #0f1923;
-}
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
 
-[data-theme="dark"] .resume-preview__page {
-  /* Keep paper white — it represents a real printed document */
-  background: #fff;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.7);
-}
-
-[data-theme="dark"] .resume-preview__project-delete-btn {
-  background: var(--color-card-bg);
-  border-color: var(--color-border);
-  color: var(--color-text-secondary);
-}
-
-[data-theme="dark"] .resume-preview__project-delete-btn:hover {
-  background: #2d1a1a;
-  color: #f56565;
-  border-color: #f56565;
-}
-
-[data-theme="dark"] .resume-preview__page [contenteditable="true"] {
-  outline-color: var(--color-border);
-  color: inherit;
-}
-
-[data-theme="dark"] .resume-preview__page [contenteditable="true"]:focus {
-  outline-color: var(--color-blue-medium);
-}
-
-[data-theme="dark"] .resume-preview__project-date-input:focus,
-[data-theme="dark"] .resume-preview__project-date-input:not(:placeholder-shown) {
-  background: #fff;
-  color: #000;
 /* In edit mode, allow controls to overflow the fixed page height.
    Otherwise inputs/textarea focus states can get clipped when a section is near
    the bottom of a page. */

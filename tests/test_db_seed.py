@@ -74,6 +74,7 @@ def test_all_tables_populated(isolated_db):
 
     # Remove test data from tables
     delete_order = [
+    "COVER_LETTER",
     "RESUME_PROJECT",
     "RESUME_SKILLS",
     "RESUME_AWARDS",

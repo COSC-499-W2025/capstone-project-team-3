@@ -603,31 +603,5 @@
   text-decoration: underline;
 }
 
-/* ── Dark mode  ── */
-[data-theme="dark"] .data-management-container      { background: var(--color-page-bg); }
-[data-theme="dark"] .data-management-title          { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-description    { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-loading        { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-section-title  { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-empty          { background: var(--color-card-bg); color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-table-wrap     { background: var(--color-card-bg); }
-[data-theme="dark"] .data-management-table thead tr { background: var(--color-bg-light); }
-[data-theme="dark"] .data-management-table tbody tr { border-bottom-color: var(--color-border); }
-[data-theme="dark"] .data-management-table td       { color: var(--color-text-body); }
-[data-theme="dark"] .data-management-expand-btn     { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-expand-btn:hover { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-edit-input     { background: var(--color-card-bg); border-color: var(--color-border); color: var(--color-text-body); }
-[data-theme="dark"] .data-management-skills-cell    { background: var(--color-page-bg); }
-[data-theme="dark"] .data-management-skills-title   { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-skills-empty   { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-skills-table th { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-skills-table-wrap { background: var(--color-card-bg); }
-[data-theme="dark"] .data-management-modal          { background: var(--color-card-bg); }
-[data-theme="dark"] .data-management-modal-title    { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-modal-body     { color: var(--color-text-body); }
-[data-theme="dark"] .data-management-modal-cancel   { background: var(--color-page-bg); border-color: var(--color-border); color: var(--color-text-body); }
-[data-theme="dark"] .data-management-modal-cancel:hover:not(:disabled) { background: var(--color-card-bg); }
-[data-theme="dark"] .data-management-cancel-btn     { color: var(--color-text-secondary); }
-[data-theme="dark"] .data-management-cancel-btn:hover { color: var(--color-text-heading); }
-[data-theme="dark"] .data-management-save-error      { background: #2d1010; color: #fc8181; }
-[data-theme="dark"] .data-management-count           { color: var(--color-text-secondary); }
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
+

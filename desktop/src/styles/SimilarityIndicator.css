@@ -1,0 +1,32 @@
+.similarity-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+
+.similarity-circle {
+  width: 40px;
+  height: 40px;
+}
+
+.similarity-indicator--none .similarity-circle circle {
+  transition: stroke 0.3s ease;
+}
+
+.similarity-indicator--low {
+  color: #10b981;
+}
+
+.similarity-indicator--medium {
+  color: #f59e0b;
+}
+
+.similarity-indicator--high {
+  color: #ef4444;
+}
+
+.similarity-indicator:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}

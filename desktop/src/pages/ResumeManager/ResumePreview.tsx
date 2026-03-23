@@ -21,8 +21,8 @@ import "../../styles/ResumePreview.css";
 
 /** Callback for section-only edits: parent merges into state. */
 export type OnSectionChange = (
-  section: "skills" | "projects" | "awards" | "work_experience",
-  data: Skills | Project[] | Award[] | WorkExperience[],
+  section: "skills" | "projects" | "awards" | "work_experience" | "personal_summary",
+  data: Skills | Project[] | Award[] | WorkExperience[] | string,
 ) => void;
 
 const PAGE_HEIGHT_PX = 1056; // A4-like proportion at 96dpi
@@ -104,6 +104,10 @@ export function ResumePreview({
 
   const handleSkillsChange = (skills: Skills) => {
     onSectionChange?.("skills", skills);
+  };
+
+  const handleSummaryChange = (summary: string) => {
+    onSectionChange?.("personal_summary", summary);
   };
 
   const handleProjectChange = (globalIndex: number, project: Project) => {
@@ -275,7 +279,7 @@ export function ResumePreview({
       >
         <div className="resume-preview__content">
           <div ref={setSectionRef(0)}>
-            <HeaderSection resume={resume} />
+            <HeaderSection resume={resume} isEditing={isEditing} onChange={handleSummaryChange} />
           </div>
           <div ref={setSectionRef(1)}>
             <EducationSection education={resume.education} />
@@ -414,7 +418,7 @@ export function ResumePreview({
                       }}
                     >
                       <div className="resume-preview__content">
-                        {hasHeader && <HeaderSection resume={resume} />}
+                        {hasHeader && <HeaderSection resume={resume} isEditing={isEditing} onChange={handleSummaryChange} />}
                         {hasEducation && (
                           <EducationSection education={resume.education} />
                         )}
@@ -535,7 +539,7 @@ export function ResumePreview({
                   }}
                 >
                   <div className="resume-preview__content">
-                    {hasHeader && <HeaderSection resume={resume} />}
+                    {hasHeader && <HeaderSection resume={resume} isEditing={isEditing} onChange={handleSummaryChange} />}
                     {hasEducation && (
                       <EducationSection education={resume.education} />
                     )}

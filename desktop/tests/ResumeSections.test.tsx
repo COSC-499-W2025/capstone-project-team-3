@@ -153,6 +153,112 @@ describe('HeaderSection', () => {
     const emailLink = screen.getByText('test@example.com').closest('a');
     expect(emailLink?.getAttribute('href')).toBe('mailto:test@example.com');
   });
+
+  test('renders personal summary in read-only mode when present', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: [],
+      personal_summary: 'Passionate full-stack developer with 3 years of experience.'
+    };
+
+    render(<HeaderSection resume={resume} />);
+
+    expect(screen.getByText('Professional Summary')).toBeDefined();
+    expect(screen.getByText('Passionate full-stack developer with 3 years of experience.')).toBeDefined();
+  });
+
+  test('does not render Professional Summary heading when personal_summary is absent', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: []
+    };
+
+    render(<HeaderSection resume={resume} />);
+
+    expect(screen.queryByText('Professional Summary')).toBeNull();
+  });
+
+  test('does not render Professional Summary heading when personal_summary is empty string', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: [],
+      personal_summary: ''
+    };
+
+    render(<HeaderSection resume={resume} />);
+
+    expect(screen.queryByText('Professional Summary')).toBeNull();
+  });
+
+  test('renders summary textarea in edit mode', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: [],
+      personal_summary: 'My summary text.'
+    };
+
+    const { container } = render(
+      <HeaderSection resume={resume} isEditing={true} onChange={jest.fn()} />
+    );
+
+    const textarea = container.querySelector('textarea');
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toBe('My summary text.');
+  });
+
+  test('edit mode textarea shows Professional Summary heading', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: [],
+      personal_summary: 'Some summary.'
+    };
+
+    render(<HeaderSection resume={resume} isEditing={true} onChange={jest.fn()} />);
+
+    expect(screen.getByText('Professional Summary')).toBeDefined();
+  });
+
+  test('edit mode calls onChange when textarea value changes', () => {
+    const resume: Resume = {
+      name: 'Test User',
+      email: 'test@example.com',
+      links: [],
+      education: [],
+      skills: { Proficient: [], Familiar: [] },
+      projects: [],
+      personal_summary: 'Old summary.'
+    };
+    const onChange = jest.fn();
+
+    const { container } = render(
+      <HeaderSection resume={resume} isEditing={true} onChange={onChange} />
+    );
+
+    const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'New summary text.' } });
+
+    expect(onChange).toHaveBeenCalledWith('New summary text.');
+  });
 });
 
 describe('SkillsSection', () => {

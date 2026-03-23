@@ -1297,6 +1297,177 @@ This document explains all API endpoints in Project Insights.
 }
 ```
 
+---
+
+### 50. Generate and Save Cover Letter
+
+**What it does:** Generates a tailored cover letter from a saved resume and job details, then persists it to the database. Supports two generation modes: `local` (template-based, no API key needed) and `ai` (Gemini LLM, falls back to local if no API key is configured).
+
+**URL:** `POST /api/cover-letter/generate`
+
+**Request:**
+```json
+{
+  "resume_id": 2,
+  "job_title": "Backend Engineer",
+  "company": "Acme Corp",
+  "job_description": "Build scalable REST APIs using Python and FastAPI...",
+  "motivations": ["meaningful_work", "innovation", "the team's open-source focus"],
+  "mode": "local"
+}
+```
+
+**Fields:**
+- `resume_id` — ID of a saved resume (integer, required)
+- `job_title` — Role title (string, required)
+- `company` — Company name (string, required)
+- `job_description` — Full job description text (string, min 10 chars, required)
+- `motivations` — Array of preset motivation keys and/or custom free-text strings (optional, default `[]`)
+- `mode` — `"local"` or `"ai"` (default `"local"`)
+
+**Preset motivation keys:** `strong_company_culture`, `personal_growth`, `meaningful_work`, `reputation_stability`, `innovation`, `work_life_balance`, `social_impact`, `compensation`, `team_collaboration`, `learning_opportunities`
+
+**Response:**
+```json
+{
+  "id": 1,
+  "resume_id": 2,
+  "job_title": "Backend Engineer",
+  "company": "Acme Corp",
+  "job_description": "Build scalable REST APIs...",
+  "motivations": ["meaningful_work", "innovation"],
+  "content": "Jane Smith\njane@example.com\nMarch 21, 2026\n\nBackend Engineer Application — Acme Corp\n\nDear Hiring Manager,\n...\n\nSincerely,\nJane Smith",
+  "generation_mode": "local",
+  "created_at": "2026-03-21T10:00:00"
+}
+```
+
+**Errors:**
+- `422` — Invalid `mode` value
+- `500` — Resume could not be loaded or letter generation failed
+
+---
+
+### 51. List All Cover Letters
+
+**What it does:** Returns a summary list of all saved cover letters (no full content), ordered most-recent first.
+
+**URL:** `GET /api/cover-letter`
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "resume_id": 2,
+    "job_title": "Backend Engineer",
+    "company": "Acme Corp",
+    "generation_mode": "local",
+    "created_at": "2026-03-21T10:00:00"
+  }
+]
+```
+
+---
+
+### 52. Get Cover Letter
+
+**What it does:** Retrieves a single saved cover letter with full content.
+
+**URL:** `GET /api/cover-letter/{id}`
+
+**URL Parameters:**
+- `id` — Cover letter ID (integer)
+
+**Response:**
+```json
+{
+  "id": 1,
+  "resume_id": 2,
+  "job_title": "Backend Engineer",
+  "company": "Acme Corp",
+  "job_description": "Build scalable REST APIs...",
+  "motivations": ["meaningful_work"],
+  "content": "Jane Smith\n...\nSincerely,\nJane Smith",
+  "generation_mode": "local",
+  "created_at": "2026-03-21T10:00:00"
+}
+```
+
+**Errors:**
+- `404` — Cover letter not found
+
+---
+
+### 53. Update Cover Letter Content
+
+**What it does:** Saves user edits to the text of an existing cover letter in-place. The PDF cache for this letter is automatically invalidated on the next PDF download.
+
+**URL:** `PATCH /api/cover-letter/{id}`
+
+**URL Parameters:**
+- `id` — Cover letter ID (integer)
+
+**Request:**
+```json
+{
+  "content": "Jane Smith\njane@example.com\nMarch 21, 2026\n\n...edited body..."
+}
+```
+
+**Fields:**
+- `content` — Full updated letter text (string, min 1 char, required)
+
+**Response:** Full `CoverLetterResponse` object (same shape as endpoint 52) with updated content.
+
+**Errors:**
+- `404` — Cover letter not found
+- `500` — Database update failed
+
+---
+
+### 54. Download Cover Letter as PDF
+
+**What it does:** Compiles the saved cover letter to PDF via `pdflatex` and returns it as a file download. Results are cached by SHA-256 content hash — re-downloading an unedited letter is instant. The cache is bypassed automatically after a PATCH edit.
+
+**URL:** `GET /api/cover-letter/{id}/pdf`
+
+**URL Parameters:**
+- `id` — Cover letter ID (integer)
+
+**Response:** PDF binary (`application/pdf`) with `Content-Disposition: attachment` header.
+
+**Filename format:** `cover_letter_{Company}_{Role}.pdf`
+
+**Errors:**
+- `404` — Cover letter not found
+- `500` — `pdflatex` not installed or compilation failed (error detail includes LaTeX output)
+
+---
+
+### 55. Delete Cover Letter
+
+**What it does:** Permanently deletes a saved cover letter and its cached PDF.
+
+**URL:** `DELETE /api/cover-letter/{id}`
+
+**URL Parameters:**
+- `id` — Cover letter ID (integer)
+
+**Response:**
+```json
+{
+  "success": true,
+  "deleted_id": 1
+}
+```
+
+**Errors:**
+- `404` — Cover letter not found
+- `500` — Deletion failed
+
+---
+
 ### Using JavaScript
 
 ```javascript
@@ -1411,6 +1582,14 @@ fetch(`${API_BASE}/resume/123`, {
 - Update Skill Name: `PATCH /api/chronological/skills/{skill_id}/name`
 - Delete Skill: `DELETE /api/chronological/skills/{skill_id}`
 
+**Cover Letter:**
+- Generate + Save: `POST /api/cover-letter/generate`
+- List All: `GET /api/cover-letter`
+- Get One: `GET /api/cover-letter/{id}`
+- Save Edits: `PATCH /api/cover-letter/{id}`
+- Download PDF: `GET /api/cover-letter/{id}/pdf`
+- Delete: `DELETE /api/cover-letter/{id}`
+
 
 ## Error Handling
 
@@ -1430,6 +1609,6 @@ fetch(`${API_BASE}/resume/123`, {
 ```
 
 ---
-**Last Updated:** March 1, 2026  
-**Total Endpoints Documented:** 49  
+**Last Updated:** March 21, 2026  
+**Total Endpoints Documented:** 55  
 **Questions?** Contact development team

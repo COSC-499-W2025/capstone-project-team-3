@@ -589,4 +589,83 @@ describe('ResumePreview', () => {
     fireEvent.change(titleInputs[0], { target: { value: 'New Title' } });
     expect(onSectionChange).toHaveBeenCalledWith('awards', expect.any(Array));
   });
+
+  test('renders personal summary in read-only mode when present', () => {
+    const resumeWithSummary: Resume = {
+      ...mockResume,
+      personal_summary: 'Experienced developer with a passion for clean code.'
+    };
+
+    render(<ResumePreview resume={resumeWithSummary} />);
+
+    expect(screen.getAllByText('Professional Summary').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Experienced developer with a passion for clean code.').length
+    ).toBeGreaterThan(0);
+  });
+
+  test('does not render Professional Summary section when personal_summary is absent', () => {
+    render(<ResumePreview resume={mockResume} />);
+
+    // mockResume has no personal_summary — heading should not appear
+    expect(screen.queryByText('Professional Summary')).toBeNull();
+  });
+
+  test('does not render Professional Summary section when personal_summary is null', () => {
+    const resumeNullSummary: Resume = {
+      ...mockResume,
+      personal_summary: null
+    };
+
+    render(<ResumePreview resume={resumeNullSummary} />);
+
+    expect(screen.queryByText('Professional Summary')).toBeNull();
+  });
+
+  test('in edit mode shows summary textarea when personal_summary is present', () => {
+    const resumeWithSummary: Resume = {
+      ...mockResume,
+      personal_summary: 'My editable summary.'
+    };
+    const onSectionChange = jest.fn();
+
+    const { container } = render(
+      <ResumePreview
+        resume={resumeWithSummary}
+        isEditing={true}
+        onSectionChange={onSectionChange}
+      />
+    );
+
+    const textareas = container.querySelectorAll('textarea');
+    // At least one textarea should exist (the summary textarea in the header)
+    expect(textareas.length).toBeGreaterThan(0);
+  });
+
+  test('in edit mode typing in summary textarea fires onSectionChange with personal_summary', () => {
+    const resumeWithSummary: Resume = {
+      ...mockResume,
+      personal_summary: 'Original summary.'
+    };
+    const onSectionChange = jest.fn();
+
+    const { container } = render(
+      <ResumePreview
+        resume={resumeWithSummary}
+        isEditing={true}
+        onSectionChange={onSectionChange}
+      />
+    );
+
+    // Find the summary textarea (it's in the non-aria-hidden header area)
+    const allTextareas = Array.from(container.querySelectorAll('textarea'));
+    // The summary textarea sits outside aria-hidden measure container
+    const visibleTextarea = allTextareas.find(
+      (ta) => !ta.closest('[aria-hidden="true"]')
+    ) as HTMLTextAreaElement | undefined;
+
+    expect(visibleTextarea).toBeDefined();
+    fireEvent.change(visibleTextarea!, { target: { value: 'Updated summary.' } });
+    expect(onSectionChange).toHaveBeenCalledWith('personal_summary', 'Updated summary.');
+  });
 });

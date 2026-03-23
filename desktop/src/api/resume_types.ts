@@ -63,4 +63,6 @@ export interface Resume {
   skills: Skills;
 
   projects: Project[];
+
+  personal_summary?: string | null;
 }

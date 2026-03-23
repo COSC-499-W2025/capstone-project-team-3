@@ -657,18 +657,5 @@
   font-family: var(--font-sans);
 }
 
-/* ── Dark mode overrides (appended — existing code above untouched) ── */
-[data-theme="dark"] .input-field {
-  background: var(--color-card-bg);
-  color: var(--color-text-dark);
-  border-color: var(--color-border);
-}
+/* ── Dark mode overrides are in src/styles/dark-theme.css ── */
 
-[data-theme="dark"] .field-hint {
-  color: var(--color-text-dark);
-}
-
-[data-theme="dark"] .education-card {
-  background: var(--color-card-bg);
-  border-color: var(--color-border);
-}

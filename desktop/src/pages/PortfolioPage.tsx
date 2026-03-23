@@ -4,6 +4,21 @@ import { API_BASE_URL } from "../config/api";
 import "../styles/PortfolioPage.css";
 import Chart from "chart.js/auto";
 
+/** Returns true whenever <html data-theme="dark"> is set, and re-renders on change. */
+function useIsDarkMode(): boolean {
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.getAttribute("data-theme") === "dark",
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
+
 interface Project {
   id: string | number;
   name?: string;
@@ -425,6 +440,7 @@ function PieChart({
   const chartRef = useRef<Chart | null>(null);
   const labels = Object.keys(data || {});
   const values = Object.values(data || {}).map((v) => Number(v) || 0);
+  const isDark = useIsDarkMode();
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -432,6 +448,8 @@ function PieChart({
 
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const textColor = isDark ? "#ffffff" : "#4a5568";
 
     chartRef.current = new Chart(ctx, {
       type: "pie",
@@ -454,7 +472,7 @@ function PieChart({
               "#38b2ac",
               "#68d391",
             ],
-            borderColor: "#ffffff",
+            borderColor: isDark ? "#1a2535" : "#ffffff",
             borderWidth: 2,
           },
         ],
@@ -466,7 +484,7 @@ function PieChart({
           legend: {
             position: "bottom",
             labels: {
-              color: "#4a5568",
+              color: textColor,
               font: { size: 12 },
               padding: 15,
               usePointStyle: true,
@@ -482,7 +500,7 @@ function PieChart({
         chartRef.current = null;
       }
     };
-  }, [labels, values]);
+  }, [labels, values, isDark]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -499,12 +517,16 @@ function BarChart({
   const chartRef = useRef<Chart | null>(null);
   const labels = Object.keys(data || {});
   const values = Object.values(data || {}).map((v) => Number(v) || 0);
+  const isDark = useIsDarkMode();
 
   useEffect(() => {
     if (!canvasRef.current) return;
     if (chartRef.current) chartRef.current.destroy();
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const textColor = isDark ? "#ffffff" : "#4a5568";
+    const gridColor = isDark ? "#2d3f52" : "#e2e8f0";
 
     chartRef.current = new Chart(ctx, {
       type: "bar",
@@ -513,8 +535,8 @@ function BarChart({
         datasets: [
           {
             data: values,
-            backgroundColor: "#2d3748",
-            borderColor: "#4a5568",
+            backgroundColor: isDark ? "#5fa3bc" : "#2d3748",
+            borderColor: isDark ? "#3a7a96" : "#4a5568",
             borderWidth: 1,
             borderRadius: 4,
           },
@@ -527,12 +549,12 @@ function BarChart({
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } },
           },
           x: {
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } },
           },
         },
       },
@@ -544,7 +566,7 @@ function BarChart({
         chartRef.current = null;
       }
     };
-  }, [labels, values]);
+  }, [labels, values, isDark]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -562,12 +584,16 @@ function HorizontalBarChart({
   const ordered = Object.entries(data || {}).slice(0, 8);
   const labels = ordered.map(([k]) => k);
   const values = ordered.map(([, v]) => Number(v) || 0);
+  const isDark = useIsDarkMode();
 
   useEffect(() => {
     if (!canvasRef.current) return;
     if (chartRef.current) chartRef.current.destroy();
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const textColor = isDark ? "#ffffff" : "#4a5568";
+    const gridColor = isDark ? "#2d3f52" : "#e2e8f0";
 
     chartRef.current = new Chart(ctx, {
       type: "bar",
@@ -576,8 +602,8 @@ function HorizontalBarChart({
         datasets: [
           {
             data: values,
-            backgroundColor: "#4a5568",
-            borderColor: "#2d3748",
+            backgroundColor: isDark ? "#5fa3bc" : "#4a5568",
+            borderColor: isDark ? "#3a7a96" : "#2d3748",
             borderWidth: 1,
             borderRadius: 4,
           },
@@ -591,12 +617,12 @@ function HorizontalBarChart({
         scales: {
           x: {
             beginAtZero: true,
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } },
           },
           y: {
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } },
           },
         },
       },
@@ -608,7 +634,7 @@ function HorizontalBarChart({
         chartRef.current = null;
       }
     };
-  }, [labels, values]);
+  }, [labels, values, isDark]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;
@@ -628,12 +654,17 @@ function LineChart({
   );
   const labels = sortedData.map(([month]) => month);
   const values = sortedData.map(([, value]) => Number(value) || 0);
+  const isDark = useIsDarkMode();
 
   useEffect(() => {
     if (!canvasRef.current) return;
     if (chartRef.current) chartRef.current.destroy();
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    const textColor = isDark ? "#ffffff" : "#4a5568";
+    const gridColor = isDark ? "#2d3f52" : "#e2e8f0";
+    const lineColor = isDark ? "#5fa3bc" : "#2d3748";
 
     chartRef.current = new Chart(ctx, {
       type: "line",
@@ -643,13 +674,13 @@ function LineChart({
           {
             label: "Activity",
             data: values,
-            borderColor: "#2d3748",
-            backgroundColor: "rgba(45, 55, 72, 0.1)",
+            borderColor: lineColor,
+            backgroundColor: isDark ? "rgba(95, 163, 188, 0.15)" : "rgba(45, 55, 72, 0.1)",
             fill: true,
             tension: 0.4,
             borderWidth: 3,
-            pointBackgroundColor: "#2d3748",
-            pointBorderColor: "#ffffff",
+            pointBackgroundColor: lineColor,
+            pointBorderColor: isDark ? "#1a2535" : "#ffffff",
             pointBorderWidth: 2,
             pointRadius: 5,
           },
@@ -662,18 +693,18 @@ function LineChart({
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 }, stepSize: 0.5 },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 }, stepSize: 0.5 },
             title: {
               display: true,
               text: "Activity Level",
-              color: "#4a5568",
+              color: textColor,
               font: { size: 12, weight: "bold" },
             },
           },
           x: {
-            grid: { color: "#e2e8f0" },
-            ticks: { color: "#4a5568", font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } },
           },
         },
       },
@@ -685,7 +716,7 @@ function LineChart({
         chartRef.current = null;
       }
     };
-  }, [labels, values]);
+  }, [labels, values, isDark]);
 
   if (!labels.length) return <div className="loading">No data available</div>;
   return <canvas ref={canvasRef} id={canvasId} />;

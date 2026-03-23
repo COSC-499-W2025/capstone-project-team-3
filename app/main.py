@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.post_thumbnail import router as thumbnail_router
 from app.api.routes.chronological import router as chronological_router
 from app.api.routes.ats import router as ats_router
+from app.api.routes.cover_letter import router as cover_letter_router
 from app.api.routes.gemini_settings import router as gemini_settings_router
 
 from app.manager.llm_consent_manager import LLMConsentManager
@@ -86,6 +87,7 @@ app.include_router(health_router)
 app.include_router(thumbnail_router, prefix="/api")
 app.include_router(chronological_router, prefix="/api")
 app.include_router(ats_router, prefix="/api")
+app.include_router(cover_letter_router, prefix="/api")
 app.include_router(gemini_settings_router, prefix="/api")
 
 

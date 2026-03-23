@@ -32,6 +32,18 @@ def escape_latex(text: str) -> str:
     return re.sub(r'[&%$#_{}~^\\]', lambda m: mapping[m.group(0)], text)
 
 
+def render_summary(summary: str) -> str:
+    """Return a LaTeX Professional Summary section block, or empty string if no summary."""
+    if not summary or not summary.strip():
+        return ""
+    return (
+        r"\header{Professional Summary}" + "\n"
+        r"\vspace{2mm}" + "\n"
+        f"{escape_latex(summary.strip())}\n"
+        r"\vspace{2mm}" + "\n"
+    )
+
+
 def render_skills(skills: Dict[str, List[str]]) -> str:
     """Return LaTeX longtable rows for skills."""
     rows = []
@@ -319,6 +331,7 @@ def generate_resume_tex(resume: Dict[str, Any]) -> str:
     tex = tex.replace("{education_section}", education_block)
 
     tex = tex.replace("{skills_table}", render_skills(resume["skills"]))
+    tex = tex.replace("{summary_section}", render_summary(resume.get("personal_summary") or ""))
     tex = tex.replace("{work_experience_section}", render_work_experience(resume.get("work_experience", [])))
     tex = tex.replace("{projects}", render_projects(resume["projects"]))
     tex = tex.replace("{awards_section}", render_awards(resume.get("awards", [])))

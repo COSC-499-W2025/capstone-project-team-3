@@ -139,7 +139,7 @@ export async function saveNewResume(
 // Update existing saved resume with partial edits
 export async function updateResume(
   id: number, 
-  payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] }
+  payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[]; personal_summary?: string | null }
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
     method: "POST",

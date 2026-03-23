@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Resume, Skills, Project, Award, WorkExperience } from "../api/resume_types";
+import { Resume, Skills, Award, WorkExperience } from "../api/resume_types";
+import type { OnSectionChange } from "./ResumeManager/ResumePreview";
 import { ResumeSidebar } from "./ResumeManager/ResumeSidebar";
 import { ResumePreview } from "./ResumeManager/ResumePreview";
 import "../styles/ResumeManager.css";
@@ -191,9 +192,9 @@ export function ResumeBuilderPage() {
   const allowAddWorkExperienceSection =
     !isMasterResume && isEditing && !hasWorkExperience && !editedSections.has("work_experience");
 
-  const handleSectionChange = (
-    section: "skills" | "projects" | "awards" | "work_experience",
-    data: Skills | Project[] | Award[] | WorkExperience[],
+  const handleSectionChange: OnSectionChange = (
+    section,
+    data,
   ) => {
     setActiveContent(prev => (prev ? { ...prev, [section]: data } : prev));
     setEditedSections(prev => new Set(prev).add(section));
@@ -354,7 +355,7 @@ export function ResumeBuilderPage() {
       setSaving(true);
       
       // Build payload with only edited sections
-      const payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[] } = {};
+      const payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[]; personal_summary?: string | null } = {};
       
       if (editedSections.has('skills')) {
         payload.skills = activeContent.skills;
@@ -389,6 +390,10 @@ export function ResumeBuilderPage() {
 
       if (editedSections.has("work_experience")) {
         payload.work_experience = activeContent.work_experience ?? [];
+      }
+
+      if (editedSections.has("personal_summary")) {
+        payload.personal_summary = activeContent.personal_summary ?? null;
       }
       
       await updateResume(currentResume.id, payload);

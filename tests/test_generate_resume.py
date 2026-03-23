@@ -24,6 +24,7 @@ from app.utils.generate_resume import (
     snapshot_project_into_resume_rows,
     duplicate_resume,
     rename_resume,
+    save_personal_summary,
     ResumeServiceError,
     ResumeNotFoundError,
     ResumePersistenceError,
@@ -586,7 +587,7 @@ def test_create_resume_with_name(db_connection):
 
 
 def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
-    """duplicate_resume inserts a new RESUME and copies RESUME_PROJECT + RESUME_SKILLS from source."""
+    """duplicate_resume from master (1) snapshots all PROJECT rows; copies RESUME_SKILLS from source."""
     new_id = duplicate_resume(1)
     assert new_id != 1
 
@@ -596,6 +597,48 @@ def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
     assert row is not None
     # Seeded resume 1 has NULL name → base "Resume-1"
     assert row[0] == "Resume-1 copy"
+
+    # Master duplicate uses PROJECT (last_modified DESC), not a bitwise copy of RESUME_PROJECT for id=1
+    cursor.execute(
+        """
+        SELECT project_id, display_order
+        FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order
+        """,
+        (new_id,),
+    )
+    copy_projects = cursor.fetchall()
+    cursor.execute(
+        """
+        SELECT project_signature FROM PROJECT ORDER BY last_modified DESC
+        """
+    )
+    expected_order = [r[0] for r in cursor.fetchall()]
+    assert [r[0] for r in copy_projects] == expected_order
+    assert len(copy_projects) == len(expected_order)
+
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
+    sk_new = cursor.fetchone()
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
+    sk_src = cursor.fetchone()
+    assert sk_new is not None and sk_src is not None
+    assert sk_new[0] == sk_src[0]
+
+
+def test_duplicate_resume_non_master_bitwise_copies_resume_project(db_connection):
+    """Duplicating a non-master resume still copies RESUME_PROJECT rows verbatim."""
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Tailored')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT
+        VALUES (2, 'p2', 'Beta Project', '2023-01-01', '2023-12-01', ?, ?, 1)
+        """,
+        (json.dumps(["Python"]), json.dumps(["Line"])),
+    )
+    db_connection.commit()
+
+    new_id = duplicate_resume(2)
+    assert new_id not in (1, 2)
 
     cursor.execute(
         """
@@ -608,18 +651,10 @@ def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
     cursor.execute(
         """
         SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
-        FROM RESUME_PROJECT WHERE resume_id = 1 ORDER BY display_order
+        FROM RESUME_PROJECT WHERE resume_id = 2 ORDER BY display_order
         """
     )
-    source_rows = cursor.fetchall()
-    assert copy_rows == source_rows
-
-    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
-    sk_new = cursor.fetchone()
-    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
-    sk_src = cursor.fetchone()
-    assert sk_new is not None and sk_src is not None
-    assert sk_new[0] == sk_src[0]
+    assert copy_rows == cursor.fetchall()
 
 
 def test_duplicate_resume_not_found(db_connection):
@@ -847,3 +882,91 @@ def test_list_resumes_database_error(db_connection, monkeypatch):
         list_resumes()
 
     assert "Failed listing resumes" in str(exc_info.value)
+
+
+# ---------------------------------------------------------------------------
+# personal_summary tests
+# ---------------------------------------------------------------------------
+
+def test_build_resume_model_includes_personal_summary(db_connection, monkeypatch):
+    """build_resume_model should include personal_summary from USER_PREFERENCES."""
+    conn = db_connection
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE USER_PREFERENCES SET personal_summary = ? WHERE user_id = 1",
+        ("Experienced developer with a passion for clean code.",),
+    )
+    conn.commit()
+
+    model = build_resume_model(project_ids=["p1"])
+
+    assert model["personal_summary"] == "Experienced developer with a passion for clean code."
+
+
+def test_build_resume_model_personal_summary_none_when_unset(db_connection):
+    """build_resume_model should return personal_summary as None when not set in DB."""
+    model = build_resume_model(project_ids=["p1"])
+    # Seed data does not set personal_summary, so it should be None
+    assert model["personal_summary"] is None
+
+
+def test_load_saved_resume_includes_personal_summary(db_connection, monkeypatch):
+    """load_saved_resume should include personal_summary from USER_PREFERENCES."""
+    conn = db_connection
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE USER_PREFERENCES SET personal_summary = ? WHERE user_id = 1",
+        ("Collaborative and results-driven engineer.",),
+    )
+    conn.commit()
+
+    resume = load_saved_resume(1)
+
+    assert resume["personal_summary"] == "Collaborative and results-driven engineer."
+
+
+def test_load_saved_resume_personal_summary_none_when_unset(db_connection):
+    """load_saved_resume should return personal_summary as None when not stored."""
+    resume = load_saved_resume(1)
+    assert resume["personal_summary"] is None
+
+
+def test_save_personal_summary_inserts_and_retrieves(db_connection):
+    """save_personal_summary should persist the summary to USER_PREFERENCES."""
+    save_personal_summary("A driven software engineer.")
+
+    conn = db_connection
+    cursor = conn.cursor()
+    cursor.execute("SELECT personal_summary FROM USER_PREFERENCES WHERE user_id = 1")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "A driven software engineer."
+
+
+def test_save_personal_summary_updates_existing(db_connection):
+    """save_personal_summary should overwrite a previously stored summary."""
+    save_personal_summary("First summary.")
+    save_personal_summary("Updated summary.")
+
+    conn = db_connection
+    cursor = conn.cursor()
+    cursor.execute("SELECT personal_summary FROM USER_PREFERENCES WHERE user_id = 1")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "Updated summary."
+
+
+def test_save_personal_summary_db_error_raises(monkeypatch):
+    """save_personal_summary should raise ResumePersistenceError on DB failure."""
+    import sqlite3 as _sqlite3
+    from unittest.mock import MagicMock
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.execute.side_effect = _sqlite3.OperationalError("no such table")
+
+    monkeypatch.setattr(mod, "get_connection", lambda: mock_conn)
+
+    with pytest.raises(ResumePersistenceError, match="Failed to save personal summary"):
+        save_personal_summary("This will fail.")

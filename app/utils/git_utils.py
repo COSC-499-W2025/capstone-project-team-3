@@ -1,6 +1,6 @@
 from git import NULL_TREE, InvalidGitRepositoryError, NoSuchPathError, Repo, GitCommandError
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from datetime import datetime
 import os, json, re, requests
 from urllib.parse import quote
@@ -267,6 +267,65 @@ def is_collaborative(path: Union[str, Path], author_aliases: Optional[List[str]]
     except Exception:
         return False
     
+
+def extract_all_contributors(
+    path: Union[str, Path],
+    author_aliases: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Extract all unique contributors from a Git repository.
+
+    Returns a list of contributor dicts:
+        [{"name": str, "email": str, "commits": int, "is_primary": bool}, ...]
+
+    The primary user's aliases are collapsed under ``is_primary=True``.
+    Other contributors are de-duplicated using the same canonical-key logic
+    used by ``is_collaborative()``.
+    """
+    try:
+        repo = get_repo(path)
+    except (ValueError, GitCommandError, PermissionError, Exception):
+        return []
+
+    aliases = _normalize_author_identifiers(author_aliases) if author_aliases else []
+
+    # key -> {name, email, commits, is_primary}
+    contributors: Dict[str, Dict[str, Any]] = {}
+
+    for commit in repo.iter_commits(rev="--all"):
+        a = commit.author
+        if not a:
+            continue
+
+        author_name = getattr(a, "name", "") or ""
+        author_email = getattr(a, "email", "") or ""
+
+        if aliases and author_matches(commit, aliases):
+            key = "__primary__"
+            if key not in contributors:
+                contributors[key] = {
+                    "name": author_name,
+                    "email": author_email,
+                    "commits": 0,
+                    "is_primary": True,
+                }
+            contributors[key]["commits"] += 1
+            continue
+
+        key = _canonical_author_key(author_name, author_email)
+        if not key:
+            continue
+
+        if key not in contributors:
+            contributors[key] = {
+                "name": author_name,
+                "email": author_email,
+                "commits": 0,
+                "is_primary": False,
+            }
+        contributors[key]["commits"] += 1
+
+    return list(contributors.values())
 
 def extract_code_commit_content_by_author(
     path: Union[str, Path],

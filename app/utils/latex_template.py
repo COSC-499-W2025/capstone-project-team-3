@@ -88,6 +88,8 @@ class ResumeTemplate:
     {education_section}
     \vspace{2mm}
 
+    {summary_section}
+
     \header{Skills}
     \vspace{2mm}
     \begin{longtable}{p{4cm}p{12cm}}

@@ -6,6 +6,7 @@ from app.utils.generate_resume_tex import (
     render_links,
     render_awards,
     render_work_experience,
+    render_summary,
     generate_resume_tex,
 )
 from app.utils.latex_template import ResumeTemplate
@@ -317,3 +318,94 @@ def test_generate_resume_tex_renders_work_experience_section():
     assert r"\textbf{Tech Challenge Inc. | Software Engineer}" in tex
     assert "Tech Challenge Inc." in tex
     assert r"\item Built backend services" in tex
+
+
+# ---------------------------------------------------------------------------
+# render_summary tests
+# ---------------------------------------------------------------------------
+
+def test_render_summary_empty_string_returns_empty():
+    """render_summary should return '' when given an empty string."""
+    assert render_summary("") == ""
+
+
+def test_render_summary_whitespace_only_returns_empty():
+    """render_summary should return '' when given only whitespace."""
+    assert render_summary("   ") == ""
+
+
+def test_render_summary_none_returns_empty():
+    """render_summary should return '' when given None (treated as falsy)."""
+    assert render_summary(None) == ""  # type: ignore[arg-type]
+
+
+def test_render_summary_produces_header():
+    """render_summary should include the Professional Summary header."""
+    rendered = render_summary("Experienced developer.")
+    assert r"\header{Professional Summary}" in rendered
+
+
+def test_render_summary_includes_escaped_text():
+    """render_summary should include the LaTeX-escaped summary text."""
+    rendered = render_summary("Experienced developer & team lead.")
+    assert r"\&" in rendered  # & should be escaped
+    assert "Experienced developer" in rendered
+
+
+def test_render_summary_strips_leading_trailing_whitespace():
+    """render_summary should strip surrounding whitespace from the summary."""
+    rendered = render_summary("  Some summary.  ")
+    assert "Some summary." in rendered
+    # No leading/trailing spaces in the embedded text
+    assert "  Some summary.  " not in rendered
+
+
+def test_generate_resume_tex_includes_summary_when_present():
+    """generate_resume_tex should render the Professional Summary section when personal_summary is set."""
+    resume = {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "links": [],
+        "education": [],
+        "skills": {"Languages": ["Python"]},
+        "projects": [],
+        "personal_summary": "Passionate engineer with 5 years of experience.",
+    }
+
+    tex = generate_resume_tex(resume)
+
+    assert r"\header{Professional Summary}" in tex
+    assert "Passionate engineer with 5 years of experience." in tex
+
+
+def test_generate_resume_tex_omits_summary_when_absent():
+    """generate_resume_tex should not include a Professional Summary section when personal_summary is missing."""
+    resume = {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "links": [],
+        "education": [],
+        "skills": {"Languages": ["Python"]},
+        "projects": [],
+    }
+
+    tex = generate_resume_tex(resume)
+
+    assert r"\header{Professional Summary}" not in tex
+
+
+def test_generate_resume_tex_omits_summary_when_none():
+    """generate_resume_tex should not include a Professional Summary section when personal_summary is None."""
+    resume = {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "links": [],
+        "education": [],
+        "skills": {"Languages": ["Python"]},
+        "projects": [],
+        "personal_summary": None,
+    }
+
+    tex = generate_resume_tex(resume)
+
+    assert r"\header{Professional Summary}" not in tex

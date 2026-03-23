@@ -10,6 +10,14 @@ TECH_KEYWORDS: set = {
     "clojure", "groovy", "matlab", "r", "dart", "lua", "bash", "shell",
     "powershell", "c", "c++", "c#", "objective-c", "assembly",
 
+    # Web fundamentals
+    "html", "css", "scss", "sass", "less", "jsx", "tsx", "xml", "json", "yaml",
+
+    # JavaScript / Node ecosystem
+    "node", "nodejs", "npm", "yarn", "pnpm", "deno", "bun",
+    "webpack", "vite", "esbuild", "parcel", "rollup", "turbopack",
+    "babel", "eslint", "prettier",
+
     # Web frameworks & libraries
     "react", "angular", "vue", "svelte", "nextjs", "nuxtjs", "gatsby",
     "express", "fastapi", "django", "flask", "rails", "spring", "springboot",

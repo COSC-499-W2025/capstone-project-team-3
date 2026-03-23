@@ -484,12 +484,16 @@ def run_scan_flow(
     if not files:
         if raw_files:
             print("All files excluded by user file-type filters. Skipping analysis.")
+            # Same signature as a full scan (pre user exclusions) so the API can clear
+            # SKILL_ANALYSIS / DASHBOARD_DATA for the correct PROJECT row.
+            pre_exclusion_sigs = [extract_file_signature(f, root) for f in raw_files]
+            excluded_sig = get_project_signature(pre_exclusion_sigs)
             return {
                 "files": [],
                 "skip_analysis": True,
                 "score": 0.0,
                 "reason": "all_files_excluded",
-                "signature": None,
+                "signature": excluded_sig,
             }
         print("No files found to scan in the specified directory. Skipping analysis.")
         return {
@@ -510,11 +514,30 @@ def run_scan_flow(
     
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
+
+    raw_file_signatures = [extract_file_signature(f, root) for f in raw_files]
+    full_project_signature = get_project_signature(raw_file_signatures)
     
     # Count files for dynamic threshold calculation
     file_count = len(files)
 
     has_user_type_exclusions = bool(exclude_extensions) or bool(exclude_name_prefixes)
+
+    # If the user set file-type exclusions, always re-run when this upload's full content
+    # is already in the DB — even when the filtered file hash matches (100%) or only the
+    # full hash matches. Use the canonical (full-content) signature for merge/storage.
+    if has_user_type_exclusions and project_signature_exists(full_project_signature):
+        print(
+            "Project (full content) exists in DB, but per-project file-type exclusions are set — "
+            "re-running analysis on the filtered file set."
+        )
+        return {
+            "files": files,
+            "skip_analysis": False,
+            "score": 100.0,
+            "reason": "reanalyze_with_exclusions",
+            "signature": full_project_signature,
+        }
 
     # Check if exact project already exists (skip re-analysis unless user applied type exclusions)
     if project_signature_exists(project_signature):

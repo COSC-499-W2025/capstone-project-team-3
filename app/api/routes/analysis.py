@@ -39,9 +39,20 @@ from app.utils.scan_utils import (
 )
 from app.utils.git_utils import detect_git, extract_all_contributors
 from app.utils.clean_up import cleanup_upload
+from app.utils.analysis_clear_utils import clear_project_analysis_when_skipped_no_files
 from app.data.db import get_connection
 
 router = APIRouter()
+
+# Reuse one extraction per upload_id until cleanup removes it. Each extract uses a new
+# temp dir (mkdtemp); without this cache, GET /projects + POST /scan-project see path A
+# while POST /analysis/run re-extracts to path B — client exclusion maps keyed by A never match B,
+# so has_user_type_exclusions is false and exact DB matches skip re-analysis incorrectly.
+_upload_extract_cache: Dict[str, Dict[str, Any]] = {}
+
+
+def _invalidate_upload_extract_cache(upload_id: str) -> None:
+    _upload_extract_cache.pop(upload_id, None)
 
 
 def _persist_git_history(
@@ -154,9 +165,23 @@ def _load_projects_from_upload(upload_id: str) -> Dict[str, Any]:
     zip_path = os.path.join(upload_dir, f"{upload_id}.zip")
 
     if not os.path.exists(zip_path):
+        _invalidate_upload_extract_cache(upload_id)
         raise HTTPException(
             status_code=404, detail="Upload not found for provided upload_id"
         )
+
+    cached = _upload_extract_cache.get(upload_id)
+    if cached:
+        extracted_dir = cached.get("extracted_dir")
+        project_paths = cached.get("project_paths") or []
+        if extracted_dir and os.path.isdir(extracted_dir) and project_paths:
+            return {
+                "upload_id": upload_id,
+                "zip_path": zip_path,
+                "project_paths": list(project_paths),
+                "extracted_dir": extracted_dir,
+            }
+        _invalidate_upload_extract_cache(upload_id)
 
     extract_result = extract_and_list_projects(zip_path)
     if extract_result.get("status") != "ok":
@@ -169,11 +194,17 @@ def _load_projects_from_upload(upload_id: str) -> Dict[str, Any]:
     if not project_paths:
         raise HTTPException(status_code=400, detail="No projects found in uploaded zip")
 
+    extracted_dir = extract_result.get("extracted_dir")
+    _upload_extract_cache[upload_id] = {
+        "project_paths": list(project_paths),
+        "extracted_dir": extracted_dir,
+    }
+
     return {
         "upload_id": upload_id,
         "zip_path": zip_path,
-        "project_paths": project_paths,
-        "extracted_dir": extract_result.get("extracted_dir"),
+        "project_paths": list(project_paths),
+        "extracted_dir": extracted_dir,
     }
 
 
@@ -274,6 +305,13 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
 
         project_signature = scan_result.get("signature")
         if scan_result.get("skip_analysis"):
+            skip_reason = scan_result.get("reason", "skipped")
+            if skip_reason in ("all_files_excluded", "no_files"):
+                clear_project_analysis_when_skipped_no_files(
+                    project_path,
+                    project_name,
+                    project_signature,
+                )
             results.append(
                 ProjectAnalysisResult(
                     project_name=project_name,
@@ -282,7 +320,7 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                     requested_analysis_type=requested_analysis_type,
                     effective_analysis_type="local",
                     status="skipped",
-                    reason=scan_result.get("reason", "skipped"),
+                    reason=skip_reason,
                 )
             )
             continue
@@ -305,6 +343,11 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
         top_level_dirs = get_project_top_level_dirs(project_path)
 
         if not files:
+            clear_project_analysis_when_skipped_no_files(
+                project_path,
+                project_name,
+                project_signature,
+            )
             results.append(
                 ProjectAnalysisResult(
                     project_name=project_name,
@@ -482,6 +525,10 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
             delete_extracted=payload.cleanup_extracted,
         )
 
+    if cleanup_result and cleanup_result.get("status") == "ok":
+        if cleanup_result.get("extracted_deleted") or cleanup_result.get("zip_deleted"):
+            _invalidate_upload_extract_cache(payload.upload_id)
+
     analyzed = sum(1 for item in results if item.status == "analyzed")
     skipped = sum(1 for item in results if item.status == "skipped")
     failed = sum(1 for item in results if item.status == "failed")
@@ -573,6 +620,8 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
 
         file_signatures = [extract_file_signature(f, project_path) for f in files]
         project_signature = get_project_signature(file_signatures)
+        raw_file_signatures = [extract_file_signature(f, project_path) for f in raw_files]
+        full_project_signature = get_project_signature(raw_file_signatures)
         file_count = eligible_file_count
 
         has_user_type_exclusions = bool(payload.exclude_extensions) or bool(
@@ -581,6 +630,19 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
 
         # Exact DB match — do not auto-skip scan UX when user set file-type exclusions
         from app.utils.scan_utils import project_signature_exists
+
+        if has_user_type_exclusions and project_signature_exists(full_project_signature):
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": file_count,
+                "total_scanned_files": total_scanned_files,
+                "eligible_file_count": eligible_file_count,
+                "exact_match": False,
+                "similarity": None,
+                "reason": "reanalyze_with_exclusions",
+            }
 
         if project_signature_exists(project_signature):
             if has_user_type_exclusions:

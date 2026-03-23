@@ -634,43 +634,60 @@ def duplicate_resume(source_id: int) -> int:
         cursor.execute("INSERT INTO RESUME (name) VALUES (?)", (new_name,))
         new_id = cursor.lastrowid
 
-        cursor.execute(
-            """
-            SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
-            FROM RESUME_PROJECT
-            WHERE resume_id = ?
-            ORDER BY display_order
-            """,
-            (source_id,),
-        )
-        for (
-            project_id,
-            project_name,
-            start_date,
-            end_date,
-            skills,
-            bullets,
-            display_order,
-        ) in cursor.fetchall():
+        if source_id == 1:
             cursor.execute(
                 """
-                INSERT INTO RESUME_PROJECT (
-                    resume_id, project_id, project_name, start_date, end_date,
-                    skills, bullets, display_order
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    new_id,
-                    project_id,
-                    project_name,
-                    start_date,
-                    end_date,
-                    skills,
-                    bullets,
-                    display_order,
-                ),
+                SELECT project_signature
+                FROM PROJECT
+                ORDER BY last_modified DESC
+                """
             )
+            for display_order, (pid,) in enumerate(cursor.fetchall(), start=1):
+                cursor.execute(
+                    """
+                    INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order)
+                    VALUES (?, ?, ?)
+                    """,
+                    (new_id, pid, display_order),
+                )
+        else:
+            cursor.execute(
+                """
+                SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+                FROM RESUME_PROJECT
+                WHERE resume_id = ?
+                ORDER BY display_order
+                """,
+                (source_id,),
+            )
+            for (
+                project_id,
+                project_name,
+                start_date,
+                end_date,
+                skills,
+                bullets,
+                display_order,
+            ) in cursor.fetchall():
+                cursor.execute(
+                    """
+                    INSERT INTO RESUME_PROJECT (
+                        resume_id, project_id, project_name, start_date, end_date,
+                        skills, bullets, display_order
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        new_id,
+                        project_id,
+                        project_name,
+                        start_date,
+                        end_date,
+                        skills,
+                        bullets,
+                        display_order,
+                    ),
+                )
 
         cursor.execute(
             "SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1",

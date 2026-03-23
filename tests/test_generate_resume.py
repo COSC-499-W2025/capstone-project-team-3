@@ -587,7 +587,7 @@ def test_create_resume_with_name(db_connection):
 
 
 def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
-    """duplicate_resume inserts a new RESUME and copies RESUME_PROJECT + RESUME_SKILLS from source."""
+    """duplicate_resume from master (1) snapshots all PROJECT rows; copies RESUME_SKILLS from source."""
     new_id = duplicate_resume(1)
     assert new_id != 1
 
@@ -597,6 +597,48 @@ def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
     assert row is not None
     # Seeded resume 1 has NULL name → base "Resume-1"
     assert row[0] == "Resume-1 copy"
+
+    # Master duplicate uses PROJECT (last_modified DESC), not a bitwise copy of RESUME_PROJECT for id=1
+    cursor.execute(
+        """
+        SELECT project_id, display_order
+        FROM RESUME_PROJECT WHERE resume_id = ? ORDER BY display_order
+        """,
+        (new_id,),
+    )
+    copy_projects = cursor.fetchall()
+    cursor.execute(
+        """
+        SELECT project_signature FROM PROJECT ORDER BY last_modified DESC
+        """
+    )
+    expected_order = [r[0] for r in cursor.fetchall()]
+    assert [r[0] for r in copy_projects] == expected_order
+    assert len(copy_projects) == len(expected_order)
+
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
+    sk_new = cursor.fetchone()
+    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
+    sk_src = cursor.fetchone()
+    assert sk_new is not None and sk_src is not None
+    assert sk_new[0] == sk_src[0]
+
+
+def test_duplicate_resume_non_master_bitwise_copies_resume_project(db_connection):
+    """Duplicating a non-master resume still copies RESUME_PROJECT rows verbatim."""
+    cursor = db_connection.cursor()
+    cursor.execute("INSERT INTO RESUME (id, name) VALUES (2, 'Tailored')")
+    cursor.execute(
+        """
+        INSERT INTO RESUME_PROJECT
+        VALUES (2, 'p2', 'Beta Project', '2023-01-01', '2023-12-01', ?, ?, 1)
+        """,
+        (json.dumps(["Python"]), json.dumps(["Line"])),
+    )
+    db_connection.commit()
+
+    new_id = duplicate_resume(2)
+    assert new_id not in (1, 2)
 
     cursor.execute(
         """
@@ -609,18 +651,10 @@ def test_duplicate_resume_copies_resume_project_and_skills(db_connection):
     cursor.execute(
         """
         SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
-        FROM RESUME_PROJECT WHERE resume_id = 1 ORDER BY display_order
+        FROM RESUME_PROJECT WHERE resume_id = 2 ORDER BY display_order
         """
     )
-    source_rows = cursor.fetchall()
-    assert copy_rows == source_rows
-
-    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (new_id,))
-    sk_new = cursor.fetchone()
-    cursor.execute("SELECT skills FROM RESUME_SKILLS WHERE resume_id = ?", (1,))
-    sk_src = cursor.fetchone()
-    assert sk_new is not None and sk_src is not None
-    assert sk_new[0] == sk_src[0]
+    assert copy_rows == cursor.fetchall()
 
 
 def test_duplicate_resume_not_found(db_connection):

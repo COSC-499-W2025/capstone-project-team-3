@@ -359,6 +359,8 @@ export function UploadPage() {
         projectPath,
         projectExcludeGroupsRef.current,
       );
+      const scanUsedExclusions =
+        exclude_extensions.length > 0 || exclude_name_prefixes.length > 0;
       try {
         const res = await fetch(
           `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/scan-project`,
@@ -378,6 +380,33 @@ export function UploadPage() {
           prev.map((p) => {
             if (p.path !== projectPath) return p;
 
+            // Debounced rescan sends user exclusions; API similarity is for filtered files only.
+            // Keep the wheel / matched name frozen — only refresh eligibility counts.
+            if (scanUsedExclusions) {
+              if (data.reason === "all_files_excluded") {
+                return {
+                  ...p,
+                  fileCount: 0,
+                  totalScannedFiles: total,
+                  status: "ready",
+                  userDecision: "create_new",
+                };
+              }
+              if (data.reason === "reanalyze_with_exclusions") {
+                return {
+                  ...p,
+                  fileCount: eligible,
+                  totalScannedFiles: total,
+                  // Do not set status: "ready" — that clears similarity_detected and the yellow row.
+                };
+              }
+              return {
+                ...p,
+                fileCount: eligible,
+                totalScannedFiles: total,
+              };
+            }
+
             if (data.reason === "all_files_excluded") {
               return {
                 ...p,
@@ -392,11 +421,9 @@ export function UploadPage() {
             if (data.reason === "reanalyze_with_exclusions") {
               return {
                 ...p,
-                similarity: null,
                 fileCount: eligible,
                 totalScannedFiles: total,
                 status: "ready",
-                userDecision: "create_new",
               };
             }
 
@@ -531,11 +558,9 @@ export function UploadPage() {
               idx === i
                 ? {
                     ...p,
-                    similarity: null,
                     fileCount: eligible,
                     totalScannedFiles: total,
                     status: "ready",
-                    userDecision: "create_new",
                   }
                 : p
             )
@@ -543,7 +568,7 @@ export function UploadPage() {
           continue;
         }
 
-        // Handle exact match (100%) - auto-skip
+        // Handle exact match (100%) - auto-skip (similarity only; exclusions handled on Run Analysis)
         if (data.exact_match) {
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
@@ -623,14 +648,48 @@ export function UploadPage() {
   const runActualAnalysis = async () => {
     if (!uploadId) return;
 
+    setAnalysisRequestPending(true);
+    setRunResult(null);
+    setRunError(null);
+
+    // Final rescan so file counts match current exclusions (debounced rescan may not have finished).
+    const pathsToSync = projectsRef.current.map((p) => p.path);
+    for (const projectPath of pathsToSync) {
+      await refreshProjectScan(projectPath);
+    }
+
+    const latestProjects = projectsRef.current;
+    const nameCounts = new Map<string, number>();
+    latestProjects.forEach((p) => {
+      nameCounts.set(p.name, (nameCounts.get(p.name) ?? 0) + 1);
+    });
+
+    const blocked = latestProjects.filter(
+      (p) =>
+        (projectExcludeGroupsRef.current[p.path]?.size ?? 0) > 0 && p.fileCount === 0,
+    );
+    if (blocked.length > 0) {
+      setRunError(
+        `No files left to analyze after exclusions for: ${blocked.map((p) => p.name).join(", ")}. Clear some excluded types before running.`,
+      );
+      setAnalysisRequestPending(false);
+      return;
+    }
+
     const project_analysis_types: Record<string, string> = {};
     const project_similarity_actions: Record<string, string> = {};
 
-    const latestProjects = projectsRef.current;
     latestProjects.forEach((p) => {
-      if (p.userDecision !== "skip") {
+      const hasExclusions = (projectExcludeGroupsRef.current[p.path]?.size ?? 0) > 0;
+      // Similarity Decision column: skip/update/create only. Exclusions do not remove a row from
+      // these maps — if exclusions are set, still send mode + similarity action so run matches UI,
+      // while run_scan_flow on the server applies exclusions and re-runs when they trump 100% match.
+      if (p.userDecision !== "skip" || hasExclusions) {
         project_analysis_types[p.path] = p.mode;
-        if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
+        if (p.userDecision === "skip" && hasExclusions) {
+          project_similarity_actions[p.path] = "create_new";
+          project_similarity_actions[p.name] = "create_new";
+        } else if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
           project_similarity_actions[p.path] = p.userDecision;
           project_similarity_actions[p.name] = p.userDecision;
         } else {
@@ -648,14 +707,20 @@ export function UploadPage() {
         const matched = FILE_TYPE_GROUPS.filter((g) => groups.has(g.id));
         const exts = matched.flatMap((g) => [...g.exts]);
         const prefixes = matched.filter((g) => g.namePrefix).map((g) => g.namePrefix!);
-        if (exts.length) project_exclude_extensions[p.path] = exts;
-        if (prefixes.length) project_exclude_name_prefixes[p.path] = prefixes;
+        if (exts.length) {
+          project_exclude_extensions[p.path] = exts;
+          if (nameCounts.get(p.name) === 1) {
+            project_exclude_extensions[p.name] = exts;
+          }
+        }
+        if (prefixes.length) {
+          project_exclude_name_prefixes[p.path] = prefixes;
+          if (nameCounts.get(p.name) === 1) {
+            project_exclude_name_prefixes[p.name] = prefixes;
+          }
+        }
       }
     });
-
-    setAnalysisRequestPending(true);
-    setRunResult(null);
-    setRunError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
         method: "POST",
@@ -1001,7 +1066,11 @@ export function UploadPage() {
                                   });
                                 }
                               }}
-                              title={hasRunAnalysis ? "Analysis complete - cannot change decision" : `Click to view/change decision for: ${project.similarity.matched_project_name}`}
+                              title={
+                                hasRunAnalysis
+                                  ? "Analysis complete - cannot change decision"
+                                  : `Click to view/change decision for: ${project.similarity.matched_project_name}`
+                              }
                               disabled={hasRunAnalysis}
                             >
                               <SimilarityIndicator
@@ -1089,8 +1158,7 @@ export function UploadPage() {
                                   {excluded && excluded.size === FILE_TYPE_GROUPS.length && (
                                     <p className="ar-exclude-all-types-msg" role="status">
                                       All <strong>{FILE_TYPE_GROUPS.length}</strong> categories are excluded
-                                      (documents and code). Files with extensions not listed above may still be
-                                      analyzed.
+                                      (documents and code).
                                     </p>
                                   )}
                                   <div className="ar-exclude-grid">

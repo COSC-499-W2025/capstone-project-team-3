@@ -181,6 +181,7 @@ describe("UploadPage", () => {
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
       .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ analyzed_projects: 1, skipped_projects: 0, failed_projects: 0 }),
@@ -214,6 +215,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
@@ -274,6 +276,7 @@ describe("UploadPage", () => {
         }),
       } as Response)
       .mockResolvedValueOnce(scanProjectSimilarityResponse)
+      .mockResolvedValueOnce(scanProjectSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -329,6 +332,17 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({
           projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: "ok",
+          file_count: 5,
+          eligible_file_count: 5,
+          total_scanned_files: 5,
+          similarity: null,
+          reason: "no_match",
         }),
       } as Response)
       .mockResolvedValueOnce({

@@ -373,6 +373,50 @@ def test_save_edited_resume_success(mock_exists, mock_save, client):
     assert response.json()["status"] == "ok"
     mock_save.assert_called_once_with(1, payload)
 
+
+@patch("app.api.routes.resume.save_personal_summary")
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_with_personal_summary(mock_exists, mock_save, mock_summary, client):
+    """
+    POST /resume/{id}/edit should call save_personal_summary separately and strip
+    personal_summary from the payload passed to save_resume_edits.
+    """
+    mock_exists.return_value = True
+    payload = {
+        "projects": [{"project_id": "p1", "project_name": "My Project"}],
+        "personal_summary": "Driven engineer with 3 years of experience.",
+    }
+    response = client.post("/resume/1/edit", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+    # save_personal_summary called with the string value
+    mock_summary.assert_called_once_with("Driven engineer with 3 years of experience.")
+    # personal_summary stripped from the payload forwarded to save_resume_edits
+    forwarded = mock_save.call_args[0][1]
+    assert "personal_summary" not in forwarded
+
+
+@patch("app.api.routes.resume.save_personal_summary")
+@patch("app.api.routes.resume.save_resume_edits")
+@patch("app.api.routes.resume.resume_exists")
+def test_save_edited_resume_personal_summary_null_saves_empty_string(mock_exists, mock_save, mock_summary, client):
+    """
+    POST /resume/{id}/edit converts a null personal_summary to an empty string and
+    still calls save_personal_summary (endpoint coerces None → "").
+    """
+    mock_exists.return_value = True
+    payload = {
+        "projects": [],
+        "personal_summary": None,
+    }
+    response = client.post("/resume/1/edit", json=payload)
+    assert response.status_code == 200
+    # Endpoint calls save_personal_summary("") when value is None
+    mock_summary.assert_called_once_with("")
+    forwarded = mock_save.call_args[0][1]
+    assert "personal_summary" not in forwarded
+
 @patch("app.api.routes.resume.save_resume_edits")
 @patch("app.api.routes.resume.resume_exists")
 def test_save_edited_resume_not_found(mock_exists, mock_save, client):

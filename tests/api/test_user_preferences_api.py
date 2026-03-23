@@ -12,9 +12,9 @@ app.include_router(router)
 client = TestClient(app)
 
 # ---------------------------------------------------------------------------
-# Helper: build a full 9-field preferences row (matches SELECT column order)
+# Helper: build a full 10-field preferences row (matches SELECT column order)
 # name, email, github_user, linkedin, education, industry, job_title,
-# education_details, profile_picture_path
+# education_details, profile_picture_path, personal_summary
 # ---------------------------------------------------------------------------
 def _pref_row(
     name="Jane Smith",
@@ -26,9 +26,10 @@ def _pref_row(
     job_title="Data Scientist",
     education_details="{}",
     profile_picture_path=None,
+    personal_summary=None,
 ):
     return (name, email, github_user, linkedin, education, industry, job_title,
-            education_details, profile_picture_path)
+            education_details, profile_picture_path, personal_summary)
 
 
 @patch("app.api.routes.user_preferences.get_connection")
@@ -71,10 +72,11 @@ def test_save_user_preferences(mock_get_conn):
 
 @patch("app.api.routes.user_preferences.get_connection")
 def test_get_user_preferences_success(mock_get_conn):
-    """Test GET returns all 9 fields including profile_picture_path."""
+    """Test GET returns all 10 fields including profile_picture_path and personal_summary."""
     mock_cursor = MagicMock()
     mock_cursor.fetchone.return_value = _pref_row(
-        profile_picture_path="data/thumbnails/profile_picture.png"
+        profile_picture_path="data/thumbnails/profile_picture.png",
+        personal_summary="Experienced data scientist.",
     )
     mock_get_conn.return_value.cursor.return_value = mock_cursor
 
@@ -90,6 +92,7 @@ def test_get_user_preferences_success(mock_get_conn):
     assert data["job_title"] == "Data Scientist"
     assert data["education_details"] == "{}"
     assert data["profile_picture_path"] == "data/thumbnails/profile_picture.png"
+    assert data["personal_summary"] == "Experienced data scientist."
     mock_get_conn.return_value.close.assert_called_once()
 
 
@@ -248,3 +251,85 @@ def test_delete_profile_picture_clears_db(mock_get_conn, tmp_path):
     # Verify the UPDATE NULL query was executed
     calls = [str(call) for call in mock_cursor.execute.call_args_list]
     assert any("profile_picture_path" in c and "NULL" in c for c in calls)
+
+
+# ---------------------------------------------------------------------------
+# personal_summary field tests
+# ---------------------------------------------------------------------------
+
+@patch("app.api.routes.user_preferences.get_connection")
+def test_get_user_preferences_returns_personal_summary_null_when_unset(mock_get_conn):
+    """GET /user-preferences returns personal_summary as None when not stored."""
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = _pref_row(personal_summary=None)
+    mock_get_conn.return_value.cursor.return_value = mock_cursor
+
+    response = client.get("/user-preferences")
+    assert response.status_code == 200
+    assert response.json()["personal_summary"] is None
+
+
+@patch("app.api.routes.user_preferences.get_connection")
+def test_get_user_preferences_returns_personal_summary_value(mock_get_conn):
+    """GET /user-preferences returns the stored personal_summary string."""
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = _pref_row(
+        personal_summary="Passionate full-stack developer."
+    )
+    mock_get_conn.return_value.cursor.return_value = mock_cursor
+
+    response = client.get("/user-preferences")
+    assert response.status_code == 200
+    assert response.json()["personal_summary"] == "Passionate full-stack developer."
+
+
+@patch("app.api.routes.user_preferences.get_connection")
+def test_save_user_preferences_with_personal_summary(mock_get_conn):
+    """POST /user-preferences persists personal_summary when included in payload."""
+    mock_cursor = MagicMock()
+    mock_get_conn.return_value.cursor.return_value = mock_cursor
+
+    payload = {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "github_user": "johndoe",
+        "education": "Bachelor's",
+        "industry": "Technology",
+        "job_title": "Software Engineer",
+        "personal_summary": "Building impactful software every day.",
+    }
+
+    response = client.post("/user-preferences", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
+    # Verify that the SQL was executed with the summary value
+    call_args = mock_cursor.execute.call_args
+    assert call_args is not None
+    bound_params = call_args[0][1]  # positional args tuple passed to execute()
+    assert "Building impactful software every day." in bound_params
+
+
+@patch("app.api.routes.user_preferences.get_connection")
+def test_save_user_preferences_without_personal_summary_defaults_to_none(mock_get_conn):
+    """POST /user-preferences defaults personal_summary to None when omitted."""
+    mock_cursor = MagicMock()
+    mock_get_conn.return_value.cursor.return_value = mock_cursor
+
+    payload = {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "github_user": "janedoe",
+        "education": "Master's",
+        "industry": "Finance",
+        "job_title": "Data Analyst",
+    }
+
+    response = client.post("/user-preferences", json=payload)
+    assert response.status_code == 200
+
+    # personal_summary not in payload → should be None in the bound params
+    call_args = mock_cursor.execute.call_args
+    assert call_args is not None
+    bound_params = call_args[0][1]
+    assert None in bound_params  # personal_summary defaults to None

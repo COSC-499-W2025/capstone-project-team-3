@@ -497,7 +497,8 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
             },
-            "projects": projects
+            "projects": projects,
+            "personal_summary": user.get("personal_summary"),
         }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading saved resume") from e
@@ -560,7 +561,8 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
             },
-            "projects": projects
+            "projects": projects,
+            "personal_summary": user.get("personal_summary"),
         }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed building resume model") from e
@@ -632,43 +634,60 @@ def duplicate_resume(source_id: int) -> int:
         cursor.execute("INSERT INTO RESUME (name) VALUES (?)", (new_name,))
         new_id = cursor.lastrowid
 
-        cursor.execute(
-            """
-            SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
-            FROM RESUME_PROJECT
-            WHERE resume_id = ?
-            ORDER BY display_order
-            """,
-            (source_id,),
-        )
-        for (
-            project_id,
-            project_name,
-            start_date,
-            end_date,
-            skills,
-            bullets,
-            display_order,
-        ) in cursor.fetchall():
+        if source_id == 1:
             cursor.execute(
                 """
-                INSERT INTO RESUME_PROJECT (
-                    resume_id, project_id, project_name, start_date, end_date,
-                    skills, bullets, display_order
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    new_id,
-                    project_id,
-                    project_name,
-                    start_date,
-                    end_date,
-                    skills,
-                    bullets,
-                    display_order,
-                ),
+                SELECT project_signature
+                FROM PROJECT
+                ORDER BY last_modified DESC
+                """
             )
+            for display_order, (pid,) in enumerate(cursor.fetchall(), start=1):
+                cursor.execute(
+                    """
+                    INSERT INTO RESUME_PROJECT (resume_id, project_id, display_order)
+                    VALUES (?, ?, ?)
+                    """,
+                    (new_id, pid, display_order),
+                )
+        else:
+            cursor.execute(
+                """
+                SELECT project_id, project_name, start_date, end_date, skills, bullets, display_order
+                FROM RESUME_PROJECT
+                WHERE resume_id = ?
+                ORDER BY display_order
+                """,
+                (source_id,),
+            )
+            for (
+                project_id,
+                project_name,
+                start_date,
+                end_date,
+                skills,
+                bullets,
+                display_order,
+            ) in cursor.fetchall():
+                cursor.execute(
+                    """
+                    INSERT INTO RESUME_PROJECT (
+                        resume_id, project_id, project_name, start_date, end_date,
+                        skills, bullets, display_order
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        new_id,
+                        project_id,
+                        project_name,
+                        start_date,
+                        end_date,
+                        skills,
+                        bullets,
+                        display_order,
+                    ),
+                )
 
         cursor.execute(
             "SELECT skills FROM RESUME_SKILLS WHERE resume_id = ? LIMIT 1",
@@ -897,6 +916,29 @@ def save_resume_edits(resume_id: int, payload: dict):
     except sqlite3.Error as e:
         conn.rollback()
         raise ResumePersistenceError("Failed to save resume edits") from e
+    finally:
+        conn.close()
+
+
+def save_personal_summary(summary: str) -> None:
+    """Persist the personal_summary back to USER_PREFERENCES (user_id=1)."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO USER_PREFERENCES (user_id, personal_summary, updated_at)
+            VALUES (1, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                personal_summary = excluded.personal_summary,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (summary,),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to save personal summary") from e
     finally:
         conn.close()
 

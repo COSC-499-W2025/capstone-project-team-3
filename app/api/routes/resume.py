@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import Query
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
-from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, duplicate_resume, rename_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
+from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, save_personal_summary, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, duplicate_resume, rename_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
 from app.data.db import get_connection
 from pydantic import BaseModel, Field
@@ -186,8 +186,14 @@ def save_edited_resume(id: int, payload: Dict[str, Any]):
         if not exists:
             raise HTTPException(status_code=404, detail="Resume not found")
 
-        # Save project overrides
-        save_resume_edits(id,payload)
+        # personal_summary is global (USER_PREFERENCES); handle separately then strip from payload
+        if "personal_summary" in payload:
+            raw = payload.pop("personal_summary")
+            summary = str(raw).strip() if raw is not None else ""
+            save_personal_summary(summary)
+
+        # Save project / skills / awards / work_experience overrides
+        save_resume_edits(id, payload)
         return {"status": "ok", "message": "Resume edits saved"}
     except ResumeNotFoundError:
         raise HTTPException(status_code=404, detail="Resume not found")

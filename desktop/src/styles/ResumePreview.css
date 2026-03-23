@@ -156,6 +156,56 @@
   pointer-events: none;
 }
 
+.resume-preview__summary {
+  font-size: 10pt;
+  font-weight: 400;
+  margin: 4px 0 0 0;
+  line-height: 1.5;
+  color: #222;
+  text-align: left;
+}
+
+.resume-preview__summary-block {
+  margin-top: 6px;
+  text-align: left;
+}
+
+.resume-preview__summary-edit {
+  margin-top: 6px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resume-preview__summary-textarea {
+  font-family: inherit;
+  font-size: 10pt;
+  line-height: 1.5;
+  color: #222;
+  border: 1px dashed #aaa;
+  border-radius: 3px;
+  padding: 4px 6px;
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  background: rgba(27, 159, 200, 0.04);
+  outline: none;
+  min-height: 3.5em;
+}
+
+.resume-preview__summary-textarea:focus {
+  border-color: #1b9fc8;
+  background: rgba(27, 159, 200, 0.07);
+}
+
+.resume-preview__summary-hint {
+  font-size: 8pt;
+  color: #888;
+  text-align: right;
+  line-height: 1;
+}
+
 .resume-preview__section {
   margin-bottom: 10px;
 }

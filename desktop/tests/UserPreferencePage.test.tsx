@@ -26,6 +26,7 @@ beforeEach(() => {
     job_title: '',
     education_details: null,
     profile_picture_path: null,
+    personal_summary: null,
   });
   mockGetProfilePictureUrl.mockReturnValue('http://localhost:8000/api/user-preferences/profile-picture');
 });
@@ -253,4 +254,76 @@ test('Remove button calls deleteProfilePicture and clears image', async () => {
     const img = container.querySelector('.profile-picture-img');
     expect(img).toBeNull();
   });
+});
+
+// ---------------------------------------------------------------------------
+// Personal summary textarea tests
+// ---------------------------------------------------------------------------
+
+test('renders Professional Summary textarea field', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText(/Professional Summary/i)).toBeDefined();
+  });
+});
+
+test('pre-populates personal summary textarea from API response', async () => {
+  mockGetUserPreferences.mockResolvedValue({
+    name: 'Jane',
+    email: 'jane@example.com',
+    github_user: 'jane',
+    linkedin: null,
+    education: "Bachelor's",
+    industry: 'Technology',
+    job_title: 'Developer',
+    education_details: null,
+    profile_picture_path: null,
+    personal_summary: 'Experienced developer passionate about clean code.',
+  });
+
+  const { container } = render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toBe('Experienced developer passionate about clean code.');
+  });
+});
+
+test('personal summary textarea is empty when personal_summary is null', async () => {
+  const { container } = render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toBe('');
+  });
+});
+
+test('personal summary textarea accepts user input', async () => {
+  const { container } = render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Professional Summary/i));
+
+  const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
+  fireEvent.change(textarea, { target: { value: 'New summary text.' } });
+
+  expect(textarea.value).toBe('New summary text.');
 });

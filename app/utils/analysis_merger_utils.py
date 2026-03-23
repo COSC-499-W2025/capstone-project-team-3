@@ -493,7 +493,8 @@ def store_results_in_db(project_name, merged_results, project_score, project_sig
         WHERE project_signature = ?
         """, (project_name, merged_results["summary"], project_score, project_signature))
     
-        # Delete existing records to avoid duplicates
+        # Delete existing records to avoid duplicates (including git-derived metrics)
+        cur.execute("DELETE FROM GIT_HISTORY WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM RESUME_SUMMARY WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM DASHBOARD_DATA WHERE project_id = ?", (project_signature,))

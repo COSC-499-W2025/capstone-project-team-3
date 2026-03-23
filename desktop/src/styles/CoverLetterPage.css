@@ -1,0 +1,560 @@
+/* CoverLetterPage.css */
+
+.cl-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: var(--color-page-bg);
+  padding: var(--spacing-lg) var(--spacing-md);
+  gap: var(--spacing-md);
+  animation: fadeIn 0.6s ease-out;
+}
+
+.cl-title {
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-navy);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-serif);
+  letter-spacing: 0.3px;
+}
+
+.cl-description {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  max-width: 620px;
+  font-family: var(--font-sans);
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────── */
+
+.cl-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-border);
+  width: 100%;
+  max-width: 860px;
+}
+
+.cl-tab {
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cl-tab:hover {
+  background: none;
+}
+
+.cl-tab:focus {
+  outline: 2px solid var(--color-blue-light);
+  outline-offset: 2px;
+}
+
+.cl-tab--active {
+  color: var(--color-blue-darker);
+  font-weight: 600;
+  border-bottom-color: var(--color-blue-darker);
+}
+
+/* ── Card / Form ──────────────────────────────────────────────────── */
+
+.cl-card {
+  width: 100%;
+  max-width: 860px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 1px 4px var(--color-shadow);
+}
+
+/* Step header */
+.cl-step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.cl-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-blue-darker);
+  color: var(--color-text-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cl-step-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-heading);
+  font-family: var(--font-sans);
+  margin: 0;
+}
+
+/* ── Form fields ──────────────────────────────────────────────────── */
+
+.cl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cl-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-body);
+  font-family: var(--font-sans);
+}
+
+.cl-input,
+.cl-select,
+.cl-textarea {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  color: var(--color-text-body);
+  background: var(--color-card-bg);
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.cl-input:focus,
+.cl-select:focus,
+.cl-textarea:focus {
+  outline: 2px solid var(--color-blue-light);
+  outline-offset: 1px;
+}
+
+.cl-textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.cl-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Motivations ──────────────────────────────────────────────────── */
+
+.cl-motivation-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.cl-motivation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card-bg);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--color-text-body);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  user-select: none;
+}
+
+.cl-motivation-chip:hover {
+  border-color: var(--color-blue-medium);
+  background: var(--color-bg-light);
+  color: var(--color-blue-darker);
+  /* Neutralise the global button:hover override */
+  background-color: var(--color-bg-light);
+  transform: none;
+  box-shadow: none;
+}
+
+.cl-motivation-chip--selected {
+  border-color: var(--color-blue-darker);
+  background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
+  color: var(--color-blue-darker);
+  font-weight: 600;
+}
+
+.cl-motivation-chip--selected:hover {
+  background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
+  color: var(--color-blue-darker);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Mode selector ────────────────────────────────────────────────── */
+
+.cl-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.cl-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card-bg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  text-align: left;
+}
+
+.cl-mode-card:hover {
+  border-color: var(--color-blue-medium);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--color-shadow);
+  /* Neutralise the global button:hover override */
+  background-color: var(--color-card-bg);
+  color: inherit;
+}
+
+.cl-mode-card--selected {
+  border-color: var(--color-blue-darker);
+  background: var(--color-bg-lighter);
+  background-color: var(--color-bg-lighter);
+}
+
+.cl-mode-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-heading);
+  font-family: var(--font-sans);
+}
+
+.cl-mode-card-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  margin: 0;
+}
+
+/* ── Actions ──────────────────────────────────────────────────────── */
+
+.cl-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.cl-btn {
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.cl-btn--primary {
+  background: var(--color-blue-medium);
+  color: var(--color-text-light);
+  border-color: var(--color-blue-medium);
+}
+
+.cl-btn--primary:hover:not(:disabled) {
+  background: var(--color-blue-dark);
+  transform: translateY(-1px);
+}
+
+.cl-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cl-btn--secondary {
+  background: var(--color-card-bg);
+  color: var(--color-text-body);
+  border-color: var(--color-border);
+}
+
+.cl-btn--secondary:hover {
+  background: var(--color-bg-light);
+  transform: translateY(-1px);
+}
+
+.cl-btn--danger {
+  background: transparent;
+  color: #c53030;
+  border-color: #c53030;
+}
+
+.cl-btn--danger:hover {
+  background: #fde8e8;
+}
+
+/* ── Preview panel ────────────────────────────────────────────────── */
+
+.cl-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.cl-preview-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cl-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.cl-badge--ai {
+  background: var(--color-bg-lighter);
+  color: var(--color-blue-dark);
+}
+
+.cl-badge--local {
+  background: var(--color-bg-light);
+  color: var(--color-blue-darker);
+}
+
+.cl-preview-content {
+  white-space: pre-wrap;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--color-text-body);
+  background: var(--color-page-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1.5rem;
+  min-height: 300px;
+}
+
+/* Editable letter textarea */
+.cl-preview-editor {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 420px;
+  padding: 1.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: var(--color-text-body);
+  background: var(--color-page-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  margin-top: 1rem;
+  white-space: pre-wrap;
+}
+.cl-preview-editor:focus {
+  border-color: var(--color-blue-light);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-blue-light) 25%, transparent);
+}
+
+/* Unsaved changes indicator */
+.cl-unsaved-badge {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-family: var(--font-sans);
+}
+
+/* Saved confirmation indicator */
+.cl-saved-badge {
+  font-size: 0.78rem;
+  color: #2f855a;
+  font-style: italic;
+  font-family: var(--font-sans);
+}
+
+/* Edit action row */
+.cl-actions--edit {
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.cl-preview-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ── History list ─────────────────────────────────────────────────── */
+
+.cl-history-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  padding: 3rem 0;
+  font-family: var(--font-sans);
+}
+
+.cl-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.cl-history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card-bg);
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cl-history-card:hover {
+  box-shadow: 0 4px 10px var(--color-shadow);
+  border-color: var(--color-blue-light);
+}
+
+.cl-history-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-history-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-heading);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-history-card-sub {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+}
+
+.cl-history-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ── Error / loading ──────────────────────────────────────────────── */
+
+.cl-error {
+  color: #c53030;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  background: #fde8e8;
+  border: 1px solid #f0a0a0;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+}
+
+/* Compact inline variant used inside history cards and preview header */
+.cl-pdf-error {
+  display: block;
+  color: #c53030;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.cl-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.4);
+  border-top-color: var(--color-text-light);
+  border-radius: 50%;
+  animation: cl-spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes cl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .cl-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-mode-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .cl-title {
+    font-size: 1.5rem;
+  }
+
+  .cl-card {
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .cl-actions {
+    flex-direction: column;
+  }
+
+  .cl-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

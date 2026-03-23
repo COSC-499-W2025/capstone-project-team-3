@@ -583,16 +583,34 @@ def create_resume(name: str) -> int:
     return resume_id
 
 def list_resumes() -> List[Dict[str, Any]]:
-    """Return list of resumes for sidebar: id, name, is_master. Master is id=1."""
+    """Return list of resumes for sidebar: id, name, is_master, project_count. Master is id=1."""
     conn = get_connection()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT id, name FROM RESUME ORDER BY id")
         rows = cursor.fetchall()
-        return [
-            {"id": r[0], "name": (r[1] or f"Resume-{r[0]}").strip() or f"Resume-{r[0]}", "is_master": r[0] == 1}
-            for r in rows
-        ]
+
+        # Count projects per saved resume (RESUME_PROJECT) in one query
+        cursor.execute("SELECT resume_id, COUNT(*) FROM RESUME_PROJECT GROUP BY resume_id")
+        saved_counts: dict = {r[0]: r[1] for r in cursor.fetchall()}
+
+        # Master resume (id=1) pulls from SKILL_ANALYSIS; count distinct projects there
+        cursor.execute("SELECT COUNT(DISTINCT project_id) FROM SKILL_ANALYSIS")
+        master_count_row = cursor.fetchone()
+        master_project_count = master_count_row[0] if master_count_row else 0
+
+        result = []
+        for r in rows:
+            rid, rname = r[0], r[1]
+            is_master = rid == 1
+            project_count = master_project_count if is_master else saved_counts.get(rid, 0)
+            result.append({
+                "id": rid,
+                "name": (rname or f"Resume-{rid}").strip() or f"Resume-{rid}",
+                "is_master": is_master,
+                "project_count": project_count,
+            })
+        return result
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed listing resumes") from e
     finally:

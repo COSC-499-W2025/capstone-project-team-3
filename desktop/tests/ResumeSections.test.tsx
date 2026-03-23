@@ -677,6 +677,37 @@ describe('WorkExperienceSection', () => {
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
+  test('in edit mode with enableSortable shows drag handle per entry', () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'A', company: 'Co1', start_date: '', end_date: '', details: [] },
+      { role: 'B', company: 'Co2', start_date: '', end_date: '', details: [] },
+    ];
+
+    render(
+      <WorkExperienceSection
+        workExperience={workExperience}
+        isEditing={true}
+        onChange={jest.fn()}
+        enableSortable={true}
+      />,
+    );
+
+    const dragHandles = screen.getAllByLabelText('Drag to reorder work experience');
+    expect(dragHandles.length).toBe(2);
+  });
+
+  test('in edit mode without enableSortable does not show work experience drag handle', () => {
+    const workExperience: WorkExperience[] = [
+      { role: 'A', company: 'Co', start_date: '', end_date: '', details: [] },
+    ];
+
+    render(
+      <WorkExperienceSection workExperience={workExperience} isEditing={true} onChange={jest.fn()} />,
+    );
+
+    expect(screen.queryByLabelText('Drag to reorder work experience')).toBeNull();
+  });
+
   test('in edit mode updating company calls onChange', async () => {
     const workExperience: WorkExperience[] = [
       { role: 'Dev', company: '', start_date: '', end_date: '', details: [] }
@@ -764,5 +795,27 @@ describe('AwardsSection', () => {
     const removeBtn = screen.getByRole('button', { name: 'Remove award' });
     fireEvent.click(removeBtn);
     expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  test('in edit mode with enableSortable shows drag handle per award', () => {
+    const awards: Award[] = [
+      { title: 'One', issuer: '', date: '', details: [] },
+      { title: 'Two', issuer: '', date: '', details: [] },
+    ];
+
+    render(
+      <AwardsSection awards={awards} isEditing={true} onChange={jest.fn()} enableSortable={true} />,
+    );
+
+    const dragHandles = screen.getAllByLabelText('Drag to reorder award');
+    expect(dragHandles.length).toBe(2);
+  });
+
+  test('in edit mode without enableSortable does not show award drag handle', () => {
+    const awards: Award[] = [{ title: 'One', issuer: '', date: '', details: [] }];
+
+    render(<AwardsSection awards={awards} isEditing={true} onChange={jest.fn()} />);
+
+    expect(screen.queryByLabelText('Drag to reorder award')).toBeNull();
   });
 });

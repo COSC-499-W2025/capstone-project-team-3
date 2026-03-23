@@ -100,7 +100,8 @@ class ResumeTemplate:
     \header{Projects / Experience}
     \vspace{2mm}
     {projects} % projects are filled in here, includes name, skills, duration, and bullets
-
+    \vspace{1mm}
+    
     {awards_section}
 
     \end{document}

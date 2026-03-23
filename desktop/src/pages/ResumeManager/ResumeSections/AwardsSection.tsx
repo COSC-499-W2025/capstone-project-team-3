@@ -1,3 +1,6 @@
+import { type ReactNode } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Award } from "../../../api/resume_types";
 
 const MONTH_ABBREV = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -41,14 +44,64 @@ function normalizeDateForInput(value?: string): string {
   return "";
 }
 
+function SortableAwardRow({
+  sortableId,
+  children,
+}: {
+  sortableId?: string;
+  children: (dragHandle: ReactNode) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: sortableId ?? "__award_sortable_disabled__",
+    disabled: sortableId === undefined,
+  });
+  const style =
+    sortableId !== undefined
+      ? {
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.5 : 1,
+          marginTop: 8,
+        }
+      : { marginTop: 8 };
+
+  const dragHandle =
+    sortableId !== undefined ? (
+      <span
+        className="resume-preview__project-drag-handle"
+        aria-label="Drag to reorder award"
+        {...attributes}
+        {...listeners}
+      >
+        ⋮⋮
+      </span>
+    ) : null;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandle)}
+    </div>
+  );
+}
+
 export function AwardsSection({
   awards,
   isEditing = false,
   onChange,
+  enableSortable = false,
 }: {
   awards: Award[];
   isEditing?: boolean;
   onChange?: (awards: Award[]) => void;
+  /** When true and isEditing, each award shows a drag handle for reordering. */
+  enableSortable?: boolean;
 }) {
   const updateAward = (index: number, patch: Partial<Award>) => {
     const next = awards.map((a, i) => (i === index ? { ...a, ...patch } : a));
@@ -100,12 +153,15 @@ export function AwardsSection({
         const issuer = award.issuer?.trim() ?? "";
         const detailsList = normalizeDetails(award.details);
         const detailsText = (award.details ?? []).map((d) => String(d)).join("\n");
+        const sortableId = enableSortable && isEditing ? `award-${index}` : undefined;
 
         return (
-          <div key={index} style={{ marginTop: 8 }}>
-            {isEditing ? (
+          <SortableAwardRow key={index} sortableId={sortableId}>
+            {(dragHandle) => (
+              isEditing ? (
               <div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {dragHandle}
                   <input
                     type="text"
                     value={award.title}
@@ -185,8 +241,9 @@ export function AwardsSection({
                   </ul>
                 )}
               </div>
+            )
             )}
-          </div>
+          </SortableAwardRow>
         );
       })}
     </section>

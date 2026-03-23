@@ -94,7 +94,8 @@ export function ProjectsSection({
         const skills = projectSkills(p);
         const bullets = projectBullets(p);
         const globalKey = projectStartIndex + i;
-        const sortableId = enableSortable && isEditing ? globalKey : undefined;
+        const sortableId =
+          enableSortable && isEditing ? `project-${globalKey}` : undefined;
 
         return (
           <ProjectBlock
@@ -123,7 +124,7 @@ function ProjectBlock({
   onChange: (project: Project) => void;
   onDelete?: (projectId: string) => void;
   /** When set (and isEditing), this block is sortable and shows a drag handle. */
-  sortableId?: number;
+  sortableId?: string;
 }) {
   const skills = projectSkills(project);
   const bullets = projectBullets(project);
@@ -142,7 +143,7 @@ function ProjectBlock({
     transition,
     isDragging,
   } = useSortable({
-    id: sortableId ?? -1,
+    id: sortableId ?? "__project_sortable_disabled__",
     disabled: sortableId === undefined,
   });
 

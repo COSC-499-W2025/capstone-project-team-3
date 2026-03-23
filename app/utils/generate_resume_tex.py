@@ -288,6 +288,7 @@ def render_work_experience(work_experience: Any) -> str:
         r"\header{Work Experience}" "\n"
         r"\vspace{2mm}" "\n"
         f"{work_body}\n"
+        r"\vspace{1mm}" "\n"
     )
     
 def generate_resume_tex(resume: Dict[str, Any]) -> str:

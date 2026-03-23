@@ -83,14 +83,7 @@ TECH_KEYWORDS: set = {
     "design-patterns", "solid", "clean-architecture", "hexagonal",
     "domain-driven", "event-sourcing", "cqrs", "saga",
 
-    # Methodologies
-    "agile", "scrum", "kanban", "lean", "xp", "safe", "sprint",
-    "retrospective", "standup",
-
-    # Version control & collaboration
+    # Version control & collaboration tools
     "git", "github", "gitlab", "bitbucket", "jira", "confluence",
     "linear", "notion",
-
-    # Years / seniority indicators (token-level)
-    "senior", "lead", "principal", "staff", "architect", "manager",
 }

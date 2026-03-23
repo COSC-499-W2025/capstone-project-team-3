@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Dict, Optional, Sequence, Iterable
 import hashlib
 import json
 import time 
@@ -109,6 +109,51 @@ def scan_project_files(root: Union[str, Path], exclude_patterns: List[str] = EXC
     except Exception as e:
         print(f"Error scanning files in {root}: {e}")
     return files
+
+
+def _normalize_user_exclude_ext(ext: str) -> str:
+    e = str(ext).strip().lower()
+    if e and not e.startswith("."):
+        e = "." + e
+    return e
+
+
+def filter_files_by_user_exclusions(
+    files: List[Path],
+    exclude_extensions: Optional[Iterable[str]] = None,
+    exclude_name_prefixes: Optional[Sequence[str]] = None,
+) -> List[Path]:
+    """
+    Per-project exclusions: drop files whose suffix is in exclude_extensions
+    or whose stem starts with any exclude_name_prefix (case-insensitive).
+    """
+    paths: List[Path] = [f if isinstance(f, Path) else Path(f) for f in files]
+
+    if not exclude_extensions and not exclude_name_prefixes:
+        return list(paths)
+
+    ext_set = set()
+    if exclude_extensions:
+        for x in exclude_extensions:
+            ne = _normalize_user_exclude_ext(x)
+            if ne:
+                ext_set.add(ne)
+
+    prefixes = [p for p in (exclude_name_prefixes or []) if p]
+
+    if not ext_set and not prefixes:
+        return list(paths)
+
+    out: List[Path] = []
+    for f in paths:
+        suf = f.suffix.lower()
+        if ext_set and suf in ext_set:
+            continue
+        if prefixes and any(f.stem.lower().startswith(p.lower()) for p in prefixes):
+            continue
+        out.append(f)
+    return out
+
 
 def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
     """Extract basic metadata from a file."""
@@ -408,6 +453,8 @@ def run_scan_flow(
     similarity_threshold: float = None,
     base_threshold: float = 65.0,
     similarity_decision: Optional[bool] = None,
+    exclude_extensions: Optional[List[str]] = None,
+    exclude_name_prefixes: Optional[List[str]] = None,
 ) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
@@ -422,19 +469,35 @@ def run_scan_flow(
             - True: update existing similar project
             - False: create new project
             - None: prompt user via CLI
+        exclude_extensions: Per-project suffixes to omit (e.g. [".md", ".pdf"]).
+        exclude_name_prefixes: Per-project filename stem prefixes to omit (e.g. ["readme"]).
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
         patterns.extend(exclude)
-    files = scan_project_files(root, exclude_patterns=patterns)
+    raw_files = scan_project_files(root, exclude_patterns=patterns)
+    files = filter_files_by_user_exclusions(
+        raw_files,
+        exclude_extensions=exclude_extensions,
+        exclude_name_prefixes=exclude_name_prefixes,
+    )
     if not files:
+        if raw_files:
+            print("All files excluded by user file-type filters. Skipping analysis.")
+            return {
+                "files": [],
+                "skip_analysis": True,
+                "score": 0.0,
+                "reason": "all_files_excluded",
+                "signature": None,
+            }
         print("No files found to scan in the specified directory. Skipping analysis.")
         return {
-            "files": [], 
-            "skip_analysis": True, 
-            "score": 0.0, 
+            "files": [],
+            "skip_analysis": True,
+            "score": 0.0,
             "reason": "no_files",
-            "signature": None
+            "signature": None,
         }
 
     # Print scanned files for user feedback

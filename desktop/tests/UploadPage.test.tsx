@@ -26,6 +26,8 @@ const scanProjectNoSimilarityResponse = {
   json: async () => ({
     status: "ok",
     file_count: 5,
+    eligible_file_count: 5,
+    total_scanned_files: 5,
     similarity: null,
     reason: "no_match",
   }),
@@ -252,6 +254,8 @@ describe("UploadPage", () => {
       json: async () => ({
         status: "ok",
         file_count: 5,
+        eligible_file_count: 5,
+        total_scanned_files: 5,
         similarity: {
           jaccard_similarity: 75.5,
           containment_ratio: 82.3,
@@ -330,9 +334,12 @@ describe("UploadPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          status: "ok",
           file_count: 5,
+          eligible_file_count: 5,
+          total_scanned_files: 5,
           similarity: null,
-          exact_match: false,
+          reason: "no_match",
         }),
       } as Response)
       .mockResolvedValueOnce({

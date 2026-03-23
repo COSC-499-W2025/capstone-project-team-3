@@ -34,8 +34,10 @@ from app.utils.scan_utils import (
     extract_file_signature,
     get_project_signature,
     find_similar_project,
+    filter_files_by_user_exclusions,
+    _normalize_user_exclude_ext,
 )
-from app.utils.git_utils import detect_git
+from app.utils.git_utils import detect_git, extract_all_contributors
 from app.utils.clean_up import cleanup_upload
 from app.data.db import get_connection
 
@@ -201,6 +203,26 @@ def _resolve_requested_similarity_action(
     return default_similarity_action
 
 
+def _resolve_project_user_exclusions(
+    payload: AnalyzeUploadRequest, project_path: str, project_name: str
+) -> tuple[set, list]:
+    """Per-project extension and filename-prefix exclusions (upload / analysis payload)."""
+    raw_exts = (
+        payload.project_exclude_extensions.get(project_path, [])
+        + payload.project_exclude_extensions.get(project_name, [])
+    )
+    exclude_exts: set = set()
+    for x in raw_exts:
+        ne = _normalize_user_exclude_ext(str(x))
+        if ne:
+            exclude_exts.add(ne)
+    exclude_prefixes: list = (
+        payload.project_exclude_name_prefixes.get(project_path, [])
+        + payload.project_exclude_name_prefixes.get(project_name, [])
+    )
+    return exclude_exts, exclude_prefixes
+
+
 @router.post("/analysis/run")
 def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
     upload_context = _load_projects_from_upload(payload.upload_id)
@@ -226,10 +248,16 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
             project_similarity_actions=payload.project_similarity_actions,
         )
         similarity_decision = requested_similarity_action == "update_existing"
+        exclude_exts, exclude_prefixes = _resolve_project_user_exclusions(
+            payload, project_path, project_name
+        )
 
         try:
             scan_result = run_scan_flow(
-                project_path, similarity_decision=similarity_decision
+                project_path,
+                similarity_decision=similarity_decision,
+                exclude_extensions=sorted(exclude_exts) if exclude_exts else None,
+                exclude_name_prefixes=exclude_prefixes if exclude_prefixes else None,
             )
         except Exception as exc:
             results.append(
@@ -275,25 +303,6 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
 
         files = scan_result.get("files", [])
         top_level_dirs = get_project_top_level_dirs(project_path)
-
-        # Resolve per-project extension exclusions (match by path or name)
-        exclude_exts: set = set(
-            payload.project_exclude_extensions.get(project_path, [])
-            + payload.project_exclude_extensions.get(project_name, [])
-        )
-        if exclude_exts:
-            files = [f for f in files if f.suffix.lower() not in exclude_exts]
-
-        # Resolve per-project filename-prefix exclusions (e.g. "readme" catches README.md, README.txt, README)
-        exclude_prefixes: list = (
-            payload.project_exclude_name_prefixes.get(project_path, [])
-            + payload.project_exclude_name_prefixes.get(project_name, [])
-        )
-        if exclude_prefixes:
-            files = [
-                f for f in files
-                if not any(f.stem.lower().startswith(p.lower()) for p in exclude_prefixes)
-            ]
 
         if not files:
             results.append(
@@ -518,6 +527,8 @@ def list_upload_projects(upload_id: str) -> Dict[str, Any]:
 
 class ScanProjectRequest(BaseModel):
     project_path: str = Field(..., min_length=1)
+    exclude_extensions: List[str] = Field(default_factory=list)
+    exclude_name_prefixes: List[str] = Field(default_factory=list)
 
 
 @router.post("/analysis/uploads/{upload_id}/scan-project")
@@ -527,22 +538,44 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
         project_path = payload.project_path
         project_name = Path(project_path).name
 
-        files = scan_project_files(project_path)
-        if not files:
+        raw_files = scan_project_files(project_path)
+        total_scanned_files = len(raw_files)
+        files = filter_files_by_user_exclusions(
+            raw_files,
+            exclude_extensions=payload.exclude_extensions or None,
+            exclude_name_prefixes=payload.exclude_name_prefixes or None,
+        )
+        eligible_file_count = len(files)
+
+        if total_scanned_files == 0:
             return {
                 "status": "ok",
                 "project_name": project_name,
                 "project_path": project_path,
                 "file_count": 0,
+                "total_scanned_files": 0,
+                "eligible_file_count": 0,
                 "similarity": None,
                 "reason": "no_files",
             }
 
+        if eligible_file_count == 0:
+            return {
+                "status": "ok",
+                "project_name": project_name,
+                "project_path": project_path,
+                "file_count": 0,
+                "total_scanned_files": total_scanned_files,
+                "eligible_file_count": 0,
+                "similarity": None,
+                "reason": "all_files_excluded",
+            }
+
         file_signatures = [extract_file_signature(f, project_path) for f in files]
         project_signature = get_project_signature(file_signatures)
-        file_count = len(files)
+        file_count = eligible_file_count
 
-        # Check if exact match (100%)
+        # Check if exact match (100%) — based on files that will be analyzed
         from app.utils.scan_utils import project_signature_exists
 
         if project_signature_exists(project_signature):
@@ -551,6 +584,8 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
                 "project_name": project_name,
                 "project_path": project_path,
                 "file_count": file_count,
+                "total_scanned_files": total_scanned_files,
+                "eligible_file_count": eligible_file_count,
                 "exact_match": True,
                 "similarity": {
                     "jaccard_similarity": 100.0,
@@ -574,12 +609,15 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
                 "project_name": project_name,
                 "project_path": project_path,
                 "file_count": file_count,
+                "total_scanned_files": total_scanned_files,
+                "eligible_file_count": eligible_file_count,
                 "similarity": {
                     "jaccard_similarity": match_info["similarity_percentage"],
                     "containment_ratio": match_info["containment_percentage"],
                     "matched_project_name": match_info["project_name"],
                     "match_reason": match_info["match_reason"],
                 },
+                "reason": "similar_match",
             }
         else:
             return {
@@ -587,6 +625,8 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
                 "project_name": project_name,
                 "project_path": project_path,
                 "file_count": file_count,
+                "total_scanned_files": total_scanned_files,
+                "eligible_file_count": eligible_file_count,
                 "similarity": None,
                 "reason": "no_match",
             }

@@ -172,6 +172,8 @@ def test_scan_project_no_similarity_new_project(
     assert data["project_name"] == "my-project"
     assert data["project_path"] == "/tmp/extracted/my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["similarity"] is None
     assert data.get("exact_match") is None
 
@@ -206,6 +208,8 @@ def test_scan_project_with_similarity_detected(
     assert data["status"] == "ok"
     assert data["project_name"] == "my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["similarity"] is not None
     assert data["similarity"]["jaccard_similarity"] == 75.5
     assert data["similarity"]["containment_ratio"] == 82.3
@@ -244,6 +248,8 @@ def test_scan_project_exact_match(
     assert data["status"] == "ok"
     assert data["project_name"] == "my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["exact_match"] is True
     assert data["similarity"]["jaccard_similarity"] == 100.0
     assert data["similarity"]["containment_ratio"] == 100.0
@@ -264,8 +270,36 @@ def test_scan_project_no_files(mock_exists, mock_scan_files):
     assert data["status"] == "ok"
     assert data["project_name"] == "empty-project"
     assert data["file_count"] == 0
+    assert data["eligible_file_count"] == 0
+    assert data["total_scanned_files"] == 0
     assert data["similarity"] is None
     assert data["reason"] == "no_files"
+
+
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_all_files_excluded(mock_exists, mock_scan_files):
+    """User exclusions remove every file — similarity must not run."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/readme.md"), Path("/tmp/proj/notes.txt")]
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={
+            "project_path": "/tmp/extracted/docs-only",
+            "exclude_extensions": [".md", ".txt"],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["file_count"] == 0
+    assert data["eligible_file_count"] == 0
+    assert data["total_scanned_files"] == 2
+    assert data["similarity"] is None
+    assert data["reason"] == "all_files_excluded"
 
 
 def test_scan_project_missing_project_path():

@@ -365,6 +365,16 @@
   margin: 0 0 0.65rem;
 }
 
+.ar-exclude-no-files-msg {
+  font-size: 0.78rem;
+  color: #c05621;
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin: 0.65rem 0 0;
+}
+
 .ar-exclude-grid {
   display: flex;
   flex-wrap: wrap;

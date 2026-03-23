@@ -33,11 +33,28 @@ const FILE_TYPE_GROUPS: FileTypeGroup[] = [
   { id: "shell",    label: "Shell Scripts",  exts: [".sh", ".bash"] },
 ];
 
+/** Build API payload for per-project file-type exclusions (same shape as run analysis). */
+function buildExcludePayloadForPath(
+  path: string,
+  groups: Record<string, Set<string>>,
+): { exclude_extensions: string[]; exclude_name_prefixes: string[] } {
+  const set = groups[path];
+  if (!set?.size) {
+    return { exclude_extensions: [], exclude_name_prefixes: [] };
+  }
+  const matched = FILE_TYPE_GROUPS.filter((g) => set.has(g.id));
+  const exclude_extensions = matched.flatMap((g) => [...g.exts]);
+  const exclude_name_prefixes = matched.filter((g) => g.namePrefix).map((g) => g.namePrefix!);
+  return { exclude_extensions, exclude_name_prefixes };
+}
+
 interface Project {
   name: string;
   path: string;
   mode: string;
   fileCount?: number;
+  /** Files on disk after global scan patterns (before user type exclusions). */
+  totalScannedFiles?: number;
   similarity?: {
     jaccard_similarity: number;
     containment_ratio: number;
@@ -108,7 +125,10 @@ export function UploadPage() {
   const [defaultMode, setDefaultMode] = useState<"local" | "ai">("local");
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+  /** True while per-project similarity scan loop is in progress (before POST /analysis/run). */
+  const [scanPhaseActive, setScanPhaseActive] = useState(false);
+  /** True only while POST /api/analysis/run is in flight. */
+  const [analysisRequestPending, setAnalysisRequestPending] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [aiConsentAccepted, setAiConsentAccepted] = useState(false);
@@ -131,10 +151,28 @@ export function UploadPage() {
   const [expandedExclude, setExpandedExclude] =
     useState<Set<string>>(new Set());
 
+  const projectExcludeGroupsRef = useRef<Record<string, Set<string>>>({});
+  useEffect(() => {
+    projectExcludeGroupsRef.current = projectExcludeGroups;
+  }, [projectExcludeGroups]);
+
+  const hasRunAnalysisRef = useRef(hasRunAnalysis);
+  useEffect(() => {
+    hasRunAnalysisRef.current = hasRunAnalysis;
+  }, [hasRunAnalysis]);
+
+  const rescanDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   useEffect(() => {
     getGeminiKeyStatus()
       .then(setGeminiStatus)
       .catch(() => setGeminiStatus(null));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(rescanDebounceTimers.current).forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   useEffect(() => {
@@ -200,7 +238,7 @@ export function UploadPage() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (uploading || running) return;
+    if (uploading || scanPhaseActive || analysisRequestPending) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
       setUploadError(null);
@@ -212,7 +250,7 @@ export function UploadPage() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = uploading || running ? "none" : "copy";
+    e.dataTransfer.dropEffect = uploading || scanPhaseActive || analysisRequestPending ? "none" : "copy";
   };
 
   const handleResetUpload = () => {
@@ -286,6 +324,100 @@ export function UploadPage() {
     setShowAiConsentModal(false);
   };
 
+  const refreshProjectScan = useCallback(
+    async (projectPath: string) => {
+      if (!uploadId || hasRunAnalysisRef.current) return;
+      const proj = projectsRef.current.find((p) => p.path === projectPath);
+      if (!proj || proj.status === "scanning") return;
+      const { exclude_extensions, exclude_name_prefixes } = buildExcludePayloadForPath(
+        projectPath,
+        projectExcludeGroupsRef.current,
+      );
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/scan-project`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project_path: projectPath, exclude_extensions, exclude_name_prefixes }),
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+
+        const eligible = data.eligible_file_count ?? data.file_count;
+        const total = data.total_scanned_files ?? data.file_count;
+
+        setProjectsWithRef((prev) =>
+          prev.map((p) => {
+            if (p.path !== projectPath) return p;
+
+            if (data.reason === "all_files_excluded") {
+              return {
+                ...p,
+                similarity: null,
+                fileCount: 0,
+                totalScannedFiles: total,
+                status: "ready",
+                userDecision: "create_new",
+              };
+            }
+
+            if (data.exact_match) {
+              return {
+                ...p,
+                similarity: data.similarity,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "ready",
+                userDecision: "skip",
+              };
+            }
+
+            if (data.similarity) {
+              return {
+                ...p,
+                similarity: data.similarity,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "similarity_detected",
+                userDecision:
+                  p.userDecision === "update_existing" || p.userDecision === "create_new"
+                    ? p.userDecision
+                    : "create_new",
+              };
+            }
+
+            return {
+              ...p,
+              similarity: null,
+              fileCount: eligible,
+              totalScannedFiles: total,
+              status: "ready",
+              userDecision: "create_new",
+            };
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    },
+    [uploadId, setProjectsWithRef],
+  );
+
+  const scheduleRescanProject = useCallback(
+    (projectPath: string) => {
+      if (!uploadId || hasRunAnalysisRef.current) return;
+      const timers = rescanDebounceTimers.current;
+      if (timers[projectPath]) clearTimeout(timers[projectPath]);
+      timers[projectPath] = setTimeout(() => {
+        delete timers[projectPath];
+        void refreshProjectScan(projectPath);
+      }, 400);
+    },
+    [uploadId, refreshProjectScan],
+  );
+
   const handleSimilarityDecision = (decision: "create_new" | "update_existing") => {
     if (!similarityModalData) return;
 
@@ -299,10 +431,11 @@ export function UploadPage() {
     );
 
     setSimilarityModalData(null);
-    processNextProject(nextIndex);
+    void processNextProject(nextIndex);
   };
 
   const processNextProject = async (startIndex: number) => {
+    try {
     for (let i = startIndex; i < projectsRef.current.length; i++) {
       const project = projectsRef.current[i];
 
@@ -313,17 +446,46 @@ export function UploadPage() {
       );
 
       try {
+        const { exclude_extensions, exclude_name_prefixes } = buildExcludePayloadForPath(
+          project.path,
+          projectExcludeGroupsRef.current,
+        );
         const res = await fetch(
           `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ project_path: project.path }),
+            body: JSON.stringify({
+              project_path: project.path,
+              exclude_extensions,
+              exclude_name_prefixes,
+            }),
           }
         );
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.detail || "Scan failed");
+
+        const eligible = data.eligible_file_count ?? data.file_count;
+        const total = data.total_scanned_files ?? data.file_count;
+
+        if (data.reason === "all_files_excluded") {
+          setProjectsWithRef((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? {
+                    ...p,
+                    similarity: null,
+                    fileCount: 0,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision: "create_new",
+                  }
+                : p
+            )
+          );
+          continue;
+        }
 
         // Handle exact match (100%) - auto-skip
         if (data.exact_match) {
@@ -333,7 +495,8 @@ export function UploadPage() {
                 ? {
                     ...p,
                     similarity: data.similarity,
-                    fileCount: data.file_count,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
                     status: "ready",
                     userDecision: "skip",
                   }
@@ -349,7 +512,13 @@ export function UploadPage() {
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i
-                ? { ...p, similarity: data.similarity, fileCount: data.file_count, status: "similarity_detected" }
+                ? {
+                    ...p,
+                    similarity: data.similarity,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
+                    status: "similarity_detected",
+                  }
                 : p
             )
           );
@@ -365,7 +534,15 @@ export function UploadPage() {
           // No similarity - proceed
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
-              idx === i ? { ...p, fileCount: data.file_count, status: "ready", userDecision: "create_new" } : p
+              idx === i
+                ? {
+                    ...p,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision: "create_new",
+                  }
+                : p
             )
           );
         }
@@ -379,7 +556,12 @@ export function UploadPage() {
       }
     }
 
-    runActualAnalysis();
+    setScanPhaseActive(false);
+    await runActualAnalysis();
+    } catch (e) {
+      console.error(e);
+      setScanPhaseActive(false);
+    }
   };
 
   const runActualAnalysis = async () => {
@@ -415,7 +597,7 @@ export function UploadPage() {
       }
     });
 
-    setRunning(true);
+    setAnalysisRequestPending(true);
     setRunResult(null);
     setRunError(null);
     try {
@@ -444,11 +626,11 @@ export function UploadPage() {
         results: data.results ?? [],
       });
       setSimilarityModalData(null);
-      setRunning(false);
+      setAnalysisRequestPending(false);
       setHasRunAnalysis(true);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
-      setRunning(false);
+      setAnalysisRequestPending(false);
     }
   };
 
@@ -456,8 +638,11 @@ export function UploadPage() {
     setProjectExcludeGroups((prev) => {
       const current = new Set(prev[projectPath] ?? []);
       current.has(groupId) ? current.delete(groupId) : current.add(groupId);
-      return { ...prev, [projectPath]: current };
+      const next = { ...prev, [projectPath]: current };
+      projectExcludeGroupsRef.current = next;
+      return next;
     });
+    scheduleRescanProject(projectPath);
   };
 
   const toggleExpandExclude = (projectPath: string) => {
@@ -469,9 +654,9 @@ export function UploadPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!uploadId || running || hasRunAnalysis) return;
+    if (!uploadId || scanPhaseActive || analysisRequestPending || hasRunAnalysis) return;
 
-    setRunning(true);
+    setScanPhaseActive(true);
     setRunResult(null);
     setRunError(null);
 
@@ -479,11 +664,17 @@ export function UploadPage() {
       prev.map((p) => ({ ...p, status: "pending" as const, similarity: null }))
     );
 
-    processNextProject(0);
+    await processNextProject(0);
   };
 
   const hasUpload = !!uploadId;
-  const analysisDisabled = !hasUpload || loadingProjects || running || hasRunAnalysis;
+  /** Locks default / per-project analysis mode and Run Analysis — not exclusion checkboxes. */
+  const analysisPipelineBusy = scanPhaseActive || analysisRequestPending;
+  const analysisFormDisabled =
+    !hasUpload || loadingProjects || analysisPipelineBusy || hasRunAnalysis;
+  /** Exclusions stay editable during similarity scan; only lock while POST /analysis/run runs. */
+  const exclusionControlsDisabled =
+    !hasUpload || loadingProjects || hasRunAnalysis || analysisRequestPending;
   const isAiSelected =
     defaultMode === "ai" || projects.some((project) => project.mode === "ai");
 
@@ -574,8 +765,10 @@ export function UploadPage() {
               <button
                 type="button"
                 className="upload-select-btn"
-                onClick={() => !uploading && !running && fileInputRef.current?.click()}
-                disabled={uploading || running}
+                onClick={() =>
+                  !uploading && !analysisPipelineBusy && fileInputRef.current?.click()
+                }
+                disabled={uploading || analysisPipelineBusy}
               >
                 {uploading ? "Uploading…" : hasUpload ? "Upload another ZIP" : "Choose ZIP file"}
               </button>
@@ -584,7 +777,7 @@ export function UploadPage() {
                   type="button"
                   className="upload-clear-btn"
                   onClick={handleResetUpload}
-                  disabled={uploading || running}
+                  disabled={uploading || analysisPipelineBusy}
                 >
                   Clear
                 </button>
@@ -593,14 +786,19 @@ export function UploadPage() {
           </div>
 
           <div
-            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}${running ? " upload-dropzone--disabled" : ""}`}
+            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}${analysisPipelineBusy ? " upload-dropzone--disabled" : ""}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onClick={() => !uploading && !running && fileInputRef.current?.click()}
+            onClick={() =>
+              !uploading && !analysisPipelineBusy && fileInputRef.current?.click()
+            }
             role="button"
             tabIndex={0}
             onKeyDown={(e) =>
-              e.key === "Enter" && !uploading && !running && fileInputRef.current?.click()
+              e.key === "Enter" &&
+              !uploading &&
+              !analysisPipelineBusy &&
+              fileInputRef.current?.click()
             }
             aria-label="Drop or click to select ZIP file"
           >
@@ -624,7 +822,7 @@ export function UploadPage() {
             onChange={handleFileChange}
             className="upload-file-input"
             aria-label="Select ZIP file"
-            disabled={uploading || running}
+            disabled={uploading || analysisPipelineBusy}
           />
         </section>
 
@@ -644,7 +842,7 @@ export function UploadPage() {
                 className="ar-select"
                 value={defaultMode}
                 onChange={(e) => handleDefaultModeChange(e.target.value as "local" | "ai")}
-                disabled={analysisDisabled}
+                disabled={analysisFormDisabled}
               >
                 <option value="local">Local (rule-based)</option>
                 <option value="ai">AI (language model)</option>
@@ -774,7 +972,7 @@ export function UploadPage() {
                             value={project.mode}
                             onChange={(e) => handleProjectModeChange(index, e.target.value)}
                             aria-label={`Analysis type for ${project.name}`}
-                            disabled={analysisDisabled}
+                            disabled={analysisFormDisabled}
                           >
                             <option value="local">Local</option>
                             <option value="ai">AI</option>
@@ -813,7 +1011,7 @@ export function UploadPage() {
                             type="button"
                             className={`ar-exclude-btn${isExpanded ? " ar-exclude-btn--open" : ""}`}
                             onClick={() => toggleExpandExclude(project.path)}
-                            disabled={analysisDisabled}
+                            disabled={exclusionControlsDisabled}
                             aria-expanded={isExpanded}
                             aria-label={`Exclude file types for ${project.name}`}
                           >
@@ -841,7 +1039,7 @@ export function UploadPage() {
                                             type="checkbox"
                                             checked={checked}
                                             onChange={() => toggleExcludeGroup(project.path, group.id)}
-                                            disabled={analysisDisabled}
+                                            disabled={exclusionControlsDisabled}
                                           />
                                           <span className="ar-exclude-label">{group.label}</span>
                                           {group.exts.length > 0 ? (
@@ -853,6 +1051,13 @@ export function UploadPage() {
                                       );
                                     })}
                                   </div>
+                                  {(project.totalScannedFiles ?? 0) > 0 &&
+                                    (project.fileCount ?? 0) === 0 && (
+                                      <p className="ar-exclude-no-files-msg" role="status">
+                                        No files left to analyze for this project — change or clear
+                                        exclusions.
+                                      </p>
+                                    )}
                                 </div>
                               </td>
                             </tr>
@@ -868,18 +1073,22 @@ export function UploadPage() {
 
           <div className="ar-actions">
             <button
-              className={`ar-btn ar-btn--primary ${running || hasRunAnalysis ? "ar-btn--disabled" : ""}`}
-              onClick={handleRunAnalysis}
-              disabled={analysisDisabled || projects.length === 0}
+              className={`ar-btn ar-btn--primary ${analysisPipelineBusy || hasRunAnalysis ? "ar-btn--disabled" : ""}`}
+              onClick={() => void handleRunAnalysis()}
+              disabled={analysisFormDisabled || projects.length === 0}
               title={
                 hasRunAnalysis
                   ? "Analysis already run. Upload another ZIP or clear to run again."
-                  : running
+                  : analysisPipelineBusy
                     ? "Analysis in progress…"
                     : ""
               }
             >
-              {running ? "Running…" : hasRunAnalysis ? "Analysis Complete" : "Run Analysis"}
+              {analysisPipelineBusy
+                ? "Running…"
+                : hasRunAnalysis
+                  ? "Analysis Complete"
+                  : "Run Analysis"}
             </button>
           </div>
 

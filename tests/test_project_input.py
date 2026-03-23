@@ -531,6 +531,16 @@ def test_run_scan_flow_accepts_base_threshold(tmp_path):
     assert result["reason"] == "new_project"
 
 
+def test_run_scan_flow_all_files_excluded_by_user_extensions(tmp_path):
+    """Per-project user exclusions can remove every analyzable file."""
+    (tmp_path / "a.py").write_text("print(1)")
+    (tmp_path / "b.py").write_text("print(2)")
+    result = run_scan_flow(str(tmp_path), exclude_extensions=[".py"])
+    assert result["skip_analysis"] is True
+    assert result["reason"] == "all_files_excluded"
+    assert result["files"] == []
+
+
 # ============================================================================
 # Tests for calculate_dynamic_threshold()
 # ============================================================================

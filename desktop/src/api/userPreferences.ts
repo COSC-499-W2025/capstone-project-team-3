@@ -18,6 +18,7 @@ export interface UserPreferences {
   education: string; // e.g., "Bachelor's", "Master's", "PhD"
   industry: string;
   job_title: string;
+  personal_summary?: string | null; // Personal/professional summary shown on resume
   education_details?: EducationDetail[] | null;
   profile_picture_path?: string | null; //path stored in DB e.g. "data/thumbnails/profile_picture.png"
 }

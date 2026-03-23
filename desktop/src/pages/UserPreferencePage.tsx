@@ -45,6 +45,7 @@ export interface ProfileData {
   linkedin: string;
   jobTitle: string;
   industry: typeof INDUSTRIES[number] | null;
+  personalSummary: string;
   educationEntries: EducationEntry[];
 }
 
@@ -111,6 +112,7 @@ function convertToFrontend(backendData: UserPreferences): ProfileData {
     linkedin: backendData.linkedin || "",
     jobTitle: backendData.job_title || "",
     industry: backendData.industry as typeof INDUSTRIES[number] || null,
+    personalSummary: backendData.personal_summary || "",
     educationEntries,
   };
 }
@@ -146,6 +148,7 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
     education: frontendData.educationEntries[0]?.degree || "", // Use first degree as main education level
     industry: frontendData.industry || "",
     job_title: frontendData.jobTitle || "",
+    personal_summary: frontendData.personalSummary || null,
     education_details: educationDetails.length > 0 ? educationDetails : null,
   };
 }
@@ -529,6 +532,7 @@ export default function UserPreferencePage() {
     linkedin: "",
     jobTitle: "",
     industry: null,
+    personalSummary: "",
     educationEntries: [],
   });
 
@@ -853,6 +857,25 @@ export default function UserPreferencePage() {
               className="input-field"
               placeholder="e.g., Software Engineer, Data Scientist"
             />
+          </div>
+
+          {/* Personal Summary */}
+          <div className="form-field">
+            <label className="field-label" htmlFor="personalSummary">
+              Professional Summary (optional)
+            </label>
+            <textarea
+              id="personalSummary"
+              value={profileData.personalSummary}
+              onChange={(e) => updateField("personalSummary", e.target.value)}
+              className="input-field textarea-field"
+              placeholder="Write a brief professional summary that will appear on your resume..."
+              rows={4}
+              maxLength={500}
+            />
+            <span className="field-hint">
+              {profileData.personalSummary.length}/500 characters
+            </span>
           </div>
 
           {/* Educational Background */}

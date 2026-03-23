@@ -497,7 +497,8 @@ def load_saved_resume(resume_id:int) ->Dict[str,Any]:
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
             },
-            "projects": projects
+            "projects": projects,
+            "personal_summary": user.get("personal_summary"),
         }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed loading saved resume") from e
@@ -560,7 +561,8 @@ def build_resume_model(project_ids: Optional[List[str]] = None) -> Dict[str, Any
                 "Proficient": all_skills_buckets["Proficient"],
                 "Familiar": all_skills_buckets["Familiar"],
             },
-            "projects": projects
+            "projects": projects,
+            "personal_summary": user.get("personal_summary"),
         }
     except sqlite3.Error as e:
         raise ResumeServiceError("Failed building resume model") from e
@@ -897,6 +899,29 @@ def save_resume_edits(resume_id: int, payload: dict):
     except sqlite3.Error as e:
         conn.rollback()
         raise ResumePersistenceError("Failed to save resume edits") from e
+    finally:
+        conn.close()
+
+
+def save_personal_summary(summary: str) -> None:
+    """Persist the personal_summary back to USER_PREFERENCES (user_id=1)."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO USER_PREFERENCES (user_id, personal_summary, updated_at)
+            VALUES (1, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                personal_summary = excluded.personal_summary,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (summary,),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise ResumePersistenceError("Failed to save personal summary") from e
     finally:
         conn.close()
 

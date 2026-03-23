@@ -564,8 +564,10 @@ def _build_collaboration_network(
     # Aggregate contributors across projects
     # node_key -> {name, commits, is_primary, projects set}
     node_map: Dict[str, Dict[str, Any]] = {}
-    # (source_key, target_key) -> {projects set}
+    # (source_key, target_key) -> {projects set}  — primary ↔ collaborator
     edge_map: Dict[tuple, set] = {}
+    # (source_key, target_key) -> {projects set}  — peer ↔ peer
+    peer_edge_map: Dict[tuple, set] = {}
 
     primary_key = user.get("name") or user.get("github_user") or "You"
 
@@ -621,6 +623,15 @@ def _build_collaboration_network(
                 edge_map[edge_key] = set()
             edge_map[edge_key].add(project_title)
 
+        # Create peer edges between non-primary collaborators who share this project
+        non_primary_keys = [k for k in project_keys if k != primary_key]
+        for ii in range(len(non_primary_keys)):
+            for jj in range(ii + 1, len(non_primary_keys)):
+                peer_edge_key = tuple(sorted([non_primary_keys[ii], non_primary_keys[jj]]))
+                if peer_edge_key not in peer_edge_map:
+                    peer_edge_map[peer_edge_key] = set()
+                peer_edge_map[peer_edge_key].add(project_title)
+
     # Build output
     nodes = []
     for key, data in node_map.items():
@@ -639,6 +650,15 @@ def _build_collaboration_network(
             "target": target,
             "projects": sorted(proj_set),
             "weight": len(proj_set),
+            "is_peer": False,
+        })
+    for (source, target), proj_set in peer_edge_map.items():
+        edges.append({
+            "source": source,
+            "target": target,
+            "projects": sorted(proj_set),
+            "weight": len(proj_set),
+            "is_peer": True,
         })
 
     # Sort nodes: primary first, then by commits descending

@@ -11,7 +11,7 @@ import os
 import re
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -25,25 +25,61 @@ router = APIRouter()
 # Stop-words (lightweight)
 # ---------------------------------------------------------------------------
 _STOP_WORDS = {
+    # Articles / conjunctions / prepositions
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
     "of", "with", "by", "from", "up", "about", "into", "through", "during",
+    # Auxiliaries / modals
     "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
     "do", "does", "did", "will", "would", "could", "should", "may", "might",
     "must", "shall", "can", "need", "dare", "ought", "used",
+    # Pronouns / determiners
     "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us",
     "them", "my", "your", "his", "its", "our", "their", "this", "that",
     "these", "those", "who", "which", "what", "all", "both", "each",
     "few", "more", "most", "other", "some", "such", "no", "nor", "not",
     "only", "own", "same", "so", "than", "too", "very", "s", "t", "just",
-    "don", "as", "if", "when", "where", "how", "work", "working", "use",
-    "using", "experience", "strong", "ability", "excellent", "etc",
-    "including", "also", "well", "within", "across", "ensure", "provide",
-    "take", "make", "build", "create", "develop", "manage", "support",
-    "help", "ability", "required", "preferred", "years", "year", "role",
-    "team", "company", "environment", "understanding", "knowledge",
-    "responsibilities", "qualifications", "position", "candidate", "job",
-    "looking", "seeking", "opportunity", "applications", "new", "good",
-    "great", "plus", "type", "based", "various",
+    "don", "as", "if", "when", "where", "how",
+    # Generic verbs (already covered elsewhere, extended)
+    "work", "working", "use", "using", "ensure", "provide", "take", "make",
+    "build", "create", "develop", "manage", "support", "help", "drive",
+    "define", "own", "lead", "improve", "optimize", "contribute", "deliver",
+    "implement", "execute", "operate", "monitor", "evaluate", "maintain",
+    "collaborate", "communicate", "partner", "participate", "assist",
+    # Generic job-posting nouns
+    "experience", "ability", "knowledge", "understanding", "skill", "skills",
+    "required", "preferred", "years", "year", "role", "team", "company",
+    "environment", "responsibilities", "qualifications", "position",
+    "candidate", "job", "looking", "seeking", "opportunity", "applications",
+    "solution", "solutions", "service", "services", "platform", "platforms",
+    "product", "products", "feature", "features", "result", "results",
+    "impact", "value", "goal", "goals", "challenge", "challenges",
+    "process", "processes", "practice", "practices", "standard", "standards",
+    "level", "levels", "quality", "business", "area", "areas", "function",
+    # Generic adjectives / size / scale (not tech concepts)
+    "large", "larger", "largest", "small", "smaller", "smallest",
+    "big", "bigger", "biggest", "huge", "massive",
+    "high", "higher", "highest", "low", "lower", "lowest",
+    "fast", "faster", "fastest", "quick", "quicker", "slow", "slower",
+    "long", "longer", "longest", "short", "shorter",
+    "wide", "wider", "broad", "broader", "deep", "deeper",
+    "full", "complex", "simple", "simpler", "basic", "light", "heavy",
+    # Generic importance / priority adjectives
+    "key", "core", "main", "primary", "secondary", "major", "minor",
+    "critical", "important", "essential", "significant", "unique",
+    "specific", "clear", "clean", "smart", "rich", "solid", "modern",
+    "advanced", "global", "multiple", "different", "various", "general",
+    "technical", "effective", "efficient", "successful", "cross", "end",
+    # Superlatives / comparatives (generally noise)
+    "best", "top", "leading", "latest", "newest", "greatest", "closest",
+    # Soft-skill and personality descriptors
+    "innovative", "creative", "dynamic", "strategic", "analytical",
+    "collaborative", "passionate", "motivated", "driven", "proactive",
+    "detail", "oriented", "ownership", "initiative", "interpersonal",
+    "adaptable", "ambitious", "self", "starter", "entrepreneurial",
+    "communication", "leadership", "mentoring", "coaching", "mentorship",
+    # Misc filler
+    "including", "also", "well", "within", "across", "etc", "new", "good",
+    "great", "plus", "type", "based", "strong", "excellent",
 }
 
 
@@ -56,6 +92,10 @@ class ATSScoreRequest(BaseModel):
     resume_id: Optional[int] = Field(
         None,
         description="ID of a saved resume. Omit or pass null to use the master resume.",
+    )
+    analysis_mode: Literal["local", "ai"] = Field(
+        "local",
+        description="Keyword extraction mode. 'local' uses the rule-based tokenizer; 'ai' uses Gemini (falls back to local if no API key is configured).",
     )
 
 
@@ -120,10 +160,13 @@ def _gemini_extract_jd_keywords(jd: str) -> List[str]:
             "- Software engineering methodologies and practices\n"
             "- Explicit years-of-experience requirements (e.g. '5 years')\n\n"
             "DO NOT include:\n"
-            "- Company-specific culture words (e.g. 'Amazonian', 'Googler')\n"
-            "- Generic soft skills (e.g. 'passionate', 'collaborative')\n"
-            "- Generic verbs (e.g. 'build', 'develop', 'manage')\n"
-            "- Generic nouns (e.g. 'team', 'environment', 'opportunity')\n\n"
+            "- Generic adjectives, comparatives, or superlatives "
+            "(e.g. 'large', 'largest', 'high', 'fast', 'best', 'latest', 'scalable')\n"
+            "- Soft skills or personality traits "
+            "(e.g. 'leadership', 'communication', 'collaborative', 'detail-oriented', 'passionate')\n"
+            "- Generic verbs (e.g. 'build', 'develop', 'manage', 'drive', 'deliver')\n"
+            "- Generic nouns (e.g. 'team', 'environment', 'solution', 'platform', 'product')\n"
+            "- Company-specific culture words (e.g. 'Amazonian', 'Googler')\n\n"
             "Return ONLY a valid JSON array of lowercase strings, nothing else.\n"
             "Example: [\"python\", \"react\", \"aws\", \"5+ years\", \"docker\"]\n\n"
             f"Job description:\n{jd}"
@@ -231,8 +274,11 @@ def _match_level(score: int) -> str:
 # Core scoring
 # ---------------------------------------------------------------------------
 
-def _score_ats(resume: Any, jd: str) -> ATSScoreResponse:
-    jd_keywords = _gemini_extract_jd_keywords(jd)
+def _score_ats(resume: Any, jd: str, analysis_mode: Literal["local", "ai"] = "local") -> ATSScoreResponse:
+    if analysis_mode == "ai":
+        jd_keywords = _gemini_extract_jd_keywords(jd)
+    else:
+        jd_keywords = _extract_jd_keywords_fallback(jd)
 
     # Supplement with any TECH_KEYWORDS that appear verbatim in the JD
     jd_lower = jd.lower()
@@ -244,20 +290,34 @@ def _score_ats(resume: Any, jd: str) -> ATSScoreResponse:
             jd_keywords.append(kw)
             jd_keywords_set.add(kw)
 
-    resume_text_tokens = set(_tokenize(_resume_full_text(resume)))
-    resume_skill_tokens = set(_all_resume_skills(resume))
+    # Build token set from full resume text, expanding compound terms
+    # e.g. "node.js" → also add "node"; "react-native" → also add "react"
+    _raw_tokens = set(_tokenize(_resume_full_text(resume)))
+    resume_text_tokens: set = _raw_tokens.copy()
+    for _t in _raw_tokens:
+        for _part in re.split(r"[.\-/]", _t):
+            if len(_part) > 2 and _part not in _STOP_WORDS:
+                resume_text_tokens.add(_part)
 
     # Keyword coverage: JD keywords found anywhere in resume text
-    matched_kw = [kw for kw in jd_keywords if any(t in resume_text_tokens for t in _tokenize(kw) or [kw])]
-    missing_kw = [kw for kw in jd_keywords if kw not in matched_kw]
-
-    # Skill overlap: JD keywords found in resume skills specifically
-    matched_sk = [kw for kw in jd_keywords if any(t in resume_skill_tokens for t in _tokenize(kw) or [kw])]
-    missing_sk = [kw for kw in jd_keywords if kw not in matched_sk]
-
+    matched_kw = [
+        kw for kw in jd_keywords
+        if any(t in resume_text_tokens for t in (_tokenize(kw) or [kw]))
+    ]
+    missing_kw = [kw for kw in jd_keywords if kw not in set(matched_kw)]
     kw_count = max(len(jd_keywords), 1)
     keyword_score = round(len(matched_kw) / kw_count * 100)
-    skills_score = round(len(matched_sk) / kw_count * 100)
+
+    # Skills match: tech/tool JD keywords found in full resume text
+    jd_tech = [kw for kw in jd_keywords
+               if any(t in TECH_KEYWORDS for t in (_tokenize(kw) or [kw]))]
+    if jd_tech:
+        matched_sk = [kw for kw in jd_tech
+                      if any(t in resume_text_tokens for t in (_tokenize(kw) or [kw]))]
+        missing_sk = [kw for kw in jd_tech if kw not in set(matched_sk)]
+        skills_score = round(len(matched_sk) / len(jd_tech) * 100)
+    else:
+        matched_sk, missing_sk, skills_score = matched_kw, missing_kw, keyword_score
 
     bullet_count = sum(
         len(proj.get("bullets") or []) if isinstance(proj.get("bullets"), list) else 1
@@ -279,7 +339,7 @@ def _score_ats(resume: Any, jd: str) -> ATSScoreResponse:
 
     tips: List[str] = []
     if skills_score < 50:
-        tips.append("Add more of the required skills from the job description to your resume skills section.")
+        tips.append("Add more of the required tools and technologies from the job description to your resume project descriptions.")
     if keyword_score < 60:
         tips.append("Mirror the exact wording from the job description in your project descriptions and bullet points.")
     if content_score < 50:
@@ -326,4 +386,10 @@ def ats_score(payload: ATSScoreRequest) -> ATSScoreResponse:
     except Exception as exc:
         raise HTTPException(status_code=404, detail=f"Resume not found: {exc}")
 
-    return _score_ats(resume, payload.job_description)
+    if not _resume_full_text(resume).strip():
+        raise HTTPException(
+            status_code=422,
+            detail="EMPTY_RESUME",
+        )
+
+    return _score_ats(resume, payload.job_description, payload.analysis_mode)

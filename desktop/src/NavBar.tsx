@@ -160,6 +160,7 @@ export function NavBar() {
               title={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
               aria-label={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
               aria-expanded={fontSizeExpanded}
+              aria-controls="text-size-controls"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <polyline points="4 7 4 4 20 4 20 7" />
@@ -168,7 +169,7 @@ export function NavBar() {
               </svg>
             </button>
             {fontSizeExpanded && (
-              <div className="app-sidebar__text-size-controls">
+              <div id="text-size-controls" role="group" aria-label="Text size controls" className="app-sidebar__text-size-controls">
                 <button
                   type="button"
                   className="app-sidebar__text-size-btn"
@@ -180,7 +181,7 @@ export function NavBar() {
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
                 </button>
-                <span className="app-sidebar__text-size-label">{fontSize === "small" ? "S" : fontSize === "default" ? "M" : fontSize === "large" ? "L" : "XL"}</span>
+                <span className="app-sidebar__text-size-label" aria-live="polite" aria-label={`Text size: ${fontSize}`}>{fontSize === "small" ? "S" : fontSize === "default" ? "M" : fontSize === "large" ? "L" : "XL"}</span>
                 <button
                   type="button"
                   className="app-sidebar__text-size-btn"

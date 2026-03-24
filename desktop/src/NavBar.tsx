@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { mainNavItems, footerNavItems } from "./navigation";
 import { getResumes } from "./api/resume";
+import {
+  getUserPreferences,
+  USER_PREFERENCES_UPDATED_EVENT,
+} from "./api/userPreferences";
 import { useTheme } from "./context/ThemeContext";
 import "./styles/NavBar.css";
 
@@ -64,6 +68,13 @@ const navIcons: Record<string, React.ReactNode> = {
   ),
 };
 
+const profileOutlineIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 const settingsIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <circle cx="12" cy="12" r="3" />
@@ -74,6 +85,7 @@ const settingsIcon = (
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [hasMasterResume, setHasMasterResume] = useState(true);
+  const [displayName, setDisplayName] = useState("");
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -85,20 +97,41 @@ export function NavBar() {
       .catch(() => setHasMasterResume(true));
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadName = () => {
+      getUserPreferences()
+        .then((prefs) => {
+          if (!cancelled) setDisplayName((prefs.name || "").trim());
+        })
+        .catch(() => {
+          if (!cancelled) setDisplayName("");
+        });
+    };
+    loadName();
+    window.addEventListener(USER_PREFERENCES_UPDATED_EVENT, loadName);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_PREFERENCES_UPDATED_EVENT, loadName);
+    };
+  }, []);
+
   return (
     <aside
       className={`app-sidebar ${collapsed ? "app-sidebar--collapsed" : ""}`}
       aria-label="Main navigation"
     >
       <div className="app-sidebar__head">
-        <NavLink to="/hubpage" className="app-sidebar__brand" title="Insights">
-          <span className="app-sidebar__brand-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-          </span>
-          {!collapsed && <span className="app-sidebar__brand-text">Insights</span>}
+        <NavLink
+          to="/userpreferencepage"
+          className="app-sidebar__brand"
+          title={displayName ? displayName : "Profile"}
+          aria-label={displayName ? `Profile — ${displayName}` : "Profile"}
+        >
+          <span className="app-sidebar__brand-icon">{profileOutlineIcon}</span>
+          {!collapsed && (
+            <span className="app-sidebar__brand-text">{displayName || "Profile"}</span>
+          )}
         </NavLink>
       </div>
 

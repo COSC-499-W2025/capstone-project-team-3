@@ -1,0 +1,167 @@
+[
+  {
+    "id": "cs50p",
+    "title": "CS50's Introduction to Programming with Python",
+    "description": "Harvard's intro to programming using Python — good first step if you are new to code or want structured fundamentals.",
+    "url": "https://cs50.harvard.edu/python/",
+    "thumbnail_url": "https://placehold.co/320x180/1e3a5f/ffffff?text=Python",
+    "provider": "Harvard CS50",
+    "tags": ["python", "programming", "beginner"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "fastapi-doc",
+    "title": "FastAPI documentation & tutorial",
+    "description": "Official guide to building APIs with Python and FastAPI, including async patterns and OpenAPI.",
+    "url": "https://fastapi.tiangolo.com/tutorial/",
+    "thumbnail_url": "https://placehold.co/320x180/009688/ffffff?text=FastAPI",
+    "provider": "FastAPI",
+    "tags": ["python", "api", "web", "backend"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "mdn-js",
+    "title": "MDN JavaScript guide",
+    "description": "Deep, vendor-neutral JavaScript fundamentals from Mozilla — ideal for solidifying web skills.",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+    "thumbnail_url": "https://placehold.co/320x180/f7df1e/333333?text=JavaScript",
+    "provider": "MDN",
+    "tags": ["javascript", "web", "frontend"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "react-learn",
+    "title": "React — Learn",
+    "description": "Interactive official tutorial for building UIs with React and modern JavaScript.",
+    "url": "https://react.dev/learn",
+    "thumbnail_url": "https://placehold.co/320x180/149eca/ffffff?text=React",
+    "provider": "Meta / React",
+    "tags": ["react", "javascript", "frontend", "web"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "sqlbolt",
+    "title": "SQLBolt",
+    "description": "Short, interactive lessons on SQL queries — tables, joins, and aggregations.",
+    "url": "https://sqlbolt.com/",
+    "thumbnail_url": "https://placehold.co/320x180/336791/ffffff?text=SQL",
+    "provider": "SQLBolt",
+    "tags": ["sql", "database"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "aws-skill-builder-free",
+    "title": "AWS Skill Builder — Cloud essentials",
+    "description": "Free digital training for core AWS services and cloud concepts (filter for free content).",
+    "url": "https://skillbuilder.aws/",
+    "thumbnail_url": "https://placehold.co/320x180/ff9900/232f3e?text=AWS",
+    "provider": "Amazon AWS",
+    "tags": ["aws", "cloud", "devops"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "ml-coursera-ng",
+    "title": "Machine Learning (Andrew Ng)",
+    "description": "Classic introduction to ML concepts, linear models, and neural networks.",
+    "url": "https://www.coursera.org/learn/machine-learning",
+    "thumbnail_url": "https://placehold.co/320x180/0056d2/ffffff?text=ML",
+    "provider": "Coursera / Stanford",
+    "tags": ["machine-learning", "python", "algorithms"],
+    "level": "starter",
+    "pricing": "paid"
+  },
+  {
+    "id": "system-design-primer",
+    "title": "System Design Primer",
+    "description": "Large open-source repo covering scalability, trade-offs, and interview-style system design.",
+    "url": "https://github.com/donnemartin/system-design-primer",
+    "thumbnail_url": "https://placehold.co/320x180/24292f/ffffff?text=System+Design",
+    "provider": "GitHub (community)",
+    "tags": ["system-design", "architecture", "interview", "scalability"],
+    "level": "advanced",
+    "pricing": "free"
+  },
+  {
+    "id": "ddia-book",
+    "title": "Designing Data-Intensive Applications (book)",
+    "description": "In-depth look at databases, replication, and distributed systems — strong follow-on after basics.",
+    "url": "https://dataintensive.net/",
+    "thumbnail_url": "https://placehold.co/320x180/2d5016/ffffff?text=DDIA",
+    "provider": "Martin Kleppmann",
+    "tags": ["system-design", "database", "distributed-systems"],
+    "level": "advanced",
+    "pricing": "paid"
+  },
+  {
+    "id": "k8s-basics",
+    "title": "Kubernetes Basics (official)",
+    "description": "Official interactive tutorial for pods, deployments, and services on Kubernetes.",
+    "url": "https://kubernetes.io/docs/tutorials/kubernetes-basics/",
+    "thumbnail_url": "https://placehold.co/320x180/326ce5/ffffff?text=Kubernetes",
+    "provider": "Kubernetes",
+    "tags": ["kubernetes", "cloud", "devops", "containers"],
+    "level": "advanced",
+    "pricing": "free"
+  },
+  {
+    "id": "leetcode-patterns",
+    "title": "LeetCode (interview prep)",
+    "description": "Practice coding problems by topic — pair with a curated pattern list for interviews.",
+    "url": "https://leetcode.com/",
+    "thumbnail_url": "https://placehold.co/320x180/ffa116/000000?text=LeetCode",
+    "provider": "LeetCode",
+    "tags": ["interview", "algorithms", "python", "javascript"],
+    "level": "advanced",
+    "pricing": "free"
+  },
+  {
+    "id": "deep-learning-deeplearning-ai",
+    "title": "Deep Learning Specialization",
+    "description": "Neural networks, CNNs, sequence models — for after introductory ML.",
+    "url": "https://www.deeplearning.ai/courses/deep-learning-specialization/",
+    "thumbnail_url": "https://placehold.co/320x180/764ba2/ffffff?text=Deep+Learning",
+    "provider": "DeepLearning.AI",
+    "tags": ["machine-learning", "deep-learning", "python"],
+    "level": "advanced",
+    "pricing": "paid"
+  },
+  {
+    "id": "postgres-doc",
+    "title": "PostgreSQL documentation",
+    "description": "Official docs for SQL features, indexing, and performance — complements hands-on SQL practice.",
+    "url": "https://www.postgresql.org/docs/current/",
+    "thumbnail_url": "https://placehold.co/320x180/336791/ffffff?text=PostgreSQL",
+    "provider": "PostgreSQL",
+    "tags": ["sql", "database", "backend"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "go-tour",
+    "title": "A Tour of Go",
+    "description": "Interactive introduction to Go syntax, concurrency, and standard patterns.",
+    "url": "https://go.dev/tour/",
+    "thumbnail_url": "https://placehold.co/320x180/00add8/ffffff?text=Go",
+    "provider": "Go",
+    "tags": ["go", "backend", "programming"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "rust-book",
+    "title": "The Rust Programming Language",
+    "description": "Official book for ownership, borrowing, and systems programming in Rust.",
+    "url": "https://doc.rust-lang.org/book/",
+    "thumbnail_url": "https://placehold.co/320x180/ce422b/ffffff?text=Rust",
+    "provider": "Rust Project",
+    "tags": ["rust", "systems", "programming"],
+    "level": "advanced",
+    "pricing": "free"
+  }
+]

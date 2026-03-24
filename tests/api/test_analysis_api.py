@@ -474,13 +474,14 @@ def test_project_exclude_name_prefixes_filters_readme_files(
 @patch(
     "app.api.routes.analysis.run_scan_flow",
     return_value={
-        "files": [Path("/tmp/proj/README.md"), Path("/tmp/proj/notes.md")],
-        "skip_analysis": False,
+        "files": [],
+        "skip_analysis": True,
+        "reason": "all_files_excluded",
         "signature": "sig-all-excl",
     },
 )
 def test_all_files_excluded_returns_skipped(mock_scan, mock_exists, mock_extract, mock_api_key):
-    """When exclusions remove every file the project must be skipped with reason all_files_excluded."""
+    """When run_scan_flow reports all_files_excluded the API must skip (exclusions removed every file)."""
     response = client.post(
         "/api/analysis/run",
         json={
@@ -496,3 +497,38 @@ def test_all_files_excluded_returns_skipped(mock_scan, mock_exists, mock_extract
     result = data["results"][0]
     assert result["status"] == "skipped"
     assert result["reason"] == "all_files_excluded"
+
+
+@patch("app.api.routes.analysis.clear_project_analysis_when_skipped_no_files")
+@patch("app.api.routes.analysis.check_gemini_api_key", return_value=(False, "missing key"))
+@patch(
+    "app.api.routes.analysis.extract_and_list_projects",
+    return_value={
+        "status": "ok",
+        "projects": ["/tmp/proj"],
+        "extracted_dir": "/tmp",
+    },
+)
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+@patch(
+    "app.api.routes.analysis.run_scan_flow",
+    return_value={
+        "files": [],
+        "skip_analysis": True,
+        "reason": "all_files_excluded",
+        "signature": "sig-from-scan",
+    },
+)
+def test_all_files_excluded_skip_calls_clear_with_signature(
+    mock_scan, mock_exists, mock_extract, mock_api_key, mock_clear,
+):
+    """Skip from scan must clear stale DB rows using the content signature when provided."""
+    response = client.post(
+        "/api/analysis/run",
+        json={
+            "upload_id": "upload-skip-clear",
+            "project_exclude_extensions": {"/tmp/proj": [".md"]},
+        },
+    )
+    assert response.status_code == 200
+    mock_clear.assert_called_once_with("/tmp/proj", "proj", "sig-from-scan")

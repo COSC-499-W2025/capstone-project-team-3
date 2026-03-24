@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, test, expect, jest } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
@@ -181,5 +182,70 @@ describe('NavBar', () => {
     renderNavBar();
     fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
     expect(screen.getByText('XL')).toBeInTheDocument();
+  });
+
+  // ── Accessibility: aria semantics
+  test('text size toggle has aria-controls pointing to controls', () => {
+    renderNavBar();
+    const toggle = screen.getByRole('button', { name: /adjust text size/i });
+    expect(toggle).toHaveAttribute('aria-controls', 'text-size-controls');
+  });
+
+  test('expanded controls have role group and aria-label', () => {
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    const group = screen.getByRole('group', { name: /text size controls/i });
+    expect(group).toBeInTheDocument();
+  });
+
+  test('size label has aria-live for screen reader announcements', () => {
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    const label = screen.getByLabelText(/text size:/i);
+    expect(label).toHaveAttribute('aria-live', 'polite');
+  });
+
+  // ── Keyboard navigation
+  test('text size toggle is focusable', () => {
+    renderNavBar();
+    const toggle = screen.getByRole('button', { name: /adjust text size/i });
+    toggle.focus();
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  test('increase button is focusable when expanded', () => {
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    const btn = screen.getByRole('button', { name: /increase text size/i });
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
+  });
+
+  test('decrease button is focusable when expanded', () => {
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    const btn = screen.getByRole('button', { name: /decrease text size/i });
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
+  });
+
+  test('increase button responds to Enter key', async () => {
+    const user = userEvent.setup();
+    mockIncreaseFontSize.mockClear();
+    renderNavBar();
+    await user.click(screen.getByRole('button', { name: /adjust text size/i }));
+    await user.keyboard('{Tab}{Tab}');
+    await user.keyboard('{Enter}');
+    expect(mockIncreaseFontSize).toHaveBeenCalledTimes(1);
+  });
+
+  test('decrease button responds to Enter key', async () => {
+    const user = userEvent.setup();
+    mockDecreaseFontSize.mockClear();
+    renderNavBar();
+    await user.click(screen.getByRole('button', { name: /adjust text size/i }));
+    await user.keyboard('{Tab}');
+    await user.keyboard('{Enter}');
+    expect(mockDecreaseFontSize).toHaveBeenCalledTimes(1);
   });
 });

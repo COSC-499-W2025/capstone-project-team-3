@@ -10,7 +10,8 @@ from app.utils.scan_utils import (
     get_all_file_signatures_from_db,
     extract_project_timestamps,
     calculate_dynamic_threshold,
-    calculate_containment_ratio
+    calculate_containment_ratio,
+    EXCLUDE_PATTERNS,
 )
 from pathlib import Path
 from unittest.mock import patch
@@ -539,6 +540,12 @@ def test_run_scan_flow_all_files_excluded_by_user_extensions(tmp_path):
     assert result["skip_analysis"] is True
     assert result["reason"] == "all_files_excluded"
     assert result["files"] == []
+    raw = scan_project_files(str(tmp_path), exclude_patterns=EXCLUDE_PATTERNS.copy())
+    expected_sig = get_project_signature(
+        [extract_file_signature(f, str(tmp_path)) for f in raw]
+    )
+    assert result["signature"] == expected_sig
+    assert result["signature"]
 
 
 @patch("app.utils.scan_utils.project_signature_exists", return_value=True)

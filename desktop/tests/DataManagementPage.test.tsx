@@ -6,6 +6,7 @@ import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import * as chronologicalApi from '../src/api/chronological';
 import * as projectsApi from '../src/api/projects';
+import { ERROR_TIMEOUT } from '../src/constants/uiTiming';
 
 jest.mock('../src/api/chronological');
 jest.mock('../src/api/projects');
@@ -683,7 +684,7 @@ test('date error auto-dismisses after 8 seconds', async () => {
   expect(await screen.findByText(/Invalid date format/i)).toBeInTheDocument();
 
   await act(async () => {
-    jest.advanceTimersByTime(8000);
+    jest.advanceTimersByTime(ERROR_TIMEOUT);
   });
   expect(screen.queryByText(/Invalid date format/i)).not.toBeInTheDocument();
 

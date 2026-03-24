@@ -13,6 +13,7 @@ import {
   type ChronologicalSkill,
 } from "../api/chronological";
 import { deleteProject } from "../api/projects";
+import { ERROR_TIMEOUT } from "../constants/uiTiming";
 import "../styles/DataManagementPage.css";
 import trashIcon from "../assets/delete-24.png";
 
@@ -107,16 +108,16 @@ export function DataManagementPage() {
   const [dateError, setDateError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Auto-dismiss error banners after 8 seconds
+  // Auto-dismiss error banners after ERROR_TIMEOUT
   useEffect(() => {
     if (!dateError) return;
-    const t = setTimeout(() => setDateError(null), 8000);
+    const t = setTimeout(() => setDateError(null), ERROR_TIMEOUT);
     return () => clearTimeout(t);
   }, [dateError]);
 
   useEffect(() => {
     if (!saveError) return;
-    const t = setTimeout(() => setSaveError(null), 8000);
+    const t = setTimeout(() => setSaveError(null), ERROR_TIMEOUT);
     return () => clearTimeout(t);
   }, [saveError]);
 

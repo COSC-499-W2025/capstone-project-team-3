@@ -1,8 +1,26 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, test, expect, jest } from '@jest/globals';
+import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { NavBar } from '../src/NavBar';
+import * as userPreferencesApi from '../src/api/userPreferences';
+
+jest.mock('../src/api/resume', () => ({
+  getResumes: jest.fn().mockResolvedValue([{ id: 1, name: 'Master', is_master: true }]),
+}));
+
+const emptyPrefs = {
+  name: '',
+  email: '',
+  github_user: '',
+  linkedin: null as string | null,
+  education: '',
+  industry: '',
+  job_title: '',
+  education_details: null,
+  profile_picture_path: null as string | null,
+  personal_summary: null as string | null,
+};
 
 // ── Theme Mock
 const mockToggleTheme = jest.fn();
@@ -13,6 +31,12 @@ jest.mock('../src/context/ThemeContext', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+jest.spyOn(userPreferencesApi, 'getUserPreferences').mockResolvedValue(emptyPrefs);
+
+beforeEach(() => {
+  jest.mocked(userPreferencesApi.getUserPreferences).mockResolvedValue(emptyPrefs);
+});
+
 function renderNavBar() {
   return render(
     <BrowserRouter>
@@ -22,11 +46,23 @@ function renderNavBar() {
 }
 
 describe('NavBar', () => {
-  test('renders sidebar with brand Insights', () => {
+  test('renders sidebar with Profile brand linking to profile page', async () => {
     renderNavBar();
-    const brand = screen.getByRole('link', { name: /insights/i });
+    const brand = await screen.findByRole('link', { name: /^profile$/i });
     expect(brand).toBeInTheDocument();
-    expect(brand).toHaveAttribute('href', '/hubpage');
+    expect(brand).toHaveAttribute('href', '/userpreferencepage');
+  });
+
+  test('shows saved name in brand when user has a name', async () => {
+    jest.mocked(userPreferencesApi.getUserPreferences).mockResolvedValue({
+      ...emptyPrefs,
+      name: 'Alex Rivera',
+    });
+    renderNavBar();
+    expect(await screen.findByRole('link', { name: /profile — alex rivera/i })).toHaveAttribute(
+      'href',
+      '/userpreferencepage'
+    );
   });
 
   test('renders all main nav links from config', () => {

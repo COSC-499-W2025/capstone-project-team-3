@@ -6,10 +6,19 @@ import { NavBar } from '../src/NavBar';
 
 // ── Theme Mock
 const mockToggleTheme = jest.fn();
+const mockIncreaseFontSize = jest.fn();
+const mockDecreaseFontSize = jest.fn();
 let mockTheme = 'light';
+let mockFontSize = 'default';
 
 jest.mock('../src/context/ThemeContext', () => ({
-  useTheme: () => ({ theme: mockTheme, toggleTheme: mockToggleTheme }),
+  useTheme: () => ({ 
+    theme: mockTheme, 
+    toggleTheme: mockToggleTheme,
+    fontSize: mockFontSize,
+    increaseFontSize: mockIncreaseFontSize,
+    decreaseFontSize: mockDecreaseFontSize
+  }),
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -92,5 +101,85 @@ describe('NavBar', () => {
     renderNavBar();
     const toggleBtn = screen.getByRole('button', { name: /switch to light mode/i });
     expect(toggleBtn).toBeInTheDocument();
+  });
+
+  // ── Text Size Toggle Tests
+  test('renders text size toggle button', () => {
+    renderNavBar();
+    const textSizeToggle = screen.getByRole('button', { name: /adjust text size/i });
+    expect(textSizeToggle).toBeInTheDocument();
+    expect(textSizeToggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('clicking text size toggle expands controls', () => {
+    renderNavBar();
+    const textSizeToggle = screen.getByRole('button', { name: /adjust text size/i });
+    
+    expect(screen.queryByRole('button', { name: /decrease text size/i })).not.toBeInTheDocument();
+    
+    fireEvent.click(textSizeToggle);
+    
+    expect(textSizeToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /decrease text size/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /increase text size/i })).toBeInTheDocument();
+  });
+
+  test('clicking text size toggle again collapses controls', () => {
+    renderNavBar();
+    const textSizeToggle = screen.getByRole('button', { name: /adjust text size/i });
+    
+    fireEvent.click(textSizeToggle);
+    expect(screen.getByRole('button', { name: /decrease text size/i })).toBeInTheDocument();
+    
+    fireEvent.click(screen.getByRole('button', { name: /hide text size controls/i }));
+    expect(screen.queryByRole('button', { name: /decrease text size/i })).not.toBeInTheDocument();
+  });
+
+  test('decrease text size button calls decreaseFontSize', () => {
+    mockDecreaseFontSize.mockClear();
+    renderNavBar();
+    
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    fireEvent.click(screen.getByRole('button', { name: /decrease text size/i }));
+    
+    expect(mockDecreaseFontSize).toHaveBeenCalledTimes(1);
+  });
+
+  test('increase text size button calls increaseFontSize', () => {
+    mockIncreaseFontSize.mockClear();
+    renderNavBar();
+    
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    fireEvent.click(screen.getByRole('button', { name: /increase text size/i }));
+    
+    expect(mockIncreaseFontSize).toHaveBeenCalledTimes(1);
+  });
+
+  test('displays correct text size label for default size', () => {
+    mockFontSize = 'default';
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    expect(screen.getByText('M')).toBeInTheDocument();
+  });
+
+  test('displays correct text size label for small size', () => {
+    mockFontSize = 'small';
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    expect(screen.getByText('S')).toBeInTheDocument();
+  });
+
+  test('displays correct text size label for large size', () => {
+    mockFontSize = 'large';
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    expect(screen.getByText('L')).toBeInTheDocument();
+  });
+
+  test('displays correct text size label for x-large size', () => {
+    mockFontSize = 'x-large';
+    renderNavBar();
+    fireEvent.click(screen.getByRole('button', { name: /adjust text size/i }));
+    expect(screen.getByText('XL')).toBeInTheDocument();
   });
 });

@@ -141,16 +141,49 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
     });
 
   return {
-    name: frontendData.fullName,
-    email: frontendData.email,
-    github_user: frontendData.github,
-    linkedin: frontendData.linkedin || null,
+    name: frontendData.fullName.trim(),
+    email: frontendData.email.trim(),
+    github_user: frontendData.github.trim(),
+    linkedin: frontendData.linkedin.trim() || null,
     education: frontendData.educationEntries[0]?.degree || "", // Use first degree as main education level
     industry: frontendData.industry || "",
-    job_title: frontendData.jobTitle || "",
-    personal_summary: frontendData.personalSummary || null,
+    job_title: frontendData.jobTitle.trim(),
+    personal_summary: frontendData.personalSummary.trim() || null,
     education_details: educationDetails.length > 0 ? educationDetails : null,
   };
+}
+
+// Validate a single education entry (shared between EducationCard and page-level save)
+export function validateEducationEntry(entry: EducationEntry): Record<string, string> {
+  const errs: Record<string, string> = {};
+  if (entry.gpa !== "") {
+    const gpaNum = parseFloat(entry.gpa);
+    if (isNaN(gpaNum)) {
+      errs.gpa = "GPA must be a number.";
+    } else if (gpaNum < 0 || gpaNum > 4.33) {
+      errs.gpa = "GPA must be between 0 and 4.33.";
+    }
+  }
+  if (entry.startDate && entry.endDate && entry.endDate < entry.startDate) {
+    errs.endDate = "End date must be after start date.";
+  }
+  return errs;
+}
+
+function validateEducationEntries(entries: EducationEntry[]): string | null {
+  const messages = entries
+    .map((entry, index) => {
+      const errs = validateEducationEntry(entry);
+      if (Object.keys(errs).length === 0) {
+        return null;
+      }
+
+      const label = entry.institution.trim() || entry.degree.trim() || `Education entry ${index + 1}`;
+      return `${label}: ${Object.values(errs).join(" ")}`;
+    })
+    .filter((message): message is string => Boolean(message));
+
+  return messages.length > 0 ? messages.join(" ") : null;
 }
 
 // Convert "2024-01" to "2024-01-01" format
@@ -386,7 +419,26 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
   const [editing, setEditing] = useState(isNew ?? false);
   const [draft, setDraft] = useState<EducationEntry>(entry);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!(field in prev)) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleSave = () => {
+    const validationErrors = validateEducationEntry(draft);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    setErrors({});
     onSave(draft);
     setEditing(false);
   };
@@ -397,6 +449,7 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
       return;
     }
     setDraft(entry);
+    setErrors({});
     setEditing(false);
   };
 
@@ -438,7 +491,10 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
             <input
               type="month"
               value={draft.startDate}
-              onChange={(e) => setDraft({ ...draft, startDate: e.target.value })}
+              onChange={(e) => {
+                setDraft({ ...draft, startDate: e.target.value });
+                clearError("endDate");
+              }}
               className="input-field"
             />
           </div>
@@ -447,9 +503,13 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
             <input
               type="month"
               value={draft.endDate}
-              onChange={(e) => setDraft({ ...draft, endDate: e.target.value })}
-              className="input-field"
+              onChange={(e) => {
+                setDraft({ ...draft, endDate: e.target.value });
+                clearError("endDate");
+              }}
+              className={`input-field${errors.endDate ? " input-error" : ""}`}
             />
+            {errors.endDate && <span className="field-error">{errors.endDate}</span>}
           </div>
         </div>
 
@@ -458,10 +518,14 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
           <input
             type="text"
             value={draft.gpa}
-            onChange={(e) => setDraft({ ...draft, gpa: e.target.value })}
+            onChange={(e) => {
+              setDraft({ ...draft, gpa: e.target.value });
+              clearError("gpa");
+            }}
             placeholder="e.g. 3.8"
-            className="input-field"
+            className={`input-field${errors.gpa ? " input-error" : ""}`}
           />
+          {errors.gpa && <span className="field-error">{errors.gpa}</span>}
         </div>
 
         <div className="card-actions">
@@ -540,6 +604,7 @@ export default function UserPreferencePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   // True when no preferences exist yet (first-time user arriving from consent flow)
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -608,6 +673,17 @@ export default function UserPreferencePage() {
     setProfileData({ ...profileData, [field]: value });
   };
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const addEducation = () => {
     const entry = createEmptyEntry();
     setNewEntryId(entry.id);
@@ -615,6 +691,7 @@ export default function UserPreferencePage() {
       ...profileData,
       educationEntries: [...profileData.educationEntries, entry],
     });
+    clearFieldError("education");
   };
 
   const updateEducation = (updated: EducationEntry) => {
@@ -625,6 +702,7 @@ export default function UserPreferencePage() {
         e.id === updated.id ? updated : e
       ),
     });
+    clearFieldError("education");
   };
 
   const deleteEducation = (id: string) => {
@@ -633,6 +711,7 @@ export default function UserPreferencePage() {
       ...profileData,
       educationEntries: profileData.educationEntries.filter((e) => e.id !== id),
     });
+    clearFieldError("education");
   };
 
   const handlePictureFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -665,11 +744,45 @@ export default function UserPreferencePage() {
     }
   };
 
+  const validateProfile = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!profileData.fullName.trim()) {
+      errs.fullName = "Full name is required.";
+    }
+    if (!profileData.email.trim()) {
+      errs.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email.trim())) {
+      errs.email = "Please enter a valid email address.";
+    }
+    if (!profileData.jobTitle.trim()) {
+      errs.jobTitle = "Job title is required.";
+    }
+    if (!profileData.industry) {
+      errs.industry = "Please select an industry.";
+    }
+    if (profileData.linkedin.trim() && !/^https?:\/\/.+\..+/.test(profileData.linkedin.trim())) {
+      errs.linkedin = "Please enter a valid URL (e.g., https://linkedin.com/in/your-profile).";
+    }
+    return errs;
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
-      
+
+      const errs = validateProfile();
+      const educationError = validateEducationEntries(profileData.educationEntries);
+      if (educationError) {
+        errs.education = educationError;
+      }
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs);
+        setSaving(false);
+        return;
+      }
+      setFieldErrors({});
+
       const backendData = convertToBackend(profileData);
       await saveUserPreferences(backendData);
 
@@ -784,34 +897,48 @@ export default function UserPreferencePage() {
         )}
 
         <div className="form-section">
+          <p className="required-legend">Fields marked with <span className="required-indicator" aria-hidden="true">*</span> are required</p>
+
           {/* Full Name */}
           <div className="form-field">
             <label className="field-label" htmlFor="fullName">
-              Full name
+              Full name <span className="required-indicator" aria-hidden="true">*</span>
             </label>
             <input
               id="fullName"
               type="text"
               value={profileData.fullName}
-              onChange={(e) => updateField("fullName", e.target.value)}
-              className="input-field"
+              onChange={(e) => {
+                updateField("fullName", e.target.value);
+                clearFieldError("fullName");
+              }}
+              className={`input-field${fieldErrors.fullName ? " input-error" : ""}`}
               placeholder="Enter your full name"
+              aria-required="true"
+              required
             />
+            {fieldErrors.fullName && <span className="field-error">{fieldErrors.fullName}</span>}
           </div>
 
           {/* Email */}
           <div className="form-field">
             <label className="field-label" htmlFor="email">
-              Email
+              Email <span className="required-indicator" aria-hidden="true">*</span>
             </label>
             <input
               id="email"
               type="email"
               value={profileData.email}
-              onChange={(e) => updateField("email", e.target.value)}
-              className="input-field"
+              onChange={(e) => {
+                updateField("email", e.target.value);
+                clearFieldError("email");
+              }}
+              className={`input-field${fieldErrors.email ? " input-error" : ""}`}
               placeholder="your.email@example.com"
+              aria-required="true"
+              required
             />
+            {fieldErrors.email && <span className="field-error">{fieldErrors.email}</span>}
           </div>
 
           {/* GitHub Username */}
@@ -836,27 +963,37 @@ export default function UserPreferencePage() {
             </label>
             <input
               id="linkedin"
-              type="text"
+              type="url"
               value={profileData.linkedin}
-              onChange={(e) => updateField("linkedin", e.target.value)}
-              className="input-field"
-              placeholder="linkedin.com/in/your-profile"
+              onChange={(e) => {
+                updateField("linkedin", e.target.value);
+                clearFieldError("linkedin");
+              }}
+              className={`input-field${fieldErrors.linkedin ? " input-error" : ""}`}
+              placeholder="https://linkedin.com/in/your-profile"
             />
+            {fieldErrors.linkedin && <span className="field-error">{fieldErrors.linkedin}</span>}
           </div>
 
           {/* Job Title */}
           <div className="form-field">
             <label className="field-label" htmlFor="jobTitle">
-              Job Title (Aspiring or Current)
+              Job Title (Aspiring or Current) <span className="required-indicator" aria-hidden="true">*</span>
             </label>
             <input
               id="jobTitle"
               type="text"
               value={profileData.jobTitle}
-              onChange={(e) => updateField("jobTitle", e.target.value)}
-              className="input-field"
+              onChange={(e) => {
+                updateField("jobTitle", e.target.value);
+                clearFieldError("jobTitle");
+              }}
+              className={`input-field${fieldErrors.jobTitle ? " input-error" : ""}`}
               placeholder="e.g., Software Engineer, Data Scientist"
+              aria-required="true"
+              required
             />
+            {fieldErrors.jobTitle && <span className="field-error">{fieldErrors.jobTitle}</span>}
           </div>
 
           {/* Personal Summary */}
@@ -906,19 +1043,21 @@ export default function UserPreferencePage() {
                 />
               ))}
             </div>
+            {fieldErrors.education && <span className="field-error">{fieldErrors.education}</span>}
           </div>
 
           {/* Industry */}
           <div className="form-field">
-            <label className="field-label">Industry</label>
-            <div className="industry-buttons">
+            <label className="field-label">Industry <span className="required-indicator" aria-hidden="true">*</span></label>
+            <div className="industry-buttons" role="group" aria-required="true">
               {INDUSTRIES.map((industry) => (
                 <button
                   key={industry}
                   type="button"
-                  onClick={() =>
-                    updateField("industry", profileData.industry === industry ? null : industry)
-                  }
+                  onClick={() => {
+                    updateField("industry", profileData.industry === industry ? null : industry);
+                    clearFieldError("industry");
+                  }}
                   className={`industry-btn ${
                     profileData.industry === industry ? "selected" : ""
                   }`}
@@ -927,6 +1066,7 @@ export default function UserPreferencePage() {
                 </button>
               ))}
             </div>
+            {fieldErrors.industry && <span className="field-error">{fieldErrors.industry}</span>}
           </div>
 
           {/* Save Button */}

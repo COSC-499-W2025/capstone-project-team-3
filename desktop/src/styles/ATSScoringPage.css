@@ -840,6 +840,14 @@
   height: 100%;
 }
 
+/* Below job description + actions when scoring all resumes */
+.ats-comparison-view--embedded {
+  margin-top: 0.25rem;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid #e5e7eb;
+  height: auto;
+}
+
 .ats-comparison-view-header {
   display: flex;
   align-items: center;

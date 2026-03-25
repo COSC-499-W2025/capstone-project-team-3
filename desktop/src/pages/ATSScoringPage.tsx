@@ -236,7 +236,6 @@ export function ATSScoringPage() {
   interface AllResult { resumeId: number | null; resumeName: string; result: ATSScoreResult }
   const [allResults, setAllResults] = useState<AllResult[]>([]);
   const [scoringAll, setScoringAll] = useState(false);
-  const [inputView, setInputView] = useState<"form" | "comparison">("form");
 
   // --- empty-resume guard ---
   // Tracks which resumeId (null = master) last returned EMPTY_RESUME
@@ -351,6 +350,7 @@ export function ATSScoringPage() {
       };
       pushHistory(entry);
       setHistory(loadHistory());
+      setAllResults([]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to calculate job match score";
       if (msg === "EMPTY_RESUME") {
@@ -368,6 +368,9 @@ export function ATSScoringPage() {
     setJobDescription(entry.jobDescription);
     setSelectedResumeId(entry.resumeId);
     setAnalysisMode(entry.analysisMode ?? "local");
+    setAllResults([]);
+    setError(null);
+    setEmptyResumeId(undefined);
     setResult({
       score: entry.score,
       match_level: entry.matchLevel,
@@ -397,6 +400,7 @@ export function ATSScoringPage() {
     if (!jobDescription.trim() || resumes.length === 0) return;
     setScoringAll(true);
     setAllResults([]);
+    setResult(null);
     setError(null);
     try {
       const results: AllResult[] = [];
@@ -409,7 +413,6 @@ export function ATSScoringPage() {
       }
       results.sort((a, b) => b.result.score - a.result.score);
       setAllResults(results);
-      setInputView("comparison");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to score all resumes";
       setError(
@@ -548,22 +551,122 @@ export function ATSScoringPage() {
 
           {/* ---- Left panel — form OR comparison view ---- */}
           <div className="ats-input-panel">
+            {/* Left column always shows resume, mode, and job description; results stay on the right. */}
+            <div className="ats-field">
+              <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
+              {resumesLoading ? (
+                <p className="ats-loading-small">Loading resumes…</p>
+              ) : (
+                <select
+                  id="ats-resume-select"
+                  className="ats-select"
+                  value={selectedResumeId === null ? "" : selectedResumeId}
+                  disabled={scorableResumes.length === 0}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedResumeId(val === "" ? null : Number(val));
+                    setResult(null);
+                    setEmptyResumeId(undefined);
+                  }}
+                >
+                  {scorableResumes.length === 0 ? (
+                    <option value="" disabled>No resumes found</option>
+                  ) : (
+                    <>
+                      {resumes.some((r) => r.is_master && (r.project_count ?? 1) > 0) && (
+                        <option value="">Master Resume (all projects)</option>
+                      )}
+                      {resumes
+                        .filter((r) => !r.is_master && r.id !== null && (r.project_count ?? 1) > 0)
+                        .map((r) => (
+                          <option key={r.id} value={r.id!}>{r.name}</option>
+                        ))}
+                    </>
+                  )}
+                </select>
+              )}
+            </div>
 
-            {inputView === "comparison" && allResults.length > 0 ? (
-              /* ---- Comparison view ---- */
-              <div className="ats-comparison-view">
+            <div className="ats-field">
+              <label className="ats-label">Scoring Mode</label>
+              <div className="ats-mode-toggle" role="group" aria-label="Scoring mode">
+                <button
+                  type="button"
+                  className={`ats-mode-btn${analysisMode === "local" ? " ats-mode-btn--active" : ""}`}
+                  onClick={() => { setAnalysisMode("local"); setResult(null); setAllResults([]); }}
+                >
+                  Local
+                </button>
+                <button
+                  type="button"
+                  className={`ats-mode-btn${analysisMode === "ai" ? " ats-mode-btn--active" : ""}`}
+                  onClick={() => { setAnalysisMode("ai"); setResult(null); setAllResults([]); }}
+                >
+                  AI
+                </button>
+              </div>
+              {analysisMode === "ai" && (
+                <p className="ats-ai-disclaimer">
+                  AI mode: your job description will be sent to the configured LLM provider for keyword extraction.
+                </p>
+              )}
+            </div>
+
+            <div className="ats-field">
+              <label htmlFor="ats-jd-textarea" className="ats-label">Job Description</label>
+              <textarea
+                id="ats-jd-textarea"
+                className="ats-textarea"
+                placeholder="Paste the full job description here…"
+                value={jobDescription}
+                onChange={(e) => {
+                  setJobDescription(e.target.value);
+                  setResult(null);
+                  setAllResults([]);
+                }}
+                rows={14}
+              />
+              <p className="ats-char-count">
+                {jobDescription.trim().split(/\s+/).filter(Boolean).length} words
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="ats-score-btn"
+              onClick={handleScore}
+              disabled={scoring || scoringAll || currentResumeIsEmpty || jobDescription.trim().length < 10}
+            >
+              {scoring ? "Analyzing…" : "Check Job Match Score"}
+            </button>
+
+            {scorableResumes.length > 1 && (
+              <button
+                type="button"
+                className="ats-score-btn ats-score-btn--secondary"
+                onClick={handleScoreAll}
+                disabled={scoring || scoringAll || jobDescription.trim().length < 10}
+              >
+                {scoringAll ? "Scoring all resumes…" : "Score All Resumes"}
+              </button>
+            )}
+
+            {error && <div className="ats-error" role="alert">{error}</div>}
+
+            {allResults.length > 0 && (
+              <div className="ats-comparison-view ats-comparison-view--embedded">
                 <div className="ats-comparison-view-header">
                   <h2 className="ats-section-title">All Resumes</h2>
                   <button
                     type="button"
                     className="ats-history-action-btn"
-                    onClick={() => { setInputView("form"); setAllResults([]); }}
+                    onClick={() => setAllResults([])}
                   >
-                    New Analysis
+                    Clear ranking
                   </button>
                 </div>
                 <p className="ats-comparison-view-hint">
-                  Click <strong>Load Details</strong> to view a resume's full breakdown.
+                  Click <strong>Details</strong> to show that resume&apos;s full breakdown on the right.
                 </p>
                 <div className="ats-comparison-list">
                   {allResults.map((ar, idx) => {
@@ -591,109 +694,6 @@ export function ATSScoringPage() {
                   })}
                 </div>
               </div>
-            ) : (
-              /* ---- Form view ---- */
-              <>
-                <div className="ats-field">
-                  <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
-                  {resumesLoading ? (
-                    <p className="ats-loading-small">Loading resumes…</p>
-                  ) : (
-                    <select
-                      id="ats-resume-select"
-                      className="ats-select"
-                      value={selectedResumeId === null ? "" : selectedResumeId}
-                      disabled={scorableResumes.length === 0}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedResumeId(val === "" ? null : Number(val));
-                        setResult(null);
-                        setEmptyResumeId(undefined);
-                      }}
-                    >
-                      {scorableResumes.length === 0 ? (
-                        <option value="" disabled>No resumes found</option>
-                      ) : (
-                        <>
-                          {resumes.some((r) => r.is_master && (r.project_count ?? 1) > 0) && (
-                            <option value="">Master Resume (all projects)</option>
-                          )}
-                          {resumes
-                            .filter((r) => !r.is_master && r.id !== null && (r.project_count ?? 1) > 0)
-                            .map((r) => (
-                              <option key={r.id} value={r.id!}>{r.name}</option>
-                            ))}
-                        </>
-                      )}
-                    </select>
-                  )}
-                </div>
-
-                <div className="ats-field">
-                  <label className="ats-label">Scoring Mode</label>
-                  <div className="ats-mode-toggle" role="group" aria-label="Scoring mode">
-                    <button
-                      type="button"
-                      className={`ats-mode-btn${analysisMode === "local" ? " ats-mode-btn--active" : ""}`}
-                      onClick={() => { setAnalysisMode("local"); setResult(null); }}
-                    >
-                      Local
-                    </button>
-                    <button
-                      type="button"
-                      className={`ats-mode-btn${analysisMode === "ai" ? " ats-mode-btn--active" : ""}`}
-                      onClick={() => { setAnalysisMode("ai"); setResult(null); }}
-                    >
-                      AI
-                    </button>
-                  </div>
-                  {analysisMode === "ai" && (
-                    <p className="ats-ai-disclaimer">
-                      AI mode: your job description will be sent to the configured LLM provider for keyword extraction.
-                    </p>
-                  )}
-                </div>
-
-                <div className="ats-field">
-                  <label htmlFor="ats-jd-textarea" className="ats-label">Job Description</label>
-                  <textarea
-                    id="ats-jd-textarea"
-                    className="ats-textarea"
-                    placeholder="Paste the full job description here…"
-                    value={jobDescription}
-                    onChange={(e) => {
-                      setJobDescription(e.target.value);
-                      setResult(null);
-                    }}
-                    rows={14}
-                  />
-                  <p className="ats-char-count">
-                    {jobDescription.trim().split(/\s+/).filter(Boolean).length} words
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="ats-score-btn"
-                  onClick={handleScore}
-                  disabled={scoring || scoringAll || currentResumeIsEmpty || jobDescription.trim().length < 10}
-                >
-                  {scoring ? "Analyzing…" : "Check Job Match Score"}
-                </button>
-
-                {scorableResumes.length > 1 && (
-                  <button
-                    type="button"
-                    className="ats-score-btn ats-score-btn--secondary"
-                    onClick={handleScoreAll}
-                    disabled={scoring || scoringAll || jobDescription.trim().length < 10}
-                  >
-                    {scoringAll ? "Scoring all resumes…" : "Score All Resumes"}
-                  </button>
-                )}
-
-                {error && <div className="ats-error" role="alert">{error}</div>}
-              </>
             )}
           </div>
 

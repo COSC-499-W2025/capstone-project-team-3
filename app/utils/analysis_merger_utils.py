@@ -483,13 +483,16 @@ def store_results_in_db(project_name, merged_results, project_score, project_sig
     """, (project_signature, project_name, merged_results["summary"], project_score, 0, None))
     else:
         # Update summary if project already exists
+        # Reset override state including stored exclusion list — a fresh analysis run should not
+        # keep prior metric exclusions (same project re-upload / re-analyze).
         cur.execute("""
         UPDATE PROJECT
         SET name = ?,
             summary = ?,
             score = ?,
             score_overridden = 0,
-            score_overridden_value = NULL
+            score_overridden_value = NULL,
+            score_override_exclusions = NULL
         WHERE project_signature = ?
         """, (project_name, merged_results["summary"], project_score, project_signature))
     

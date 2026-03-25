@@ -4,17 +4,24 @@ import { test, expect, jest, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import * as userPreferencesApi from '../src/api/userPreferences';
+import * as consentApi from '../src/api/consent';
 
-// Mock the API module
+// Mock the API modules
 jest.mock('../src/api/userPreferences');
+jest.mock('../src/api/consent');
+
+const mockGetConsentStatus = consentApi.getConsentStatus as jest.MockedFunction<typeof consentApi.getConsentStatus>;
 
 const mockGetUserPreferences = userPreferencesApi.getUserPreferences as jest.MockedFunction<typeof userPreferencesApi.getUserPreferences>;
+const mockSaveUserPreferences = userPreferencesApi.saveUserPreferences as jest.MockedFunction<typeof userPreferencesApi.saveUserPreferences>;
 const mockUploadProfilePicture = userPreferencesApi.uploadProfilePicture as jest.MockedFunction<typeof userPreferencesApi.uploadProfilePicture>;
 const mockDeleteProfilePicture = userPreferencesApi.deleteProfilePicture as jest.MockedFunction<typeof userPreferencesApi.deleteProfilePicture>;
 const mockGetProfilePictureUrl = userPreferencesApi.getProfilePictureUrl as jest.MockedFunction<typeof userPreferencesApi.getProfilePictureUrl>;
+const mockGetAllInstitutions = userPreferencesApi.getAllInstitutions as jest.MockedFunction<typeof userPreferencesApi.getAllInstitutions>;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetConsentStatus.mockResolvedValue({ has_consent: true });
   // Mock API to return empty preferences so component renders
   mockGetUserPreferences.mockResolvedValue({
     name: '',
@@ -28,7 +35,9 @@ beforeEach(() => {
     profile_picture_path: null,
     personal_summary: null,
   });
+  mockSaveUserPreferences.mockResolvedValue({ status: 'ok', message: 'Saved' });
   mockGetProfilePictureUrl.mockReturnValue('http://localhost:8000/api/user-preferences/profile-picture');
+  mockGetAllInstitutions.mockResolvedValue({ institutions: [], status: 'ok', count: 0 });
 });
 
 test('renders user preference page with title', async () => {
@@ -326,4 +335,404 @@ test('personal summary textarea accepts user input', async () => {
   fireEvent.change(textarea, { target: { value: 'New summary text.' } });
 
   expect(textarea.value).toBe('New summary text.');
+});
+
+// ---------------------------------------------------------------------------
+// Required field indicators
+// ---------------------------------------------------------------------------
+
+test('displays asterisks on required fields', async () => {
+  const { container } = render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  const indicators = container.querySelectorAll('.required-indicator');
+  // Legend + Full Name, Email, Job Title, Industry = 5 asterisks
+  expect(indicators.length).toBe(5);
+});
+
+test('displays required fields legend', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText(/Fields marked with/i)).toBeDefined();
+  });
+});
+
+test('required inputs have aria-required attribute', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  const fullName = screen.getByPlaceholderText('Enter your full name');
+  const email = screen.getByPlaceholderText('your.email@example.com');
+  const jobTitle = screen.getByPlaceholderText('e.g., Software Engineer, Data Scientist');
+
+  expect(fullName.getAttribute('aria-required')).toBe('true');
+  expect(email.getAttribute('aria-required')).toBe('true');
+  expect(jobTitle.getAttribute('aria-required')).toBe('true');
+});
+
+test('required inputs have native required attribute', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  const fullName = screen.getByPlaceholderText('Enter your full name');
+  const email = screen.getByPlaceholderText('your.email@example.com');
+  const jobTitle = screen.getByPlaceholderText('e.g., Software Engineer, Data Scientist');
+
+  expect(fullName).toHaveAttribute('required');
+  expect(email).toHaveAttribute('required');
+  expect(jobTitle).toHaveAttribute('required');
+});
+
+// ---------------------------------------------------------------------------
+// Profile form validation on save
+// ---------------------------------------------------------------------------
+
+test('shows validation errors when saving with empty required fields', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(screen.getByText('Full name is required.')).toBeDefined();
+    expect(screen.getByText('Email is required.')).toBeDefined();
+    expect(screen.getByText('Job title is required.')).toBeDefined();
+    expect(screen.getByText('Please select an industry.')).toBeDefined();
+  });
+
+  // Should NOT have called the API
+  expect(mockSaveUserPreferences).not.toHaveBeenCalled();
+});
+
+test('shows email format error for invalid email', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
+  fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'not-an-email' } });
+  fireEvent.change(screen.getByPlaceholderText('e.g., Software Engineer, Data Scientist'), { target: { value: 'Developer' } });
+  fireEvent.click(screen.getByText('Technology'));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(screen.getByText('Please enter a valid email address.')).toBeDefined();
+  });
+
+  expect(mockSaveUserPreferences).not.toHaveBeenCalled();
+});
+
+test('shows LinkedIn URL format error for invalid URL', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
+  fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'jane@example.com' } });
+  fireEvent.change(screen.getByPlaceholderText('e.g., Software Engineer, Data Scientist'), { target: { value: 'Developer' } });
+  fireEvent.change(screen.getByPlaceholderText('https://linkedin.com/in/your-profile'), { target: { value: 'not-a-url' } });
+  fireEvent.click(screen.getByText('Technology'));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(screen.getByText(/Please enter a valid URL/i)).toBeDefined();
+  });
+
+  expect(mockSaveUserPreferences).not.toHaveBeenCalled();
+});
+
+test('accepts valid LinkedIn URL and saves successfully', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
+  fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'jane@example.com' } });
+  fireEvent.change(screen.getByPlaceholderText('e.g., Software Engineer, Data Scientist'), { target: { value: 'Developer' } });
+  fireEvent.change(screen.getByPlaceholderText('https://linkedin.com/in/your-profile'), { target: { value: 'https://linkedin.com/in/janedoe' } });
+  fireEvent.click(screen.getByText('Technology'));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(mockSaveUserPreferences).toHaveBeenCalledTimes(1);
+  });
+});
+
+test('blocks profile save when an existing education entry is invalid', async () => {
+  mockGetUserPreferences.mockResolvedValueOnce({
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+    github_user: '',
+    linkedin: null,
+    education: "Bachelor's",
+    industry: 'Technology',
+    job_title: 'Developer',
+    education_details: [
+      {
+        institution: 'MIT',
+        degree: 'B.S. Computer Science',
+        start_date: '2024-06-01',
+        end_date: '2023-01-01',
+        gpa: 4.5,
+      },
+    ],
+    profile_picture_path: null,
+    personal_summary: null,
+  });
+
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText('MIT'));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(screen.getByText(/MIT: GPA must be between 0 and 4\.33\./i)).toBeDefined();
+  });
+
+  expect(mockSaveUserPreferences).not.toHaveBeenCalled();
+});
+
+test('clears field error when user starts typing', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  // Trigger validation errors
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    expect(screen.getByText('Full name is required.')).toBeDefined();
+  });
+
+  // Start typing in the full name field
+  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'J' } });
+
+  // The full name error should be cleared
+  expect(screen.queryByText('Full name is required.')).toBeNull();
+});
+
+test('adds input-error class to invalid fields', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Save Profile/i));
+
+  fireEvent.click(screen.getByText(/Save Profile/i));
+
+  await waitFor(() => {
+    const fullNameInput = screen.getByPlaceholderText('Enter your full name');
+    expect(fullNameInput.className).toContain('input-error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Education card validation — GPA
+// ---------------------------------------------------------------------------
+
+test('shows error when GPA is not a number', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  // Add an education entry
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. MIT'));
+
+  fireEvent.change(screen.getByPlaceholderText('e.g. 3.8'), { target: { value: 'abc' } });
+
+  // Click the Save button inside the education card
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(screen.getByText('GPA must be a number.')).toBeDefined();
+  });
+});
+
+test('shows error when GPA is out of range', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. MIT'));
+
+  fireEvent.change(screen.getByPlaceholderText('e.g. 3.8'), { target: { value: '5.0' } });
+
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(screen.getByText('GPA must be between 0 and 4.33.')).toBeDefined();
+  });
+});
+
+test('accepts valid GPA value', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. MIT'));
+
+  fireEvent.change(screen.getByPlaceholderText('e.g. MIT'), { target: { value: 'MIT' } });
+  fireEvent.change(screen.getByPlaceholderText('e.g. 3.8'), { target: { value: '3.8' } });
+
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    // Should show the saved card view, not the editing view
+    expect(screen.getByText('MIT')).toBeDefined();
+    expect(screen.getByText('GPA: 3.8')).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Education card validation — End date before start date
+// ---------------------------------------------------------------------------
+
+test('shows error when end date is before start date', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. MIT'));
+
+  // Set start date after end date
+  const dateInputs = document.querySelectorAll('input[type="month"]');
+  fireEvent.change(dateInputs[0], { target: { value: '2024-06' } }); // start
+  fireEvent.change(dateInputs[1], { target: { value: '2023-01' } }); // end (before start)
+
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(screen.getByText('End date must be after start date.')).toBeDefined();
+  });
+});
+
+test('clears end date error when start date changes', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. MIT'));
+
+  const dateInputs = document.querySelectorAll('input[type="month"]');
+  fireEvent.change(dateInputs[0], { target: { value: '2024-06' } });
+  fireEvent.change(dateInputs[1], { target: { value: '2023-01' } });
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(screen.getByText('End date must be after start date.')).toBeDefined();
+  });
+
+  fireEvent.change(dateInputs[0], { target: { value: '2022-06' } });
+
+  await waitFor(() => {
+    expect(screen.queryByText('End date must be after start date.')).toBeNull();
+  });
+});
+
+test('clears education card errors on cancel', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => screen.getByText(/Build your Profile/i));
+
+  fireEvent.click(screen.getByText('Add your first education entry'));
+
+  await waitFor(() => screen.getByPlaceholderText('e.g. 3.8'));
+
+  // Trigger GPA error
+  fireEvent.change(screen.getByPlaceholderText('e.g. 3.8'), { target: { value: 'bad' } });
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(screen.getByText('GPA must be a number.')).toBeDefined();
+  });
+
+  // Cancel should remove the card (new entry with no institution)
+  fireEvent.click(screen.getByText('Cancel'));
+
+  expect(screen.queryByText('GPA must be a number.')).toBeNull();
 });

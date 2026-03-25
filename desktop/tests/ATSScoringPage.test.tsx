@@ -8,9 +8,19 @@ import { jest, test, describe, beforeEach, afterEach } from '@jest/globals';
 
 const mockNavigate = jest.fn();
 
+/** Stable fake location — ATSScoringPage uses useLocation (e.g. location.key) outside a test Router. */
+const mockLocation = {
+  pathname: '/',
+  search: '',
+  hash: '',
+  state: null as unknown,
+  key: 'default',
+};
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual<typeof import('react-router-dom')>('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useLocation: () => mockLocation,
 }));
 
 jest.mock('../src/api/ats', () => ({

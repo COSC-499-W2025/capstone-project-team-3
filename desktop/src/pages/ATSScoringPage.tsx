@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getResumes, type ResumeListItem } from "../api/resume";
 import { scoreATS, type ATSScoreResult, type ATSBreakdown } from "../api/ats";
+import { ERROR_TIMEOUT } from "../constants/uiTiming";
 import "../styles/ATSScoringPage.css";
 
 // ---------------------------------------------------------------------------
@@ -199,6 +200,13 @@ export function ATSScoringPage() {
   const [scoring, setScoring] = useState(false);
   const [result, setResult] = useState<ATSScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-dismiss error messages after ERROR_TIMEOUT
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), ERROR_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   // --- history state ---
   const [history, setHistory] = useState<ATSHistoryEntry[]>(loadHistory);

@@ -624,7 +624,13 @@ def _build_collaboration_network(
             edge_map[edge_key].add(project_title)
 
         # Create peer edges between non-primary collaborators who share this project
+        # Cap to top collaborators by commit count to avoid O(n²) blowup on large repos
+        MAX_PEER_COLLABORATORS = 50
         non_primary_keys = [k for k in project_keys if k != primary_key]
+        if len(non_primary_keys) > MAX_PEER_COLLABORATORS:
+            non_primary_keys = sorted(
+                non_primary_keys, key=lambda k: node_map[k]["commits"], reverse=True
+            )[:MAX_PEER_COLLABORATORS]
         for ii in range(len(non_primary_keys)):
             for jj in range(ii + 1, len(non_primary_keys)):
                 peer_edge_key = tuple(sorted([non_primary_keys[ii], non_primary_keys[jj]]))

@@ -91,8 +91,9 @@ const settingsIcon = (
 
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
-   const [hasMasterResume, setHasMasterResume] = useState(true);
-   const { theme, toggleTheme, fontSize, increaseFontSize, decreaseFontSize } = useTheme();
+  const [hasMasterResume, setHasMasterResume] = useState(true);
+  const [displayName, setDisplayName] = useState("");
+  const { theme, toggleTheme, fontSize, increaseFontSize, decreaseFontSize } = useTheme();
    const [fontSizeExpanded, setFontSizeExpanded] = useState(false);
 
   useEffect(() => {

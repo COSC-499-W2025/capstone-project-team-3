@@ -780,9 +780,9 @@ const buildHeatmapModel = (
   today.setHours(0, 0, 0, 0);
 
   // Find the earliest date across projects, daily activity, and monthly activity
-  let earliest: Date | null = null;
+  const dateCandidates: Date[] = [];
   const consider = (d: Date | null) => {
-    if (d && (!earliest || d < earliest)) earliest = d;
+    if (d) dateCandidates.push(d);
   };
 
   (projects || []).forEach((p) => {
@@ -800,6 +800,11 @@ const buildHeatmapModel = (
     const m = monthKey.match(/^(\d{4})-(\d{2})/);
     if (m) consider(new Date(Number(m[1]), Number(m[2]) - 1, 1));
   });
+
+  let earliest: Date | null = null;
+  for (const d of dateCandidates) {
+    if (!earliest || d < earliest) earliest = d;
+  }
 
   // Start from Jan 1 of the earliest project year, but always show at least a full year
   const currentYear = today.getFullYear();

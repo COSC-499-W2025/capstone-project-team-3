@@ -22,6 +22,7 @@ export interface ResumeListItem {
   id: number | null; // null for preview resumes
   name: string;
   is_master: boolean;
+  project_count?: number; // present only after backend supports it (Docker rebuild)
 }
 
 // Fetch list of all saved resumes

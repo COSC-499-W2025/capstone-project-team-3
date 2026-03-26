@@ -468,3 +468,10 @@
 [data-theme="dark"] .cl-history-card-title { color: var(--color-text-heading); }
 [data-theme="dark"] .cl-history-card-sub   { color: var(--color-text-secondary); }
 [data-theme="dark"] .cl-pdf-error          { color: #fc8181; }
+
+/* ---- Job Match Score: new elements ---- */
+[data-theme="dark"] .ats-comparison-row         { background: var(--color-surface); border-color: var(--color-border); }
+[data-theme="dark"] .ats-comparison-name        { color: var(--color-text-heading); }
+[data-theme="dark"] .ats-empty-resume-warning   { background: #451a03; border-color: #78350f; }
+[data-theme="dark"] .ats-empty-resume-warning p { color: #fde68a; }
+[data-theme="dark"] .ats-placeholder-subtext    { color: var(--color-text-secondary); }

@@ -75,6 +75,13 @@ const profileOutlineIcon = (
   </svg>
 );
 
+/** First token of the saved name — fits the sidebar without clipping long full names. */
+function firstNameForSidebar(fullName: string): string {
+  const t = fullName.trim();
+  if (!t) return "";
+  return t.split(/\s+/)[0] ?? t;
+}
+
 const settingsIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <circle cx="12" cy="12" r="3" />
@@ -130,7 +137,9 @@ export function NavBar() {
         >
           <span className="app-sidebar__brand-icon">{profileOutlineIcon}</span>
           {!collapsed && (
-            <span className="app-sidebar__brand-text">{displayName || "Profile"}</span>
+            <span className="app-sidebar__brand-text">
+              {firstNameForSidebar(displayName) || "Profile"}
+            </span>
           )}
         </NavLink>
       </div>

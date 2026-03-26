@@ -163,5 +163,93 @@
     "tags": ["rust", "systems", "programming"],
     "level": "advanced",
     "pricing": "free"
+  },
+  {
+    "id": "industry-technology",
+    "title": "freeCodeCamp — full curriculum",
+    "description": "Free paths in web, data, and tools that align with common technology-industry roles.",
+    "url": "https://www.freecodecamp.org/",
+    "thumbnail_url": "https://placehold.co/320x180/0a0a23/ffffff?text=Technology",
+    "provider": "freeCodeCamp",
+    "tags": ["technology", "web", "javascript", "python", "programming"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-healthcare",
+    "title": "OpenWHO — health learning",
+    "description": "WHO open courses on public health, outbreak readiness, and health systems — useful context for healthcare-focused tech roles.",
+    "url": "https://openwho.org/",
+    "thumbnail_url": "https://placehold.co/320x180/198754/ffffff?text=Healthcare",
+    "provider": "WHO / OpenWHO",
+    "tags": ["healthcare", "public-health", "data", "compliance"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-finance",
+    "title": "Khan Academy — finance & capital markets",
+    "description": "Core ideas in markets, interest, and financial instruments — helpful grounding for finance and fintech adjacent engineering.",
+    "url": "https://www.khanacademy.org/economics-finance-domain/core-finance",
+    "thumbnail_url": "https://placehold.co/320x180/1a365d/ffffff?text=Finance",
+    "provider": "Khan Academy",
+    "tags": ["finance", "markets", "economics", "data"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-education",
+    "title": "Learning How to Learn (Coursera)",
+    "description": "Evidence-based study techniques — strong fit for education-sector roles and lifelong learning habits.",
+    "url": "https://www.coursera.org/learn/learning-how-to-learn",
+    "thumbnail_url": "https://placehold.co/320x180/0056d2/ffffff?text=Education",
+    "provider": "Coursera",
+    "tags": ["education", "learning", "teaching", "pedagogy"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-manufacturing",
+    "title": "Digital Manufacturing & Design (Coursera)",
+    "description": "Industry 4.0, digital threads, and smart manufacturing concepts common in manufacturing organizations.",
+    "url": "https://www.coursera.org/learn/digital-manufacturing-and-design-technology",
+    "thumbnail_url": "https://placehold.co/320x180/4a5568/ffffff?text=Manufacturing",
+    "provider": "Coursera / University at Buffalo",
+    "tags": ["manufacturing", "engineering", "iot", "operations"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-retail",
+    "title": "Shopify Learn — retail & commerce",
+    "description": "Retail operations, ecommerce, and customer experience fundamentals relevant to retail tech.",
+    "url": "https://www.shopify.com/learn",
+    "thumbnail_url": "https://placehold.co/320x180/95bf47/ffffff?text=Retail",
+    "provider": "Shopify",
+    "tags": ["retail", "ecommerce", "sales", "operations"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "industry-hospitality",
+    "title": "eCornell — hospitality courses",
+    "description": "Service operations, revenue, and guest experience from a leading hospitality program (many courses are paid; browse for fit).",
+    "url": "https://www.ecornell.com/certificates/hospitality-and-foodservice-management/",
+    "thumbnail_url": "https://placehold.co/320x180/b7791f/ffffff?text=Hospitality",
+    "provider": "eCornell",
+    "tags": ["hospitality", "service", "operations", "customer-service"],
+    "level": "starter",
+    "pricing": "paid"
+  },
+  {
+    "id": "industry-transportation",
+    "title": "Supply Chain Management (Coursera)",
+    "description": "Planning, sourcing, logistics, and delivery — core to transportation and supply-chain heavy industries.",
+    "url": "https://www.coursera.org/learn/supply-chain-management",
+    "thumbnail_url": "https://placehold.co/320x180/2c5282/ffffff?text=Transportation",
+    "provider": "Coursera / Rutgers",
+    "tags": ["transportation", "logistics", "supply-chain", "operations"],
+    "level": "starter",
+    "pricing": "free"
   }
 ]

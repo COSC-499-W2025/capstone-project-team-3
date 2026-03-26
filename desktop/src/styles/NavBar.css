@@ -318,6 +318,19 @@
   margin-bottom: 0.5rem;
 }
 
+.app-sidebar--collapsed .app-sidebar__text-size-controls {
+  bottom: auto;
+  left: 100%;
+  top: 0;
+  transform: none;
+  margin-bottom: 0;
+  margin-left: 0.5rem;
+}
+
+.app-sidebar--collapsed {
+  overflow: visible;
+}
+
 .app-sidebar__text-size-btn {
   width: 24px;
   height: 24px;

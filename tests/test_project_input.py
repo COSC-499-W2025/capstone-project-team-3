@@ -577,6 +577,16 @@ def test_run_scan_flow_reruns_when_stored_manifest_smaller_than_full_scan(
     assert len(result["files"]) == len(raw)
 
 
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=None)
+def test_run_scan_flow_reruns_when_stored_manifest_missing(mock_stored, mock_exists, tmp_path):
+    """No exclusions: NULL stored file_signatures must not yield already_analyzed skip."""
+    (tmp_path / "a.py").write_text("print(1)")
+    result = run_scan_flow(str(tmp_path))
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "file_manifest_mismatch_after_exclusions"
+
+
 # ============================================================================
 # Tests for calculate_dynamic_threshold()
 # ============================================================================

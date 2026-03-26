@@ -418,12 +418,16 @@ export function UploadPage() {
               };
             }
 
-            if (data.reason === "reanalyze_with_exclusions") {
+            if (data.reason === "reanalyze_with_exclusions" || data.reason === "reanalyze_cleared_exclusions") {
               return {
                 ...p,
                 fileCount: eligible,
                 totalScannedFiles: total,
                 status: "ready",
+                // Drop stale "skip" from a prior 100% row so Run Analysis always sends this project.
+                userDecision:
+                  data.reason === "reanalyze_cleared_exclusions" ? "create_new" : p.userDecision,
+                similarity: data.reason === "reanalyze_cleared_exclusions" ? null : p.similarity,
               };
             }
 
@@ -551,8 +555,8 @@ export function UploadPage() {
           continue;
         }
 
-        // Same content as DB, but user set exclusions — run analysis on filtered files (no auto-skip)
-        if (data.reason === "reanalyze_with_exclusions") {
+        // Same content as DB, but user set exclusions — or prior run used exclusions and now full tree (no auto-skip)
+        if (data.reason === "reanalyze_with_exclusions" || data.reason === "reanalyze_cleared_exclusions") {
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i
@@ -561,6 +565,9 @@ export function UploadPage() {
                     fileCount: eligible,
                     totalScannedFiles: total,
                     status: "ready",
+                    userDecision:
+                      data.reason === "reanalyze_cleared_exclusions" ? "create_new" : p.userDecision,
+                    similarity: data.reason === "reanalyze_cleared_exclusions" ? null : p.similarity,
                   }
                 : p
             )

@@ -631,7 +631,10 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
         )
 
         # Exact DB match — do not auto-skip scan UX when user set file-type exclusions
-        from app.utils.scan_utils import project_signature_exists
+        from app.utils.scan_utils import (
+            get_stored_project_file_signatures,
+            project_signature_exists,
+        )
 
         if has_user_type_exclusions and project_signature_exists(full_project_signature):
             return {
@@ -658,6 +661,22 @@ def scan_single_project(upload_id: str, payload: ScanProjectRequest) -> Dict[str
                     "exact_match": False,
                     "similarity": None,
                     "reason": "reanalyze_with_exclusions",
+                }
+            # Same content hash as DB, but last analysis may have used fewer files
+            # (exclusions). Do not show 100% / auto-skip until manifests match.
+            stored_sigs = get_stored_project_file_signatures(project_signature)
+            # NULL / missing manifest: never claim 100% — same as "subset analyzed" until persist backfills.
+            if stored_sigs is None or set(stored_sigs) != set(file_signatures):
+                return {
+                    "status": "ok",
+                    "project_name": project_name,
+                    "project_path": project_path,
+                    "file_count": file_count,
+                    "total_scanned_files": total_scanned_files,
+                    "eligible_file_count": eligible_file_count,
+                    "exact_match": False,
+                    "similarity": None,
+                    "reason": "reanalyze_cleared_exclusions",
                 }
             return {
                 "status": "ok",

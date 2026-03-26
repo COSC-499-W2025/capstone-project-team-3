@@ -223,6 +223,7 @@ def test_scan_project_with_similarity_detected(
 @patch("app.api.routes.analysis.scan_project_files")
 @patch("app.api.routes.analysis.extract_file_signature")
 @patch("app.api.routes.analysis.get_project_signature")
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=["sig123"])
 @patch("app.utils.scan_utils.project_signature_exists")
 @patch("app.api.routes.analysis.find_similar_project")
 @patch("app.api.routes.analysis.os.path.exists", return_value=True)
@@ -230,6 +231,7 @@ def test_scan_project_exact_match(
     mock_exists,
     mock_find_similar,
     mock_sig_exists,
+    mock_get_stored,
     mock_get_sig,
     mock_extract_sig,
     mock_scan_files,
@@ -291,6 +293,73 @@ def test_scan_project_reanalyze_with_exclusions_bypasses_exact_match(
     assert data.get("exact_match") is False
     assert data["similarity"] is None
     assert data["file_count"] == 1
+
+
+@patch("app.api.routes.analysis.find_similar_project", return_value=None)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=None)
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.get_project_signature", return_value="same_project_hash")
+@patch("app.api.routes.analysis.extract_file_signature", return_value="sig-file")
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_null_stored_manifest_bypasses_exact_match(
+    mock_exists,
+    mock_scan_files,
+    mock_extract_sig,
+    mock_get_sig,
+    mock_sig_exists,
+    mock_stored_none,
+    mock_find_similar,
+):
+    """No exclusions: NULL file_signatures in DB must not show 100% auto-skip."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/a.py"), Path("/tmp/proj/b.py")]
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_cleared_exclusions"
+    assert data.get("exact_match") is False
+
+
+@patch("app.api.routes.analysis.find_similar_project", return_value=None)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=["old-sig-only"])
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.get_project_signature", return_value="same_project_hash")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_cleared_exclusions_bypasses_exact_match(
+    mock_exists,
+    mock_scan_files,
+    mock_extract_sig,
+    mock_get_sig,
+    mock_sig_exists,
+    mock_stored_sigs,
+    mock_find_similar,
+):
+    """No exclusions: if DB analyzed fewer files than this scan, do not show 100% auto-skip."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/a.py"), Path("/tmp/proj/b.py")]
+    mock_extract_sig.return_value = "sig-file"
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_cleared_exclusions"
+    assert data.get("exact_match") is False
+    assert data["similarity"] is None
+    assert data["eligible_file_count"] == 2
 
 
 @patch("app.api.routes.analysis.scan_project_files", return_value=[])

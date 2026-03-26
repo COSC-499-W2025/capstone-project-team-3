@@ -603,24 +603,23 @@ def run_scan_flow(
                 "reason": "reanalyze_with_exclusions",
                 "signature": project_signature,
             }
-        # Same content hash as DB, but a prior run may have merged analysis on a *subset* of files
-        # (file-type exclusions). Stored file_signatures must match this scan's file set or we re-run.
+        # Same content hash as DB — only skip if we know the last merged run used this exact file set.
+        # Missing file_signatures (legacy row or persist never ran) must NOT auto-skip, or exclusions
+        # cleared / full re-upload will incorrectly hit "already analyzed".
         stored_sigs = get_stored_project_file_signatures(project_signature)
-        if stored_sigs is not None:
-            stored_set = set(stored_sigs)
-            current_set = set(file_signatures)
-            if stored_set != current_set:
-                print(
-                    "Project signature matches DB but analyzed file manifest differs from current scan "
-                    "(e.g. file-type exclusions were cleared or changed) — re-running analysis."
-                )
-                return {
-                    "files": files,
-                    "skip_analysis": False,
-                    "score": 100.0,
-                    "reason": "file_manifest_mismatch_after_exclusions",
-                    "signature": project_signature,
-                }
+        current_set = set(file_signatures)
+        if stored_sigs is None or set(stored_sigs) != current_set:
+            print(
+                "Project signature matches DB but stored file manifest is missing or differs from "
+                "current scan — re-running analysis."
+            )
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": 100.0,
+                "reason": "file_manifest_mismatch_after_exclusions",
+                "signature": project_signature,
+            }
         print("100.0% of this Project was analyzed in the past.")
         return {
             "files": files,

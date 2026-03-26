@@ -50,6 +50,7 @@ def test_run_analysis_upload_not_found(mock_exists):
     assert response.json()["detail"] == "Upload not found for provided upload_id"
 
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch(
     "app.api.routes.analysis.analyze_parsed_project",
@@ -112,6 +113,7 @@ def test_run_analysis_non_interactive_flow(
     mock_analyze_non_code,
     mock_analyze_code,
     mock_merge,
+    mock_persist_manifest,
 ):
     payload = {
         "upload_id": "upload-123",
@@ -346,6 +348,7 @@ def test_scan_project_missing_project_path():
 # Extension and name-prefix exclusion tests
 # ---------------------------------------------------------------------------
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch("app.api.routes.analysis.analyze_parsed_project", return_value={"Metrics": {}, "Resume_bullets": []})
 @patch("app.api.routes.analysis.analyze_project_clean", return_value={"Metrics": {}})
@@ -385,6 +388,7 @@ def test_project_exclude_extensions_filters_non_code_files(
     mock_exists, mock_extract, mock_api_status, mock_scan, mock_git,
     mock_identity, mock_classify, mock_parse_non_code, mock_top_level,
     mock_parse_code, mock_analyze_non_code, mock_analyze_code, mock_merge,
+    mock_persist_manifest,
 ):
     """Files with excluded extensions must not reach parsed_input_text."""
     response = client.post(
@@ -401,6 +405,7 @@ def test_project_exclude_extensions_filters_non_code_files(
     assert call_kwargs["file_paths_dict"]["non_collaborative"] == []
 
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch("app.api.routes.analysis.analyze_parsed_project", return_value={"Metrics": {}, "Resume_bullets": []})
 @patch("app.api.routes.analysis.analyze_project_clean", return_value={"Metrics": {}})
@@ -440,6 +445,7 @@ def test_project_exclude_name_prefixes_filters_readme_files(
     mock_exists, mock_extract, mock_api_status, mock_scan, mock_git,
     mock_identity, mock_classify, mock_parse_non_code, mock_top_level,
     mock_parse_code, mock_analyze_non_code, mock_analyze_code, mock_merge,
+    mock_persist_manifest,
 ):
     """Files whose stem starts with 'readme' must be excluded when namePrefix filter is set."""
     response = client.post(

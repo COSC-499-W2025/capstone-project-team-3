@@ -84,9 +84,9 @@ const settingsIcon = (
 
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [hasMasterResume, setHasMasterResume] = useState(true);
-  const [displayName, setDisplayName] = useState("");
-  const { theme, toggleTheme } = useTheme();
+   const [hasMasterResume, setHasMasterResume] = useState(true);
+   const { theme, toggleTheme, fontSize, increaseFontSize, decreaseFontSize } = useTheme();
+   const [fontSizeExpanded, setFontSizeExpanded] = useState(false);
 
   useEffect(() => {
     getResumes()
@@ -183,6 +183,52 @@ export function NavBar() {
               <span className="app-sidebar__link-icon">{path === "/settingspage" ? settingsIcon : navIcons[path]}</span>
             </NavLink>
           ))}
+          {/* Text size toggle - expandable */}
+          <div className="app-sidebar__text-size-wrapper">
+            <button
+              type="button"
+              className={`app-sidebar__toggle app-sidebar__text-size-toggle ${fontSizeExpanded ? "app-sidebar__text-size-toggle--expanded" : ""}`}
+              onClick={() => setFontSizeExpanded(!fontSizeExpanded)}
+              title={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
+              aria-label={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
+              aria-expanded={fontSizeExpanded}
+              aria-controls="text-size-controls"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+            </button>
+            {fontSizeExpanded && (
+              <div id="text-size-controls" role="group" aria-label="Text size controls" className="app-sidebar__text-size-controls">
+                <button
+                  type="button"
+                  className="app-sidebar__text-size-btn"
+                  onClick={decreaseFontSize}
+                  title="Decrease text size"
+                  aria-label="Decrease text size"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <span className="app-sidebar__text-size-label" aria-live="polite" aria-label={`Text size: ${fontSize}`}>{fontSize === "small" ? "S" : fontSize === "default" ? "M" : fontSize === "large" ? "L" : "XL"}</span>
+                <button
+                  type="button"
+                  className="app-sidebar__text-size-btn"
+                  onClick={increaseFontSize}
+                  title="Increase text size"
+                  aria-label="Increase text size"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           {/* Dark / light mode toggle */}
           <button
             type="button"

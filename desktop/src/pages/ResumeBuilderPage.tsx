@@ -512,7 +512,7 @@ export function ResumeBuilderPage() {
           <button
             className="btn btn--ats"
             onClick={() => navigate('/atsscoringpage')}
-            title="Check ATS compatibility score for this resume"
+            title="Check job match score for this resume"
           >
             Check Job Match
           </button>

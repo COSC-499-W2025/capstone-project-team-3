@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getResumes, type ResumeListItem } from "../api/resume";
 import { scoreATS, type ATSScoreResult, type ATSBreakdown } from "../api/ats";
+import { ERROR_TIMEOUT } from "../constants/uiTiming";
 import "../styles/ATSScoringPage.css";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ interface ATSHistoryEntry {
   matchedKeywords: string[];
   missingKeywords: string[];
   tips: string[];
+  analysisMode?: "local" | "ai";
 }
 
 const HISTORY_KEY = "ats_history";
@@ -55,7 +57,7 @@ function ScoreRing({ score }: { score: number }) {
     score >= 70 ? "#2ecc71" : score >= 40 ? "#f39c12" : "#e74c3c";
 
   return (
-    <svg className="ats-score-ring" viewBox="0 0 128 128" aria-label={`ATS score: ${score} out of 100`}>
+    <svg className="ats-score-ring" viewBox="0 0 128 128" aria-label={`Job match score: ${score} out of 100`}>
       <circle className="ats-score-ring-bg" cx="64" cy="64" r={radius} strokeWidth="10" fill="none" />
       <circle
         className="ats-score-ring-fill"
@@ -106,7 +108,20 @@ function ScoreBadge({ score, matchLevel }: { score: number; matchLevel: string }
   );
 }
 
-function HistoryCard({ entry, onRestore }: { entry: ATSHistoryEntry; onRestore: (e: ATSHistoryEntry) => void }) {
+function ModePill({ mode }: { mode?: "local" | "ai" }) {
+  if (!mode) return null;
+  return (
+    <span className={`ats-mode-pill ats-mode-pill--${mode}`}>
+      {mode === "ai" ? "AI" : "Local"}
+    </span>
+  );
+}
+
+function HistoryCard({ entry, onRestore, onDelete }: {
+  entry: ATSHistoryEntry;
+  onRestore: (e: ATSHistoryEntry) => void;
+  onDelete: (id: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [jdExpanded, setJdExpanded] = useState(false);
   const date = new Date(entry.timestamp).toLocaleString(undefined, {
@@ -118,6 +133,7 @@ function HistoryCard({ entry, onRestore }: { entry: ATSHistoryEntry; onRestore: 
       <div className="ats-history-card-header">
         <div className="ats-history-card-meta">
           <ScoreBadge score={entry.score} matchLevel={entry.matchLevel} />
+          <ModePill mode={entry.analysisMode} />
           <span className="ats-history-resume-name">{entry.resumeName}</span>
           <span className="ats-history-date">{date}</span>
         </div>
@@ -137,6 +153,14 @@ function HistoryCard({ entry, onRestore }: { entry: ATSHistoryEntry; onRestore: 
           >
             {expanded ? "Hide" : "Details"}
           </button>
+          <button
+            type="button"
+            className="ats-history-action-btn ats-history-delete-btn"
+            onClick={() => onDelete(entry.id)}
+            title="Remove this entry"
+          >
+            Remove
+          </button>
         </div>
       </div>
 
@@ -153,25 +177,29 @@ function HistoryCard({ entry, onRestore }: { entry: ATSHistoryEntry; onRestore: 
 
       {expanded && (
         <div className="ats-history-details">
-          {entry.matchedKeywords.length > 0 && (
-            <div className="ats-keyword-group">
-              <p className="ats-keyword-group-label ats-matched-label">
-                Matched ({entry.matchedKeywords.length})
-              </p>
-              <div className="ats-keyword-list">
-                {entry.matchedKeywords.map((kw) => <KeywordPill key={kw} word={kw} matched />)}
-              </div>
-            </div>
-          )}
-          {entry.missingKeywords.length > 0 && (
-            <div className="ats-keyword-group">
-              <p className="ats-keyword-group-label ats-missing-label">
-                Missing ({entry.missingKeywords.length})
-              </p>
-              <div className="ats-keyword-list">
-                {entry.missingKeywords.map((kw) => <KeywordPill key={kw} word={kw} matched={false} />)}
-              </div>
-            </div>
+          {(entry.matchedKeywords.length > 0 || entry.missingKeywords.length > 0) && (
+            <>
+              {entry.matchedKeywords.length > 0 && (
+                <div className="ats-keyword-group">
+                  <p className="ats-keyword-group-label ats-matched-label">
+                    Matched ({entry.matchedKeywords.length})
+                  </p>
+                  <div className="ats-keyword-list">
+                    {entry.matchedKeywords.map((kw) => <KeywordPill key={kw} word={kw} matched />)}
+                  </div>
+                </div>
+              )}
+              {entry.missingKeywords.length > 0 && (
+                <div className="ats-keyword-group">
+                  <p className="ats-keyword-group-label ats-missing-label">
+                    To Add ({entry.missingKeywords.length})
+                  </p>
+                  <div className="ats-keyword-list">
+                    {entry.missingKeywords.map((kw) => <KeywordPill key={kw} word={kw} matched={false} />)}
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {entry.tips.length > 0 && (
             <ul className="ats-history-tips">
@@ -189,6 +217,7 @@ function HistoryCard({ entry, onRestore }: { entry: ATSHistoryEntry; onRestore: 
 // ---------------------------------------------------------------------------
 export function ATSScoringPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"score" | "history">("score");
 
   // --- session state (persisted) ---
@@ -196,22 +225,40 @@ export function ATSScoringPage() {
   const [resumesLoading, setResumesLoading] = useState(true);
   const [selectedResumeId, setSelectedResumeId] = useState<number | null>(null);
   const [jobDescription, setJobDescription] = useState("");
+  const [analysisMode, setAnalysisMode] = useState<"local" | "ai">("local");
   const [scoring, setScoring] = useState(false);
   const [result, setResult] = useState<ATSScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-dismiss error messages after ERROR_TIMEOUT
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), ERROR_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   // --- history state ---
   const [history, setHistory] = useState<ATSHistoryEntry[]>(loadHistory);
+
+  // --- score-all state ---
+  interface AllResult { resumeId: number | null; resumeName: string; result: ATSScoreResult }
+  const [allResults, setAllResults] = useState<AllResult[]>([]);
+  const [scoringAll, setScoringAll] = useState(false);
+
+  // --- empty-resume guard ---
+  // Tracks which resumeId (null = master) last returned EMPTY_RESUME
+  const [emptyResumeId, setEmptyResumeId] = useState<number | null | undefined>(undefined);
 
   // Restore session from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
-        const { jobDescription: jd, selectedResumeId: rid, result: r } = JSON.parse(raw);
+        const { jobDescription: jd, selectedResumeId: rid, result: r, analysisMode: am } = JSON.parse(raw);
         if (jd) setJobDescription(jd);
         if (rid !== undefined) setSelectedResumeId(rid);
         if (r) setResult(r);
+        if (am === "local" || am === "ai") setAnalysisMode(am);
       }
     } catch {
       // ignore
@@ -221,11 +268,11 @@ export function ATSScoringPage() {
   // Persist session to localStorage whenever state changes
   useEffect(() => {
     try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ jobDescription, selectedResumeId, result }));
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ jobDescription, selectedResumeId, result, analysisMode }));
     } catch {
       // ignore
     }
-  }, [jobDescription, selectedResumeId, result]);
+  }, [jobDescription, selectedResumeId, result, analysisMode]);
 
   const loadResumes = useCallback(async () => {
     setResumesLoading(true);
@@ -244,18 +291,28 @@ export function ATSScoringPage() {
         return;
       }
 
-      const hasMaster = list.some((r) => r.is_master);
+      // Only resumes that actually have content are selectable.
+      // Use ?? 1 so resumes with unknown project_count (old API) are treated as scorable.
+      const scorable = list.filter((r) => (r.project_count ?? 1) > 0);
+      const hasScorable = scorable.length > 0;
+      const scorableMaster = scorable.find((r) => r.is_master);
+
+      // Clear a stale result when all projects have been deleted
+      if (!hasScorable) setResult(null);
+
       setSelectedResumeId((prev) => {
         if (prev === null) {
-          // Was using master resume — keep if still exists, else pick first non-master
-          if (hasMaster) return null;
-          return list.find((r) => !r.is_master && r.id !== null)?.id ?? null;
+          // Was using master resume — keep if it has content, else pick first scorable
+          if (scorableMaster) return null;
+          return scorable.find((r) => !r.is_master && r.id !== null)?.id ?? null;
         }
-        // Was using a specific resume — check it still exists in the new list
-        if (list.some((r) => r.id === prev)) return prev;
-        // Resume was deleted — fall back gracefully
-        if (hasMaster) return null;
-        return list.find((r) => !r.is_master && r.id !== null)?.id ?? null;
+        // Was using a specific saved resume — keep if it still exists AND has content
+        const match = list.find((r) => r.id === prev);
+        if (match && (match.project_count ?? 1) > 0) return prev;
+        // Resume gone or empty — fall back to master if scorable, else first scorable
+        if (!hasScorable) return null;
+        if (scorableMaster) return null;
+        return scorable.find((r) => !r.is_master && r.id !== null)?.id ?? null;
       });
     } catch {
       // keep current selection on error
@@ -266,7 +323,7 @@ export function ATSScoringPage() {
 
   useEffect(() => {
     loadResumes();
-  }, [loadResumes]);
+  }, [loadResumes, location.key]);
 
   const resumeNameFor = (id: number | null) => {
     if (id === null) return resumes.find((r) => r.is_master)?.name ?? "Master Resume";
@@ -279,7 +336,7 @@ export function ATSScoringPage() {
     setResult(null);
     setScoring(true);
     try {
-      const res = await scoreATS(jobDescription, selectedResumeId);
+      const res = await scoreATS(jobDescription, selectedResumeId, analysisMode);
       setResult(res);
 
       // Persist to history
@@ -294,23 +351,34 @@ export function ATSScoringPage() {
         matchLevel: res.match_level,
         experienceMonths: res.experience_months,
         breakdown: res.breakdown,
-        matchedKeywords: [...new Set([...res.matched_keywords, ...res.matched_skills])].slice(0, 20),
-        missingKeywords: [...new Set([...res.missing_keywords, ...res.missing_skills])].slice(0, 20),
+        matchedKeywords: res.matched_keywords.slice(0, 20),
+        missingKeywords: res.missing_keywords.slice(0, 20),
         tips: res.tips,
+        analysisMode,
       };
       pushHistory(entry);
       setHistory(loadHistory());
+      setAllResults([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to calculate ATS score");
+      const msg = e instanceof Error ? e.message : "Failed to calculate job match score";
+      if (msg === "EMPTY_RESUME") {
+        setEmptyResumeId(selectedResumeId);
+      } else {
+        setError(msg);
+      }
     } finally {
       setScoring(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobDescription, selectedResumeId, resumes]);
+  }, [jobDescription, selectedResumeId, analysisMode, resumes]);
 
   const handleRestoreHistory = (entry: ATSHistoryEntry) => {
     setJobDescription(entry.jobDescription);
     setSelectedResumeId(entry.resumeId);
+    setAnalysisMode(entry.analysisMode ?? "local");
+    setAllResults([]);
+    setError(null);
+    setEmptyResumeId(undefined);
     setResult({
       score: entry.score,
       match_level: entry.matchLevel,
@@ -330,13 +398,67 @@ export function ATSScoringPage() {
     setHistory([]);
   };
 
-  // Merged keyword+skills sets from current result, capped to 20 to match backend limit
+  const handleDeleteHistoryEntry = (id: string) => {
+    const updated = history.filter((e) => e.id !== id);
+    saveHistory(updated);
+    setHistory(updated);
+  };
+
+  const handleScoreAll = useCallback(async () => {
+    if (!jobDescription.trim() || resumes.length === 0) return;
+    setScoringAll(true);
+    setAllResults([]);
+    setResult(null);
+    setError(null);
+    try {
+      const results: AllResult[] = [];
+      for (const resume of resumes) {
+        // Skip resumes with no projects — they have nothing to score
+        if ((resume.project_count ?? 1) === 0) continue;
+        const rid = resume.is_master ? null : (resume.id ?? null);
+        const res = await scoreATS(jobDescription, rid, analysisMode);
+        results.push({ resumeId: rid, resumeName: resume.name, result: res });
+      }
+      results.sort((a, b) => b.result.score - a.result.score);
+      setAllResults(results);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to score all resumes";
+      setError(
+        msg === "EMPTY_RESUME"
+          ? "One of your resumes has no content. Add projects before scoring."
+          : msg
+      );
+    } finally {
+      setScoringAll(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobDescription, analysisMode, resumes]);
+
   const mergedMatched = result
     ? [...new Set([...result.matched_keywords, ...result.matched_skills])].slice(0, 20)
     : [];
   const mergedMissing = result
     ? [...new Set([...result.missing_keywords, ...result.missing_skills])].slice(0, 20)
     : [];
+
+  // Show the "no content" warning either if the API returned EMPTY_RESUME for
+  // this resume, OR if the resume list already tells us it has 0 projects.
+  // NOTE: selectedResumeId is null for the master resume, but the master resume
+  // has id=1 in the list — so we look it up via is_master when id is null.
+  const selectedResumeItem = selectedResumeId === null
+    ? (resumes.find(r => r.is_master) ?? null)
+    : (resumes.find(r => r.id === selectedResumeId) ?? null);
+  const currentResumeIsEmpty =
+    (emptyResumeId !== undefined && emptyResumeId === selectedResumeId) ||
+    (selectedResumeItem !== null && (selectedResumeItem.project_count ?? 1) === 0);
+
+  // Resumes that actually have content and can be scored.
+  // ?? 1 treats unknown project_count (old API) as "has content" to avoid false empties.
+  const scorableResumes = resumes.filter(r => (r.project_count ?? 1) > 0);
+
+  // True when SKILL_ANALYSIS is empty — no projects have been uploaded at all
+  const masterResume = resumes.find(r => r.is_master);
+  const systemHasNoProjects = !masterResume || (masterResume.project_count ?? 1) === 0;
 
   const matchLevelColor =
     result?.match_level === "High" ? "#2ecc71"
@@ -354,8 +476,8 @@ export function ATSScoringPage() {
   };
 
   const breakdownDescriptions: Record<string, string> = {
-    keyword_coverage: "How many job description keywords appear anywhere in your resume.",
-    skills_match: "How many job description keywords match your listed skills.",
+    keyword_coverage: "How many job description keywords appear in your resume.",
+    skills_match: "How well the required tools and technologies from the job description match your resume.",
     content_richness: "How well your resume bullet points cover the required topics.",
   };
 
@@ -378,8 +500,7 @@ export function ATSScoringPage() {
 
       <h1 className="ats-title">Check Job Match</h1>
       <p className="ats-description">
-        Paste a job description and choose a resume to see how well it matches
-        applicant tracking system requirements.
+        Paste a job description and choose a resume to see how well your skills and experience match the role.
       </p>
 
       {/* Page tabs */}
@@ -435,8 +556,10 @@ export function ATSScoringPage() {
       ================================================================ */}
       {activeTab === "score" && resumes.length > 0 && (
         <div className="ats-layout">
-          {/* ---- Input panel ---- */}
+
+          {/* ---- Left panel — form OR comparison view ---- */}
           <div className="ats-input-panel">
+            {/* Left column always shows resume, mode, and job description; results stay on the right. */}
             <div className="ats-field">
               <label htmlFor="ats-resume-select" className="ats-label">Resume</label>
               {resumesLoading ? (
@@ -446,21 +569,54 @@ export function ATSScoringPage() {
                   id="ats-resume-select"
                   className="ats-select"
                   value={selectedResumeId === null ? "" : selectedResumeId}
+                  disabled={scorableResumes.length === 0}
                   onChange={(e) => {
                     const val = e.target.value;
                     setSelectedResumeId(val === "" ? null : Number(val));
                     setResult(null);
+                    setEmptyResumeId(undefined);
                   }}
                 >
-                  {resumes.some((r) => r.is_master) && (
-                    <option value="">Master Resume (all projects)</option>
+                  {scorableResumes.length === 0 ? (
+                    <option value="" disabled>No resumes found</option>
+                  ) : (
+                    <>
+                      {resumes.some((r) => r.is_master && (r.project_count ?? 1) > 0) && (
+                        <option value="">Master Resume (all projects)</option>
+                      )}
+                      {resumes
+                        .filter((r) => !r.is_master && r.id !== null && (r.project_count ?? 1) > 0)
+                        .map((r) => (
+                          <option key={r.id} value={r.id!}>{r.name}</option>
+                        ))}
+                    </>
                   )}
-                  {resumes
-                    .filter((r) => !r.is_master && r.id !== null)
-                    .map((r) => (
-                      <option key={r.id} value={r.id!}>{r.name}</option>
-                    ))}
                 </select>
+              )}
+            </div>
+
+            <div className="ats-field">
+              <label className="ats-label">Scoring Mode</label>
+              <div className="ats-mode-toggle" role="group" aria-label="Scoring mode">
+                <button
+                  type="button"
+                  className={`ats-mode-btn${analysisMode === "local" ? " ats-mode-btn--active" : ""}`}
+                  onClick={() => { setAnalysisMode("local"); setResult(null); setAllResults([]); }}
+                >
+                  Local
+                </button>
+                <button
+                  type="button"
+                  className={`ats-mode-btn${analysisMode === "ai" ? " ats-mode-btn--active" : ""}`}
+                  onClick={() => { setAnalysisMode("ai"); setResult(null); setAllResults([]); }}
+                >
+                  AI
+                </button>
+              </div>
+              {analysisMode === "ai" && (
+                <p className="ats-ai-disclaimer">
+                  AI mode: your job description will be sent to the configured LLM provider for keyword extraction.
+                </p>
               )}
             </div>
 
@@ -474,8 +630,9 @@ export function ATSScoringPage() {
                 onChange={(e) => {
                   setJobDescription(e.target.value);
                   setResult(null);
+                  setAllResults([]);
                 }}
-                rows={26}
+                rows={14}
               />
               <p className="ats-char-count">
                 {jobDescription.trim().split(/\s+/).filter(Boolean).length} words
@@ -486,38 +643,113 @@ export function ATSScoringPage() {
               type="button"
               className="ats-score-btn"
               onClick={handleScore}
-              disabled={scoring || jobDescription.trim().length < 10}
+              disabled={scoring || scoringAll || currentResumeIsEmpty || jobDescription.trim().length < 10}
             >
-              {scoring ? "Analyzing…" : "Calculate ATS Score"}
+              {scoring ? "Analyzing…" : "Check Job Match Score"}
             </button>
 
+            {scorableResumes.length > 1 && (
+              <button
+                type="button"
+                className="ats-score-btn ats-score-btn--secondary"
+                onClick={handleScoreAll}
+                disabled={scoring || scoringAll || jobDescription.trim().length < 10}
+              >
+                {scoringAll ? "Scoring all resumes…" : "Score All Resumes"}
+              </button>
+            )}
+
             {error && <div className="ats-error" role="alert">{error}</div>}
+
+            {allResults.length > 0 && (
+              <div className="ats-comparison-view ats-comparison-view--embedded">
+                <div className="ats-comparison-view-header">
+                  <h2 className="ats-section-title">All Resumes</h2>
+                  <button
+                    type="button"
+                    className="ats-history-action-btn"
+                    onClick={() => setAllResults([])}
+                  >
+                    Clear ranking
+                  </button>
+                </div>
+                <p className="ats-comparison-view-hint">
+                  Click <strong>Details</strong> to show that resume&apos;s full breakdown on the right.
+                </p>
+                <div className="ats-comparison-list">
+                  {allResults.map((ar, idx) => {
+                    const color = ar.result.match_level === "High" ? "#2ecc71"
+                      : ar.result.match_level === "Medium" ? "#f39c12" : "#e74c3c";
+                    return (
+                      <div key={ar.resumeId ?? "master"} className="ats-comparison-row">
+                        <span className="ats-comparison-rank">#{idx + 1}</span>
+                        <span className="ats-comparison-name">{ar.resumeName}</span>
+                        <span className="ats-history-score-badge" style={{ backgroundColor: color }}>
+                          {ar.result.score} · {ar.result.match_level}
+                        </span>
+                        <button
+                          type="button"
+                          className="ats-history-action-btn"
+                          onClick={() => {
+                            setSelectedResumeId(ar.resumeId);
+                            setResult(ar.result);
+                          }}
+                        >
+                          Details
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ---- Results panel ---- */}
           <div className="ats-results-panel">
-            {!result && !scoring && (
+            {!result && !scoring && !scoringAll && (
               <div className="ats-placeholder frame">
                 <div className="ats-placeholder-icon" aria-hidden>
                   <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    {systemHasNoProjects || currentResumeIsEmpty ? (
+                      <>
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
+                        <path d="M12 8v4m0 4h.01" />
+                      </>
+                    ) : (
+                      <>
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </>
+                    )}
                   </svg>
                 </div>
+                {systemHasNoProjects ? (
+                  <p className="ats-placeholder-text">
+                    Upload projects for insights.
+                  </p>
+                ) : currentResumeIsEmpty ? (
+                  <p className="ats-placeholder-text">
+                    Add projects or experience to this resume to score it.
+                  </p>
+                ) : (
+                  <p className="ats-placeholder-text">
+                    Your job match score and keyword analysis will appear here.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {(scoring || scoringAll) && (
+              <div className="ats-placeholder frame">
+                <div className="ats-spinner" aria-label="Analyzing" />
                 <p className="ats-placeholder-text">
-                  Your ATS score and keyword analysis will appear here.
+                  {scoringAll ? "Scoring all resumes…" : "Analyzing your resume…"}
                 </p>
               </div>
             )}
 
-            {scoring && (
-              <div className="ats-placeholder frame">
-                <div className="ats-spinner" aria-label="Analyzing" />
-                <p className="ats-placeholder-text">Analyzing your resume…</p>
-              </div>
-            )}
-
-            {result && !scoring && (
+            {result && !scoring && !scoringAll && (
               <>
                 {/* Score hero */}
                 <div className="ats-score-hero frame">
@@ -526,7 +758,7 @@ export function ATSScoringPage() {
                     <span className="ats-match-level-badge" style={{ backgroundColor: matchLevelColor }}>
                       {result.match_level} Match
                     </span>
-                    <p className="ats-score-sublabel">ATS Compatibility Score</p>
+                    <p className="ats-score-sublabel">Job Match Score</p>
                     {experienceLabel(result.experience_months) && (
                       <p className="ats-experience-pill">
                         {experienceLabel(result.experience_months)}
@@ -548,7 +780,7 @@ export function ATSScoringPage() {
                   ))}
                 </div>
 
-                {/* Merged keyword + skills section */}
+                {/* Keyword & Skills Analysis */}
                 {(mergedMatched.length > 0 || mergedMissing.length > 0) && (
                   <div className="ats-section frame">
                     <h2 className="ats-section-title">Keyword &amp; Skills Analysis</h2>
@@ -614,12 +846,12 @@ export function ATSScoringPage() {
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 6v6l4 2" />
               </svg>
-              <p>Run your first ATS score to see it here.</p>
+              <p>Run your first job match score to see it here.</p>
             </div>
           ) : (
             <div className="ats-history-list">
               {history.map((entry) => (
-                <HistoryCard key={entry.id} entry={entry} onRestore={handleRestoreHistory} />
+                <HistoryCard key={entry.id} entry={entry} onRestore={handleRestoreHistory} onDelete={handleDeleteHistoryEntry} />
               ))}
             </div>
           )}

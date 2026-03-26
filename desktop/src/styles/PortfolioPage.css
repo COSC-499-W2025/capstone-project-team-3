@@ -1786,41 +1786,85 @@
             margin-right: auto;
         }
 
-        /* ---- Theme toggle button ---- */
-        .network-theme-toggle {
+        /* ---- Network toolbar (theme + mode toggles) ---- */
+        .network-toolbar {
             position: absolute;
             top: 10px;
             right: 10px;
             z-index: 10;
-            width: 32px;
-            height: 32px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* ---- Network mode radio toggle ---- */
+        .network-mode-radio {
+            display: flex;
             border-radius: 8px;
             border: 1px solid rgba(99, 102, 241, 0.25);
             background: rgba(30, 41, 59, 0.7);
-            color: #e2e8f0;
-            font-size: 16px;
+            backdrop-filter: blur(4px);
+            overflow: hidden;
+        }
+
+        .network-mode-radio-btn {
+            height: 30px;
+            padding: 0 10px;
+            border: none;
+            background: transparent;
+            color: rgba(226, 232, 240, 0.6);
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
-            transition: background 0.2s ease, border-color 0.2s ease;
+            gap: 4px;
+            white-space: nowrap;
+            transition: background 0.2s ease, color 0.2s ease;
         }
 
-        .network-theme-toggle:hover {
-            background: rgba(99, 102, 241, 0.25);
-            border-color: rgba(99, 102, 241, 0.5);
+        .network-mode-radio-btn:first-child {
+            border-right: 1px solid rgba(99, 102, 241, 0.2);
         }
 
-        .network-theme-toggle--light {
+        .network-mode-radio-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: #e2e8f0;
+        }
+
+        .network-mode-radio-btn--active {
+            background: rgba(99, 102, 241, 0.35);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .network-mode-radio-btn--active:hover {
+            background: rgba(99, 102, 241, 0.45);
+        }
+
+        /* Light mode overrides */
+        .network-mode-radio--light {
             background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .network-mode-radio--light .network-mode-radio-btn {
+            color: rgba(51, 65, 85, 0.5);
+        }
+
+        .network-mode-radio--light .network-mode-radio-btn:hover {
+            background: rgba(99, 102, 241, 0.1);
             color: #334155;
         }
 
-        .network-theme-toggle--light:hover {
-            background: rgba(255, 255, 255, 0.95);
-            border-color: rgba(99, 102, 241, 0.45);
+        .network-mode-radio--light .network-mode-radio-btn--active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #1e293b;
+        }
+
+        .network-mode-radio--light .network-mode-radio-btn--active:hover {
+            background: rgba(99, 102, 241, 0.22);
         }
 
         /* ---- Light mode overrides ---- */

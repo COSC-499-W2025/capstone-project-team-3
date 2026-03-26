@@ -22,7 +22,8 @@ export interface ATSScoreResult {
 
 export async function scoreATS(
   jobDescription: string,
-  resumeId: number | null
+  resumeId: number | null,
+  analysisMode: "local" | "ai" = "local"
 ): Promise<ATSScoreResult> {
   const res = await fetch(`${API_BASE}/api/ats/score`, {
     method: "POST",
@@ -30,11 +31,12 @@ export async function scoreATS(
     body: JSON.stringify({
       job_description: jobDescription,
       resume_id: resumeId,
+      analysis_mode: analysisMode,
     }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || "Failed to calculate ATS score");
+    throw new Error(data.detail || "Failed to calculate job match score");
   }
   return res.json();
 }

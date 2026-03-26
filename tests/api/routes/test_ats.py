@@ -263,9 +263,9 @@ def test_score_ats_returns_valid_structure():
 
 
 def test_score_ats_keyword_lists_capped_at_20():
-    # 25 unique keywords to force the cap
+    # 25 non-tech keywords to force the cap on the general-keywords pool
     many_kw = [f"keyword{i}" for i in range(25)]
-    with patch("app.api.routes.ats._gemini_extract_jd_keywords", return_value=many_kw):
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=many_kw):
         result = _score_ats({}, "placeholder job description for testing purposes here")
 
     assert len(result.matched_keywords) <= 20
@@ -279,18 +279,19 @@ def test_score_ats_known_keyword_in_resume_is_matched():
         "skills": {"Languages": ["Python"]},
         "projects": [{"title": "Test", "bullets": ["Used python for analysis"], "skills": []}],
     }
-    with patch("app.api.routes.ats._gemini_extract_jd_keywords", return_value=["python"]):
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=["python"]):
         result = _score_ats(resume, "We need python for this role.")
 
+    assert "python" in result.matched_skills
     assert "python" in result.matched_keywords
 
 
 def test_score_ats_unknown_keyword_not_in_resume_is_missing():
-    with patch("app.api.routes.ats._gemini_extract_jd_keywords", return_value=["kubernetes"]):
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=["kubernetes"]):
         result = _score_ats({"skills": {}, "projects": []}, "We need kubernetes experience.")
 
+    assert "kubernetes" in result.missing_skills
     assert "kubernetes" in result.missing_keywords
-    assert "kubernetes" not in result.matched_keywords
 
 
 def test_score_ats_content_richness_capped_at_100():
@@ -301,8 +302,9 @@ def test_score_ats_content_richness_capped_at_100():
     assert result.breakdown["content_richness"] == 100
 
 
-def test_score_ats_empty_resume_gives_low_keyword_and_skills_score():
-    with patch("app.api.routes.ats._gemini_extract_jd_keywords",
+def test_score_ats_empty_resume_gives_zero_keyword_and_skills_score():
+    # Empty resume → keywords not found → both keyword_coverage and skills_match are 0.
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
                return_value=["python", "react", "docker", "kubernetes"]):
         result = _score_ats({}, "Requires python react docker kubernetes experience now.")
 
@@ -324,10 +326,80 @@ def test_score_ats_experience_months_matches_project_dates():
              "bullets": [], "skills": []}
         ]
     }
-    with patch("app.api.routes.ats._gemini_extract_jd_keywords", return_value=["python"]):
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=["python"]):
         result = _score_ats(resume, "We need python for this role.")
 
     assert result.experience_months == 6
+
+
+def test_tech_keywords_in_matched_skills_and_matched_keywords():
+    """Tech keywords found in resume appear in both matched_skills and matched_keywords."""
+    resume = {
+        "projects": [{"bullets": ["Built API with python and react"], "skills": []}]
+    }
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
+               return_value=["python", "react"]):
+        result = _score_ats(resume, "We need python and react experience.")
+
+    assert "python" in result.matched_skills
+    assert "react" in result.matched_skills
+    assert "python" in result.matched_keywords
+    assert "react" in result.matched_keywords
+
+
+def test_skills_match_uses_only_tech_keywords():
+    """skills_match denominator is only tech-keyword JD terms; keyword_coverage uses all JD terms."""
+    resume = {
+        "projects": [{"bullets": ["Experienced with python and agile processes"], "skills": []}]
+    }
+    # "python" is a tech keyword, "agile" is not
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
+               return_value=["python", "agile"]):
+        result = _score_ats(resume, "We need python and agile experience.")
+
+    # keyword_coverage: 2/2 matched → 100%
+    assert result.breakdown["keyword_coverage"] == 100
+    # skills_match: only "python" in tech pool, found → 100%
+    assert result.breakdown["skills_match"] == 100
+    # "agile" is in matched_keywords (general pool) but NOT in matched_skills (tech pool)
+    assert "agile" in result.matched_keywords
+    assert "agile" not in result.matched_skills
+
+
+def test_all_keywords_matched_gives_100():
+    """When all JD keywords are found in the resume, both scores are 100."""
+    resume = {
+        "projects": [{"bullets": ["Works with python react docker daily"], "skills": []}]
+    }
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
+               return_value=["python", "react", "docker"]):
+        result = _score_ats(resume, "We need python react docker experience.")
+
+    assert result.breakdown["keyword_coverage"] == 100
+    assert result.breakdown["skills_match"] == 100
+
+
+def test_no_keywords_matched_gives_zero():
+    """When no JD keywords appear in the resume, both scores are 0."""
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
+               return_value=["kubernetes", "terraform", "ansible"]):
+        result = _score_ats({}, "We need kubernetes terraform ansible experience.")
+
+    assert result.breakdown["keyword_coverage"] == 0
+    assert result.breakdown["skills_match"] == 0
+
+
+def test_compound_token_expansion_matches_skills():
+    """Resume text 'node.js' should match JD keyword 'node' via token expansion."""
+    resume = {
+        "projects": [{"bullets": ["Built REST API with Node.js and React.js on AWS"], "skills": []}]
+    }
+    with patch("app.api.routes.ats._extract_jd_keywords_fallback",
+               return_value=["node", "react", "aws"]):
+        result = _score_ats(resume, "We need node react and aws experience.")
+
+    assert result.breakdown["skills_match"] > 0
+    assert "node" in result.matched_skills or "react" in result.matched_skills
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +481,15 @@ def test_post_ats_score_returns_404_when_master_resume_fails_to_build():
     assert response.status_code == 404
 
 
+def test_post_ats_score_returns_422_when_resume_has_no_content():
+    empty_resume = {"skills": {}, "projects": []}
+    with patch("app.api.routes.ats.build_resume_model", return_value=empty_resume):
+        response = client.post("/api/ats/score", json={"job_description": LONG_JD})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "EMPTY_RESUME"
+
+
 def test_post_ats_score_score_is_in_valid_range():
     with patch("app.api.routes.ats.build_resume_model", return_value=SAMPLE_RESUME):
         response = client.post("/api/ats/score", json={"job_description": LONG_JD})
@@ -456,3 +537,56 @@ def test_post_ats_score_response_keyword_lists_capped_at_20():
     assert len(data["missing_keywords"]) <= 20
     assert len(data["matched_skills"]) <= 20
     assert len(data["missing_skills"]) <= 20
+
+
+# ---------------------------------------------------------------------------
+# analysis_mode routing
+# ---------------------------------------------------------------------------
+
+def test_local_mode_uses_fallback_not_gemini():
+    """analysis_mode=local must call _extract_jd_keywords_fallback and NOT _gemini_extract_jd_keywords."""
+    with patch("app.api.routes.ats.build_resume_model", return_value=SAMPLE_RESUME), \
+         patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=["python", "docker"]) as mock_local, \
+         patch("app.api.routes.ats._gemini_extract_jd_keywords") as mock_gemini:
+        response = client.post(
+            "/api/ats/score",
+            json={"job_description": LONG_JD, "analysis_mode": "local"},
+        )
+    assert response.status_code == 200
+    mock_local.assert_called_once_with(LONG_JD)
+    mock_gemini.assert_not_called()
+
+
+def test_ai_mode_uses_gemini_not_fallback():
+    """analysis_mode=ai must call _gemini_extract_jd_keywords and NOT _extract_jd_keywords_fallback."""
+    with patch("app.api.routes.ats.build_resume_model", return_value=SAMPLE_RESUME), \
+         patch("app.api.routes.ats._gemini_extract_jd_keywords", return_value=["python", "docker"]) as mock_gemini, \
+         patch("app.api.routes.ats._extract_jd_keywords_fallback") as mock_local:
+        response = client.post(
+            "/api/ats/score",
+            json={"job_description": LONG_JD, "analysis_mode": "ai"},
+        )
+    assert response.status_code == 200
+    mock_gemini.assert_called_once_with(LONG_JD)
+    mock_local.assert_not_called()
+
+
+def test_default_analysis_mode_is_local():
+    """Omitting analysis_mode must default to local (fallback) extraction."""
+    with patch("app.api.routes.ats.build_resume_model", return_value=SAMPLE_RESUME), \
+         patch("app.api.routes.ats._extract_jd_keywords_fallback", return_value=["python"]) as mock_local, \
+         patch("app.api.routes.ats._gemini_extract_jd_keywords") as mock_gemini:
+        response = client.post("/api/ats/score", json={"job_description": LONG_JD})
+    assert response.status_code == 200
+    mock_local.assert_called_once()
+    mock_gemini.assert_not_called()
+
+
+def test_invalid_analysis_mode_rejected():
+    """An unrecognised analysis_mode value must be rejected with 422."""
+    with patch("app.api.routes.ats.build_resume_model", return_value=SAMPLE_RESUME):
+        response = client.post(
+            "/api/ats/score",
+            json={"job_description": LONG_JD, "analysis_mode": "turbo"},
+        )
+    assert response.status_code == 422

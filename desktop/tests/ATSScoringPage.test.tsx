@@ -8,9 +8,19 @@ import { jest, test, describe, beforeEach, afterEach } from '@jest/globals';
 
 const mockNavigate = jest.fn();
 
+/** Stable fake location — ATSScoringPage uses useLocation (e.g. location.key) outside a test Router. */
+const mockLocation = {
+  pathname: '/',
+  search: '',
+  hash: '',
+  state: null as unknown,
+  key: 'default',
+};
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual<typeof import('react-router-dom')>('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useLocation: () => mockLocation,
 }));
 
 jest.mock('../src/api/ats', () => ({
@@ -116,21 +126,21 @@ describe('ATSScoringPage', () => {
   // -----------------------------------------------------------------------
   // Calculate button state
   // -----------------------------------------------------------------------
-  test('Calculate ATS Score button is disabled when job description is too short', async () => {
+  test('Check Job Match Score button is disabled when job description is too short', async () => {
     render(<ATSScoringPage />);
     await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
-    const btn = screen.getByRole('button', { name: /Calculate ATS Score/i });
+    const btn = screen.getByRole('button', { name: /Check Job Match Score/i });
     expect(btn.hasAttribute('disabled')).toBe(true);
   });
 
-  test('Calculate ATS Score button is enabled with sufficient job description', async () => {
+  test('Check Job Match Score button is enabled with sufficient job description', async () => {
     render(<ATSScoringPage />);
     await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
     fireEvent.change(
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    expect(screen.getByRole('button', { name: /Calculate ATS Score/i }).hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: /Check Job Match Score/i }).hasAttribute('disabled')).toBe(false);
   });
 
   // -----------------------------------------------------------------------
@@ -143,8 +153,8 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
-    await waitFor(() => expect(mockScoreATS).toHaveBeenCalledWith(LONG_JD, null));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
+    await waitFor(() => expect(mockScoreATS).toHaveBeenCalledWith(LONG_JD, null, 'local'));
   });
 
   test('calls scoreATS with selected resume id when non-master resume is chosen', async () => {
@@ -155,8 +165,8 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
-    await waitFor(() => expect(mockScoreATS).toHaveBeenCalledWith(LONG_JD, 2));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
+    await waitFor(() => expect(mockScoreATS).toHaveBeenCalledWith(LONG_JD, 2, 'local'));
   });
 
   test('shows match level badge after successful scoring', async () => {
@@ -166,18 +176,18 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
     await waitFor(() => expect(screen.getByText('High Match')).toBeDefined());
   });
 
-  test('shows Keyword & Skills Analysis section after scoring', async () => {
+  test('shows Keyword & Skills Analysis section after scoring when keywords are returned', async () => {
     render(<ATSScoringPage />);
     await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
     fireEvent.change(
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
     await waitFor(() => {
       expect(screen.getByText(/Keyword.*Skills Analysis/i)).toBeDefined();
     });
@@ -191,17 +201,17 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
     await waitFor(() => expect(screen.getByText('Server error')).toBeDefined());
   });
 
   // -----------------------------------------------------------------------
   // Keyword pill cap (Fix 3)
   // -----------------------------------------------------------------------
-  test('keyword pills are capped at 20 matched even when API returns more combined items', async () => {
-    // 15 unique keywords + 15 unique skills = 30 items → should be capped to 20
-    const manyKeywords = Array.from({ length: 15 }, (_, i) => `keyword${i}`);
-    const manySkills = Array.from({ length: 15 }, (_, i) => `skill${i}`);
+  test('merged keyword section is capped at 20 matched pills', async () => {
+    // 25 keywords and 25 skills → merged set deduped then capped at 20
+    const manyKeywords = Array.from({ length: 25 }, (_, i) => `keyword${i}`);
+    const manySkills = Array.from({ length: 25 }, (_, i) => `skill${i}`);
     mockScoreATS.mockResolvedValue({
       ...MOCK_ATS_RESULT,
       matched_keywords: manyKeywords,
@@ -216,11 +226,13 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
 
     await waitFor(() => {
       const matchedPills = container.querySelectorAll('.ats-keyword-matched');
+      // Merged section capped at 20
       expect(matchedPills.length).toBeLessThanOrEqual(20);
+      expect(matchedPills.length).toBeGreaterThan(0);
     });
   });
 
@@ -231,7 +243,7 @@ describe('ATSScoringPage', () => {
     render(<ATSScoringPage />);
     await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('tab', { name: /History/i }));
-    expect(screen.getByText(/Run your first ATS score/i)).toBeDefined();
+    expect(screen.getByText(/Run your first job match score/i)).toBeDefined();
   });
 
   test('history entry is added after successful scoring', async () => {
@@ -241,7 +253,7 @@ describe('ATSScoringPage', () => {
       screen.getByPlaceholderText(/Paste the full job description here/i),
       { target: { value: LONG_JD } }
     );
-    fireEvent.click(screen.getByRole('button', { name: /Calculate ATS Score/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
     await waitFor(() => expect(mockScoreATS).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('tab', { name: /History/i }));
     await waitFor(() => expect(screen.getByText('1 saved score')).toBeDefined());
@@ -317,7 +329,7 @@ describe('ATSScoringPage', () => {
     fireEvent.click(screen.getByText('Clear History'));
 
     await waitFor(() =>
-      expect(screen.getByText(/Run your first ATS score/i)).toBeDefined()
+      expect(screen.getByText(/Run your first job match score/i)).toBeDefined()
     );
   });
 
@@ -377,6 +389,144 @@ describe('ATSScoringPage', () => {
     await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
     await waitFor(() =>
       expect(localStorage.getItem('ats_history')).toBeNull()
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // Local vs AI mode toggle
+  // -----------------------------------------------------------------------
+  test('renders Local and AI mode toggle buttons', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Local$/i })).toBeDefined();
+      expect(screen.getByRole('button', { name: /^AI$/i })).toBeDefined();
+    });
+  });
+
+  test('AI disclaimer is hidden when mode is Local', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Local$/i })).toBeDefined());
+    expect(screen.queryByText(/your job description will be sent/i)).toBeNull();
+  });
+
+  test('AI disclaimer appears when AI mode is selected', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^AI$/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /^AI$/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/your job description will be sent/i)).toBeDefined()
+    );
+  });
+
+  test('scoreATS is called with analysis_mode=local by default', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/Paste the full job description here/i)).toBeDefined()
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText(/Paste the full job description here/i),
+      { target: { value: LONG_JD } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
+    await waitFor(() => expect(mockScoreATS).toHaveBeenCalled());
+    const [, , calledMode] = mockScoreATS.mock.calls[0] as [string, number | null, string];
+    expect(calledMode).toBe('local');
+  });
+
+  test('scoreATS is called with analysis_mode=ai when AI mode selected', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^AI$/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /^AI$/i }));
+    fireEvent.change(
+      screen.getByPlaceholderText(/Paste the full job description here/i),
+      { target: { value: LONG_JD } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
+    await waitFor(() => expect(mockScoreATS).toHaveBeenCalled());
+    const [, , calledMode] = mockScoreATS.mock.calls[0] as [string, number | null, string];
+    expect(calledMode).toBe('ai');
+  });
+
+  test('history entry stores the analysis mode', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /^AI$/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /^AI$/i }));
+    fireEvent.change(
+      screen.getByPlaceholderText(/Paste the full job description here/i),
+      { target: { value: LONG_JD } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Check Job Match Score/i }));
+    await waitFor(() => expect(mockScoreATS).toHaveBeenCalled());
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('ats_history') ?? '[]');
+      expect(stored.length).toBeGreaterThan(0);
+      expect(stored[0].analysisMode).toBe('ai');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Per-entry history deletion
+  // -----------------------------------------------------------------------
+  test('Remove button deletes only the target history entry', async () => {
+    const entry1 = makeHistoryEntry({ id: 'entry-1', resumeName: 'Resume A' });
+    const entry2 = makeHistoryEntry({ id: 'entry-2', resumeName: 'Resume B' });
+    localStorage.setItem('ats_history', JSON.stringify([entry1, entry2]));
+
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('tab', { name: /History/i }));
+    await waitFor(() => expect(screen.getAllByText('Remove').length).toBe(2));
+
+    fireEvent.click(screen.getAllByText('Remove')[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Remove').length).toBe(1);
+      const stored = JSON.parse(localStorage.getItem('ats_history') ?? '[]');
+      expect(stored.length).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Score All Resumes button
+  // -----------------------------------------------------------------------
+  test('Score All Resumes button is visible when 2+ resumes are available', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Score All Resumes/i })).toBeDefined()
+    );
+  });
+
+  test('Score All Resumes button is hidden when only one resume exists', async () => {
+    mockGetResumes.mockResolvedValue([
+      { id: null, name: 'Master Resume', is_master: true },
+    ]);
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Score All Resumes/i })).toBeNull()
+    );
+  });
+
+  test('Score All Resumes calls scoreATS for each resume', async () => {
+    render(<ATSScoringPage />);
+    await waitFor(() => expect(mockGetResumes).toHaveBeenCalled());
+    fireEvent.change(
+      screen.getByPlaceholderText(/Paste the full job description here/i),
+      { target: { value: LONG_JD } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Score All Resumes/i }));
+
+    await waitFor(() =>
+      // One call per resume in MOCK_RESUME_LIST (master + Backend Resume = 2)
+      expect(mockScoreATS).toHaveBeenCalledTimes(2)
     );
   });
 });

@@ -375,3 +375,16 @@ button:disabled {
     font-size: 1.1rem;
   }
 }
+
+/* Font Size Scaling - Accessibility */
+[data-font-size="small"] {
+  font-size: 87.5%;
+}
+
+[data-font-size="large"] {
+  font-size: 112.5%;
+}
+
+[data-font-size="x-large"] {
+  font-size: 125%;
+}

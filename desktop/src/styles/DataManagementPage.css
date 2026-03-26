@@ -62,6 +62,16 @@
   font-family: var(--font-sans);
 }
 
+.data-management-save-error {
+  padding: var(--spacing-md);
+  background: #fde8e8;
+  color: #c53030;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  max-width: 600px;
+  font-family: var(--font-sans);
+}
+
 .data-management-projects {
   width: 100%;
   max-width: 800px;
@@ -113,6 +123,38 @@
   font-family: var(--font-sans);
   background: #f8f9fa;
   border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.data-management-empty p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.data-management-upload-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: #fff;
+  background: var(--color-blue-medium, #3b82f6);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.data-management-upload-btn:hover {
+  background: var(--color-blue-dark, #2563eb);
+}
+
+.data-management-count {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #9ca3af;
 }
 
 .data-management-table-wrap {

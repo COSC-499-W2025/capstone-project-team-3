@@ -558,6 +558,25 @@ def test_run_scan_flow_reanalyze_when_exclusions_and_signature_exists(mock_exist
     assert len(result["files"]) == 1
 
 
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures")
+def test_run_scan_flow_reruns_when_stored_manifest_smaller_than_full_scan(
+    mock_stored,
+    mock_exists,
+    tmp_path,
+):
+    """No exclusions: if DB still reflects a narrower analyzed file set, do not skip."""
+    (tmp_path / "a.py").write_text("print(1)")
+    (tmp_path / "notes.md").write_text("# hi")
+    raw = scan_project_files(str(tmp_path), EXCLUDE_PATTERNS.copy())
+    all_sigs = [extract_file_signature(f, str(tmp_path)) for f in raw]
+    mock_stored.return_value = all_sigs[:1]
+    result = run_scan_flow(str(tmp_path))
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "file_manifest_mismatch_after_exclusions"
+    assert len(result["files"]) == len(raw)
+
+
 # ============================================================================
 # Tests for calculate_dynamic_threshold()
 # ============================================================================

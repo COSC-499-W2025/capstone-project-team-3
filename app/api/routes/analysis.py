@@ -36,6 +36,7 @@ from app.utils.scan_utils import (
     find_similar_project,
     filter_files_by_user_exclusions,
     _normalize_user_exclude_ext,
+    persist_analyzed_file_signatures,
 )
 from app.utils.git_utils import detect_git, extract_all_contributors
 from app.utils.clean_up import cleanup_upload
@@ -468,6 +469,7 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                 project_name=project_name,
                 project_signature=project_signature,
             )
+            persist_analyzed_file_signatures(project_signature, project_path, files)
 
             # Extract and persist collaborator data AFTER merge
             # (merge_analysis_results wipes DASHBOARD_DATA, so this must come after)

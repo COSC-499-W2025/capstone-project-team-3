@@ -286,7 +286,57 @@ def project_signature_exists(signature: str) -> bool:
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
-  
+
+
+def get_stored_project_file_signatures(project_signature: str) -> Optional[List[str]]:
+    """File signature list last stored on PROJECT, or None if missing/unparseable."""
+    if not project_signature:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT file_signatures FROM PROJECT WHERE project_signature = ?",
+        (project_signature,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row or row[0] is None or row[0] == "":
+        return None
+    try:
+        data = json.loads(row[0])
+        if isinstance(data, list) and all(isinstance(x, str) for x in data):
+            return data
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def persist_analyzed_file_signatures(
+    project_signature: str, project_root: str, analyzed_files: List[Path]
+) -> None:
+    """Keep PROJECT.file_signatures and size_bytes aligned with files merged into analysis."""
+    if not project_signature:
+        return
+    root = str(Path(project_root).resolve())
+    conn = get_connection()
+    cursor = conn.cursor()
+    if not analyzed_files:
+        cursor.execute(
+            "UPDATE PROJECT SET file_signatures = ?, size_bytes = ? WHERE project_signature = ?",
+            (json.dumps([]), 0, project_signature),
+        )
+        conn.commit()
+        conn.close()
+        return
+    sigs = [extract_file_signature(f, root) for f in analyzed_files]
+    size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in analyzed_files)
+    cursor.execute(
+        "UPDATE PROJECT SET file_signatures = ?, size_bytes = ? WHERE project_signature = ?",
+        (json.dumps(sigs), size_bytes, project_signature),
+    )
+    conn.commit()
+    conn.close()
+
 
 def get_all_file_signatures_from_db() -> set:
     """Get all file signatures from all projects in the DB."""
@@ -553,6 +603,24 @@ def run_scan_flow(
                 "reason": "reanalyze_with_exclusions",
                 "signature": project_signature,
             }
+        # Same content hash as DB, but a prior run may have merged analysis on a *subset* of files
+        # (file-type exclusions). Stored file_signatures must match this scan's file set or we re-run.
+        stored_sigs = get_stored_project_file_signatures(project_signature)
+        if stored_sigs is not None:
+            stored_set = set(stored_sigs)
+            current_set = set(file_signatures)
+            if stored_set != current_set:
+                print(
+                    "Project signature matches DB but analyzed file manifest differs from current scan "
+                    "(e.g. file-type exclusions were cleared or changed) — re-running analysis."
+                )
+                return {
+                    "files": files,
+                    "skip_analysis": False,
+                    "score": 100.0,
+                    "reason": "file_manifest_mismatch_after_exclusions",
+                    "signature": project_signature,
+                }
         print("100.0% of this Project was analyzed in the past.")
         return {
             "files": files,

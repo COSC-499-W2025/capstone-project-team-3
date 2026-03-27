@@ -743,7 +743,6 @@
   font-family: var(--font-sans);
 }
 
-<<<<<<< karim/input-validation
 /* ---- Required Field Indicators ---- */
 .required-indicator {
   color: #c53030;
@@ -775,7 +774,7 @@
 .input-field.input-error:focus {
   border-color: #c53030;
   box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.12);
-=======
+}
 /* ---- Profile / Learning tabs ---- */
 .profile-page-tabs {
   display: flex;
@@ -993,7 +992,6 @@
 
 .learning-course-card__cta:hover {
   text-decoration: underline;
->>>>>>> main
 }
 
 /* ── Dark mode overrides are in src/styles/dark-theme.css ── */

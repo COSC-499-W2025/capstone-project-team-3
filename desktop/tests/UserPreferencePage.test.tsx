@@ -417,7 +417,7 @@ test('displays asterisks on required fields', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   const indicators = container.querySelectorAll('.required-indicator');
   // Legend + Full Name, Email, Job Title, Industry = 5 asterisks
@@ -431,6 +431,8 @@ test('displays required fields legend', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
+
   await waitFor(() => {
     expect(screen.getByText(/Fields marked with/i)).toBeDefined();
   });
@@ -443,7 +445,7 @@ test('required inputs have aria-required attribute', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   const fullName = screen.getByPlaceholderText('Enter your full name');
   const email = screen.getByPlaceholderText('your.email@example.com');
@@ -461,7 +463,7 @@ test('required inputs have native required attribute', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   const fullName = screen.getByPlaceholderText('Enter your full name');
   const email = screen.getByPlaceholderText('your.email@example.com');
@@ -483,7 +485,7 @@ test('shows validation errors when saving with empty required fields', async () 
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText(/Save Profile/i));
 
@@ -505,7 +507,7 @@ test('shows email format error for invalid email', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
   fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'not-an-email' } });
@@ -528,7 +530,7 @@ test('shows LinkedIn URL format error for invalid URL', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
   fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'jane@example.com' } });
@@ -552,7 +554,7 @@ test('accepts valid LinkedIn URL and saves successfully', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Jane Doe' } });
   fireEvent.change(screen.getByPlaceholderText('your.email@example.com'), { target: { value: 'jane@example.com' } });
@@ -597,6 +599,8 @@ test('blocks profile save when an existing education entry is invalid', async ()
 
   await waitFor(() => screen.getByText('MIT'));
 
+  await openProfileEditMode();
+
   fireEvent.click(screen.getByText(/Save Profile/i));
 
   await waitFor(() => {
@@ -607,14 +611,13 @@ test('blocks profile save when an existing education entry is invalid', async ()
 });
 
 test('clears field error when user starts typing', async () => {
-test('Learning tab loads recommendations and shows both sections', async () => {
   render(
     <BrowserRouter>
       <UserPreferencePage />
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   // Trigger validation errors
   fireEvent.click(screen.getByText(/Save Profile/i));
@@ -637,7 +640,7 @@ test('adds input-error class to invalid fields', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Save Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText(/Save Profile/i));
 
@@ -658,7 +661,7 @@ test('shows error when GPA is not a number', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   // Add an education entry
   fireEvent.click(screen.getByText('Add your first education entry'));
@@ -682,7 +685,7 @@ test('shows error when GPA is out of range', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText('Add your first education entry'));
 
@@ -704,7 +707,7 @@ test('accepts valid GPA value', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText('Add your first education entry'));
 
@@ -733,7 +736,7 @@ test('shows error when end date is before start date', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText('Add your first education entry'));
 
@@ -758,7 +761,7 @@ test('clears end date error when start date changes', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText('Add your first education entry'));
 
@@ -787,7 +790,7 @@ test('clears education card errors on cancel', async () => {
     </BrowserRouter>
   );
 
-  await waitFor(() => screen.getByText(/Build your Profile/i));
+  await openProfileEditMode();
 
   fireEvent.click(screen.getByText('Add your first education entry'));
 
@@ -802,10 +805,20 @@ test('clears education card errors on cancel', async () => {
   });
 
   // Cancel should remove the card (new entry with no institution)
-  fireEvent.click(screen.getByText('Cancel'));
+  // Multiple Cancel buttons exist (education card + page-level), target the first one (education card)
+  const cancelButtons = screen.getAllByText('Cancel');
+  fireEvent.click(cancelButtons[0]);
 
   expect(screen.queryByText('GPA must be a number.')).toBeNull();
 });
+
+test('renders learning tab and fetches recommendations', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
   await waitFor(() => {
     expect(screen.getByRole('tab', { name: /^Learning$/i })).toBeDefined();
   });

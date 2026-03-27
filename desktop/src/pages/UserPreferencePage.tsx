@@ -161,7 +161,6 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
   };
 }
 
-<<<<<<< karim/input-validation
 // Validate a single education entry (shared between EducationCard and page-level save)
 export function validateEducationEntry(entry: EducationEntry): Record<string, string> {
   const errs: Record<string, string> = {};
@@ -193,7 +192,8 @@ function validateEducationEntries(entries: EducationEntry[]): string | null {
     .filter((message): message is string => Boolean(message));
 
   return messages.length > 0 ? messages.join(" ") : null;
-=======
+}
+
 function cloneProfileData(data: ProfileData): ProfileData {
   return {
     ...data,
@@ -207,7 +207,6 @@ function formatMonthLabel(monthStr: string): string {
   if (parts.length < 2) return monthStr;
   const date = new Date(Number(parts[0]), Number(parts[1]) - 1);
   return date.toLocaleDateString("en-US", { year: "numeric", month: "short" });
->>>>>>> main
 }
 
 // Convert "2024-01" to "2024-01-01" format
@@ -899,7 +898,6 @@ export default function UserPreferencePage() {
     }
   };
 
-<<<<<<< karim/input-validation
   const validateProfile = (): Record<string, string> => {
     const errs: Record<string, string> = {};
     if (!profileData.fullName.trim()) {
@@ -920,7 +918,8 @@ export default function UserPreferencePage() {
       errs.linkedin = "Please enter a valid URL (e.g., https://linkedin.com/in/your-profile).";
     }
     return errs;
-=======
+  };
+
   const handleCancelEdit = () => {
     if (lastSavedProfileData) {
       setProfileData(cloneProfileData(lastSavedProfileData));
@@ -930,7 +929,6 @@ export default function UserPreferencePage() {
     setError(null);
     setPictureError(null);
     setIsEditingProfile(false);
->>>>>>> main
   };
 
   const handleSave = async () => {
@@ -939,7 +937,6 @@ export default function UserPreferencePage() {
       setSaving(true);
       setError(null);
 
-<<<<<<< karim/input-validation
       const errs = validateProfile();
       const educationError = validateEducationEntries(profileData.educationEntries);
       if (educationError) {
@@ -951,9 +948,6 @@ export default function UserPreferencePage() {
         return;
       }
       setFieldErrors({});
-
-=======
->>>>>>> main
       const backendData = convertToBackend(profileData);
       await saveUserPreferences(backendData);
       notifyUserPreferencesUpdated();

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/UserPreferencePage.css';
 import '../styles/Notification.css';
 import '../styles/ProjectSelectionPage.css';
 import { 
   getUserPreferences, 
   saveUserPreferences,
+  notifyUserPreferencesUpdated,
   uploadProfilePicture,
   deleteProfilePicture,
   getProfilePictureUrl,
@@ -15,6 +16,13 @@ import {
   type Institution 
 } from '../api/userPreferences';
 import { getConsentStatus } from '../api/consent';
+import {
+  getLearningRecommendations,
+  learningThumbnailSrc,
+  type LearningCourse,
+  type LearningRecommendationsResponse,
+} from '../api/learning';
+import { getProjects } from '../api/projects';
 
 const INDUSTRIES = [
   "Technology",
@@ -153,6 +161,7 @@ function convertToBackend(frontendData: ProfileData): UserPreferences {
   };
 }
 
+<<<<<<< karim/input-validation
 // Validate a single education entry (shared between EducationCard and page-level save)
 export function validateEducationEntry(entry: EducationEntry): Record<string, string> {
   const errs: Record<string, string> = {};
@@ -184,6 +193,21 @@ function validateEducationEntries(entries: EducationEntry[]): string | null {
     .filter((message): message is string => Boolean(message));
 
   return messages.length > 0 ? messages.join(" ") : null;
+=======
+function cloneProfileData(data: ProfileData): ProfileData {
+  return {
+    ...data,
+    educationEntries: data.educationEntries.map((e) => ({ ...e })),
+  };
+}
+
+function formatMonthLabel(monthStr: string): string {
+  if (!monthStr) return "";
+  const parts = monthStr.split("-");
+  if (parts.length < 2) return monthStr;
+  const date = new Date(Number(parts[0]), Number(parts[1]) - 1);
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+>>>>>>> main
 }
 
 // Convert "2024-01" to "2024-01-01" format
@@ -582,8 +606,64 @@ function EducationCard({ entry, onSave, onDelete, isNew }: EducationCardProps) {
   );
 }
 
+function ProfileFieldReadonly({ label, value }: { label: string; value: string }) {
+  const display = value?.trim() ? value : "—";
+  return (
+    <div className="profile-view-field">
+      <span className="profile-view-field__label">{label}</span>
+      <p className="profile-view-field__value">{display}</p>
+    </div>
+  );
+}
+
+function LearningCourseCard({ course }: { course: LearningCourse }) {
+  const imgSrc = learningThumbnailSrc(course.thumbnail_url);
+  const pricingLabel = course.pricing === 'free' ? 'Free' : 'Paid';
+  return (
+    <article className="learning-course-card">
+      <div className="learning-course-card__thumb-wrap">
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt=""
+            loading="lazy"
+            className="learning-course-card__thumb"
+          />
+        ) : (
+          <div className="learning-course-card__thumb-placeholder" aria-hidden />
+        )}
+      </div>
+      <div className="learning-course-card__body">
+        <div className="learning-course-card__meta">
+          <span
+            className={`learning-course-card__badge learning-course-card__badge--${course.pricing}`}
+          >
+            {pricingLabel}
+          </span>
+          <span className="learning-course-card__provider">{course.provider}</span>
+        </div>
+        <h3 className="learning-course-card__title">{course.title}</h3>
+        <p className="learning-course-card__desc">{course.description}</p>
+        <a
+          href={course.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="learning-course-card__cta"
+        >
+          Open course
+        </a>
+      </div>
+    </article>
+  );
+}
+
+type ProfileMainTab = 'profile' | 'learning';
+
+type LearningBlockedReason = 'first-time' | 'no-projects';
+
 export default function UserPreferencePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pictureUploading, setPictureUploading] = useState(false);
   const [pictureError, setPictureError] = useState<string | null>(null);
@@ -609,10 +689,75 @@ export default function UserPreferencePage() {
   // True when no preferences exist yet (first-time user arriving from consent flow)
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
+  const [mainTab, setMainTab] = useState<ProfileMainTab>('profile');
+  const [learningLoading, setLearningLoading] = useState(false);
+  const [learningError, setLearningError] = useState<string | null>(null);
+  const [learningData, setLearningData] = useState<LearningRecommendationsResponse | null>(null);
+  const [learningBlocked, setLearningBlocked] = useState<LearningBlockedReason | null>(null);
+
+  /** Saved snapshot for cancel + view mode; returning users start in view mode (not editing). */
+  const [lastSavedProfileData, setLastSavedProfileData] = useState<ProfileData | null>(null);
+  const [savedPictureDisplayUrl, setSavedPictureDisplayUrl] = useState<string | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
   // Load user preferences on component mount
   useEffect(() => {
     loadUserPreferences();
   }, []);
+
+  // Deep link from dashboard: /userpreferencepage?tab=learning
+  useEffect(() => {
+    if (searchParams.get('tab') === 'learning') {
+      setMainTab('learning');
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (mainTab !== 'learning') return;
+    if (loading) return;
+
+    let cancelled = false;
+    setLearningError(null);
+    setLearningData(null);
+    setLearningBlocked(null);
+
+    const run = async () => {
+      if (isFirstTimeUser) {
+        setLearningLoading(false);
+        setLearningBlocked('first-time');
+        return;
+      }
+
+      setLearningLoading(true);
+      try {
+        const projects = await getProjects();
+        if (cancelled) return;
+        if (projects.length === 0) {
+          setLearningBlocked('no-projects');
+          setLearningLoading(false);
+          return;
+        }
+        const data = await getLearningRecommendations();
+        if (!cancelled) setLearningData(data);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Could not load recommendations.';
+        if (!cancelled) {
+          setLearningError(msg);
+          setLearningData(null);
+        }
+      } finally {
+        if (!cancelled) setLearningLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [mainTab, loading, isFirstTimeUser]);
 
   const loadUserPreferences = async () => {
     try {
@@ -638,12 +783,19 @@ export default function UserPreferencePage() {
         const backendData = await getUserPreferences();
         const frontendData = convertToFrontend(backendData);
         setProfileData(frontendData);
+        setLastSavedProfileData(cloneProfileData(frontendData));
         // Load profile picture — if a path is stored in the DB, use the API endpoint as img src
         if (backendData.profile_picture_path) {
-          setProfilePicture(`${getProfilePictureUrl()}?t=${Date.now()}`);
+          const pic = `${getProfilePictureUrl()}?t=${Date.now()}`;
+          setProfilePicture(pic);
+          setSavedPictureDisplayUrl(pic);
+        } else {
+          setProfilePicture(null);
+          setSavedPictureDisplayUrl(null);
         }
-        // Has saved preferences → definitely a returning user
+        // Has saved preferences → definitely a returning user (view mode, not editing)
         setIsFirstTimeUser(false);
+        setIsEditingProfile(false);
       } catch (err: any) {
         // Only treat a 404 (no preferences saved yet) as a first-time situation.
         // Any other error (500, network failure, etc.) is a real error.
@@ -657,11 +809,14 @@ export default function UserPreferencePage() {
             // (safer: first-timers go to /uploadpage which is always valid).
             setIsFirstTimeUser(true);
           }
+          setLastSavedProfileData(null);
+          setSavedPictureDisplayUrl(null);
+          setIsEditingProfile(true);
           // No error banner for a missing-preferences 404 — blank form is expected.
         } else {
-          // Real error (500, network, etc.) — only show to returning users who
-          // expected their data to load.
+          // Real error (500, network, etc.) — show edit form so they can retry after refresh.
           setError("Could not load your preferences. Please try again.");
+          setIsEditingProfile(true);
         }
       }
     } finally {
@@ -744,6 +899,7 @@ export default function UserPreferencePage() {
     }
   };
 
+<<<<<<< karim/input-validation
   const validateProfile = (): Record<string, string> => {
     const errs: Record<string, string> = {};
     if (!profileData.fullName.trim()) {
@@ -764,13 +920,26 @@ export default function UserPreferencePage() {
       errs.linkedin = "Please enter a valid URL (e.g., https://linkedin.com/in/your-profile).";
     }
     return errs;
+=======
+  const handleCancelEdit = () => {
+    if (lastSavedProfileData) {
+      setProfileData(cloneProfileData(lastSavedProfileData));
+    }
+    setProfilePicture(savedPictureDisplayUrl);
+    setNewEntryId(null);
+    setError(null);
+    setPictureError(null);
+    setIsEditingProfile(false);
+>>>>>>> main
   };
 
   const handleSave = async () => {
+    const wasFirstTime = isFirstTimeUser;
     try {
       setSaving(true);
       setError(null);
 
+<<<<<<< karim/input-validation
       const errs = validateProfile();
       const educationError = validateEducationEntries(profileData.educationEntries);
       if (educationError) {
@@ -783,18 +952,25 @@ export default function UserPreferencePage() {
       }
       setFieldErrors({});
 
+=======
+>>>>>>> main
       const backendData = convertToBackend(profileData);
       await saveUserPreferences(backendData);
+      notifyUserPreferencesUpdated();
 
-      // Show success message for 2.5s then navigate.
+      setLastSavedProfileData(cloneProfileData(profileData));
+      setSavedPictureDisplayUrl(profilePicture);
+      setIsFirstTimeUser(false);
+      setIsEditingProfile(false);
       setShowSuccess(true);
-      setTimeout(() => {
-        if (isFirstTimeUser) {
+
+      if (wasFirstTime) {
+        setTimeout(() => {
           navigate("/uploadpage");
-        } else {
-          navigate("/hubpage");
-        }
-      }, 2000);
+        }, 2000);
+      } else {
+        setTimeout(() => setShowSuccess(false), 2800);
+      }
     } catch (err: any) {
       console.error("Failed to save user preferences:", err);
       const errorMessage = err?.message || "Failed to save your preferences. Please try again.";
@@ -828,9 +1004,199 @@ export default function UserPreferencePage() {
           </span>
           Back
         </button>
-        <h1 className="page-title">Build your Profile</h1>
+        <h1 className="page-title">
+          {mainTab === 'learning'
+            ? 'Learning recommendations'
+            : isFirstTimeUser
+              ? 'Build your Profile'
+              : isEditingProfile
+                ? 'Edit your profile'
+                : 'Your profile'}
+        </h1>
 
-        {/* Profile Picture Upload */}
+        <div className="profile-page-tabs" role="tablist" aria-label="Profile sections">
+          <button
+            type="button"
+            role="tab"
+            id="tab-profile"
+            aria-selected={mainTab === 'profile'}
+            aria-controls="profile-panel"
+            className={`profile-page-tab${mainTab === 'profile' ? ' profile-page-tab--active' : ''}`}
+            onClick={() => setMainTab('profile')}
+          >
+            Profile
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-learning"
+            aria-selected={mainTab === 'learning'}
+            aria-controls="learning-panel"
+            className={`profile-page-tab${mainTab === 'learning' ? ' profile-page-tab--active' : ''}`}
+            onClick={() => setMainTab('learning')}
+          >
+            Learning
+          </button>
+        </div>
+
+        {mainTab === 'learning' && (
+          <div
+            id="learning-panel"
+            role="tabpanel"
+            aria-labelledby="tab-learning"
+            className="learning-recommendations-panel"
+          >
+            {learningBlocked === 'first-time' && !learningLoading && (
+              <div className="learning-recommendations-placeholder" role="status">
+                <p className="learning-recommendations-placeholder__title">Upload projects to get recommendations</p>
+                <p className="learning-recommendations-placeholder__text">
+                  Learning suggestions use skills and experience from analyzed projects. Finish setting up your
+                  profile, then upload at least one project so we can match courses to you.
+                </p>
+                <button type="button" className="btn btn-primary learning-recommendations-placeholder__cta" onClick={() => navigate('/uploadpage')}>
+                  Upload projects
+                </button>
+              </div>
+            )}
+            {learningBlocked === 'no-projects' && !learningLoading && (
+              <div className="learning-recommendations-placeholder" role="status">
+                <p className="learning-recommendations-placeholder__title">No projects found!</p>
+                <p className="learning-recommendations-placeholder__text">
+                  Upload projects to get insights on recommended courses for yourself!
+                </p>
+                <button type="button" className="btn btn-primary learning-recommendations-placeholder__cta" onClick={() => navigate('/uploadpage')}>
+                  Upload projects
+                </button>
+              </div>
+            )}
+            {!learningBlocked && (
+            <p className="learning-recommendations-disclosure">
+              Suggestions are generated from your saved profile and master resume data (skills, projects,
+              summary, job title, and industry). Course links open external sites in a new tab.
+            </p>
+            )}
+            {learningLoading && (
+              <div className="learning-recommendations-state">Loading recommendations…</div>
+            )}
+            {learningError && !learningLoading && (
+              <div className="error-message learning-recommendations-error" role="alert">
+                {learningError}
+              </div>
+            )}
+            {!learningLoading && !learningError && !learningBlocked && learningData && (
+              <>
+                <section className="learning-recommendations-section" aria-labelledby="learning-based-heading">
+                  <h2 id="learning-based-heading" className="learning-recommendations-heading">
+                    Based on your data
+                  </h2>
+                  <div className="learning-course-grid">
+                    {learningData.based_on_resume.map((c) => (
+                      <LearningCourseCard key={c.id} course={c} />
+                    ))}
+                  </div>
+                </section>
+                <section className="learning-recommendations-section" aria-labelledby="learning-next-heading">
+                  <h2 id="learning-next-heading" className="learning-recommendations-heading">
+                    Next steps
+                  </h2>
+                  <div className="learning-course-grid">
+                    {learningData.next_steps.map((c) => (
+                      <LearningCourseCard key={c.id} course={c} />
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+        )}
+
+        {mainTab === 'profile' && (
+          <div id="profile-panel" role="tabpanel" aria-labelledby="tab-profile">
+            {showSuccess && (
+              <div className="notification success" role="status">
+                <p>Profile saved successfully!</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            {!isEditingProfile && !isFirstTimeUser ? (
+              <>
+                <div className="profile-picture-section profile-picture-section--readonly">
+                  <div className="profile-picture-avatar profile-picture-avatar--readonly">
+                    {profilePicture ? (
+                      <img src={profilePicture} alt="" className="profile-picture-img" />
+                    ) : (
+                      <div className="profile-picture-placeholder">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-view-section">
+                  <ProfileFieldReadonly label="Full name" value={profileData.fullName} />
+                  <ProfileFieldReadonly label="Email" value={profileData.email} />
+                  <ProfileFieldReadonly label="GitHub username" value={profileData.github} />
+                  <ProfileFieldReadonly label="LinkedIn profile" value={profileData.linkedin} />
+                  <ProfileFieldReadonly label="Job title" value={profileData.jobTitle} />
+                  <div className="profile-view-field">
+                    <span className="profile-view-field__label">Professional summary</span>
+                    <p className="profile-view-field__value profile-view-field__value--multiline">
+                      {profileData.personalSummary?.trim() ? profileData.personalSummary : "—"}
+                    </p>
+                  </div>
+                  <div className="profile-view-field">
+                    <span className="profile-view-field__label">Educational background</span>
+                    {profileData.educationEntries.length === 0 ? (
+                      <p className="profile-view-field__value">No education entries saved.</p>
+                    ) : (
+                      <div className="profile-view-education-list">
+                        {profileData.educationEntries.map((entry) => (
+                          <div key={entry.id} className="profile-view-education-card">
+                            <p className="profile-view-education-card__school">{entry.institution || "—"}</p>
+                            <p className="profile-view-education-card__degree">{entry.degree || "—"}</p>
+                            <p className="profile-view-education-card__dates">
+                              {entry.startDate || entry.endDate
+                                ? [formatMonthLabel(entry.startDate), formatMonthLabel(entry.endDate)]
+                                    .filter(Boolean)
+                                    .join(" – ") || "—"
+                                : "—"}
+                            </p>
+                            {entry.gpa ? (
+                              <p className="profile-view-education-card__gpa">GPA: {entry.gpa}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <ProfileFieldReadonly label="Industry" value={profileData.industry ?? ""} />
+                </div>
+
+                <div className="save-section">
+                  <button
+                    type="button"
+                    className="btn btn-save"
+                    onClick={() => {
+                      setError(null);
+                      setPictureError(null);
+                      setIsEditingProfile(true);
+                    }}
+                  >
+                    Edit profile
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
         <div className="profile-picture-section">
           <div
             className="profile-picture-avatar"
@@ -883,18 +1249,6 @@ export default function UserPreferencePage() {
           />
           {pictureError && <p className="profile-picture-error">{pictureError}</p>}
         </div>
-
-        {showSuccess && (
-          <div className="notification success" role="status">
-            <p>Profile saved successfully!</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
 
         <div className="form-section">
           <p className="required-legend">Fields marked with <span className="required-indicator" aria-hidden="true">*</span> are required</p>
@@ -1069,11 +1423,16 @@ export default function UserPreferencePage() {
             {fieldErrors.industry && <span className="field-error">{fieldErrors.industry}</span>}
           </div>
 
-          {/* Save Button */}
-          <div className="save-section">
-            <button 
-              type="button" 
-              onClick={handleSave} 
+          {/* Save / Cancel */}
+          <div className={`save-section${!isFirstTimeUser ? " save-section--with-cancel" : ""}`}>
+            {!isFirstTimeUser && (
+              <button type="button" className="btn btn-secondary" onClick={handleCancelEdit} disabled={saving}>
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
               className="btn btn-save"
               disabled={saving}
             >
@@ -1081,6 +1440,10 @@ export default function UserPreferencePage() {
             </button>
           </div>
         </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

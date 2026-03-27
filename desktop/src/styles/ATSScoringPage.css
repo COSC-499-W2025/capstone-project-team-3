@@ -104,8 +104,9 @@
   min-width: 0;
   background: #fff;
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 10px var(--color-shadow);
-  padding: var(--spacing-lg) 0.75rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: var(--spacing-lg) var(--spacing-md);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -119,11 +120,11 @@
 }
 
 .ats-label {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #374151;
   font-family: var(--font-sans);
-  text-align: center;
+  text-align: left;
 }
 
 
@@ -145,6 +146,76 @@
   outline-offset: 1px;
 }
 
+/* Scoring mode toggle */
+.ats-mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  width: 100%;
+}
+
+.ats-mode-btn {
+  flex: 1;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  background: #fff;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ats-mode-btn + .ats-mode-btn {
+  border-left: 1px solid #d1d5db;
+}
+
+.ats-mode-btn--active {
+  background: var(--color-primary, #4361ee);
+  color: #fff;
+}
+
+.ats-mode-btn:hover:not(.ats-mode-btn--active) {
+  background: #f3f4f6;
+}
+
+/* AI disclaimer under the toggle */
+.ats-ai-disclaimer {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+/* History mode pill */
+.ats-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ats-mode-pill--local {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.ats-mode-pill--ai {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .ats-textarea {
   width: 100%;
   box-sizing: border-box;
@@ -156,7 +227,7 @@
   border: 1.5px solid #d1d5db;
   border-radius: var(--radius-sm);
   line-height: 1.65;
-  min-height: 480px;
+  min-height: 300px;
   background: #fafafa;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -198,6 +269,17 @@
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+
+.ats-score-btn--secondary {
+  background: transparent;
+  color: var(--color-blue-medium);
+  border: 1.5px solid var(--color-blue-medium);
+}
+
+.ats-score-btn--secondary:hover:not(:disabled) {
+  background: var(--color-blue-medium);
+  color: #fff;
 }
 
 .ats-error {
@@ -249,6 +331,15 @@
   font-family: var(--font-sans);
 }
 
+.ats-placeholder-subtext {
+  margin: 0.35rem 0 0;
+  font-size: 0.825rem;
+  color: #9ca3af;
+  font-family: var(--font-sans);
+  text-align: center;
+  max-width: 280px;
+}
+
 /* Spinner */
 .ats-spinner {
   width: 36px;
@@ -267,7 +358,8 @@
 .ats-section {
   background: #fff;
   border-radius: var(--radius-sm);
-  box-shadow: 0 1px 4px var(--color-shadow);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   flex-direction: column;
@@ -275,10 +367,10 @@
 }
 
 .ats-section-title {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin: 0 0 var(--spacing-sm) 0;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
   font-family: var(--font-sans);
 }
 
@@ -286,7 +378,8 @@
 .ats-score-hero {
   background: #fff;
   border-radius: var(--radius-sm);
-  box-shadow: 0 1px 4px var(--color-shadow);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   align-items: center;
@@ -642,6 +735,16 @@
   gap: 0.75rem;
 }
 
+.ats-history-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0.25rem 0 0;
+  font-family: var(--font-sans);
+}
+
 .ats-history-tips {
   margin: 0;
   padding: 0 0 0 1.1rem;
@@ -729,3 +832,92 @@
 
 /* ── Dark mode overrides are in src/styles/dark-theme.css ── */
 
+/* ---- Comparison view (left panel) ---- */
+.ats-comparison-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  height: 100%;
+}
+
+/* Below job description + actions when scoring all resumes */
+.ats-comparison-view--embedded {
+  margin-top: 0.25rem;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid #e5e7eb;
+  height: auto;
+}
+
+.ats-comparison-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ats-comparison-view-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-family: var(--font-sans);
+}
+
+.ats-comparison-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.ats-comparison-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+}
+
+.ats-comparison-row:hover { border-color: #9ca3af; }
+
+.ats-comparison-rank {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #9ca3af;
+  min-width: 1.8rem;
+}
+
+.ats-comparison-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Empty-resume warning ---- */
+.ats-empty-resume-warning {
+  padding: 1rem;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ats-empty-resume-warning p {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #92400e;
+  font-family: var(--font-sans);
+}
+
+.ats-empty-resume-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ---- Per-entry delete button ---- */
+.ats-history-delete-btn { color: #e74c3c; }
+.ats-history-delete-btn:hover { background: rgba(231,76,60,0.08); border-color: #e74c3c; }

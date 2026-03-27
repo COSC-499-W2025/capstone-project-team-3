@@ -117,6 +117,22 @@
 [data-theme="dark"] .ar-exclude-group:hover { background: var(--color-bg-light); border-color: var(--color-blue-light); }
 [data-theme="dark"] .ar-exclude-btn     { border-color: var(--color-border); color: var(--color-text-secondary); }
 [data-theme="dark"] .ar-exclude-hint    { color: var(--color-text-secondary); font-weight: 500; }
+[data-theme="dark"] .ar-exclude-no-files-msg {
+  color: #fbd38d;
+  background: rgba(251, 211, 141, 0.12);
+  border-color: rgba(251, 211, 141, 0.35);
+}
+
+[data-theme="dark"] .ar-exclude-all-types-msg {
+  color: #90cdf4;
+  background: rgba(144, 205, 244, 0.12);
+  border-color: rgba(144, 205, 244, 0.35);
+}
+
+[data-theme="dark"] .ar-exclude-all-types-msg code {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-body);
+}
 
 /* ============================================================
    UploadPage
@@ -264,6 +280,16 @@
 [data-theme="dark"] .industry-btn           { background: var(--color-card-bg); border-color: var(--color-border); color: var(--color-text-body); }
 [data-theme="dark"] .industry-btn:hover     { background: var(--color-bg-light); }
 [data-theme="dark"] .save-section           { border-top-color: var(--color-border); }
+[data-theme="dark"] .profile-page-tabs      { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .profile-page-tab--active { background: var(--color-card-bg); color: var(--color-text-heading); box-shadow: none; }
+[data-theme="dark"] .learning-course-card  { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .learning-course-card__title { color: var(--color-text-heading); }
+[data-theme="dark"] .learning-recommendations-heading { color: var(--color-text-heading); }
+[data-theme="dark"] .profile-view-education-card { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .profile-view-education-card__school { color: var(--color-text-heading); }
+[data-theme="dark"] .profile-view-field__value { color: var(--color-text-body); }
+[data-theme="dark"] .learning-recommendations-placeholder { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .learning-recommendations-placeholder__title { color: var(--color-text-heading); }
 
 /* ============================================================
    ConsentPage  (uses global vars throughout — mostly free)
@@ -468,3 +494,10 @@
 [data-theme="dark"] .cl-history-card-title { color: var(--color-text-heading); }
 [data-theme="dark"] .cl-history-card-sub   { color: var(--color-text-secondary); }
 [data-theme="dark"] .cl-pdf-error          { color: #fc8181; }
+
+/* ---- Job Match Score: new elements ---- */
+[data-theme="dark"] .ats-comparison-row         { background: var(--color-surface); border-color: var(--color-border); }
+[data-theme="dark"] .ats-comparison-name        { color: var(--color-text-heading); }
+[data-theme="dark"] .ats-empty-resume-warning   { background: #451a03; border-color: #78350f; }
+[data-theme="dark"] .ats-empty-resume-warning p { color: #fde68a; }
+[data-theme="dark"] .ats-placeholder-subtext    { color: var(--color-text-secondary); }

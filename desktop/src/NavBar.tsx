@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { mainNavItems, footerNavItems } from "./navigation";
 import { getResumes } from "./api/resume";
+import {
+  getUserPreferences,
+  USER_PREFERENCES_UPDATED_EVENT,
+} from "./api/userPreferences";
 import { useTheme } from "./context/ThemeContext";
 import "./styles/NavBar.css";
 
@@ -64,6 +68,20 @@ const navIcons: Record<string, React.ReactNode> = {
   ),
 };
 
+const profileOutlineIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+/** First token of the saved name — fits the sidebar without clipping long full names. */
+function firstNameForSidebar(fullName: string): string {
+  const t = fullName.trim();
+  if (!t) return "";
+  return t.split(/\s+/)[0] ?? t;
+}
+
 const settingsIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <circle cx="12" cy="12" r="3" />
@@ -74,7 +92,9 @@ const settingsIcon = (
 export function NavBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [hasMasterResume, setHasMasterResume] = useState(true);
-  const { theme, toggleTheme } = useTheme();
+  const [displayName, setDisplayName] = useState("");
+  const { theme, toggleTheme, fontSize, increaseFontSize, decreaseFontSize } = useTheme();
+   const [fontSizeExpanded, setFontSizeExpanded] = useState(false);
 
   useEffect(() => {
     getResumes()
@@ -85,20 +105,43 @@ export function NavBar() {
       .catch(() => setHasMasterResume(true));
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadName = () => {
+      getUserPreferences()
+        .then((prefs) => {
+          if (!cancelled) setDisplayName((prefs.name || "").trim());
+        })
+        .catch(() => {
+          if (!cancelled) setDisplayName("");
+        });
+    };
+    loadName();
+    window.addEventListener(USER_PREFERENCES_UPDATED_EVENT, loadName);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_PREFERENCES_UPDATED_EVENT, loadName);
+    };
+  }, []);
+
   return (
     <aside
       className={`app-sidebar ${collapsed ? "app-sidebar--collapsed" : ""}`}
       aria-label="Main navigation"
     >
       <div className="app-sidebar__head">
-        <NavLink to="/hubpage" className="app-sidebar__brand" title="Insights">
-          <span className="app-sidebar__brand-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-          </span>
-          {!collapsed && <span className="app-sidebar__brand-text">Insights</span>}
+        <NavLink
+          to="/userpreferencepage"
+          className="app-sidebar__brand"
+          title={displayName ? displayName : "Profile"}
+          aria-label={displayName ? `Profile — ${displayName}` : "Profile"}
+        >
+          <span className="app-sidebar__brand-icon">{profileOutlineIcon}</span>
+          {!collapsed && (
+            <span className="app-sidebar__brand-text">
+              {firstNameForSidebar(displayName) || "Profile"}
+            </span>
+          )}
         </NavLink>
       </div>
 
@@ -150,6 +193,52 @@ export function NavBar() {
               <span className="app-sidebar__link-icon">{path === "/settingspage" ? settingsIcon : navIcons[path]}</span>
             </NavLink>
           ))}
+          {/* Text size toggle - expandable */}
+          <div className="app-sidebar__text-size-wrapper">
+            <button
+              type="button"
+              className={`app-sidebar__toggle app-sidebar__text-size-toggle ${fontSizeExpanded ? "app-sidebar__text-size-toggle--expanded" : ""}`}
+              onClick={() => setFontSizeExpanded(!fontSizeExpanded)}
+              title={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
+              aria-label={fontSizeExpanded ? "Hide text size controls" : "Adjust text size"}
+              aria-expanded={fontSizeExpanded}
+              aria-controls="text-size-controls"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <polyline points="4 7 4 4 20 4 20 7" />
+                <line x1="9" y1="20" x2="15" y2="20" />
+                <line x1="12" y1="4" x2="12" y2="20" />
+              </svg>
+            </button>
+            {fontSizeExpanded && (
+              <div id="text-size-controls" role="group" aria-label="Text size controls" className="app-sidebar__text-size-controls">
+                <button
+                  type="button"
+                  className="app-sidebar__text-size-btn"
+                  onClick={decreaseFontSize}
+                  title="Decrease text size"
+                  aria-label="Decrease text size"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <span className="app-sidebar__text-size-label" aria-live="polite" aria-label={`Text size: ${fontSize}`}>{fontSize === "small" ? "S" : fontSize === "default" ? "M" : fontSize === "large" ? "L" : "XL"}</span>
+                <button
+                  type="button"
+                  className="app-sidebar__text-size-btn"
+                  onClick={increaseFontSize}
+                  title="Increase text size"
+                  aria-label="Increase text size"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           {/* Dark / light mode toggle */}
           <button
             type="button"

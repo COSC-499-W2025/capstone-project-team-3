@@ -106,6 +106,7 @@ interface PortfolioData {
       target: string;
       projects: string[];
       weight: number;
+      is_peer?: boolean;
     }>;
   };
 }
@@ -779,9 +780,9 @@ const buildHeatmapModel = (
   today.setHours(0, 0, 0, 0);
 
   // Find the earliest date across projects, daily activity, and monthly activity
-  let earliest: Date | null = null;
+  const dateCandidates: Date[] = [];
   const consider = (d: Date | null) => {
-    if (d && (!earliest || d < earliest)) earliest = d;
+    if (d) dateCandidates.push(d);
   };
 
   (projects || []).forEach((p) => {
@@ -799,6 +800,11 @@ const buildHeatmapModel = (
     const m = monthKey.match(/^(\d{4})-(\d{2})/);
     if (m) consider(new Date(Number(m[1]), Number(m[2]) - 1, 1));
   });
+
+  let earliest: Date | null = null;
+  for (const d of dateCandidates) {
+    if (!earliest || d < earliest) earliest = d;
+  }
 
   // Start from Jan 1 of the earliest project year, but always show at least a full year
   const currentYear = today.getFullYear();
@@ -1106,7 +1112,10 @@ interface NetworkEdge {
   target: string;
   projects: string[];
   weight: number;
+  is_peer?: boolean;
 }
+
+type NetworkMode = "star" | "full";
 
 /* Colour palette for collaborator nodes */
 const NODE_COLORS = [
@@ -1179,10 +1188,21 @@ function CollaborationNetwork({
   const themeRef = useRef<GraphThemeMode>("dark");
   useEffect(() => { themeRef.current = graphTheme; }, [graphTheme]);
 
+  /* ---- Network mode toggle (star = default, full = peer connections) ---- */
+  const [networkMode, setNetworkMode] = useState<NetworkMode>("star");
+  const networkModeRef = useRef<NetworkMode>("star");
+  useEffect(() => { networkModeRef.current = networkMode; }, [networkMode]);
+
   /* ---- Helpers ---- */
   const nodeRadius = (n: NetworkNode) => {
     const s = scaleRef.current;
-    return n.is_primary ? 32 * s : (14 + Math.min(n.commits, 80) * 0.18) * s;
+    if (n.is_primary) return 32 * s;
+    if (networkModeRef.current === "full") {
+      // In full network mode, size by project breadth (not commits)
+      const projCount = n.projects.length;
+      return (16 + Math.min(projCount, 8) * 2.5) * s;
+    }
+    return (14 + Math.min(n.commits, 80) * 0.18) * s;
   };
 
   const nodeColor = (n: NetworkNode, i: number) =>
@@ -1208,7 +1228,7 @@ function CollaborationNetwork({
         const w = Math.floor(entry.contentRect.width);
         if (w > 100) {
           sizeRef.current.w = w;
-          sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.55)));
+          sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.50)));
         }
       }
     });
@@ -1217,7 +1237,7 @@ function CollaborationNetwork({
     const w = container.clientWidth;
     if (w > 100) {
       sizeRef.current.w = w;
-      sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.55)));
+      sizeRef.current.h = Math.max(420, Math.min(580, Math.floor(w * 0.50)));
     }
     return () => ro.disconnect();
   }, []);
@@ -1225,7 +1245,9 @@ function CollaborationNetwork({
   /* ---- Physics simulation (runs every frame) ---- */
   const simulate = useCallback(() => {
     const nds = nodesRef.current;
-    const eds = edgesRef.current;
+    const allEds = edgesRef.current;
+    const mode = networkModeRef.current;
+    const eds = mode === "star" ? allEds.filter(e => !e.is_peer) : allEds;
     const W = sizeRef.current.w;
     const H = sizeRef.current.h;
     const cx = W / 2;
@@ -1235,9 +1257,10 @@ function CollaborationNetwork({
     const nodeAdj = Math.max(0.8, Math.min(1.5, 8 / Math.max(nds.length, 1)));
     const sizeScale = Math.max(0.9, Math.min(1.7, rawDimScale * nodeAdj));
     scaleRef.current = sizeScale;
-    const repulsion = 5200 * sizeScale;
-    const attraction = 0.005;
-    const centerPull = 0.012;
+    const isFull = mode === "full";
+    const repulsion = (isFull ? 28000 : 12000) * sizeScale;
+    const attraction = isFull ? 0.001 : 0.003;
+    const centerPull = isFull ? 0.004 : 0.008;
     const damping = 0.82;
 
     for (let i = 0; i < nds.length; i++) {
@@ -1263,9 +1286,9 @@ function CollaborationNetwork({
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const idealLen = 150 * sizeScale;
+      const idealLen = (isFull ? (edge.is_peer ? 350 : 280) : 220) * sizeScale;
       const displacement = dist - idealLen;
-      const force = displacement * attraction * (1 + edge.weight * 0.3);
+      const force = displacement * attraction * (1 + edge.weight * (isFull ? 0.1 : 0.3));
       const fx = (dx / dist) * force;
       const fy = (dy / dist) * force;
       s.vx += fx;
@@ -1279,7 +1302,28 @@ function CollaborationNetwork({
       n.vy += (cy - n.y) * centerPull;
     }
 
-    const pad = 40;
+    // Node-node overlap repulsion — push overlapping nodes apart hard
+    for (let i = 0; i < nds.length; i++) {
+      for (let j = i + 1; j < nds.length; j++) {
+        const ri = nodeRadius(nds[i]);
+        const rj = nodeRadius(nds[j]);
+        const minDist = ri + rj + (isFull ? 60 : 30) * sizeScale; // min gap between node edges
+        const dx = nds[j].x - nds[i].x;
+        const dy = nds[j].y - nds[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (dist < minDist) {
+          const push = (minDist - dist) * 0.15;
+          const px = (dx / dist) * push;
+          const py = (dy / dist) * push;
+          nds[i].vx -= px;
+          nds[i].vy -= py;
+          nds[j].vx += px;
+          nds[j].vy += py;
+        }
+      }
+    }
+
+    const pad = 60;
     for (const n of nds) {
       if (n.fx !== null && n.fy !== null) {
         n.x = n.fx;
@@ -1320,7 +1364,9 @@ function CollaborationNetwork({
     ctx.clearRect(0, 0, W, H);
 
     const nds = nodesRef.current;
-    const eds = edgesRef.current;
+    const allEds = edgesRef.current;
+    const mode = networkModeRef.current;
+    const eds = mode === "star" ? allEds.filter(e => !e.is_peer) : allEds;
     const nodeMap = new Map(nds.map((n) => [n.id, n]));
     const hovered = hoveredRef.current;
     const dragging = dragRef.current.active;
@@ -1337,7 +1383,8 @@ function CollaborationNetwork({
       const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
       const sIdx = nds.indexOf(s);
       const tIdx = nds.indexOf(t);
-      const alpha = isHighlighted ? 0.7 : 0.22 + edge.weight * 0.06;
+      const isPeer = !!edge.is_peer;
+      const alpha = isHighlighted ? 0.65 : hovered ? (isPeer ? 0.03 : 0.06) : isPeer ? 0.09 : 0.15 + edge.weight * 0.04;
       grad.addColorStop(0, hexWithAlpha(nodeColor(s, sIdx), alpha));
       grad.addColorStop(1, hexWithAlpha(nodeColor(t, tIdx), alpha));
 
@@ -1347,25 +1394,34 @@ function CollaborationNetwork({
       ctx.strokeStyle = grad;
       ctx.lineWidth = isHighlighted
         ? 2.5 + edge.weight * 0.5
-        : 1.2 + edge.weight * 0.4;
+        : isPeer ? 0.5 + edge.weight * 0.15 : 0.8 + edge.weight * 0.25;
+      // Peer edges get a dashed style to distinguish from primary connections
+      if (edge.is_peer) {
+        ctx.setLineDash([6 * sc, 4 * sc]);
+      } else {
+        ctx.setLineDash([]);
+      }
       ctx.stroke();
+      ctx.setLineDash([]);
 
-      // Always show shared-project count badge on edge midpoint
-      const mx = (s.x + t.x) / 2;
-      const my = (s.y + t.y) / 2;
-      const badgeAlpha = isHighlighted ? 0.92 : 0.6;
-      ctx.fillStyle = th.badgeBg(badgeAlpha);
-      ctx.beginPath();
-      ctx.arc(mx, my, Math.round(9 * sc), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = th.badgeStroke(!!isHighlighted);
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = th.badgeText(!!isHighlighted);
-      ctx.font = `bold ${Math.round(8 * sc)}px Inter, system-ui, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(edge.projects.length), mx, my);
+      // Only show shared-project count badge on hovered edges
+      if (isHighlighted) {
+        const mx = (s.x + t.x) / 2;
+        const my = (s.y + t.y) / 2;
+        const badgeAlpha = 0.92;
+        ctx.fillStyle = th.badgeBg(badgeAlpha);
+        ctx.beginPath();
+        ctx.arc(mx, my, Math.round(9 * sc), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = th.badgeStroke(true);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = th.badgeText(true);
+        ctx.font = `bold ${Math.round(8 * sc)}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(edge.projects.length), mx, my);
+      }
     }
 
     // -- Nodes --
@@ -1475,13 +1531,15 @@ function CollaborationNetwork({
         ctx.fillText(label, node.x, labelY);
       }
 
-      // Commit count badge
+      // Commit count badge (star mode) or project count badge (full mode)
       if (r >= 14 && !node.is_primary && !dim) {
         ctx.font = `bold ${Math.round(8 * sc)}px Inter, system-ui, sans-serif`;
         ctx.fillStyle = th.commitBadge;
-        ctx.fillText(String(node.commits), node.x, node.y);
+        const badgeValue = mode === "full" ? String(node.projects.length) : String(node.commits);
+        ctx.fillText(badgeValue, node.x, node.y);
       }
     });
+
   }, []);
 
   /* ---- Animation loop (physics always on) ---- */
@@ -1495,8 +1553,8 @@ function CollaborationNetwork({
 
     const nodes: NetworkNode[] = network.nodes.map((n, i) => {
       const angle = (2 * Math.PI * i) / network.nodes.length;
-      const spread = Math.min(W, H) * 0.35;
-      const radius = n.is_primary ? 0 : spread + Math.random() * 60;
+      const spread = Math.min(W, H) * 0.42;
+      const radius = n.is_primary ? 0 : spread + Math.random() * 80;
       return {
         ...n,
         x: cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 30,
@@ -1595,13 +1653,40 @@ function CollaborationNetwork({
   return (
     <div className="network-graph-container" data-graph-theme={graphTheme}>
       <div className={`network-canvas-wrap ${graphTheme === "light" ? "network-canvas-wrap--light" : ""}`} ref={containerRef}>
-        <button
-          className={`network-theme-toggle ${graphTheme === "light" ? "network-theme-toggle--light" : ""}`}
-          onClick={() => setGraphTheme(graphTheme === "dark" ? "light" : "dark")}
-          title={`Switch to ${graphTheme === "dark" ? "light" : "dark"} mode`}
-        >
-          {graphTheme === "dark" ? "☀️" : "🌙"}
-        </button>
+        <div className="network-toolbar">
+          <div className={`network-mode-radio ${graphTheme === "light" ? "network-mode-radio--light" : ""}`}>
+            <button
+              className={`network-mode-radio-btn ${graphTheme === "dark" ? "network-mode-radio-btn--active" : ""}`}
+              onClick={() => setGraphTheme("dark")}
+              title="Dark theme"
+            >
+              🌙 Dark
+            </button>
+            <button
+              className={`network-mode-radio-btn ${graphTheme === "light" ? "network-mode-radio-btn--active" : ""}`}
+              onClick={() => setGraphTheme("light")}
+              title="Light theme"
+            >
+              ☀️ Light
+            </button>
+          </div>
+          <div className={`network-mode-radio ${graphTheme === "light" ? "network-mode-radio--light" : ""}`}>
+            <button
+              className={`network-mode-radio-btn ${networkMode === "star" ? "network-mode-radio-btn--active" : ""}`}
+              onClick={() => { setNetworkMode("star"); setHoveredNode(null); }}
+              title="Star view — connections to you only. Node size = commit count."
+            >
+              ⭐ Star
+            </button>
+            <button
+              className={`network-mode-radio-btn ${networkMode === "full" ? "network-mode-radio-btn--active" : ""}`}
+              onClick={() => { setNetworkMode("full"); setHoveredNode(null); }}
+              title="Full network — collaborators connected if they share projects. Node size = project breadth."
+            >
+              🕸️ Network
+            </button>
+          </div>
+        </div>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -1615,7 +1700,11 @@ function CollaborationNetwork({
         {hoveredNode ? (
           <>
             <div className="network-info-name">{hoveredNode.name}</div>
-            <div className="network-info-commits">{hoveredNode.commits.toLocaleString()} commits</div>
+            <div className="network-info-commits">
+              {networkMode === "full"
+                ? `${hoveredNode.projects.length} project${hoveredNode.projects.length !== 1 ? "s" : ""}`
+                : `${hoveredNode.commits.toLocaleString()} commits`}
+            </div>
             <div className="network-info-projects">
               {hoveredNode.projects.map((p) => (
                 <span key={p} className="network-info-project-tag">{p}</span>
@@ -1623,7 +1712,10 @@ function CollaborationNetwork({
             </div>
           </>
         ) : (
-          <div className="network-info-hint"><span className="network-info-hint-icon">👆</span>Hover over a node to see details &middot; Drag to rearrange</div>
+          <div className="network-info-hint">
+            <span className="network-info-hint-icon">👆</span>
+            Hover for details &middot; Drag to rearrange &middot; {networkMode === "full" ? "Node size = project breadth" : "Node size = commit count"}
+          </div>
         )}
       </div>
       <div className="network-legend">
@@ -1632,14 +1724,22 @@ function CollaborationNetwork({
           <span className="network-stat-label">Contributors</span>
         </div>
         <div className="network-stat">
-          <span className="network-stat-value">{network.edges.length}</span>
+          <span className="network-stat-value">
+            {networkMode === "star"
+              ? network.edges.filter(e => !e.is_peer).length
+              : network.edges.length}
+          </span>
           <span className="network-stat-label">Connections</span>
         </div>
         <div className="network-stat">
           <span className="network-stat-value">
-            {network.nodes.reduce((s, n) => s + n.commits, 0).toLocaleString()}
+            {networkMode === "full"
+              ? network.edges.filter(e => e.is_peer).length
+              : network.nodes.reduce((s, n) => s + n.commits, 0).toLocaleString()}
           </span>
-          <span className="network-stat-label">Total Commits</span>
+          <span className="network-stat-label">
+            {networkMode === "full" ? "Peer Links" : "Total Commits"}
+          </span>
         </div>
       </div>
     </div>
@@ -2378,14 +2478,14 @@ const PortfolioPage: React.FC = () => {
         // Remove the React canvas — we'll recreate it via JS in the export
         const cloneCanvas = cloneCanvasWrap.querySelector("canvas");
         if (cloneCanvas) cloneCanvas.remove();
-        // Remove the theme toggle button — theme is baked in at export time
-        const cloneToggle = cloneCanvasWrap.querySelector(".network-theme-toggle");
-        if (cloneToggle) cloneToggle.remove();
+        // Remove the existing toolbar — we'll recreate it in the export script
+        const cloneToolbar = cloneCanvasWrap.querySelector(".network-toolbar");
+        if (cloneToolbar) cloneToolbar.remove();
         // Add a placeholder div that the export script will target
         const placeholder = document.createElement("div");
         placeholder.id = "networkGraphTarget";
         placeholder.style.width = "100%";
-        placeholder.style.minHeight = "440px";
+        placeholder.style.minHeight = "400px";
         placeholder.style.borderRadius = "12px";
         placeholder.style.background = "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)";
         placeholder.style.border = "1px solid rgba(99, 102, 241, 0.15)";
@@ -2458,6 +2558,7 @@ const PortfolioPage: React.FC = () => {
   if (!target) return;
 
   var COLORS = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f97316","#eab308","#22c55e","#14b8a6","#06b6d4","#3b82f6"];
+  var THEME_KEY = '${activeGraphTheme}';
   var THEMES = {
     dark: {
       primaryGrad0:'#334155', primaryGrad1:'#0f172a', primaryLabel:'#fff', primaryLabelDim:'rgba(255,255,255,0.4)',
@@ -2470,7 +2571,9 @@ const PortfolioPage: React.FC = () => {
       nodeColorPrimary:'#1e293b',
       panelBg:'#1e293b', panelBorder:'#334155', panelActiveBg:'#0f172a',
       infoName:'#f1f5f9', infoCommits:'#a78bfa', infoTag:'#38bdf8',
-      infoTagBg:'rgba(56,189,248,0.1)', infoTagBorder:'rgba(56,189,248,0.2)', infoHint:'#e2e8f0'
+      infoTagBg:'rgba(56,189,248,0.1)', infoTagBorder:'rgba(56,189,248,0.2)', infoHint:'#e2e8f0',
+      toggleBg:'rgba(30,41,59,0.7)', toggleBorder:'rgba(99,102,241,0.25)', toggleText:'#e2e8f0',
+      toggleHoverBg:'rgba(99,102,241,0.25)', toggleActiveBg:'rgba(99,102,241,0.35)', toggleActiveBorder:'rgba(99,102,241,0.65)'
     },
     light: {
       primaryGrad0:'#e2e8f0', primaryGrad1:'#94a3b8', primaryLabel:'#1e293b', primaryLabelDim:'rgba(30,41,59,0.35)',
@@ -2483,131 +2586,323 @@ const PortfolioPage: React.FC = () => {
       nodeColorPrimary:'#cbd5e1',
       panelBg:'#f1f5f9', panelBorder:'#cbd5e1', panelActiveBg:'#e2e8f0',
       infoName:'#1e293b', infoCommits:'#7c3aed', infoTag:'#0284c7',
-      infoTagBg:'rgba(2,132,199,0.1)', infoTagBorder:'rgba(2,132,199,0.2)', infoHint:'#475569'
+      infoTagBg:'rgba(2,132,199,0.1)', infoTagBorder:'rgba(2,132,199,0.2)', infoHint:'#475569',
+      toggleBg:'rgba(255,255,255,0.8)', toggleBorder:'rgba(99,102,241,0.2)', toggleText:'#334155',
+      toggleHoverBg:'rgba(255,255,255,0.95)', toggleActiveBg:'rgba(99,102,241,0.15)', toggleActiveBorder:'rgba(99,102,241,0.5)'
     }
   };
-  var T = THEMES['${activeGraphTheme}'] || THEMES.dark;
+  var T = THEMES[THEME_KEY] || THEMES.dark;
 
+  /* Helpers */
   function ha(h,a){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return 'rgba('+r+','+g+','+b+','+a+')';}
   function lt(h,n){var r=Math.min(255,parseInt(h.slice(1,3),16)+n),g=Math.min(255,parseInt(h.slice(3,5),16)+n),b=Math.min(255,parseInt(h.slice(5,7),16)+n);return '#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');}
   function nc(n,i){return n.is_primary?T.nodeColorPrimary:COLORS[i%COLORS.length];}
-  var sc=1;
-  function nr(n){return n.is_primary?32*sc:(14+Math.min(n.commits,80)*0.18)*sc;}
 
+  /* State */
+  var mode = 'star'; /* 'star' or 'full' */
+  var sc = 1;
+
+  function nr(n) {
+    if (n.is_primary) return 32 * sc;
+    if (mode === 'full') {
+      var pc = n.projects.length;
+      return (16 + Math.min(pc, 8) * 2.5) * sc;
+    }
+    return (14 + Math.min(n.commits, 80) * 0.18) * sc;
+  }
+
+  function activeEdges() {
+    return mode === 'star' ? NET.edges.filter(function(e){return !e.is_peer;}) : NET.edges;
+  }
+
+  /* Canvas setup */
   target.style.position = 'relative';
-
   var canvas = document.createElement('canvas');
   canvas.style.width='100%'; canvas.style.borderRadius='12px'; canvas.style.display='block'; canvas.style.cursor='default';
-  canvas.style.background=T.canvasBg; canvas.style.boxShadow=T.canvasShadow;
+  canvas.style.background=T.canvasBg; canvas.style.boxShadow=T.canvasShadow; canvas.style.userSelect='none';
   target.appendChild(canvas);
-  var W=target.clientWidth, H=Math.max(440,target.clientHeight);
-  var dpr=window.devicePixelRatio||1;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  canvas.style.height=H+'px';
-  var ctx=canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  var cx=W/2, cy=H/2;
-  sc=(function(){var raw=Math.min(W,H)/480;var adj=Math.max(0.8,Math.min(1.5,8/Math.max(NET.nodes.length,1)));return Math.max(0.9,Math.min(1.7,raw*adj));}());
 
-  var nodes=NET.nodes.map(function(n,i){var a=(2*Math.PI*i)/NET.nodes.length;var r=n.is_primary?0:(150*sc+Math.random()*50*sc);return {id:n.id,name:n.name,commits:n.commits,is_primary:n.is_primary,projects:n.projects,x:cx+Math.cos(a)*r+(Math.random()-0.5)*30,y:cy+Math.sin(a)*r+(Math.random()-0.5)*30,vx:0,vy:0,fx:null,fy:null};});
-  var edges=NET.edges;
-  var hovered=null, drag={node:null,ox:0,oy:0,active:false};
+  /* Toolbar */
+  var toolbar = document.createElement('div');
+  toolbar.style.cssText='position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:6px;align-items:center;';
+  target.appendChild(toolbar);
 
-  var infoPanel=target.closest('.network-graph-container').querySelector('.network-info-panel');
+  var btnBase = 'height:30px;padding:0 10px;border:none;background:transparent;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;transition:background 0.2s,color 0.2s;';
+  var radioStyle = 'display:flex;border-radius:8px;border:1px solid '+T.toggleBorder+';background:'+T.toggleBg+';backdrop-filter:blur(4px);overflow:hidden;';
+  var inactiveColor = THEME_KEY === 'dark' ? 'rgba(226,232,240,0.6)' : 'rgba(51,65,85,0.5)';
+  var activeColor = THEME_KEY === 'dark' ? '#fff' : '#1e293b';
 
-  function applyPanelTheme() {
-    if(!infoPanel) return;
-    infoPanel.style.background = hovered ? T.panelActiveBg : T.panelBg;
-    infoPanel.style.borderColor = hovered ? 'rgba(99,102,241,0.35)' : T.panelBorder;
-    var nameEl = infoPanel.querySelector('.network-info-name');
-    if(nameEl) nameEl.style.color = T.infoName;
-    var comEl = infoPanel.querySelector('.network-info-commits');
-    if(comEl) comEl.style.color = T.infoCommits;
-    var tags = infoPanel.querySelectorAll('.network-info-project-tag');
-    tags.forEach(function(t){t.style.color=T.infoTag;t.style.background=T.infoTagBg;t.style.borderColor=T.infoTagBorder;});
-    var hint = infoPanel.querySelector('.network-info-hint');
-    if(hint) hint.style.color = T.infoHint;
+  /* Mode radio */
+  var modeRadio = document.createElement('div');
+  modeRadio.style.cssText = radioStyle;
+  toolbar.appendChild(modeRadio);
+
+  var starBtn = document.createElement('button');
+  starBtn.textContent = '\\u2B50 Star';
+  starBtn.style.cssText = btnBase + 'border-right:1px solid '+T.toggleBorder+';';
+  modeRadio.appendChild(starBtn);
+
+  var netBtn = document.createElement('button');
+  netBtn.textContent = '\\ud83d\\udd78\\ufe0f Network';
+  netBtn.style.cssText = btnBase;
+  modeRadio.appendChild(netBtn);
+
+  function updateRadio() {
+    starBtn.style.background = mode === 'star' ? T.toggleActiveBg : 'transparent';
+    starBtn.style.color = mode === 'star' ? activeColor : inactiveColor;
+    starBtn.style.fontWeight = mode === 'star' ? '600' : '500';
+    netBtn.style.background = mode === 'full' ? T.toggleActiveBg : 'transparent';
+    netBtn.style.color = mode === 'full' ? activeColor : inactiveColor;
+    netBtn.style.fontWeight = mode === 'full' ? '600' : '500';
+  }
+  updateRadio();
+
+  starBtn.addEventListener('click', function() { mode = 'star'; updateRadio(); updateLegend(); updateInfo(hovered); });
+  netBtn.addEventListener('click', function() { mode = 'full'; updateRadio(); updateLegend(); updateInfo(hovered); });
+
+  var W = target.clientWidth, H = Math.max(400, Math.floor(target.clientWidth * 0.48));
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var cx = W / 2, cy = H / 2;
+
+  /* Compute scale */
+  function computeScale() {
+    var raw = Math.min(W, H) / 480;
+    var adj = Math.max(0.8, Math.min(1.5, 8 / Math.max(NET.nodes.length, 1)));
+    sc = Math.max(0.9, Math.min(1.7, raw * adj));
+  }
+  computeScale();
+
+  /* Nodes init */
+  var nodes = NET.nodes.map(function(n, i) {
+    var a = (2 * Math.PI * i) / NET.nodes.length;
+    var spread = Math.min(W, H) * 0.42;
+    var r = n.is_primary ? 0 : spread + Math.random() * 80;
+    return { id:n.id, name:n.name, commits:n.commits, is_primary:n.is_primary, projects:n.projects,
+      x:cx+Math.cos(a)*r+(Math.random()-0.5)*30, y:cy+Math.sin(a)*r+(Math.random()-0.5)*30,
+      vx:0, vy:0, fx:null, fy:null };
+  });
+
+  var hovered = null, drag = { node:null, ox:0, oy:0, active:false };
+  var infoPanel = target.closest('.network-graph-container').querySelector('.network-info-panel');
+
+  /* Legend updates */
+  var legendContainer = target.closest('.network-graph-container').querySelector('.network-legend');
+  function updateLegend() {
+    if (!legendContainer) return;
+    var eds = activeEdges();
+    var peerCount = NET.edges.filter(function(e){return e.is_peer;}).length;
+    var totalCommits = NET.nodes.reduce(function(s,n){return s+n.commits;},0);
+    var stats = legendContainer.querySelectorAll('.network-stat');
+    if (stats.length >= 3) {
+      stats[1].querySelector('.network-stat-value').textContent = eds.length;
+      if (mode === 'full') {
+        stats[2].querySelector('.network-stat-value').textContent = peerCount;
+        stats[2].querySelector('.network-stat-label').textContent = 'Peer Links';
+      } else {
+        stats[2].querySelector('.network-stat-value').textContent = totalCommits.toLocaleString();
+        stats[2].querySelector('.network-stat-label').textContent = 'Total Commits';
+      }
+    }
   }
 
   function hitTest(mx,my){for(var i=nodes.length-1;i>=0;i--){var n=nodes[i],r=nr(n)+4;if((n.x-mx)*(n.x-mx)+(n.y-my)*(n.y-my)<=r*r)return n;}return null;}
 
-  function simulate(){
-    var rep=5200*sc,att=0.006,cp=0.012,damp=0.82,pad=35;
-    for(var i=0;i<nodes.length;i++){for(var j=i+1;j<nodes.length;j++){var dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,d=Math.sqrt(dx*dx+dy*dy)||1,f=rep/(d*d),fx=dx/d*f,fy=dy/d*f;nodes[i].vx-=fx;nodes[i].vy-=fy;nodes[j].vx+=fx;nodes[j].vy+=fy;}}
-    var nm={}; nodes.forEach(function(n){nm[n.id]=n;});
-    edges.forEach(function(e){var s=nm[e.source],t=nm[e.target];if(!s||!t)return;var dx=t.x-s.x,dy=t.y-s.y,d=Math.sqrt(dx*dx+dy*dy)||1,disp=d-150*sc,f=disp*att*(1+e.weight*0.3),fx=dx/d*f,fy=dy/d*f;s.vx+=fx;s.vy+=fy;t.vx-=fx;t.vy-=fy;});
-    nodes.forEach(function(n){n.vx+=(cx-n.x)*cp;n.vy+=(cy-n.y)*cp;if(n.fx!==null){n.x=n.fx;n.y=n.fy;n.vx=0;n.vy=0;}else{n.vx*=damp;n.vy*=damp;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(pad,Math.min(W-pad,n.x));n.y=Math.max(pad,Math.min(H-pad,n.y));}});
-  }
+  /* Physics */
+  function simulate() {
+    var isFull = mode === 'full';
+    var eds = activeEdges();
+    computeScale();
+    var repulsion = (isFull ? 28000 : 12000) * sc;
+    var attraction = isFull ? 0.001 : 0.003;
+    var centerPull = isFull ? 0.004 : 0.008;
+    var damping = 0.82;
 
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    var nm={}; nodes.forEach(function(n){nm[n.id]=n;});
-    var connSet={};
-    if(hovered){edges.forEach(function(e){if(e.source===hovered.id||e.target===hovered.id){connSet[e.source]=true;connSet[e.target]=true;}});}
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var dx = nodes[j].x - nodes[i].x, dy = nodes[j].y - nodes[i].y;
+        var d = Math.sqrt(dx*dx + dy*dy) || 1;
+        var f = repulsion / (d * d);
+        var fx = dx/d*f, fy = dy/d*f;
+        nodes[i].vx -= fx; nodes[i].vy -= fy;
+        nodes[j].vx += fx; nodes[j].vy += fy;
+      }
+    }
 
-    edges.forEach(function(e){
-      var s=nm[e.source],t=nm[e.target];if(!s||!t)return;
-      var hi=hovered&&(hovered.id===e.source||hovered.id===e.target);
-      var si=nodes.indexOf(s),ti=nodes.indexOf(t);
-      var al=hi?0.7:0.18+e.weight*0.06;
-      var grad=ctx.createLinearGradient(s.x,s.y,t.x,t.y);
-      grad.addColorStop(0,ha(nc(s,si),al));grad.addColorStop(1,ha(nc(t,ti),al));
-      ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(t.x,t.y);
-      ctx.strokeStyle=grad;ctx.lineWidth=hi?2.5+e.weight*0.5:1.2+e.weight*0.4;ctx.stroke();
-      var mx2=(s.x+t.x)/2,my2=(s.y+t.y)/2;
-      ctx.fillStyle=T.badgeBg(hi?0.85:0.55);ctx.beginPath();ctx.arc(mx2,my2,Math.round(10*sc),0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle=T.badgeStroke(!!hi);ctx.lineWidth=1;ctx.stroke();
-      ctx.fillStyle=T.badgeText(!!hi);ctx.font='bold '+Math.round(9*sc)+'px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(e.projects.length),mx2,my2);
+    var nm = {}; nodes.forEach(function(n){ nm[n.id] = n; });
+    eds.forEach(function(e) {
+      var s = nm[e.source], t = nm[e.target]; if (!s||!t) return;
+      var dx = t.x-s.x, dy = t.y-s.y, dist = Math.sqrt(dx*dx+dy*dy) || 1;
+      var idealLen = (isFull ? (e.is_peer ? 350 : 280) : 220) * sc;
+      var disp = dist - idealLen;
+      var f = disp * attraction * (1 + e.weight * (isFull ? 0.1 : 0.3));
+      var fx = dx/dist*f, fy = dy/dist*f;
+      s.vx += fx; s.vy += fy; t.vx -= fx; t.vy -= fy;
     });
 
-    nodes.forEach(function(node,i){
-      var r=nr(node),col=nc(node,i);
-      var isH=hovered&&hovered.id===node.id;
-      var isConn=hovered&&connSet[node.id];
-      var dim=hovered&&!isH&&!isConn&&!drag.active;
+    nodes.forEach(function(n){ n.vx += (cx-n.x)*centerPull; n.vy += (cy-n.y)*centerPull; });
 
-      if(isH||isConn||node.is_primary){ctx.beginPath();ctx.arc(node.x,node.y,r+(isH?10*sc:6*sc),0,Math.PI*2);var gl=ctx.createRadialGradient(node.x,node.y,r*0.5,node.x,node.y,r+(isH?14*sc:8*sc));gl.addColorStop(0,ha(col,isH?0.35:0.18));gl.addColorStop(1,ha(col,0));ctx.fillStyle=gl;ctx.fill();}
+    /* Overlap repulsion */
+    var minGap = (isFull ? 60 : 30) * sc;
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var ri = nr(nodes[i]), rj = nr(nodes[j]);
+        var minD = ri + rj + minGap;
+        var dx = nodes[j].x - nodes[i].x, dy = nodes[j].y - nodes[i].y;
+        var dist = Math.sqrt(dx*dx+dy*dy) || 1;
+        if (dist < minD) {
+          var push = (minD - dist) * 0.15;
+          var px = dx/dist*push, py = dy/dist*push;
+          nodes[i].vx -= px; nodes[i].vy -= py;
+          nodes[j].vx += px; nodes[j].vy += py;
+        }
+      }
+    }
 
-      ctx.beginPath();ctx.arc(node.x,node.y,r,0,Math.PI*2);
-      var bg=ctx.createRadialGradient(node.x-r*0.3,node.y-r*0.3,r*0.1,node.x,node.y,r);
-      if(node.is_primary){bg.addColorStop(0,T.primaryGrad0);bg.addColorStop(1,T.primaryGrad1);}else{bg.addColorStop(0,lt(col,20));bg.addColorStop(1,col);}
-      ctx.fillStyle=dim?ha(col,0.35):bg;ctx.fill();
-      ctx.strokeStyle=dim?ha(col,0.2):isH?T.ringHi:isConn?ha(T.ringHi,0.7):ha(lt(col,30),0.6);ctx.lineWidth=isH?2.5:node.is_primary?2:1.5;ctx.stroke();
-
-      if(!dim){ctx.beginPath();ctx.arc(node.x-r*0.2,node.y-r*0.25,r*0.45,0,Math.PI*2);ctx.fillStyle=T.gloss;ctx.fill();}
-
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      if(node.is_primary){var maxW=r*1.7;var fs=Math.round(11*sc);var lbl=node.name.length>16?node.name.slice(0,15)+'\\u2026':node.name;ctx.font='bold '+fs+'px Inter,system-ui,sans-serif';while(ctx.measureText(lbl).width>maxW&&fs>Math.max(6,Math.round(7*sc))){fs--;ctx.font='bold '+fs+'px Inter,system-ui,sans-serif';}if(ctx.measureText(lbl).width>maxW){while(lbl.length>3&&ctx.measureText(lbl.replace(/\\u2026$/,'')+'\\u2026').width>maxW){lbl=lbl.replace(/\\u2026$/,'').slice(0,-1);}lbl=lbl.replace(/\\u2026$/,'')+'\\u2026';}ctx.fillStyle=dim?T.primaryLabelDim:T.primaryLabel;ctx.fillText(lbl,node.x,node.y);}
-      else{var lbl=node.name.length>14?node.name.slice(0,13)+'\\u2026':node.name;ctx.font='500 '+Math.round(9*sc)+'px Inter,system-ui,sans-serif';var ly=node.y+r+Math.round(12*sc);var m=ctx.measureText(lbl);var lw=m.width+8*sc;ctx.fillStyle=dim?T.labelBgDim:T.labelBg;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc),4);else{ctx.rect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc));}ctx.fill();ctx.fillStyle=dim?T.labelTextDim:T.labelText;ctx.fillText(lbl,node.x,ly);}
-      if(r>=14&&!node.is_primary&&!dim){ctx.font='bold '+Math.round(8*sc)+'px Inter,system-ui,sans-serif';ctx.fillStyle=T.commitBadge;ctx.fillText(String(node.commits),node.x,node.y);}
+    var pad = 60;
+    nodes.forEach(function(n) {
+      if (n.fx !== null) { n.x=n.fx; n.y=n.fy; n.vx=0; n.vy=0; }
+      else { n.vx*=damping; n.vy*=damping; n.x+=n.vx; n.y+=n.vy;
+        n.x=Math.max(pad,Math.min(W-pad,n.x)); n.y=Math.max(pad,Math.min(H-pad,n.y)); }
     });
   }
 
-  function updateInfo(n){
-    if(!infoPanel)return;
-    if(n){
-      infoPanel.className='network-info-panel network-info-panel--active';
-      infoPanel.style.background=T.panelActiveBg; infoPanel.style.borderColor='rgba(99,102,241,0.35)';
-      var h='<div class=\"network-info-name\" style=\"color:'+T.infoName+'\">'+n.name+'</div><div class=\"network-info-commits\" style=\"color:'+T.infoCommits+'\">'+n.commits.toLocaleString()+' commits</div><div class=\"network-info-projects\">';
-      n.projects.forEach(function(p){h+='<span class=\"network-info-project-tag\" style=\"color:'+T.infoTag+';background:'+T.infoTagBg+';border-color:'+T.infoTagBorder+'\">'+p+'</span>';});
-      h+='</div>'; infoPanel.innerHTML=h;
+  /* Draw */
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    var eds = activeEdges();
+    var nm = {}; nodes.forEach(function(n){ nm[n.id] = n; });
+    var connSet = {};
+    if (hovered) { connSet[hovered.id] = true; eds.forEach(function(e){ if(e.source===hovered.id||e.target===hovered.id){connSet[e.source]=true;connSet[e.target]=true;} }); }
+
+    /* Edges */
+    eds.forEach(function(e) {
+      var s = nm[e.source], t = nm[e.target]; if (!s||!t) return;
+      var hi = hovered && (hovered.id===e.source || hovered.id===e.target);
+      var isPeer = !!e.is_peer;
+      var si = nodes.indexOf(s), ti = nodes.indexOf(t);
+      var al = hi ? 0.65 : hovered ? (isPeer ? 0.03 : 0.06) : isPeer ? 0.09 : 0.15 + e.weight * 0.04;
+      var grad = ctx.createLinearGradient(s.x,s.y,t.x,t.y);
+      grad.addColorStop(0, ha(nc(s,si), al)); grad.addColorStop(1, ha(nc(t,ti), al));
+      ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(t.x,t.y);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = hi ? 2.5+e.weight*0.5 : isPeer ? 0.5+e.weight*0.15 : 0.8+e.weight*0.25;
+      if (isPeer) { ctx.setLineDash([6*sc, 4*sc]); } else { ctx.setLineDash([]); }
+      ctx.stroke(); ctx.setLineDash([]);
+
+      /* Badge on hovered edges only */
+      if (hi) {
+        var mx2 = (s.x+t.x)/2, my2 = (s.y+t.y)/2;
+        ctx.fillStyle = T.badgeBg(0.92); ctx.beginPath(); ctx.arc(mx2,my2,Math.round(9*sc),0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle = T.badgeStroke(true); ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = T.badgeText(true); ctx.font = 'bold '+Math.round(8*sc)+'px Inter,system-ui,sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(e.projects.length), mx2, my2);
+      }
+    });
+
+    /* Nodes */
+    nodes.forEach(function(node, i) {
+      var r = nr(node), col = nc(node, i);
+      var isH = hovered && hovered.id === node.id;
+      var isConn = hovered && connSet[node.id];
+      var dim = hovered && !isH && !isConn && !drag.active;
+
+      if (isH || isConn || node.is_primary) {
+        var gs = (isH ? 10 : isConn ? 8 : 6) * sc;
+        ctx.beginPath(); ctx.arc(node.x, node.y, r+gs, 0, Math.PI*2);
+        var gl = ctx.createRadialGradient(node.x,node.y,r*0.5,node.x,node.y,r+gs+4);
+        gl.addColorStop(0, ha(col, isH?0.35:isConn?0.28:0.18)); gl.addColorStop(1, ha(col, 0));
+        ctx.fillStyle = gl; ctx.fill();
+      }
+
+      ctx.beginPath(); ctx.arc(node.x,node.y,r,0,Math.PI*2);
+      var bg = ctx.createRadialGradient(node.x-r*0.3,node.y-r*0.3,r*0.1,node.x,node.y,r);
+      if (node.is_primary) { bg.addColorStop(0,T.primaryGrad0); bg.addColorStop(1,T.primaryGrad1); }
+      else { bg.addColorStop(0, lt(col,20)); bg.addColorStop(1, col); }
+      ctx.fillStyle = dim ? ha(col,0.35) : bg; ctx.fill();
+      ctx.strokeStyle = dim ? ha(col,0.2) : isH ? T.ringHi : isConn ? ha(T.ringHi,0.7) : ha(lt(col,30),0.6);
+      ctx.lineWidth = isH ? 2.5 : isConn ? 2.2 : node.is_primary ? 2 : 1.5; ctx.stroke();
+
+      if (!dim) { ctx.beginPath(); ctx.arc(node.x-r*0.2,node.y-r*0.25,r*0.45,0,Math.PI*2); ctx.fillStyle=T.gloss; ctx.fill(); }
+
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (node.is_primary) {
+        var maxW = r*1.7; var fs = Math.round(11*sc);
+        var lbl = node.name.length>16 ? node.name.slice(0,15)+'\\u2026' : node.name;
+        ctx.font = 'bold '+fs+'px Inter,system-ui,sans-serif';
+        while (ctx.measureText(lbl).width > maxW && fs > Math.max(6, Math.round(7*sc))) { fs--; ctx.font='bold '+fs+'px Inter,system-ui,sans-serif'; }
+        ctx.fillStyle = dim ? T.primaryLabelDim : T.primaryLabel;
+        ctx.fillText(lbl, node.x, node.y);
+      } else {
+        var lbl = node.name.length>16 ? node.name.slice(0,15)+'\\u2026' : node.name;
+        ctx.font = '500 '+Math.round(9*sc)+'px Inter,system-ui,sans-serif';
+        var ly = node.y + r + Math.round(13*sc);
+        var m = ctx.measureText(lbl); var lw = m.width + 8*sc;
+        ctx.fillStyle = dim ? T.labelBgDim : T.labelBg;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc),4);
+        else ctx.rect(node.x-lw/2,ly-Math.round(7*sc),lw,Math.round(14*sc));
+        ctx.fill();
+        ctx.fillStyle = dim ? T.labelTextDim : T.labelText;
+        ctx.fillText(lbl, node.x, ly);
+      }
+
+      /* Badge inside node */
+      if (r >= 14 && !node.is_primary && !dim) {
+        ctx.font = 'bold '+Math.round(8*sc)+'px Inter,system-ui,sans-serif';
+        ctx.fillStyle = T.commitBadge;
+        var val = mode === 'full' ? String(node.projects.length) : String(node.commits);
+        ctx.fillText(val, node.x, node.y);
+      }
+    });
+  }
+
+  function updateInfo(n) {
+    if (!infoPanel) return;
+    if (n) {
+      infoPanel.className = 'network-info-panel network-info-panel--active';
+      infoPanel.style.background = T.panelActiveBg; infoPanel.style.borderColor = 'rgba(99,102,241,0.35)';
+      var commitLabel = mode === 'full'
+        ? n.projects.length + ' project' + (n.projects.length !== 1 ? 's' : '')
+        : n.commits.toLocaleString() + ' commits';
+      var h = '<div class="network-info-name" style="color:'+T.infoName+'">'+n.name+'</div>';
+      h += '<div class="network-info-commits" style="color:'+T.infoCommits+'">'+commitLabel+'</div>';
+      h += '<div class="network-info-projects">';
+      n.projects.forEach(function(p){ h += '<span class="network-info-project-tag" style="color:'+T.infoTag+';background:'+T.infoTagBg+';border-color:'+T.infoTagBorder+'">'+p+'</span>'; });
+      h += '</div>'; infoPanel.innerHTML = h;
     } else {
-      infoPanel.className='network-info-panel';
-      infoPanel.style.background=T.panelBg; infoPanel.style.borderColor=T.panelBorder;
-      infoPanel.innerHTML='<div class=\"network-info-hint\" style=\"color:'+T.infoHint+'\"><span class=\"network-info-hint-icon\">\ud83d\udc46</span>Hover over a node to see details \\u00b7 Drag to rearrange</div>';
+      infoPanel.className = 'network-info-panel';
+      infoPanel.style.background = T.panelBg; infoPanel.style.borderColor = T.panelBorder;
+      var hint = 'Hover for details \\u00b7 Drag to rearrange \\u00b7 ' + (mode === 'full' ? 'Node size = project breadth' : 'Node size = commit count');
+      infoPanel.innerHTML = '<div class="network-info-hint" style="color:'+T.infoHint+'"><span class="network-info-hint-icon">\\ud83d\\udc46</span>'+hint+'</div>';
     }
   }
 
-  function tick(){simulate();draw();requestAnimationFrame(tick);}
-  applyPanelTheme();
+  function tick() { simulate(); draw(); requestAnimationFrame(tick); }
+  updateInfo(null); updateLegend();
   requestAnimationFrame(tick);
 
-  canvas.addEventListener('mousedown',function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var n=hitTest(mx,my);if(n){drag={node:n,ox:mx-n.x,oy:my-n.y,active:true};n.fx=n.x;n.fy=n.y;}});
-  canvas.addEventListener('mousemove',function(e){var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;if(drag.active&&drag.node){drag.node.fx=mx-drag.ox;drag.node.fy=my-drag.oy;drag.node.x=drag.node.fx;drag.node.y=drag.node.fy;}var f=hitTest(mx,my);if(f!==hovered){hovered=f;updateInfo(f);}canvas.style.cursor=drag.active?'grabbing':f?'grab':'default';});
-  canvas.addEventListener('mouseup',function(){if(drag.node){drag.node.fx=null;drag.node.fy=null;}drag={node:null,ox:0,oy:0,active:false};});
-  canvas.addEventListener('mouseleave',function(){if(drag.node){drag.node.fx=null;drag.node.fy=null;}drag={node:null,ox:0,oy:0,active:false};hovered=null;updateInfo(null);canvas.style.cursor='default';});
+  canvas.addEventListener('mousedown', function(e) {
+    var r = canvas.getBoundingClientRect(); var mx = e.clientX-r.left, my = e.clientY-r.top;
+    var n = hitTest(mx,my);
+    if (n) { drag = {node:n, ox:mx-n.x, oy:my-n.y, active:true}; n.fx=n.x; n.fy=n.y; }
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    var r = canvas.getBoundingClientRect(); var mx = e.clientX-r.left, my = e.clientY-r.top;
+    if (drag.active && drag.node) { drag.node.fx=mx-drag.ox; drag.node.fy=my-drag.oy; drag.node.x=drag.node.fx; drag.node.y=drag.node.fy; }
+    var f = hitTest(mx,my); if (f !== hovered) { hovered = f; updateInfo(f); }
+    canvas.style.cursor = drag.active ? 'grabbing' : f ? 'grab' : 'default';
+  });
+  canvas.addEventListener('mouseup', function() { if(drag.node){drag.node.fx=null;drag.node.fy=null;} drag={node:null,ox:0,oy:0,active:false}; });
+  canvas.addEventListener('mouseleave', function() { if(drag.node){drag.node.fx=null;drag.node.fy=null;} drag={node:null,ox:0,oy:0,active:false}; hovered=null; updateInfo(null); canvas.style.cursor='default'; });
 
-  window.addEventListener('resize',function(){W=target.clientWidth;H=Math.max(440,target.clientHeight);cx=W/2;cy=H/2;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);});
+  window.addEventListener('resize', function() {
+    W=target.clientWidth; H=Math.max(400,Math.floor(W*0.48)); cx=W/2; cy=H/2;
+    canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0); computeScale();
+  });
 })();
       `;
 

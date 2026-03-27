@@ -251,5 +251,137 @@
     "tags": ["transportation", "logistics", "supply-chain", "operations"],
     "level": "starter",
     "pricing": "free"
+  },
+  {
+    "id": "google-tech-writing",
+    "title": "Google Technical Writing courses",
+    "description": "Two short courses on clear structure, style, and documentation aimed at engineers — also ideal for anyone who writes specs, wikis, or user-facing copy.",
+    "url": "https://developers.google.com/tech-writing",
+    "thumbnail_url": "https://placehold.co/320x180/1a73e8/ffffff?text=Tech+Writing",
+    "provider": "Google",
+    "tags": ["writing", "technical-writing", "documentation", "communication", "editing"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "gov-uk-content-design",
+    "title": "GOV.UK — Content design guidance",
+    "description": "Public-sector gold standard for planning, structuring, and testing written content so users can complete tasks.",
+    "url": "https://www.gov.uk/guidance/content-design",
+    "thumbnail_url": "https://placehold.co/320x180/1d70b8/ffffff?text=Content+Design",
+    "provider": "GOV.UK / GDS",
+    "tags": ["writing", "content-design", "ux", "communication", "accessibility"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "plain-language-gov",
+    "title": "PlainLanguage.gov — Federal plain language guidelines",
+    "description": "Practical guidance for clear, concise writing for broad audiences — useful for policy, comms, and internal docs.",
+    "url": "https://www.plainlanguage.gov/guidelines/",
+    "thumbnail_url": "https://placehold.co/320x180/205493/ffffff?text=Plain+Language",
+    "provider": "U.S. General Services Administration",
+    "tags": ["writing", "communication", "clarity", "non-technical", "documentation"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "coursera-good-with-words",
+    "title": "Good with Words: Writing and Editing (Michigan)",
+    "description": "Foundations in word choice, sentence flow, and drafting — strong for reports, marketing, and professional writing.",
+    "url": "https://www.coursera.org/learn/wordswriting1",
+    "thumbnail_url": "https://placehold.co/320x180/00274c/ffffff?text=Writing",
+    "provider": "Coursera / University of Michigan",
+    "tags": ["writing", "communication", "business", "editing", "marketing"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "scrum-guide",
+    "title": "The Scrum Guide",
+    "description": "Official definition of Scrum — roles, events, and artifacts. Lightweight entry to agile delivery for PMs and cross-functional teams.",
+    "url": "https://scrumguides.org/scrum-guide.html",
+    "thumbnail_url": "https://placehold.co/320x180/0052cc/ffffff?text=Scrum",
+    "provider": "Scrum.org / Scrum Alliance",
+    "tags": ["agile", "scrum", "product-management", "project-management", "teamwork"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "atlassian-agile",
+    "title": "Atlassian — Agile project management",
+    "description": "Overviews of Scrum, Kanban, roadmaps, and rituals — approachable for PMs and leads without a programming focus.",
+    "url": "https://www.atlassian.com/agile/project-management",
+    "thumbnail_url": "https://placehold.co/320x180/0052cc/ffffff?text=Agile+PM",
+    "provider": "Atlassian",
+    "tags": ["agile", "product-management", "project-management", "roadmap", "delivery"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "coursera-digital-product-management",
+    "title": "Digital Product Management (Darden / Coursera)",
+    "description": "Ideation, strategy, and roadmapping for digital products — fits product, program, and business-focused roles.",
+    "url": "https://www.coursera.org/learn/uva-darden-digital-product-management",
+    "thumbnail_url": "https://placehold.co/320x180/232d4b/ffffff?text=Product",
+    "provider": "Coursera / UVA Darden",
+    "tags": ["product-management", "strategy", "roadmap", "business", "stakeholder"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "google-project-management-cert",
+    "title": "Google Project Management Professional Certificate",
+    "description": "Foundations in project lifecycles, stakeholder comms, and Agile — widely used for non-engineering PM career paths (Coursera; audit for free).",
+    "url": "https://www.coursera.org/professional-certificates/google-project-management",
+    "thumbnail_url": "https://placehold.co/320x180/4285f4/ffffff?text=Project+Mgmt",
+    "provider": "Coursera / Google",
+    "tags": ["project-management", "agile", "communication", "stakeholder", "planning"],
+    "level": "starter",
+    "pricing": "paid"
+  },
+  {
+    "id": "nn-group-ux-basics",
+    "title": "Nielsen Norman Group — UX research & writing articles",
+    "description": "Evidence-based articles on usability testing, UX writing, and design thinking — valuable for PM, content, and research-adjacent roles.",
+    "url": "https://www.nngroup.com/articles/",
+    "thumbnail_url": "https://placehold.co/320x180/e31b23/ffffff?text=UX+Research",
+    "provider": "Nielsen Norman Group",
+    "tags": ["ux", "user-research", "usability", "writing", "product-management"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "ideo-design-thinking",
+    "title": "IDEO U — Design thinking introduction",
+    "description": "Human-centered problem framing and prototyping — complements PM and strategy work without requiring code.",
+    "url": "https://www.ideou.com/blogs/inspiration/what-is-design-thinking",
+    "thumbnail_url": "https://placehold.co/320x180/f26522/ffffff?text=Design+Thinking",
+    "provider": "IDEO",
+    "tags": ["design-thinking", "product-management", "innovation", "strategy", "research"],
+    "level": "starter",
+    "pricing": "free"
+  },
+  {
+    "id": "adv-inspired-svpg",
+    "title": "Inspired (product leadership) — SVPG resources",
+    "description": "Essays and book pointers on empowered product teams, discovery, and outcomes — advanced lens after basic PM coursework.",
+    "url": "https://www.svpg.com/articles/",
+    "thumbnail_url": "https://placehold.co/320x180/111827/ffffff?text=Product+Leadership",
+    "provider": "Silicon Valley Product Group",
+    "tags": ["product-management", "strategy", "leadership", "roadmap", "stakeholder"],
+    "level": "advanced",
+    "pricing": "free"
+  },
+  {
+    "id": "adv-agile-practice-guide",
+    "title": "Agile Practice Guide (PMI overview)",
+    "description": "How predictive and agile approaches blend in larger programs — useful for PMs moving into scaled delivery (summary resources; full guide often via PMI).",
+    "url": "https://www.pmi.org/disciplined-agile/processes/agile",
+    "thumbnail_url": "https://placehold.co/320x180/003b5c/ffffff?text=Agile+Scale",
+    "provider": "PMI",
+    "tags": ["agile", "project-management", "product-management", "planning", "delivery"],
+    "level": "advanced",
+    "pricing": "free"
   }
 ]

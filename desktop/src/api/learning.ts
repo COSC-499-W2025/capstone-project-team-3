@@ -38,6 +38,14 @@ export async function getLearningRecommendations(): Promise<LearningRecommendati
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    if (res.status === 404) {
+      throw new Error(
+        "Learning recommendations endpoint returned 404. " +
+          "Set VITE_API_BASE_URL to the API origin only (e.g. http://127.0.0.1:8000), not …/api. " +
+          "Restart the FastAPI app from the latest project code so GET /api/learning/recommendations is registered. " +
+          (text ? `(${text})` : "")
+      );
+    }
     throw new Error(text || `Failed to load learning recommendations (${res.status})`);
   }
   return res.json() as Promise<LearningRecommendationsResponse>;

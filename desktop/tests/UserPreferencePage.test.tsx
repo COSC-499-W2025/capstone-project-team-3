@@ -4,14 +4,34 @@ import { test, expect, jest, beforeEach } from '@jest/globals';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import * as userPreferencesApi from '../src/api/userPreferences';
+import * as learningApi from '../src/api/learning';
 
 // Mock the API module
 jest.mock('../src/api/userPreferences');
+jest.mock('../src/api/learning', () => ({
+  ...jest.requireActual<typeof import('../src/api/learning')>('../src/api/learning'),
+  getLearningRecommendations: jest.fn(),
+}));
+
+jest.mock('../src/api/projects', () => ({
+  getProjects: jest.fn().mockResolvedValue([
+    {
+      id: 'p1',
+      name: 'Demo Project',
+      score: 0.75,
+      skills: ['Python'],
+      date_added: '2024-01-01',
+    },
+  ]),
+}));
 
 const mockGetUserPreferences = userPreferencesApi.getUserPreferences as jest.MockedFunction<typeof userPreferencesApi.getUserPreferences>;
 const mockUploadProfilePicture = userPreferencesApi.uploadProfilePicture as jest.MockedFunction<typeof userPreferencesApi.uploadProfilePicture>;
 const mockDeleteProfilePicture = userPreferencesApi.deleteProfilePicture as jest.MockedFunction<typeof userPreferencesApi.deleteProfilePicture>;
 const mockGetProfilePictureUrl = userPreferencesApi.getProfilePictureUrl as jest.MockedFunction<typeof userPreferencesApi.getProfilePictureUrl>;
+const mockGetLearningRecommendations = learningApi.getLearningRecommendations as jest.MockedFunction<
+  typeof learningApi.getLearningRecommendations
+>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -29,7 +49,45 @@ beforeEach(() => {
     personal_summary: null,
   });
   mockGetProfilePictureUrl.mockReturnValue('http://localhost:8000/api/user-preferences/profile-picture');
+  mockGetLearningRecommendations.mockResolvedValue({
+    based_on_resume: [
+      {
+        id: 'c1',
+        title: 'Starter course',
+        description: 'Short description',
+        url: 'https://example.com/s',
+        thumbnail_url: 'https://example.com/t.png',
+        provider: 'Example',
+        tags: ['python'],
+        level: 'starter',
+        pricing: 'free',
+      },
+    ],
+    next_steps: [
+      {
+        id: 'c2',
+        title: 'Advanced course',
+        description: 'Next step description',
+        url: 'https://example.com/a',
+        thumbnail_url: 'https://example.com/t2.png',
+        provider: 'Example',
+        tags: ['system-design'],
+        level: 'advanced',
+        pricing: 'paid',
+      },
+    ],
+  });
 });
+
+async function openProfileEditMode() {
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /^edit profile$/i })).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByRole('button', { name: /^edit profile$/i }));
+  await waitFor(() => {
+    expect(screen.getByText(/Save Profile/i)).toBeInTheDocument();
+  });
+}
 
 test('renders user preference page with title', async () => {
   render(
@@ -39,7 +97,7 @@ test('renders user preference page with title', async () => {
   );
 
   await waitFor(() => {
-    const title = screen.getByText(/Build your Profile/i);
+    const title = screen.getByText(/Your profile/i);
     expect(title).toBeDefined();
   });
 });
@@ -53,7 +111,7 @@ test('renders all form sections', async () => {
 
   await waitFor(() => {
     expect(screen.getByText(/Full name/i)).toBeDefined();
-    expect(screen.getByText(/Educational Background/i)).toBeDefined();
+    expect(screen.getByText(/Educational background/i)).toBeDefined();
     expect(screen.getByText(/Industry/i)).toBeDefined();
   });
 });
@@ -65,6 +123,7 @@ test('renders all input fields', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     expect(screen.getByText(/Full name/i)).toBeDefined();
     expect(screen.getByText(/Email/i)).toBeDefined();
@@ -75,7 +134,7 @@ test('renders all input fields', async () => {
   });
 });
 
-test('renders save button', async () => {
+test('renders Edit profile in view mode and Save Profile after entering edit mode', async () => {
   render(
     <BrowserRouter>
       <UserPreferencePage />
@@ -83,9 +142,10 @@ test('renders save button', async () => {
   );
 
   await waitFor(() => {
-    const saveButton = screen.getByText(/Save Profile/i);
-    expect(saveButton).toBeDefined();
+    expect(screen.getByRole('button', { name: /^edit profile$/i })).toBeInTheDocument();
   });
+  await openProfileEditMode();
+  expect(screen.getByText(/Save Profile/i)).toBeInTheDocument();
 });
 
 test('renders add education button', async () => {
@@ -95,6 +155,7 @@ test('renders add education button', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     const addButton = container.querySelector('.btn-add');
     expect(addButton).toBeDefined();
@@ -108,6 +169,7 @@ test('renders industry buttons', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     expect(screen.getByText(/Technology/i)).toBeDefined();
     expect(screen.getByText(/Healthcare/i)).toBeDefined();
@@ -122,6 +184,7 @@ test('renders form structure', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     const formSections = container.querySelectorAll('.form-section');
     expect(formSections.length).toBeGreaterThan(0);
@@ -152,6 +215,7 @@ test('shows Upload Photo button when no picture is set', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     expect(screen.getByText(/Upload Photo/i)).toBeDefined();
   });
@@ -217,6 +281,7 @@ test('shows Change Photo and Remove buttons when picture is loaded', async () =>
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     expect(screen.getByText(/Change Photo/i)).toBeDefined();
     expect(screen.getByText(/Remove/i)).toBeDefined();
@@ -243,7 +308,7 @@ test('Remove button calls deleteProfilePicture and clears image', async () => {
     </BrowserRouter>
   );
 
-  // Wait for the Remove button to appear
+  await openProfileEditMode();
   await waitFor(() => screen.getByText(/Remove/i));
 
   fireEvent.click(screen.getByText(/Remove/i));
@@ -267,6 +332,7 @@ test('renders Professional Summary textarea field', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     expect(screen.getByText(/Professional Summary/i)).toBeDefined();
   });
@@ -292,6 +358,7 @@ test('pre-populates personal summary textarea from API response', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
     expect(textarea).not.toBeNull();
@@ -306,6 +373,7 @@ test('personal summary textarea is empty when personal_summary is null', async (
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => {
     const textarea = container.querySelector('textarea') as HTMLTextAreaElement | null;
     expect(textarea).not.toBeNull();
@@ -320,10 +388,36 @@ test('personal summary textarea accepts user input', async () => {
     </BrowserRouter>
   );
 
+  await openProfileEditMode();
   await waitFor(() => screen.getByText(/Professional Summary/i));
 
   const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
   fireEvent.change(textarea, { target: { value: 'New summary text.' } });
 
   expect(textarea.value).toBe('New summary text.');
+});
+
+test('Learning tab loads recommendations and shows both sections', async () => {
+  render(
+    <BrowserRouter>
+      <UserPreferencePage />
+    </BrowserRouter>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByRole('tab', { name: /^Learning$/i })).toBeDefined();
+  });
+
+  fireEvent.click(screen.getByRole('tab', { name: /^Learning$/i }));
+
+  await waitFor(() => {
+    expect(mockGetLearningRecommendations).toHaveBeenCalled();
+  });
+
+  await waitFor(() => {
+    expect(screen.getByText(/Based on your data/i)).toBeDefined();
+    expect(screen.getByText(/Next steps/i)).toBeDefined();
+    expect(screen.getByText(/Starter course/i)).toBeDefined();
+    expect(screen.getByText(/Advanced course/i)).toBeDefined();
+  });
 });

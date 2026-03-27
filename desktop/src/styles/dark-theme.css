@@ -280,6 +280,16 @@
 [data-theme="dark"] .industry-btn           { background: var(--color-card-bg); border-color: var(--color-border); color: var(--color-text-body); }
 [data-theme="dark"] .industry-btn:hover     { background: var(--color-bg-light); }
 [data-theme="dark"] .save-section           { border-top-color: var(--color-border); }
+[data-theme="dark"] .profile-page-tabs      { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .profile-page-tab--active { background: var(--color-card-bg); color: var(--color-text-heading); box-shadow: none; }
+[data-theme="dark"] .learning-course-card  { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .learning-course-card__title { color: var(--color-text-heading); }
+[data-theme="dark"] .learning-recommendations-heading { color: var(--color-text-heading); }
+[data-theme="dark"] .profile-view-education-card { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .profile-view-education-card__school { color: var(--color-text-heading); }
+[data-theme="dark"] .profile-view-field__value { color: var(--color-text-body); }
+[data-theme="dark"] .learning-recommendations-placeholder { background: var(--color-bg-light); border-color: var(--color-border); }
+[data-theme="dark"] .learning-recommendations-placeholder__title { color: var(--color-text-heading); }
 
 /* ============================================================
    ConsentPage  (uses global vars throughout — mostly free)

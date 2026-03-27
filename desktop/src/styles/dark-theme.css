@@ -117,6 +117,22 @@
 [data-theme="dark"] .ar-exclude-group:hover { background: var(--color-bg-light); border-color: var(--color-blue-light); }
 [data-theme="dark"] .ar-exclude-btn     { border-color: var(--color-border); color: var(--color-text-secondary); }
 [data-theme="dark"] .ar-exclude-hint    { color: var(--color-text-secondary); font-weight: 500; }
+[data-theme="dark"] .ar-exclude-no-files-msg {
+  color: #fbd38d;
+  background: rgba(251, 211, 141, 0.12);
+  border-color: rgba(251, 211, 141, 0.35);
+}
+
+[data-theme="dark"] .ar-exclude-all-types-msg {
+  color: #90cdf4;
+  background: rgba(144, 205, 244, 0.12);
+  border-color: rgba(144, 205, 244, 0.35);
+}
+
+[data-theme="dark"] .ar-exclude-all-types-msg code {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-body);
+}
 
 /* ============================================================
    UploadPage

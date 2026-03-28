@@ -66,6 +66,9 @@ def _load_user_profile() -> Dict[str, Any]:
 def _load_resume_context(resume_id: int) -> Dict[str, Any]:
     """Return the resume model dict for the given resume_id."""
     try:
+        # Master resume (id=1) is assembled from PROJECT / SKILL_ANALYSIS, not RESUME_PROJECT rows.
+        if resume_id == 1:
+            return build_resume_model()
         return load_saved_resume(resume_id)
     except Exception as exc:
         raise CoverLetterServiceError(f"Could not load resume {resume_id}: {exc}") from exc

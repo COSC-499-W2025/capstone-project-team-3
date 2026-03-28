@@ -41,6 +41,7 @@ pip-wheel-metadata/
 # Database / secrets
 *.sqlite3
 *.db
+app/data/resume_pdf_cache/
 /secrets*.yaml
 .env*
 
@@ -61,3 +62,4 @@ npm-debug.log
 docker-compose.override.yml
 *.tar
 docker-entrypoint-*.sh
+desktop/release/

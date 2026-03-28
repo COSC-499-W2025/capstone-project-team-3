@@ -10,12 +10,28 @@ async function parseErrorDetail(res: Response): Promise<string> {
     if (body?.detail != null) {
       if (typeof body.detail === "string") return body.detail;
       if (Array.isArray(body.detail)) return body.detail.map((d: { msg?: string }) => d?.msg ?? String(d)).join("; ");
+      if (typeof body.detail === "object") {
+        const d = body.detail as Record<string, unknown>;
+        // Resume PDF export: LaTeX compile failures (422)
+        if (typeof d.error === "string") {
+          const parts = [d.error];
+          const tail = (s: unknown) => (typeof s === "string" && s.trim() ? s.trim().slice(-1200) : "");
+          const err = tail(d.stderr) || tail(d.stdout);
+          if (err) parts.push(err);
+          return parts.join("\n\n");
+        }
+        try {
+          return JSON.stringify(body.detail);
+        } catch {
+          return String(body.detail);
+        }
+      }
     }
     if (body && typeof body.message === "string") return body.message;
   } catch {
     // ignore non-JSON or read errors
   }
-  return "Request failed: " + res.statusText;
+  return `Request failed (${res.status}): ${res.statusText || "Unknown error"}`;
 }
 
 export interface ResumeListItem {
@@ -169,8 +185,11 @@ export async function downloadResumePDF(params?: { projectIds?: string[], resume
   const url = queryString ? `${API_BASE}/resume/export/pdf?${queryString}` : `${API_BASE}/resume/export/pdf`;
   
   const res = await fetch(url, { method: "GET" });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
-  
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+
   // Trigger browser download
   const blob = await res.blob();
   const downloadUrl = window.URL.createObjectURL(blob);
@@ -203,8 +222,11 @@ export async function downloadResumeTeX(params?: { projectIds?: string[], resume
   const url = queryString ? `${API_BASE}/resume/export/tex?${queryString}` : `${API_BASE}/resume/export/tex`;
   
   const res = await fetch(url, { method: "GET" });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
-  
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+
   // Trigger browser download
   const blob = await res.blob();
   const downloadUrl = window.URL.createObjectURL(blob);

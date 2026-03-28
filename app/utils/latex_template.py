@@ -6,14 +6,14 @@ class ResumeTemplate:
     
     LATEX_TEMPLATE = r"""
     \documentclass[a4paper]{article}
-    \usepackage{fullpage}
+    % fullpage.sty is not in BasicTeX; geometry (below) provides margins.
     \usepackage{amsmath}
     \usepackage{amssymb}
     \usepackage{textcomp}
     \usepackage[utf8]{inputenc}
     \usepackage[T1]{fontenc}
     \usepackage[hidelinks]{hyperref}
-    \usepackage[left=2cm, right=2cm, top=2cm]{geometry}
+    \usepackage[left=2cm, right=2cm, top=2cm, bottom=2cm]{geometry}
     \usepackage{longtable}
     \usepackage{enumitem}
     % Align itemize bullets with left margin and tighten spacing

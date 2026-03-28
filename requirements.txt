@@ -31,7 +31,8 @@ mdurl==0.1.2
 murmurhash==1.0.13
 mypy==1.18.2
 mypy_extensions==1.1.0
-numpy==2.3.3
+# NumPy 2.x breaks PyTorch/thinc in this stack (KeyBERT → sentence-transformers → torch). Pin 1.26 for builds.
+numpy==1.26.4
 orjson==3.11.3
 packaging==25.0
 pathspec==0.12.1

@@ -908,7 +908,9 @@ describe('ResumeBuilderPage', () => {
     fireEvent.click(pdfOption);
 
     await waitFor(() => {
-      expect(alertMock).toHaveBeenCalledWith('Failed to download resume. Please try again.');
+      expect(alertMock).toHaveBeenCalledWith(
+        'Failed to download resume.\n\nNetwork error',
+      );
     });
 
     // Button should be enabled again

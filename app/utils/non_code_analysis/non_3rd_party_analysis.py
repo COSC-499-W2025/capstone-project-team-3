@@ -1,10 +1,31 @@
 """
 Non-code file analyzer - Using offline NLP libraries.
 """
+from __future__ import annotations
+
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Any
 import re
 from collections import Counter
+
+
+def _configure_nltk_data() -> None:
+    """Use bundled or repo-local punkt data; required for PyInstaller and offline runs."""
+    if os.environ.get("NLTK_DATA"):
+        return
+    candidates: list[str] = []
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        candidates.append(os.path.join(sys._MEIPASS, "nltk_data"))
+    candidates.append(str(Path(__file__).resolve().parent / "nltk_data"))
+    for path in candidates:
+        if os.path.isdir(path):
+            os.environ["NLTK_DATA"] = path
+            return
+
+
+_configure_nltk_data()
 
 import spacy
 from nltk.tokenize import sent_tokenize, word_tokenize

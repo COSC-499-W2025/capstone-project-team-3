@@ -1,0 +1,65 @@
+name: Build Backend Sidecar
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  build-backend-sidecar:
+    name: Build sidecar (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: backend-sidecar-macos
+            output_binary: backend-sidecar
+          - os: ubuntu-latest
+            artifact_name: backend-sidecar-linux
+            output_binary: backend-sidecar
+          - os: windows-latest
+            artifact_name: backend-sidecar-windows
+            output_binary: backend-sidecar.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install --no-cache-dir pyinstaller
+
+      - name: Verify NumPy 1.x (required for PyTorch in sidecar)
+        run: |
+          python -c "import numpy as np; v=np.__version__; assert v.startswith('1.'), f'expected NumPy 1.x, got {v}'"
+
+      - name: Build standalone backend
+        run: |
+          # backend-sidecar.spec bundles static assets, spaCy/thinc, KeyBERT stack metadata, pygount, etc.
+          pyinstaller --noconfirm --clean backend-sidecar.spec
+
+      - name: Verify built binary exists
+        shell: bash
+        run: |
+          if [ ! -f "dist/backend-sidecar/${{ matrix.output_binary }}" ]; then
+            echo "Expected binary not found: dist/backend-sidecar/${{ matrix.output_binary }}"
+            exit 1
+          fi
+
+      - name: Upload backend sidecar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/backend-sidecar

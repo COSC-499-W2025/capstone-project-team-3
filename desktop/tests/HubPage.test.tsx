@@ -93,15 +93,15 @@ test('renders Check Job Match card', () => {
   expect(screen.getByText(/Check how well your resume matches a job description/i)).toBeInTheDocument();
 });
 
-test('renders Settings card', () => {
+test('renders Learnings card', () => {
   render(
     <BrowserRouter>
       <HubPage />
     </BrowserRouter>
   );
 
-  expect(screen.getByText('Settings')).toBeInTheDocument();
-  expect(screen.getByText(/Manage your profile and privacy preferences/i)).toBeInTheDocument();
+  expect(screen.getByText('Learnings')).toBeInTheDocument();
+  expect(screen.getByText(/Course recommendations based on your profile/i)).toBeInTheDocument();
 });
 
 test('navigates to upload page on card click', () => {
@@ -152,16 +152,16 @@ test('navigates to data management on card click', () => {
   expect(mockNavigate).toHaveBeenCalledWith('/datamanagementpage');
 });
 
-test('navigates to settings on card click', () => {
+test('navigates to profile learning tab on Learnings card click', () => {
   render(
     <BrowserRouter>
       <HubPage />
     </BrowserRouter>
   );
 
-  const card = screen.getByLabelText('Go to Settings');
+  const card = screen.getByLabelText('Go to Learnings');
   fireEvent.click(card);
-  expect(mockNavigate).toHaveBeenCalledWith('/settingspage');
+  expect(mockNavigate).toHaveBeenCalledWith('/userpreferencepage?tab=learning');
 });
 
 test('navigates to ATS scoring on card click', () => {
@@ -188,5 +188,5 @@ test('each card has an accessible aria-label', () => {
   expect(screen.getByLabelText('Go to Portfolio')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Data Management')).toBeInTheDocument();
   expect(screen.getByLabelText('Go to Check Job Match')).toBeInTheDocument();
-  expect(screen.getByLabelText('Go to Settings')).toBeInTheDocument();
+  expect(screen.getByLabelText('Go to Learnings')).toBeInTheDocument();
 });

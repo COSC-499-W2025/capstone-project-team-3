@@ -10,7 +10,8 @@ from app.utils.scan_utils import (
     get_all_file_signatures_from_db,
     extract_project_timestamps,
     calculate_dynamic_threshold,
-    calculate_containment_ratio
+    calculate_containment_ratio,
+    EXCLUDE_PATTERNS,
 )
 from pathlib import Path
 from unittest.mock import patch
@@ -529,6 +530,61 @@ def test_run_scan_flow_accepts_base_threshold(tmp_path):
     result = run_scan_flow(str(tmp_path), exclude=[], base_threshold=70.0)
     
     assert result["reason"] == "new_project"
+
+
+def test_run_scan_flow_all_files_excluded_by_user_extensions(tmp_path):
+    """Per-project user exclusions can remove every analyzable file."""
+    (tmp_path / "a.py").write_text("print(1)")
+    (tmp_path / "b.py").write_text("print(2)")
+    result = run_scan_flow(str(tmp_path), exclude_extensions=[".py"])
+    assert result["skip_analysis"] is True
+    assert result["reason"] == "all_files_excluded"
+    assert result["files"] == []
+    raw = scan_project_files(str(tmp_path), exclude_patterns=EXCLUDE_PATTERNS.copy())
+    expected_sig = get_project_signature(
+        [extract_file_signature(f, str(tmp_path)) for f in raw]
+    )
+    assert result["signature"] == expected_sig
+    assert result["signature"]
+
+
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+def test_run_scan_flow_reanalyze_when_exclusions_and_signature_exists(mock_exists, tmp_path):
+    """Do not skip analysis when signature matches DB if user set file-type exclusions."""
+    (tmp_path / "app.py").write_text("print(1)")
+    result = run_scan_flow(str(tmp_path), exclude_extensions=[".md"])
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "reanalyze_with_exclusions"
+    assert len(result["files"]) == 1
+
+
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures")
+def test_run_scan_flow_reruns_when_stored_manifest_smaller_than_full_scan(
+    mock_stored,
+    mock_exists,
+    tmp_path,
+):
+    """No exclusions: if DB still reflects a narrower analyzed file set, do not skip."""
+    (tmp_path / "a.py").write_text("print(1)")
+    (tmp_path / "notes.md").write_text("# hi")
+    raw = scan_project_files(str(tmp_path), EXCLUDE_PATTERNS.copy())
+    all_sigs = [extract_file_signature(f, str(tmp_path)) for f in raw]
+    mock_stored.return_value = all_sigs[:1]
+    result = run_scan_flow(str(tmp_path))
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "file_manifest_mismatch_after_exclusions"
+    assert len(result["files"]) == len(raw)
+
+
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=None)
+def test_run_scan_flow_reruns_when_stored_manifest_missing(mock_stored, mock_exists, tmp_path):
+    """No exclusions: NULL stored file_signatures must not yield already_analyzed skip."""
+    (tmp_path / "a.py").write_text("print(1)")
+    result = run_scan_flow(str(tmp_path))
+    assert result["skip_analysis"] is False
+    assert result["reason"] == "file_manifest_mismatch_after_exclusions"
 
 
 # ============================================================================

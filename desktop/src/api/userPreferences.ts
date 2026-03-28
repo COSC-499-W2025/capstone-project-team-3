@@ -186,3 +186,12 @@ export async function deleteProfilePicture(): Promise<{ status: string; message:
 
   return res.json();
 }
+
+/** Dispatched on `window` after profile/preferences are saved so shell UI (e.g. NavBar) can refresh. */
+export const USER_PREFERENCES_UPDATED_EVENT = "user-preferences-updated";
+
+export function notifyUserPreferencesUpdated(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(USER_PREFERENCES_UPDATED_EVENT));
+  }
+}

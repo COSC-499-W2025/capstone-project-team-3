@@ -733,7 +733,6 @@ a:hover {{ text-decoration: underline; }}
     </div>
   </div>
 
-  <!-- Collaboration Network -->
   {collab_section_html}
 
   <!-- Projects -->

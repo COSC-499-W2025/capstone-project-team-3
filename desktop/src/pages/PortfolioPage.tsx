@@ -2984,7 +2984,11 @@ ${mainClone.outerHTML}
       }
 
       console.log("[Publish] ← HTTP", res.status, res.statusText);
-      console.log("[Publish] response headers:", Object.fromEntries(res.headers.entries()));
+      try {
+        console.log("[Publish] response headers:", Object.fromEntries(res.headers.entries()));
+      } catch {
+        // headers.entries() not available in test mocks — safe to skip
+      }
 
       let data: { status?: string; url?: string; repo?: string; detail?: string };
       try {

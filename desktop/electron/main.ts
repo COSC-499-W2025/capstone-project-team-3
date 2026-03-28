@@ -4,6 +4,13 @@ import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Override the app name for dock windows
+app.setName('Big Picture')
+
+// Windows taskbar app name
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.bigpicture.app')
+}
 // The built directory structure
 //
 // ├─┬─┬ dist
@@ -15,6 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
+
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
@@ -22,11 +30,15 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
+// Always use PNG for the BrowserWindow icon (works on all platforms)
+// .icns is only used by electron-builder when packaging
+const iconPath = path.join(process.env.VITE_PUBLIC, 'app-icon.png')
+
 let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
@@ -63,4 +75,10 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  // Set dock icon after app is ready - macOS only
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(iconPath)
+  }
+  createWindow()
+})

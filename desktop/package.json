@@ -1,7 +1,9 @@
 {
-  "name": "desktop",
+  "name": "big-picture",
   "private": true,
   "version": "0.0.0",
+  "description": "Big Picture – a portfolio and resume builder",
+  "author": "Team 3",
   "type": "module",
   "scripts": {
     "dev": "vite",

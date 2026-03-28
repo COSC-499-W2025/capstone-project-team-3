@@ -1,23 +1,29 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
+  "appId": "com.bigpicture.app",
   "asar": true,
-  "productName": "YourAppName",
+  "productName": "Big Picture",
+  "icon": "public/app-icon.icns",
   "directories": {
     "output": "release/${version}"
   },
   "files": [
     "dist",
-    "dist-electron"
+    "dist-electron",
+    "public/app-icon.icns",
+    "public/app-icon.png"
   ],
   "mac": {
+    "icon": "public/app-icon.icns",
+    "category": "public.app-category.productivity",
     "target": [
       "dmg"
     ],
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
+    "icon": "public/app-icon.png",
     "target": [
       {
         "target": "nsis",
@@ -35,6 +41,7 @@
     "deleteAppDataOnUninstall": false
   },
   "linux": {
+    "icon": "public/app-icon.png",
     "target": [
       "AppImage"
     ],

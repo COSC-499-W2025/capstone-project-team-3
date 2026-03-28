@@ -61,3 +61,12 @@ npm-debug.log
 docker-compose.override.yml
 *.tar
 docker-entrypoint-*.sh
+
+# Project thumbnails and profile pictures
+app/data/thumbnails/*.png
+app/data/thumbnails/*.jpg
+app/data/thumbnails/*.gif
+
+# cached zip file uploads
+app/uploads/*.zip
+app/data/uploads/*.zip

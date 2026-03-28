@@ -2348,6 +2348,18 @@ const PortfolioPage: React.FC = () => {
   >(new Set());
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
 
+  // GitHub Pages publish state
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [githubToken, setGithubToken] = useState("");
+  const [publishStatus, setPublishStatus] = useState<
+    "idle" | "publishing" | "success" | "error"
+  >("idle");
+  const [publishResult, setPublishResult] = useState<{
+    url: string;
+    repo: string;
+  } | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
   const loadPortfolio = async (selectedIds?: Array<string | number>) => {
     if (!selectedIds || selectedIds.length === 0) {
       setPortfolio(null);
@@ -2937,6 +2949,64 @@ ${mainClone.outerHTML}
     }
   };
 
+  const publishToGitHubPages = async () => {
+    const token = githubToken.trim();
+    if (!token) return;
+    setPublishStatus("publishing");
+    setPublishError(null);
+    setPublishResult(null);
+    try {
+      // Send only the token + selected project IDs — HTML is generated server-side
+      const projectIds = Array.from(selectedProjects).map(String);
+      const endpoint = `${API_BASE_URL}/api/portfolio/publish-github-pages`;
+      const requestBody = {
+        github_token: token,
+        project_ids: projectIds.length > 0 ? projectIds : null,
+      };
+
+      console.log("[Publish] → POST", endpoint);
+      console.log("[Publish] project_ids:", requestBody.project_ids);
+      console.log("[Publish] token length:", token.length, "| first 4 chars:", token.slice(0, 4));
+
+      let res: Response;
+      try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+      } catch (networkErr) {
+        console.error("[Publish] Network error (fetch threw):", networkErr);
+        throw new Error(
+          `Network error — could not reach backend at ${endpoint}. ` +
+          `Is the server running? (${networkErr instanceof Error ? networkErr.message : String(networkErr)})`
+        );
+      }
+
+      console.log("[Publish] ← HTTP", res.status, res.statusText);
+      console.log("[Publish] response headers:", Object.fromEntries(res.headers.entries()));
+
+      let data: { status?: string; url?: string; repo?: string; detail?: string };
+      try {
+        data = (await res.json()) as typeof data;
+        console.log("[Publish] response body:", data);
+      } catch (parseErr) {
+        console.error("[Publish] Failed to parse response JSON:", parseErr);
+        throw new Error(`Server returned non-JSON response (HTTP ${res.status})`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data.detail ?? `HTTP ${res.status}`);
+      }
+      setPublishResult({ url: data.url ?? "", repo: data.repo ?? "" });
+      setPublishStatus("success");
+    } catch (err) {
+      console.error("[Publish] caught error:", err);
+      setPublishError(err instanceof Error ? err.message : "Publishing failed");
+      setPublishStatus("error");
+    }
+  };
+
   const toggleProject = async (id: string | number) => {
     const next = new Set(selectedProjects);
     if (next.has(id)) next.delete(id);
@@ -3147,8 +3217,161 @@ ${mainClone.outerHTML}
             >
               ⚡ Download Interactive HTML
             </button>
+            {portfolio?.user?.github_user && (
+              <button
+                className="publish-github-pages-btn"
+                onClick={() => {
+                  setShowPublishModal(true);
+                  setPublishStatus("idle");
+                  setPublishResult(null);
+                  setPublishError(null);
+                }}
+                disabled={selectedProjects.size === 0}
+                title="Publish your portfolio to GitHub Pages"
+              >
+                🚀 Publish to GitHub Pages
+              </button>
+            )}
           </div>
         </div>
+
+        {/* GitHub Pages Publish Modal */}
+        {showPublishModal && (
+          <div
+            className="github-pages-modal-overlay"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowPublishModal(false);
+            }}
+          >
+            <div className="github-pages-modal">
+              <button
+                className="github-pages-modal__close"
+                onClick={() => setShowPublishModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+              <h2 className="github-pages-modal__title">
+                🚀 Publish to GitHub Pages
+              </h2>
+              <p className="github-pages-modal__desc">
+                Your portfolio will be published to{" "}
+                <code>
+                  {portfolio?.user?.github_user
+                    ? `${portfolio.user.github_user}.github.io`
+                    : "{username}.github.io"}
+                </code>
+                . Provide a GitHub Personal Access Token with{" "}
+                <strong>repo</strong> and <strong>pages</strong> scopes.
+              </p>
+              <a
+                href="https://github.com/settings/tokens/new?scopes=repo,pages&description=Portfolio+Builder"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="github-pages-modal__token-link"
+              >
+                Generate a token on GitHub ↗
+              </a>
+
+              {publishStatus !== "success" && (
+                <>
+                  <label
+                    className="github-pages-modal__label"
+                    htmlFor="github-token-input"
+                  >
+                    Personal Access Token
+                  </label>
+                  <input
+                    id="github-token-input"
+                    type="password"
+                    className="github-pages-modal__input"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    disabled={publishStatus === "publishing"}
+                    autoComplete="off"
+                  />
+                </>
+              )}
+
+              {publishStatus === "error" && publishError && (
+                <div className="github-pages-modal__error">
+                  ❌ {publishError}
+                </div>
+              )}
+
+              {publishStatus === "success" && publishResult && (
+                <div className="github-pages-modal__success">
+                  <div className="github-pages-modal__success-icon">🎉</div>
+                  <p>
+                    Your portfolio is published! It may take a few minutes for
+                    GitHub Pages to go live.
+                  </p>
+                  <a
+                    href={publishResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="github-pages-modal__url-link"
+                  >
+                    {publishResult.url}
+                  </a>
+                  <div className="github-pages-modal__success-actions">
+                    <button
+                      className="github-pages-modal__copy-btn"
+                      onClick={() =>
+                        void navigator.clipboard.writeText(publishResult.url)
+                      }
+                    >
+                      📋 Copy URL
+                    </button>
+                    <a
+                      href={publishResult.repo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="github-pages-modal__repo-link"
+                    >
+                      View Repository ↗
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <div className="github-pages-modal__actions">
+                {publishStatus !== "success" ? (
+                  <button
+                    className="github-pages-modal__publish-btn"
+                    onClick={() => void publishToGitHubPages()}
+                    disabled={
+                      publishStatus === "publishing" ||
+                      githubToken.trim().length === 0
+                    }
+                  >
+                    {publishStatus === "publishing"
+                      ? "Publishing…"
+                      : "Publish Now"}
+                  </button>
+                ) : (
+                  <button
+                    className="github-pages-modal__publish-btn"
+                    onClick={() => {
+                      setPublishStatus("idle");
+                      setGithubToken("");
+                      setPublishResult(null);
+                    }}
+                  >
+                    Publish Again
+                  </button>
+                )}
+                <button
+                  className="github-pages-modal__cancel-btn"
+                  onClick={() => setShowPublishModal(false)}
+                >
+                  {publishStatus === "success" ? "Done" : "Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {portfolio?.user && <UserProfileCard user={portfolio.user} />}
 

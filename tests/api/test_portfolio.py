@@ -1166,3 +1166,166 @@ class TestPortfolioInteractiveExport:
         assert "window.toggleSummary = function(button)" in content
         assert "button.textContent = 'Show More';" in content
         assert "button.textContent = 'Show Less';" in content
+
+
+class TestPublishToGitHubPages:
+    """Tests for POST /portfolio/publish-github-pages endpoint."""
+
+    def _mock_github(self, responses: list):
+        """Return a side_effect list for _github_request calls."""
+        return responses
+
+    def test_missing_token_returns_400(self):
+        response = client.post(
+            "/api/portfolio/publish-github-pages",
+            json={"github_token": ""},
+        )
+        assert response.status_code == 400
+        assert "github_token" in response.json()["detail"].lower()
+
+    def test_invalid_token_returns_401(self):
+        with patch("app.api.routes.portfolio._github_request") as mock_req:
+            mock_req.return_value = (401, {"message": "Bad credentials"})
+            response = client.post(
+                "/api/portfolio/publish-github-pages",
+                json={"github_token": "bad_token"},
+            )
+        assert response.status_code == 401
+
+    def test_successful_publish_returns_url_and_repo(self, mock_portfolio_data):
+        with patch("app.api.routes.portfolio._github_request") as mock_req, \
+             patch("app.api.routes.portfolio._build_portfolio_html", return_value="<html></html>"), \
+             patch("app.api.routes.portfolio.time") as mock_time:
+            mock_time.sleep = lambda _: None
+            mock_req.side_effect = [
+                (200, {"login": "testuser"}),           # GET /user
+                (404, {"message": "Not Found"}),        # GET /repos check
+                (201, {"html_url": "https://github.com/testuser/testuser.github.io"}),  # POST create repo
+                (404, {"message": "Not Found"}),        # GET existing index.html
+                (200, {"commit": {}}),                  # PUT index.html
+                (404, {"message": "Not Found"}),        # GET pages (not yet enabled)
+                (201, {"html_url": "https://testuser.github.io"}),  # POST enable pages
+            ]
+            response = client.post(
+                "/api/portfolio/publish-github-pages",
+                json={"github_token": "ghp_valid"},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "testuser.github.io" in data["url"]
+        assert "testuser.github.io" in data["repo"]
+        assert data["username"] == "testuser"
+
+    def test_existing_repo_skips_creation(self):
+        """If the repo already exists (200), no creation request is made."""
+        with patch("app.api.routes.portfolio._github_request") as mock_req, \
+             patch("app.api.routes.portfolio._build_portfolio_html", return_value="<html></html>"), \
+             patch("app.api.routes.portfolio.time") as mock_time:
+            mock_time.sleep = lambda _: None
+            mock_req.side_effect = [
+                (200, {"login": "testuser"}),
+                (200, {"html_url": "https://github.com/testuser/testuser.github.io"}),  # repo exists
+                (404, {}),          # GET existing file → none yet
+                (200, {"commit": {}}),
+                (200, {"html_url": "https://testuser.github.io"}),  # pages already enabled
+            ]
+            response = client.post(
+                "/api/portfolio/publish-github-pages",
+                json={"github_token": "ghp_valid"},
+            )
+        assert response.status_code == 200
+        # Verify no POST /user/repos call was made (only 5 total calls, not 7)
+        assert mock_req.call_count == 5
+
+    def test_existing_index_html_sends_sha(self):
+        """When index.html already exists, PUT request must include its SHA."""
+        with patch("app.api.routes.portfolio._github_request") as mock_req, \
+             patch("app.api.routes.portfolio._build_portfolio_html", return_value="<html></html>"), \
+             patch("app.api.routes.portfolio.time") as mock_time:
+            mock_time.sleep = lambda _: None
+            existing_sha = "abc123def456"
+            mock_req.side_effect = [
+                (200, {"login": "testuser"}),
+                (200, {"html_url": "..."}),             # repo exists
+                (200, {"sha": existing_sha}),           # GET file → has SHA
+                (200, {"commit": {}}),                  # PUT update
+                (200, {"html_url": "https://testuser.github.io"}),
+            ]
+            response = client.post(
+                "/api/portfolio/publish-github-pages",
+                json={"github_token": "ghp_valid"},
+            )
+        assert response.status_code == 200
+        # The PUT call body must include the sha
+        put_call = mock_req.call_args_list[3]
+        put_body = put_call[0][3] if len(put_call[0]) > 3 else put_call[1].get("body", {})
+        assert put_body.get("sha") == existing_sha
+
+
+class TestBuildPortfolioHTML:
+    """Unit tests for the _build_portfolio_html helper."""
+
+    def _minimal_model(self, **overrides):
+        base = {
+            "user": {"name": "Dev", "github_user": "devuser", "email": "", "job_title": "", "personal_summary": ""},
+            "projects": [],
+            "overview": {"total_projects": 0, "total_skills": 0, "total_languages": 0, "total_lines": 0},
+            "graphs": {"language_distribution": {}, "top_skills": {}},
+            "collaboration_network": {"nodes": [], "edges": []},
+        }
+        base.update(overrides)
+        return base
+
+    def test_html_contains_developer_name(self):
+        from app.api.routes.portfolio import _build_portfolio_html
+        with patch("app.api.routes.portfolio.build_portfolio_model", return_value=self._minimal_model(
+            user={"name": "Alice", "github_user": "alice", "email": "", "job_title": "", "personal_summary": ""}
+        )):
+            html = _build_portfolio_html()
+        assert "Alice" in html
+
+    def test_html_has_no_score_or_percentage(self):
+        from app.api.routes.portfolio import _build_portfolio_html
+        model = self._minimal_model(projects=[{
+            "title": "Scored Project", "summary": "", "score": 0.95,
+            "score_overridden": False, "score_overridden_value": None,
+            "type": "GitHub", "created_at": "2024-01-01",
+            "dates": {}, "skills": [], "metrics": {"technical_keywords": []},
+        }])
+        with patch("app.api.routes.portfolio.build_portfolio_model", return_value=model):
+            html = _build_portfolio_html()
+        assert "95%" not in html
+        assert "project-score" not in html
+        assert "avg_score" not in html
+        assert "Avg Score" not in html
+
+    def test_html_includes_collaboration_section(self):
+        from app.api.routes.portfolio import _build_portfolio_html
+        model = self._minimal_model(collaboration_network={
+            "nodes": [
+                {"id": "Dev", "name": "Dev", "commits": 10, "is_primary": True, "projects": ["P1"]},
+                {"id": "Alice", "name": "Alice", "commits": 7, "is_primary": False, "projects": ["P1"]},
+            ],
+            "edges": [{"source": "Dev", "target": "Alice", "projects": ["P1"], "weight": 1}],
+        })
+        with patch("app.api.routes.portfolio.build_portfolio_model", return_value=model):
+            html = _build_portfolio_html()
+        assert "Collaboration Network" in html
+        assert "Alice" in html
+        assert "networkGraphTarget" in html
+
+    def test_html_omits_collaboration_section_when_no_collaborators(self):
+        from app.api.routes.portfolio import _build_portfolio_html
+        with patch("app.api.routes.portfolio.build_portfolio_model", return_value=self._minimal_model()):
+            html = _build_portfolio_html()
+        assert "Collaboration Network" not in html
+        # The section heading should be absent; the CSS class name in <style> is expected but the table body should not appear
+        assert "<tbody>" not in html
+
+    def test_html_is_valid_document(self):
+        from app.api.routes.portfolio import _build_portfolio_html
+        with patch("app.api.routes.portfolio.build_portfolio_model", return_value=self._minimal_model()):
+            html = _build_portfolio_html()
+        assert html.strip().startswith("<!DOCTYPE html>")
+        assert "</html>" in html

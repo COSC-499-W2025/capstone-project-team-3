@@ -475,3 +475,51 @@
 [data-theme="dark"] .ats-empty-resume-warning   { background: #451a03; border-color: #78350f; }
 [data-theme="dark"] .ats-empty-resume-warning p { color: #fde68a; }
 [data-theme="dark"] .ats-placeholder-subtext    { color: var(--color-text-secondary); }
+
+/* ---- GitHub Pages Publish Modal (dark mode) ---- */
+[data-theme="dark"] .github-pages-modal {
+  background: var(--color-card-bg, #1e293b);
+}
+[data-theme="dark"] .github-pages-modal__title {
+  color: var(--color-text-heading, #e2e8f0);
+}
+[data-theme="dark"] .github-pages-modal__desc {
+  color: var(--color-text-secondary, #94a3b8);
+}
+[data-theme="dark"] .github-pages-modal__close {
+  color: var(--color-text-secondary, #94a3b8);
+}
+[data-theme="dark"] .github-pages-modal__close:hover {
+  background: var(--color-bg-lighter, #334155);
+}
+[data-theme="dark"] .github-pages-modal__label {
+  color: var(--color-text-secondary, #94a3b8);
+}
+[data-theme="dark"] .github-pages-modal__input {
+  background: var(--color-bg-light, #0f172a);
+  border-color: var(--color-border, #334155);
+  color: var(--color-text-body, #e2e8f0);
+}
+[data-theme="dark"] .github-pages-modal__input:focus {
+  border-color: #2ea043;
+}
+[data-theme="dark"] .github-pages-modal__error {
+  background: #450a0a;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+[data-theme="dark"] .github-pages-modal__success {
+  background: #052e16;
+  border-color: #14532d;
+}
+[data-theme="dark"] .github-pages-modal__success p {
+  color: #86efac;
+}
+[data-theme="dark"] .github-pages-modal__cancel-btn {
+  background: var(--color-bg-lighter, #334155);
+  color: var(--color-text-secondary, #94a3b8);
+  border-color: var(--color-border, #475569);
+}
+[data-theme="dark"] .github-pages-modal__cancel-btn:hover {
+  background: var(--color-border, #475569);
+}

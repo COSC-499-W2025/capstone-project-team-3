@@ -35,7 +35,7 @@ from app.utils.scan_utils import (
     get_project_signature,
     find_similar_project,
 )
-from app.utils.git_utils import detect_git
+from app.utils.git_utils import detect_git, extract_all_contributors
 from app.utils.clean_up import cleanup_upload
 from app.data.db import get_connection
 

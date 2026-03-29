@@ -41,9 +41,9 @@ jobs:
           python -m pip install --no-cache-dir -r requirements.txt
           python -m pip install --no-cache-dir pyinstaller
 
-      - name: Verify NumPy 1.x (required for PyTorch in sidecar)
+      - name: Verify NumPy 2.x (required by thinc 8.3 / spaCy 3.8)
         run: |
-          python -c "import numpy as np; v=np.__version__; assert v.startswith('1.'), f'expected NumPy 1.x, got {v}'"
+          python -c "import numpy as np; v=tuple(map(int, np.__version__.split('.')[:2])); assert v>=(2,0), f'expected NumPy >= 2.0, got {np.__version__}'"
 
       - name: Build standalone backend
         run: |

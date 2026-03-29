@@ -5,7 +5,7 @@
 
 # Project details
 
- - [Data Flow Diagram and Explanation](docs/plan/DFD.md)
+ - [Data Flow Diagram and Explanation](docs/plan/DFD.md) — includes [interactive diagrams (draw.io)](https://app.diagrams.net/#G10cYCpvFpWB_LUyqjNVTxVPAnlgEQ53dM#%7B%22pageId%22%3A%22CjHqhK4MZXdRkchG9Wa0%22%7D) and embedded Level 0 / Level 1 images
  - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
  - [System Architecture](docs/plan/System_Architecture_Diagram.md)
  - [API Documentation](docs/API_DOCUMENTATION.md)

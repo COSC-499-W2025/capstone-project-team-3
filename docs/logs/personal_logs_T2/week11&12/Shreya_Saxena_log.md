@@ -119,6 +119,10 @@
 
 - **PR #914:** Course catalog + recommendation API; User Preferences Learning tab; hub card; sidebar profile block and username; profile defaults; no-insights messaging.
 
+### Milestone 3 demo video
+
+- Recorded and edited the **final Milestone 3 team demo video**, covering walkthroughs of the **learning recommendations** page (User Preferences → Learning), the **Data Management** page, and the **Job Match score** page.
+
 ---
 
 ### Testing & Quality
@@ -127,15 +131,16 @@
 
 ### Collaboration
 
-- PR descriptions, reviews, and alignment with Milestone 3 wrap-up.
+- PR descriptions, reviews, and alignment with Milestone 3 wrap-up.  
+- Produced the Milestone 3 demo video segments for learning, Data Management, and Job Match.
 
 ---
 
 ### Reflection
 
-**What went well:** Large documentation pass (DFD + API) alongside feature delivery; ATS/Job Match evolved from first slice to score-all and history polish; learning recommendations tied profile data to a clear UI path.
+**What went well:** Large documentation pass (DFD + API) alongside feature delivery; ATS/Job Match evolved from first slice to score-all and history polish; learning recommendations tied profile data to a clear UI path; final Milestone 3 demo video highlighted learning, Data Management, and Job Match flows.
 
-**What could be improved:** Continue monitoring edge cases for empty resumes and API base URL configuration in desktop builds.
+**What could be improved:** Fater reviews but understandable due to course load on everyone. 
 
 ---
 

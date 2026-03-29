@@ -39,7 +39,9 @@ def render_summary(summary: str) -> str:
     return (
         r"\header{Professional Summary}" + "\n"
         r"\vspace{2mm}" + "\n"
-        f"{escape_latex(summary.strip())}\n"
+        r"{\small "
+        + escape_latex(summary.strip())
+        + "}\n"
         r"\vspace{2mm}" + "\n"
     )
 
@@ -114,10 +116,10 @@ def render_projects(projects: List[Dict]) -> str:
 
         block = rf""" \vspace*{{3mm}}
 	\textbf{{{escape_latex(title_cap)}}} \hfill {escape_latex(project['dates'])}\\
-    {{\textbf{{Skills: }}\sl {escape_latex(skills_str)}}}\\[1mm]
-    \begin{{itemize}}[leftmargin=2em]
+    \textit{{\textbf{{Skills: }} {escape_latex(skills_str)}}}\\[1mm]
+    \begin{{resumeitemizewide}}
 {bullets_tex}
-\end{{itemize}}
+\end{{resumeitemizewide}}
 """
         blocks.append(block)
 
@@ -133,7 +135,8 @@ def render_links(links):
             rf"\textbf{{\href{{{escape_latex(link['url'])}}}{{{escape_latex(link['label'])}}}}}"
         )
 
-    return " \\quad ".join(rendered)
+    # Match in-app preview (ResumePreview.css: links get " | " between items).
+    return " | ".join(rendered)
 
 def render_education(education_list: List[Dict[str, Any]]) -> str:
     """Return LaTeX blocks for education entries."""
@@ -212,9 +215,9 @@ def render_awards(awards: Any) -> str:
             )
             details_block = (
                 "\n" +
-                rf"\begin{{itemize}}[leftmargin=1.8em]" + "\n" +
+                r"\begin{resumeitemize}" + "\n" +
                 details_items + "\n" +
-                r"\end{itemize}"
+                r"\end{resumeitemize}"
             )
 
         header_line = rf"\textbf{{{title}}}"
@@ -279,9 +282,9 @@ def render_work_experience(work_experience: Any) -> str:
         if details_list:
             details_items = "\n".join(rf"\item {escape_latex(d)}" for d in details_list)
             details_block = (
-                "\n" + rf"\begin{{itemize}}[leftmargin=1.8em]" + "\n" +
+                "\n" + r"\begin{resumeitemize}" + "\n" +
                 details_items + "\n" +
-                r"\end{itemize}"
+                r"\end{resumeitemize}"
             )
 
         if company:

@@ -21,6 +21,32 @@ os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 
 LATEX_BUILD_DIR = os.getenv("LATEX_BUILD_DIR", "app/data/latex_build")
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
+
+
+def clear_resume_pdf_cache() -> int:
+    """
+    Remove cached compiled resume PDFs under PDF_CACHE_DIR.
+    Used when the desktop sidecar exits so exports are not left on disk between sessions.
+    Returns the number of files removed.
+    """
+    removed = 0
+    if not os.path.isdir(PDF_CACHE_DIR):
+        return removed
+    base = os.path.abspath(PDF_CACHE_DIR)
+    for name in os.listdir(PDF_CACHE_DIR):
+        path = os.path.join(PDF_CACHE_DIR, name)
+        if os.path.isfile(path) and not os.path.islink(path):
+            ap = os.path.abspath(path)
+            if os.path.commonpath([base, ap]) != base:
+                continue
+            try:
+                os.unlink(path)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
     project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")

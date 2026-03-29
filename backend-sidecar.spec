@@ -4,37 +4,85 @@ import os
 
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
-_SPEC_DIR = os.path.dirname(os.path.abspath(SPECPATH))
+
+def _repo_root_containing_app_shared(spec_path: str) -> str:
+    """
+    Directory that contains app/shared (and app/sidecar_main.py).
+
+    SPECPATH is often relative to the shell cwd; dirname(abspath(SPECPATH)) can then
+    point at a parent folder (e.g. Desktop/COSC 499) instead of capstone-project-team-3.
+    """
+    start = os.path.dirname(os.path.abspath(spec_path))
+    d = start
+    for _ in range(12):
+        if os.path.isdir(os.path.join(d, "app", "shared")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    try:
+        for name in sorted(os.listdir(start)):
+            sub = os.path.join(start, name)
+            if os.path.isdir(sub) and os.path.isdir(os.path.join(sub, "app", "shared")):
+                return sub
+    except OSError:
+        pass
+    raise FileNotFoundError(
+        "backend-sidecar.spec: cannot find app/shared (searched from %r). "
+        "cd into the repository root (folder containing app/shared) and run: "
+        "pyinstaller backend-sidecar.spec" % start
+    )
+
+
+_SPEC_DIR = _repo_root_containing_app_shared(SPECPATH)
 _NLTK_DATA = os.path.join(
     _SPEC_DIR, "app", "utils", "non_code_analysis", "nltk_data"
 )
 
-datas = [('app/static', 'app/static')]
-# Tree-sitter / parse_code_utils JSON (namespace package breaks importlib.resources.open in frozen app)
-for _json in (
+_STATIC_DIR = os.path.join(_SPEC_DIR, "app", "static")
+if not os.path.isdir(_STATIC_DIR):
+    raise FileNotFoundError(
+        "backend-sidecar.spec: app/static not found at %s" % _STATIC_DIR
+    )
+datas = [(_STATIC_DIR, "app/static")]
+# Learning recommendations (learning_recommendations.CATALOG_PATH → _MEIPASS/app/data/...)
+_CATALOG_JSON = os.path.join(_SPEC_DIR, 'app', 'data', 'course_catalog.json')
+if os.path.isfile(_CATALOG_JSON):
+    datas.append((_CATALOG_JSON, 'app/data'))
+# Tree-sitter JSON + grammar .js: must land under _MEIPASS/app/shared/ (parse_code_utils._shared_package_dir).
+# Dest must be "app/shared/..." — not "shared/..." (older grammar loop used relpath to app/ and broke frozen paths).
+_SHARED_ROOT = os.path.join(_SPEC_DIR, 'app', 'shared')
+_TS_REQUIRED_JSON = (
     'treesitter_import_keywords.json',
     'import_patterns_regex.json',
     'library.json',
     'language_mapping.json',
-):
-    _jp = os.path.join(_SPEC_DIR, 'app', 'shared', _json)
-    if os.path.isfile(_jp):
-        datas.append((_jp, 'app/shared'))
-# Grammar .js files for extract_rule_names (same cwd issue as JSON; not auto-collected)
-_GRAMMARS = os.path.join(_SPEC_DIR, "app", "shared", "grammars")
-_APP_ROOT = os.path.join(_SPEC_DIR, "app")
-if os.path.isdir(_GRAMMARS):
-    for _root, _, _files in os.walk(_GRAMMARS):
-        for _f in _files:
-            if not _f.endswith(".js"):
-                continue
-            _abs = os.path.join(_root, _f)
-            _dest = os.path.relpath(_root, _APP_ROOT).replace(os.sep, "/")
-            datas.append((_abs, _dest))
+)
+_SKIP_SHARED_DIRS = frozenset({'test_data', 'text'})
+for _name in _TS_REQUIRED_JSON:
+    _jp = os.path.join(_SHARED_ROOT, _name)
+    if not os.path.isfile(_jp):
+        raise FileNotFoundError(
+            'backend-sidecar.spec: missing %s (required for tree-sitter / import analysis)' % _jp
+        )
+for _root, _dirnames, _filenames in os.walk(_SHARED_ROOT):
+    _dirnames[:] = [d for d in _dirnames if d not in _SKIP_SHARED_DIRS]
+    _rel = os.path.relpath(_root, _SHARED_ROOT)
+    _dest = 'app/shared' if _rel in ('.', '') else os.path.join('app/shared', _rel).replace('\\', '/')
+    for _f in _filenames:
+        if _f.endswith('.pyc'):
+            continue
+        # Runtime needs JSON config + tree-sitter grammars (.js). Skip bundled Python samples.
+        if _f.endswith('.py'):
+            continue
+        _abs = os.path.join(_root, _f)
+        datas.append((_abs, _dest))
 if os.path.isdir(_NLTK_DATA):
     datas.append((_NLTK_DATA, "nltk_data"))
 binaries = []
-hiddenimports = ['unicodedata']
+# app.api_app / app.data.db imported inside `if __name__ == "__main__"` after SIDECAR_LISTENING.
+hiddenimports = ['unicodedata', 'app.api_app', 'app.data.db']
 
 # Distribution metadata (importlib.metadata) — required by transformers / tqdm at runtime
 for _pkg in (
@@ -72,8 +120,8 @@ tmp_ret = collect_all('numpy')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
-    ['app/sidecar_main.py'],
-    pathex=[],
+    [os.path.join(_SPEC_DIR, 'app', 'sidecar_main.py')],
+    pathex=[_SPEC_DIR],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

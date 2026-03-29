@@ -5,7 +5,7 @@ class ResumeTemplate:
     # skills_table, work_experience_section, projects, awards_section
     
     LATEX_TEMPLATE = r"""
-    \documentclass[a4paper]{article}
+    \documentclass[a4paper,11pt]{article}
     % fullpage.sty is not in BasicTeX; geometry (below) provides margins.
     \usepackage{amsmath}
     \usepackage{amssymb}
@@ -15,9 +15,37 @@ class ResumeTemplate:
     \usepackage[hidelinks]{hyperref}
     \usepackage[left=2cm, right=2cm, top=2cm, bottom=2cm]{geometry}
     \usepackage{longtable}
-    \usepackage{enumitem}
-    % Align itemize bullets with left margin and tighten spacing
-    \setlist[itemize]{leftmargin=0pt, itemsep= -3pt, topsep=0pt, label=\textbullet, labelsep=0.5em}
+    % enumitem is not in BasicTeX; approximate former:
+    %   \setlist[itemize]{leftmargin=0pt, itemsep=-3pt, topsep=0pt, label=\textbullet, labelsep=0.5em}
+    %   \begin{itemize}[leftmargin=1.8em] (work / awards) and [leftmargin=2em] (projects).
+    \newenvironment{resumeitemize}{%
+        \begin{list}{\textbullet}{%
+            \setlength{\leftmargin}{1.8em}%
+            \setlength{\rightmargin}{0pt}%
+            \setlength{\labelwidth}{1.15em}%
+            \setlength{\labelsep}{0.5em}%
+            \setlength{\itemindent}{0pt}%
+            \setlength{\listparindent}{0pt}%
+            \setlength{\itemsep}{-3pt}%
+            \setlength{\topsep}{0pt}%
+            \setlength{\parsep}{0pt}%
+            \setlength{\partopsep}{0pt}%
+        }%
+    }{\end{list}}
+    \newenvironment{resumeitemizewide}{%
+        \begin{list}{\textbullet}{%
+            \setlength{\leftmargin}{2em}%
+            \setlength{\rightmargin}{0pt}%
+            \setlength{\labelwidth}{1.25em}%
+            \setlength{\labelsep}{0.5em}%
+            \setlength{\itemindent}{0pt}%
+            \setlength{\listparindent}{0pt}%
+            \setlength{\itemsep}{-3pt}%
+            \setlength{\topsep}{0pt}%
+            \setlength{\parsep}{0pt}%
+            \setlength{\partopsep}{0pt}%
+        }%
+    }{\end{list}}
     \textheight=10in
     \pagestyle{empty}
     \raggedright
@@ -33,11 +61,12 @@ class ResumeTemplate:
 
     \newcommand{\lineunder} {
         \vspace*{-8pt} \\
-        \hspace*{-18pt} \hrulefill \\
+        \noindent\hrulefill \\
     }
 
+    % Align with body text (preview uses full-width rules under headings; no negative indent).
     \newcommand{\header} [1] {
-        {\hspace*{-18pt}\vspace*{6pt} \textsc{#1}}
+        {\noindent\vspace*{6pt} \textsc{#1}}
         \vspace*{-6pt} \lineunder
     }
     \newcommand{\employer} [3] {
@@ -82,13 +111,13 @@ class ResumeTemplate:
     \href{mailto:{email}}{{{email}}}\\ % adding email of user
     {links_block} % links block (will be updated based on user info - LinkedIn, Github,...)
     \end{center}
+    \vspace{1.5mm}
+    {summary_section}
 
     \header{Education}
     \vspace{2mm}
     {education_section}
     \vspace{2mm}
-
-    {summary_section}
 
     \header{Skills}
     \vspace{2mm}

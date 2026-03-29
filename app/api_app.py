@@ -29,6 +29,7 @@ from app.api.routes.chronological import router as chronological_router
 from app.api.routes.ats import router as ats_router
 from app.api.routes.cover_letter import router as cover_letter_router
 from app.api.routes.gemini_settings import router as gemini_settings_router
+from app.api.routes.learning import router as learning_router
 
 
 def _resolve_static_dir() -> Path:
@@ -39,7 +40,7 @@ def _resolve_static_dir() -> Path:
     return Path(__file__).resolve().parent / "static"
 
 
-app = FastAPI(title="Project Insights")
+app = FastAPI(title="Big Picture API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,6 +68,7 @@ app.include_router(chronological_router, prefix="/api")
 app.include_router(ats_router, prefix="/api")
 app.include_router(cover_letter_router, prefix="/api")
 app.include_router(gemini_settings_router, prefix="/api")
+app.include_router(learning_router, prefix="/api")
 
 
 @app.get("/")

@@ -1,7 +1,8 @@
 {
-  "name": "desktop",
+  "name": "big-picture-desktop",
   "private": true,
   "version": "0.0.0",
+  "description": "Big Picture — portfolio and résumé insights",
   "type": "module",
   "scripts": {
     "dev": "vite",

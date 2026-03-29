@@ -1,8 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
+import readline from 'node:readline'
 import { spawn, type ChildProcess } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -27,6 +28,20 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 let win: BrowserWindow | null
 let backendChild: ChildProcess | null = null
+/** Set when this process spawned the sidecar and parsed `SIDECAR_LISTENING` from its stdout. */
+let backendApiOrigin: string | null = null
+
+const SIDECAR_LISTEN_PREFIX = 'SIDECAR_LISTENING '
+
+/** Must stay in sync with sidecar defaults for `SIDECAR_PORT_SCAN_LO` / `SIDECAR_PORT_SCAN_HI`. */
+const SIDECAR_PORT_SCAN_LO = 8000
+const SIDECAR_PORT_SCAN_HI = 8099
+
+/** PyInstaller can delay stdout; cold imports happen after the port line is printed. */
+const SIDECAR_STDOUT_LINE_MS = 120_000
+const SIDECAR_HEALTH_WAIT_MS = 600_000
+
+ipcMain.handle('api:getBackendOrigin', () => backendApiOrigin)
 
 function resolveBackendExecutable(): string | null {
   const fromEnv = process.env.DESKTOP_BACKEND_BINARY?.trim()
@@ -52,11 +67,20 @@ function resolveBackendExecutable(): string | null {
   return null
 }
 
-async function waitForHealth(timeoutMs: number, intervalMs: number): Promise<void> {
+function healthUrl(origin: string): string {
+  return `${origin.replace(/\/+$/, '')}/health`
+}
+
+async function waitForHealth(
+  origin: string,
+  timeoutMs: number,
+  intervalMs: number
+): Promise<void> {
+  const url = healthUrl(origin)
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const ok = await new Promise<boolean>((resolve) => {
-      const req = http.get('http://127.0.0.1:8000/health', (res) => {
+      const req = http.get(url, (res) => {
         res.resume()
         resolve(res.statusCode === 200)
       })
@@ -69,9 +93,80 @@ async function waitForHealth(timeoutMs: number, intervalMs: number): Promise<voi
     if (ok) return
     await new Promise((r) => setTimeout(r, intervalMs))
   }
-  throw new Error(
-    `Timed out waiting for http://127.0.0.1:8000/health (${timeoutMs}ms). Is the sidecar binary valid?`
-  )
+  throw new Error(`Timed out waiting for ${url} (${timeoutMs}ms). Is the sidecar binary valid?`)
+}
+
+function healthCheckOnce(origin: string, reqTimeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(healthUrl(origin), (res) => {
+      res.resume()
+      resolve(res.statusCode === 200)
+    })
+    req.on('error', () => resolve(false))
+    req.setTimeout(reqTimeoutMs, () => {
+      req.destroy()
+      resolve(false)
+    })
+  })
+}
+
+/**
+ * If `SIDECAR_LISTENING` is missed (buffering / old binary), find the sidecar by polling /health
+ * on the same port range the Python process scans.
+ */
+async function discoverSidecarOriginByPortScan(totalTimeoutMs: number): Promise<string | null> {
+  const deadline = Date.now() + totalTimeoutMs
+  while (Date.now() < deadline) {
+    for (let p = SIDECAR_PORT_SCAN_LO; p <= SIDECAR_PORT_SCAN_HI; p++) {
+      const origin = `http://127.0.0.1:${p}`
+      if (await healthCheckOnce(origin, 120)) {
+        return origin
+      }
+    }
+    await new Promise((r) => setTimeout(r, 350))
+  }
+  return null
+}
+
+function awaitSidecarListenLine(child: ChildProcess, timeoutMs: number): Promise<string> {
+  const stdout = child.stdout
+  if (!stdout) {
+    return Promise.reject(new Error('backend-sidecar has no stdout pipe (cannot read SIDECAR_LISTENING)'))
+  }
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({ input: stdout, crlfDelay: Infinity })
+
+    const cleanup = () => {
+      rl.close()
+    }
+
+    const onExit = (code: string | number | null) => {
+      clearTimeout(timer)
+      rl.off('line', onLine)
+      cleanup()
+      reject(new Error(`Sidecar exited before announcing port (code=${code ?? 'unknown'})`))
+    }
+
+    const onLine = (line: string) => {
+      if (line.startsWith(SIDECAR_LISTEN_PREFIX)) {
+        clearTimeout(timer)
+        child.removeListener('exit', onExit)
+        rl.off('line', onLine)
+        cleanup()
+        resolve(line.slice(SIDECAR_LISTEN_PREFIX.length).trim())
+      }
+    }
+
+    const timer = setTimeout(() => {
+      child.removeListener('exit', onExit)
+      rl.off('line', onLine)
+      cleanup()
+      reject(new Error(`Timed out after ${timeoutMs}ms waiting for ${SIDECAR_LISTEN_PREFIX.trim()} from sidecar`))
+    }, timeoutMs)
+
+    rl.on('line', onLine)
+    child.on('exit', onExit)
+  })
 }
 
 /**
@@ -92,33 +187,46 @@ function envWithTexPath(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return out
 }
 
-function startBackendSidecar(): boolean {
-  if (backendChild && !backendChild.killed) return true
+/**
+ * Spawns the PyInstaller sidecar when a bundled binary exists.
+ * Returns `{ ok, spawnedNew }`: `ok` is false if no bundled binary; `spawnedNew` is true when a new
+ * process was started (caller must read `SIDECAR_LISTENING` from stdout).
+ */
+function startBackendSidecar(): { ok: boolean; spawnedNew: boolean } {
+  if (backendChild && !backendChild.killed) {
+    return { ok: true, spawnedNew: false }
+  }
 
   const exe = resolveBackendExecutable()
   if (!exe) {
     console.log(
-      '[electron] No backend binary configured. Start Docker or run the sidecar manually on port 8000, or set DESKTOP_BACKEND_BINARY.'
+      '[electron] No backend binary configured. Start the API manually (e.g. uvicorn) or set DESKTOP_BACKEND_BINARY.'
     )
-    return false
+    backendApiOrigin = null
+    return { ok: false, spawnedNew: false }
   }
 
   const cwd = path.dirname(exe)
   const debug = process.env.DESKTOP_BACKEND_DEBUG === '1' || process.env.DESKTOP_BACKEND_DEBUG === 'true'
 
+  // Keep stdout piped so we can parse SIDECAR_LISTENING; in debug mode send sidecar stderr to terminal.
   backendChild = spawn(exe, [], {
     cwd,
     env: {
       ...envWithTexPath(process.env),
+      PYTHONUNBUFFERED: '1',
       PROMPT_ROOT: '0',
       AUTO_CONSENT: 'true',
+      // Sidecar clears resume PDF export cache on SIGTERM/exit (see sidecar_main.py)
+      CLEAR_RESUME_PDF_CACHE_ON_EXIT: '1',
     },
-    stdio: debug ? 'inherit' : 'pipe',
+    stdio: debug ? ['ignore', 'pipe', 'inherit'] : ['ignore', 'pipe', 'pipe'],
   })
 
   backendChild.on('exit', (code, signal) => {
     console.warn('[electron] backend-sidecar exited', { code, signal })
     backendChild = null
+    backendApiOrigin = null
   })
 
   if (!debug && backendChild.stderr) {
@@ -129,12 +237,75 @@ function startBackendSidecar(): boolean {
   }
 
   console.log('[electron] started backend-sidecar:', exe)
-  return true
+  return { ok: true, spawnedNew: true }
+}
+
+async function ensureManagedSidecarReady(): Promise<void> {
+  const { ok, spawnedNew } = startBackendSidecar()
+  if (!ok) {
+    return
+  }
+  if (spawnedNew && backendChild) {
+    try {
+      backendApiOrigin = await awaitSidecarListenLine(backendChild, SIDECAR_STDOUT_LINE_MS)
+      console.log('[electron] sidecar API origin:', backendApiOrigin)
+    } catch (err) {
+      console.warn(
+        '[electron] no SIDECAR_LISTENING line in time; scanning',
+        `${SIDECAR_PORT_SCAN_LO}-${SIDECAR_PORT_SCAN_HI}`,
+        err instanceof Error ? `(${err.message})` : ''
+      )
+      const discovered = await discoverSidecarOriginByPortScan(120_000)
+      if (discovered) {
+        backendApiOrigin = discovered
+        console.warn('[electron] sidecar OK via port scan (stdout handshake missed)')
+      } else {
+        console.error('[electron] sidecar not found on scanned ports')
+        backendChild.kill()
+        backendChild = null
+        backendApiOrigin = null
+        throw new Error(
+          `No SIDECAR_LISTENING line and no /health on 127.0.0.1:${SIDECAR_PORT_SCAN_LO}-${SIDECAR_PORT_SCAN_HI}. Rebuild the sidecar or set DESKTOP_BACKEND_DEBUG=1.`
+        )
+      }
+    }
+  } else if (!backendApiOrigin) {
+    throw new Error(
+      'Sidecar process is running but the listen URL is unknown. Quit the app completely and try again.'
+    )
+  }
+  if (!backendApiOrigin) {
+    return
+  }
+  await waitForHealth(backendApiOrigin, SIDECAR_HEALTH_WAIT_MS, 400)
+}
+
+/** Small window while waiting for FastAPI /health (sidecar can take tens of seconds on cold start). */
+function createSplashWindow(): BrowserWindow {
+  const splash = new BrowserWindow({
+    width: 420,
+    height: 140,
+    show: false,
+    frame: false,
+    center: true,
+    resizable: false,
+    alwaysOnTop: true,
+  })
+  void splash.loadURL(
+    `data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#1e1e1e;color:#e0e0e0;display:flex;align-items:center;justify-content:center;height:100vh;font-size:14px;">
+      <div style="text-align:center;padding:1.25rem;">
+        <div style="margin-bottom:0.5rem">Starting backend…</div>
+        <div style="opacity:0.75;font-size:12px">First launch may take a minute.</div>
+      </div></body></html>`)}`
+  )
+  splash.once('ready-to-show', () => splash.show())
+  return splash
 }
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    title: 'Big Picture',
+    icon: path.join(process.env.VITE_PUBLIC, 'big-picture-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
@@ -164,10 +335,25 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // On OS X it's common to re-create a window when the dock icon is clicked.
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
+    void (async () => {
+      if (resolveBackendExecutable()) {
+        try {
+          await ensureManagedSidecarReady()
+        } catch (err) {
+          console.error('[electron]', err)
+          void dialog.showMessageBox({
+            type: 'error',
+            title: 'Backend not ready',
+            message: 'The local API server did not become ready in time.',
+            detail: err instanceof Error ? err.message : String(err),
+          })
+          return
+        }
+      }
+      createWindow()
+    })()
   }
 })
 
@@ -179,12 +365,25 @@ app.on('before-quit', () => {
 })
 
 app.whenReady().then(async () => {
-  if (startBackendSidecar()) {
+  let splash: BrowserWindow | null = null
+  if (resolveBackendExecutable()) {
+    splash = createSplashWindow()
     try {
-      await waitForHealth(120_000, 400)
+      await ensureManagedSidecarReady()
     } catch (err) {
       console.error('[electron]', err)
+      splash?.destroy()
+      void dialog.showMessageBox({
+        type: 'error',
+        title: 'Backend not ready',
+        message: 'The local API server did not become ready in time.',
+        detail: err instanceof Error ? err.message : String(err),
+      })
+      app.quit()
+      return
     }
+    splash?.destroy()
   }
+
   createWindow()
 })

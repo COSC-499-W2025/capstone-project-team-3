@@ -1,5 +1,9 @@
 import { ipcRenderer, contextBridge } from 'electron'
 
+contextBridge.exposeInMainWorld('projectInsights', {
+  getBackendApiOrigin: (): Promise<string | null> => ipcRenderer.invoke('api:getBackendOrigin'),
+})
+
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
   on(...args: Parameters<typeof ipcRenderer.on>) {

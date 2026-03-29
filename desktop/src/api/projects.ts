@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 interface ErrorPayload {
   detail?: string;
@@ -83,14 +81,14 @@ export interface OverridePreview {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const res = await fetch(`${API_BASE}/api/projects`, { method: "GET" });
+  const res = await fetch(`${getApiBaseUrl()}/api/projects`, { method: "GET" });
   if (!res.ok) throw await buildRequestError(res);
   return res.json();
 }
 
 export async function getScoreBreakdown(projectId: string): Promise<ScoreBreakdown> {
   const encodedProjectId = encodeProjectId(projectId);
-  const res = await fetch(`${API_BASE}/api/projects/${encodedProjectId}/score-breakdown`);
+  const res = await fetch(`${getApiBaseUrl()}/api/projects/${encodedProjectId}/score-breakdown`);
   if (!res.ok) throw await buildRequestError(res);
   return res.json();
 }
@@ -100,7 +98,7 @@ export async function previewScoreOverride(
   excludeMetrics: string[]
 ): Promise<OverridePreview> {
   const encodedProjectId = encodeProjectId(projectId);
-  const res = await fetch(`${API_BASE}/api/projects/${encodedProjectId}/score-override/preview`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/projects/${encodedProjectId}/score-override/preview`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ exclude_metrics: excludeMetrics }),
@@ -114,7 +112,7 @@ export async function applyScoreOverride(
   excludeMetrics: string[]
 ): Promise<ScoreBreakdown> {
   const encodedProjectId = encodeProjectId(projectId);
-  const res = await fetch(`${API_BASE}/api/projects/${encodedProjectId}/score-override`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/projects/${encodedProjectId}/score-override`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ exclude_metrics: excludeMetrics }),
@@ -125,7 +123,7 @@ export async function applyScoreOverride(
 
 export async function clearScoreOverride(projectId: string): Promise<void> {
   const encodedProjectId = encodeProjectId(projectId);
-  const res = await fetch(`${API_BASE}/api/projects/${encodedProjectId}/score-override/clear`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/projects/${encodedProjectId}/score-override/clear`, {
     method: "POST",
   });
   if (!res.ok) throw await buildRequestError(res);
@@ -133,7 +131,7 @@ export async function clearScoreOverride(projectId: string): Promise<void> {
 
 export async function deleteProject(projectSignature: string): Promise<{ status: string; message: string; project_signature: string }> {
   const encodedSig = projectSignature.split("/").map(encodeURIComponent).join("/");
-  const res = await fetch(`${API_BASE}/api/projects/${encodedSig}`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/projects/${encodedSig}`, {
     method: "DELETE",
   });
   if (!res.ok) throw await buildRequestError(res);

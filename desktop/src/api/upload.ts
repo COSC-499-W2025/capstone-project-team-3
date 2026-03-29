@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 
 export interface UploadResponse {
   status: string;
@@ -17,7 +17,7 @@ export async function uploadZipFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE_URL}/upload-file`, {
+  const res = await fetch(`${getApiBaseUrl()}/upload-file`, {
     method: "POST",
     body: formData,
   });

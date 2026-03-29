@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { getGeminiKeyStatus } from "../api/geminiKey";
 import { GeminiApiKeyModal } from "../components/gemini/GeminiApiKeyModal";
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 import { SimilarityIndicator } from "../components/SimilarityIndicator";
 import "../styles/UploadPage.css";
 import "../styles/AnalysisRunnerPage.css";
@@ -208,7 +208,7 @@ export function UploadPage() {
       setLoadError(null);
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/projects`,
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId)}/projects`,
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Failed to load projects");
@@ -363,7 +363,7 @@ export function UploadPage() {
         exclude_extensions.length > 0 || exclude_name_prefixes.length > 0;
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/scan-project`,
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId)}/scan-project`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -519,7 +519,7 @@ export function UploadPage() {
           projectExcludeGroupsRef.current,
         );
         const res = await fetch(
-          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -729,7 +729,7 @@ export function UploadPage() {
       }
     });
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/analysis/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

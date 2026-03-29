@@ -2,7 +2,7 @@
  * Portfolio API Client
  */
 
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 
 export interface Project {
   id: number;
@@ -57,7 +57,7 @@ export interface PortfolioData {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const res = await fetch(`${API_BASE_URL}/api/projects`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/projects`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
@@ -70,7 +70,7 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getPortfolio(projectIds?: Array<number | string>): Promise<PortfolioData> {
-  const url = new URL(`${API_BASE_URL}/api/portfolio`);
+  const url = new URL(`${getApiBaseUrl()}/api/portfolio`);
   
   if (projectIds && projectIds.length > 0) {
     url.searchParams.append('project_ids', projectIds.join(','));

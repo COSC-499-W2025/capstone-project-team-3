@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 import "../styles/PortfolioPage.css";
 import Chart from "chart.js/auto";
 
@@ -303,7 +303,7 @@ function UserProfileCard({ user }: { user: UserInfo }) {
 
   // Build the profile picture URL if a path is stored
   const profilePictureUrl = user.profile_picture_path
-    ? `${API_BASE_URL}/api/user-preferences/profile-picture`
+    ? `${getApiBaseUrl()}/api/user-preferences/profile-picture`
     : null;
 
   // education_details arrives as a JSON string from the API
@@ -1862,7 +1862,7 @@ function ProjectCard({
       form.append("project_id", String(project.id));
       form.append("image", file);
       const res = await fetch(
-        `${API_BASE_URL}/api/portfolio/project/thumbnail`,
+        `${getApiBaseUrl()}/api/portfolio/project/thumbnail`,
         {
           method: "POST",
           body: form,
@@ -1930,7 +1930,7 @@ function ProjectCard({
         if (editing.lastModified) editData.last_modified = editing.lastModified;
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/portfolio/edit`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/portfolio/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ edits: [editData] }),
@@ -2209,7 +2209,7 @@ function ProjectCard({
           style={{ margin: "16px 0", textAlign: "center" }}
         >
           <img
-            src={`${API_BASE_URL}${project.thumbnail_url}?cb=${Date.now()}`}
+            src={`${getApiBaseUrl()}${project.thumbnail_url}?cb=${Date.now()}`}
             alt="Project thumbnail"
             className="project-thumbnail"
             crossOrigin="anonymous"
@@ -2362,7 +2362,7 @@ const PortfolioPage: React.FC = () => {
       selectedIds.length < allProjects.length
         ? `?project_ids=${selectedIds.join(",")}`
         : "";
-    const res = await fetch(`${API_BASE_URL}/api/portfolio${query}`);
+    const res = await fetch(`${getApiBaseUrl()}/api/portfolio${query}`);
     if (!res.ok)
       throw new Error(`Failed to fetch portfolio: ${res.statusText}`);
     setPortfolio((await res.json()) as PortfolioData);
@@ -2372,13 +2372,13 @@ const PortfolioPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const projectsRes = await fetch(`${API_BASE_URL}/api/projects`);
+      const projectsRes = await fetch(`${getApiBaseUrl()}/api/projects`);
       if (!projectsRes.ok)
         throw new Error(`Failed to fetch projects: ${projectsRes.statusText}`);
       const projects = (await projectsRes.json()) as Project[];
       setAllProjects(projects);
       setSelectedProjects(new Set(projects.map((p) => p.id)));
-      const portRes = await fetch(`${API_BASE_URL}/api/portfolio`);
+      const portRes = await fetch(`${getApiBaseUrl()}/api/portfolio`);
       if (!portRes.ok)
         throw new Error(`Failed to fetch portfolio: ${portRes.statusText}`);
       setPortfolio((await portRes.json()) as PortfolioData);

@@ -26,69 +26,27 @@ These PNGs match the current Level 0 (context) and Level 1 diagrams:
 
 ---
 
-## How the diagrams evolved
+## What the diagrams describe
 
-### Level 0 (context)
+### Level 0 — system context
 
-The **older** Level 0 mainly showed:
+The context diagram places **Productivity Dashboard / System** at the center. The **User** supplies consent, folder paths, and commands; the system returns the **dashboard** experience. **Local File System** exchanges project files with the system (read/write). **Export Storage** receives saved exports (e.g. PDF, PNG, JSON).
 
-- User  
-- Productivity Dashboard / System  
-- Local File System  
-- Export Storage  
+External services sit outside the boundary: the **Canadian Institution API** supplies institutional data used in preferences and related flows; the **Google Gemini API** supplies model-backed analysis and generation where the product uses LLMs. **Project Cache** is the internal data store for persisted project metadata and analysis state, with read/write flows to and from the system. Together, these elements show the dashboard as dependent on local files, cached project data, exports, and selected third-party APIs—not only on “open a folder and render a page.”
 
-The **newer** Level 0 expands context substantially. It adds:
+### Level 1 — main processes and data paths
 
-- **Canadian Institution API** — external institutional data (e.g. for preferences or lookups).  
-- **Google Gemini API** — external AI for analysis and generation.  
-- **Project Cache** — internal persistent store for project-related data.
+Inside the system boundary, work moves from ingestion through analysis to user-facing outputs and exports.
 
-That change matters because the system is no longer modeled as “read files → produce exports” only. The context diagram now reflects **real dependencies**: external services for recommendations and AI-assisted features, and **internal cached project state**. The diagram is a more accurate picture of how the dashboard actually operates.
+**Session, consent, and file intake** — **Folder Selection & Session Configuration** and **Consent & Preferences** capture how the user starts a session and what the app may store. **Scanning and Indexing Files** walks the extracted tree; **Data and Cache Management** and **Project Cache** coordinate what gets created or updated. **Extracting Metadata**, **Comparing Metadata**, **Parse Content**, and **Extracting Git History / Metadata** turn raw files and repos into structured signals used downstream.
 
-### Level 1 (major decomposition)
+**Analysis and presentation** — **Visualization Generation** builds timelines, productivity views, and contribution-oriented outputs for the **Portfolio**. **Content Analysis & Skill Inferences** consumes parsed file content; the **Google Gemini API** attaches to this process wherever the implementation delegates summarization or inference to an LLM. Results feed STAR-style narratives, role/skill views, and the **Resume**.
 
-The **older** Level 1 already included processes such as:
+**Recommendations and evaluation** — **Learning Recommendations** combines parsed skills and gaps with profile context and curated learning resources; ties to **Canadian Institution API** appear where institutional lookup supports preferences or education fields. **Project Scoring Configuration** connects rankings and scores from cached analysis back into how projects appear in the portfolio. These steps add prescriptive and evaluative behavior alongside descriptive reporting.
 
-- Folder Selection & Session Configuration  
-- Consent & Preferences  
-- Data and Cache Management  
-- Scanning and Indexing Files  
-- Extracting Metadata  
-- Comparing Metadata  
-- Parse Content  
-- Extracting Git History / Metadata  
-- Visualization Generation  
-- Content Analysis & Skill Inference  
-- Portfolio  
-- Resume  
-- Exporter  
-- Project Cache  
+**Career-oriented outputs** — **Resume** is both an artifact users edit and an input to **Job Match Score** and **Cover Letter Generation**, which take resume-aligned content plus a user-supplied **job description** to produce match scoring and tailored application text. **Portfolio** aggregates visualization, recommendations, scoring, and edited project views. **Exporter** reads portfolio, resume, and cover-letter outputs and writes to **Export Storage**.
 
-The **newer** Level 1 **keeps** those and adds capabilities that extend the product from **analysis** into **recommendation, scoring, and job-application support**.
-
-**Google Gemini API (explicit at Level 1)**  
-Gemini appears as an external entity feeding **Content Analysis & Skill Inferences**. That makes LLM-backed behavior part of the formal model instead of leaving it implicit: downstream analysis and generation depend on that service.
-
-**Learning recommendations**  
-A **Learning Recommendations** process (learning recommender) is a major addition. The system is not only **descriptive** (analyze past work, generate documents) but also **prescriptive** (suggest what to learn or improve). It is fed from parsed content and related signals and contributes recommendations toward user-facing outputs—an extra intelligence layer. The diagram also shows ties to institutional data (e.g. **Canadian Institution API**) where relevant to preferences or context.
-
-**Project scoring**  
-**Project Scoring Configuration** formalizes a **scoring** path: the portfolio is not only a static generated artifact; the system computes an evaluation of projects (from metadata, content, and inferred signals). That moves the platform from “organizer + generator” toward **evaluator**.
-
-**Job match score**  
-**Job Match Score** is new scope: the system compares portfolio/resume/project information against **job-oriented criteria** (e.g. user-supplied job description) and produces a match score. Processed data is used not only to store and present projects but to **assess fit with opportunities**—a more career- and application-oriented DFD.
-
-**Cover letter generation**  
-**Cover Letter Generation** adds another application artifact beyond portfolio and resume, reusing structured profile and project information for **tailored application content**. Together with job match, this is a strong signal that the product evolved from a **project dashboard** toward **broader career tooling**.
-
-**Resume in the workflow**  
-In the older Level 1, **Resume** was largely an output next to **Portfolio**. In the newer diagram, **Resume** is more integrated into the right-hand workflow as an input to **Job Match Score** and **Cover Letter Generation**—it is not only an endpoint but **fuel for downstream intelligent processes**.
-
-**Richer output / decision-support side**  
-The right side grows from roughly *Portfolio → Resume → Exporter → Export Storage* to include **Project Scoring Configuration**, **Job Match Score**, and **Cover Letter Generation** before export. Outputs now include **evaluations**, **matching scores**, and **generated application content**, not only documents and visual summaries.
-
-**Separation of analysis vs. decision support**  
-Previously, ingestion, parsing, and skill inference led mostly to presentation and export. The new processes (**Learning Recommendations**, **Job Match Score**, **Cover Letter Generation**, explicit **Gemini**) show **reasoning and personalization** on top of analysis—closer to an **assistant-like** platform than a pure file-processing dashboard.
+**Analysis vs. decision support** — Ingestion and parsing establish a factual base; learning suggestions, scoring, job matching, and cover-letter generation layer judgment and personalization on top, so the DFD reads as one pipeline from files and consent through intelligence services to dashboards, documents, and exports.
 
 ---
 

@@ -31,9 +31,8 @@ mdurl==0.1.2
 murmurhash==1.0.13
 mypy==1.18.2
 mypy_extensions==1.1.0
-# spaCy 3.8 + thinc 8.3.x require NumPy 2.x (pip cannot satisfy thinc 8.3.6 with NumPy 1.26).
-# sentence-transformers / PyTorch wheels on 3.11 support NumPy 2 (use current torch if issues appear).
-numpy>=2.0.0,<3.0.0
+# spaCy 3.8 + thinc 8.3.x require NumPy 2.x. Pin exact version so CI resolves the same on Linux/macOS/Windows.
+numpy==2.2.6
 orjson==3.11.3
 packaging==25.0
 pathspec==0.12.1

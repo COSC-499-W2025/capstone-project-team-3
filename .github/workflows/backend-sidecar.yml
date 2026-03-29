@@ -38,6 +38,17 @@ jobs:
       - name: Install Python build dependencies
         run: |
           python -m pip install --upgrade pip
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("requirements.txt").read_text(encoding="utf-8")
+          if re.search(r"(?m)^numpy==1\.", text):
+              raise SystemExit(
+                  "requirements.txt still pins NumPy 1.x; thinc 8.3 needs NumPy 2.x. "
+                  "Check the branch/commit GitHub checked out for this workflow."
+              )
+          PY
+          python -m pip install --no-cache-dir "numpy==2.2.6"
           python -m pip install --no-cache-dir -r requirements.txt
           python -m pip install --no-cache-dir pyinstaller
 

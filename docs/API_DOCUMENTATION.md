@@ -6,9 +6,11 @@
 
 ## Overview
 
-This document explains all API endpoints in Project Insights. 
+This document explains all API endpoints in Project Insights.
 
-**Note:** Full frontend URLs available once complete UI is deployed.
+**Recent additions** include upload **scan-project** (similarity / exclusions), **learning recommendations**, **Gemini API key** management, **ATS / job match scoring**, **profile picture** upload, **resume duplicate & rename**, and the split **cover letter generate** (preview) vs **save** (persist) flow.
+
+**Note:** Full frontend URLs depend on deployment; API paths below are relative to the server origin (e.g. `http://127.0.0.1:8000`).
 
 ---
 
@@ -168,12 +170,17 @@ This document explains all API endpoints in Project Insights.
   "name": "Your Name",
   "email": "you@example.com",
   "github_user": "yourusername",
+  "linkedin": "https://linkedin.com/in/you",
   "education": "Computer Science",
   "industry": "Software",
   "job_title": "Software Engineer",
-  "education_details": "[{\"institution\":\"Your University\",\"degree\":\"BS Computer Science\",\"start_date\":\"2020-09-01\",\"end_date\":\"2024-05-01\",\"gpa\":3.8}]"
+  "education_details": "[{\"institution\":\"Your University\",\"degree\":\"BS Computer Science\",\"start_date\":\"2020-09-01\",\"end_date\":\"2024-05-01\",\"gpa\":3.8}]",
+  "profile_picture_path": "data/thumbnails/profile_picture.jpg",
+  "personal_summary": "Short bio text used on resume and learning signals."
 }
 ```
+
+**Errors:** `404` if no preferences row exists yet.
 
 ---
 
@@ -417,9 +424,11 @@ This document explains all API endpoints in Project Insights.
   "name": "Your Name",
   "email": "you@example.com",
   "github_user": "yourusername",
+  "linkedin": "https://linkedin.com/in/you",
   "education": "Computer Science",
   "industry": "Software",
   "job_title": "Senior Engineer",
+  "personal_summary": "Optional short professional summary.",
   "education_details": [
     {
       "institution": "Your University",
@@ -431,6 +440,8 @@ This document explains all API endpoints in Project Insights.
   ]
 }
 ```
+
+**Fields:** `linkedin` and `personal_summary` are optional; other string fields are required by the API model.
 
 **Response:**
 ```json
@@ -1083,7 +1094,264 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 38. Get Chronological Projects
+### 38. Scan Single Project (Upload Flow)
+
+**What it does:** Scans one extracted project folder for an upload **without** persisting analysis. Used by the desktop upload UI for similarity / duplicate detection, optional file-type exclusions, and merge decisions.
+
+**URL:** `POST /api/analysis/uploads/{upload_id}/scan-project`
+
+**Path parameters:**
+- `upload_id` — UUID from `POST /upload-file`
+
+**Request (JSON):**
+```json
+{
+  "project_path": "/tmp/extracted/my-project",
+  "exclude_extensions": [".md", ".txt"],
+  "exclude_name_prefixes": ["test_"]
+}
+```
+
+**Fields:**
+- `project_path` — Absolute path to the project root inside the extracted upload (required)
+- `exclude_extensions` — Optional; user-selected suffixes to skip for this scan
+- `exclude_name_prefixes` — Optional; file stem prefixes to skip
+
+**Response (examples):** Always `status: "ok"`. Key fields:
+
+| Field | Meaning |
+|--------|---------|
+| `project_name`, `project_path` | Identifiers |
+| `total_scanned_files` | Files found before user exclusions |
+| `eligible_file_count` | Files after exclusions |
+| `reason` | `no_files`, `all_files_excluded`, `reanalyze_with_exclusions`, `reanalyze_cleared_exclusions`, `exact_match`, `similar_match`, `no_match` |
+| `exact_match` | Present when prior DB manifest matches current scan (100% analyzed path) |
+| `similarity` | Object with `jaccard_similarity`, `containment_ratio`, `matched_project_name`, `match_reason` when similar or exact; `null` otherwise |
+
+**Errors:** `500` if scan fails unexpectedly.
+
+---
+
+### 39. Learning Recommendations
+
+**What it does:** Returns curated starter and advanced courses scored from the **master resume** plus the latest saved **job title** and **industry** from user preferences. Used by the User Preferences → Learning tab.
+
+**URL:** `GET /api/learning/recommendations`
+
+**Response:**
+```json
+{
+  "based_on_resume": [
+    {
+      "id": "cs50p",
+      "title": "CS50's Introduction to Programming with Python",
+      "description": "...",
+      "url": "https://...",
+      "thumbnail_url": "https://...",
+      "provider": "Harvard CS50",
+      "tags": ["python", "programming", "beginner"],
+      "level": "starter",
+      "pricing": "free"
+    }
+  ],
+  "next_steps": [
+    {
+      "id": "system-design-primer",
+      "title": "System Design Primer",
+      "description": "...",
+      "url": "https://...",
+      "thumbnail_url": "https://...",
+      "provider": "GitHub (community)",
+      "tags": ["system-design", "architecture"],
+      "level": "advanced",
+      "pricing": "free"
+    }
+  ]
+}
+```
+
+**Notes:** If `course_catalog.json` is missing or invalid, both arrays may be empty. No request body.
+
+---
+
+### 40. Gemini API Key — Status
+
+**What it does:** Reports whether a Gemini API key is configured (environment / persisted store) and whether it passes a lightweight validation check.
+
+**URL:** `GET /api/gemini-key/status`
+
+**Response:**
+```json
+{
+  "configured": true,
+  "valid": true,
+  "masked_suffix": "…a1b2"
+}
+```
+
+---
+
+### 41. Gemini API Key — Save
+
+**What it does:** Persists a Gemini API key for the app (used by AI cover letter, ATS AI mode, and other Gemini-backed features).
+
+**URL:** `POST /api/gemini-key`
+
+**Request:**
+```json
+{
+  "api_key": "your-key"
+}
+```
+
+**Response:** `{"ok": true}`
+
+**Errors:** `400` if key format is invalid.
+
+---
+
+### 42. Gemini API Key — Delete
+
+**What it does:** Clears the persisted Gemini API key from app storage.
+
+**URL:** `DELETE /api/gemini-key`
+
+**Response:** `{"ok": true}`
+
+---
+
+### 43. ATS / Job Match Score
+
+**What it does:** Compares a job description to a resume (master or a saved resume) and returns an ATS-style compatibility score, keyword/skill overlap, experience months, match level, and tips.
+
+**URL:** `POST /api/ats/score`
+
+**Request:**
+```json
+{
+  "job_description": "We are hiring a backend engineer with Python and FastAPI...",
+  "resume_id": 2,
+  "analysis_mode": "local"
+}
+```
+
+**Fields:**
+- `job_description` — Full posting text (required, min length 10)
+- `resume_id` — Optional; omit or `null` for **master** resume
+- `analysis_mode` — `"local"` (rule-based tokenization) or `"ai"` (Gemini-assisted; falls back to local if no key)
+
+**Response:**
+```json
+{
+  "score": 72,
+  "match_level": "Medium",
+  "experience_months": 24,
+  "breakdown": {
+    "keyword_coverage": 70,
+    "skills_match": 65,
+    "content_richness": 88
+  },
+  "matched_keywords": ["python", "api"],
+  "missing_keywords": ["kubernetes"],
+  "matched_skills": ["FastAPI"],
+  "missing_skills": ["Docker"],
+  "tips": ["Mirror the exact wording from the job description in your project descriptions and bullet points."]
+}
+```
+
+**Errors:** `422` validation errors; `500` if scoring fails.
+
+---
+
+### 44. Upload Profile Picture
+
+**What it does:** Saves a profile image and stores its path on the user preferences row.
+
+**URL:** `POST /api/user-preferences/profile-picture`
+
+**Content-Type:** `multipart/form-data`
+
+**Form:** `file` — image (`image/jpeg`, `image/png`, `image/webp`, `image/gif`), max 5 MB.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Profile picture saved successfully",
+  "path": "data/thumbnails/profile_picture.jpg"
+}
+```
+
+**Errors:** `400` for wrong type or size.
+
+---
+
+### 45. Get Profile Picture
+
+**What it does:** Returns the raw image file for the current profile picture.
+
+**URL:** `GET /api/user-preferences/profile-picture`
+
+**Response:** Image binary with appropriate `Content-Type`.
+
+**Errors:** `404` if none set.
+
+---
+
+### 46. Delete Profile Picture
+
+**What it does:** Removes the profile picture file and clears the DB path.
+
+**URL:** `DELETE /api/user-preferences/profile-picture`
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Profile picture removed"
+}
+```
+
+---
+
+### 47. Duplicate Resume
+
+**What it does:** Clones an existing resume (including master) into a new tailored resume row.
+
+**URL:** `POST /resume/{resume_id}/duplicate`
+
+**Response:**
+```json
+{
+  "resume_id": 3,
+  "message": "Resume duplicated successfully"
+}
+```
+
+**Errors:** `404`, `409`, `500`.
+
+---
+
+### 48. Rename Resume
+
+**What it does:** Renames a **saved** resume. Master resume cannot be renamed.
+
+**URL:** `PATCH /resume/{resume_id}`
+
+**Request:**
+```json
+{
+  "name": "Targeted — Backend roles"
+}
+```
+
+**Response:** `{"status": "ok", "message": "Resume renamed"}`
+
+**Errors:** `400` if master; `404` / `409` / `500` as applicable.
+
+---
+
+### 49. Get Chronological Projects
 
 **What it does:** Lists all projects with chronological date fields for review.
 
@@ -1093,7 +1361,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 39. Get Chronological Project
+### 50. Get Chronological Project
 
 **What it does:** Returns chronological details for one project by signature.
 
@@ -1105,7 +1373,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 40. Update Project Dates
+### 51. Update Project Dates
 
 **What it does:** Updates `created_at` and `last_modified` for a project.
 
@@ -1123,7 +1391,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 41. Get Project Chronological Skills
+### 52. Get Project Chronological Skills
 
 **What it does:** Lists a project's skills ordered chronologically.
 
@@ -1133,7 +1401,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 42. Add Skill To Project
+### 53. Add Skill To Project
 
 **What it does:** Adds a dated skill entry to a project.
 
@@ -1162,7 +1430,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 43. Update Skill Date
+### 54. Update Skill Date
 
 **What it does:** Updates the date for a specific skill entry.
 
@@ -1187,7 +1455,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 44. Update Skill Name
+### 55. Update Skill Name
 
 **What it does:** Renames an existing skill entry.
 
@@ -1212,7 +1480,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 45. Delete Skill
+### 56. Delete Skill
 
 **What it does:** Deletes a skill entry by ID.
 
@@ -1222,7 +1490,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 46. Add Projects To Resume
+### 57. Add Projects To Resume
 
 **What it does:** Adds selected projects to an existing saved resume.
 
@@ -1252,7 +1520,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 47. Delete Project From Resume
+### 58. Delete Project From Resume
 
 **What it does:** Removes one project association from a resume.
 
@@ -1274,7 +1542,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 48. Portfolio JavaScript
+### 59. Portfolio JavaScript
 
 **What it does:** Serves the JavaScript bundle for the portfolio dashboard page.
 
@@ -1284,7 +1552,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 49. Read Root
+### 60. Read Root
 
 **What it does:** Returns a basic welcome payload for the API root.
 
@@ -1299,9 +1567,9 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 50. Generate and Save Cover Letter
+### 61. Generate Cover Letter (Preview, Not Saved)
 
-**What it does:** Generates a tailored cover letter from a saved resume and job details, then persists it to the database. Supports two generation modes: `local` (template-based, no API key needed) and `ai` (Gemini LLM, falls back to local if no API key is configured).
+**What it does:** Generates tailored cover letter **text** from a saved resume and job details **without** writing to the database. Use this for an in-app preview; call **`POST /api/cover-letter/save`** (next section) to persist after the user confirms.
 
 **URL:** `POST /api/cover-letter/generate`
 
@@ -1323,22 +1591,20 @@ This document explains all API endpoints in Project Insights.
 - `company` — Company name (string, required)
 - `job_description` — Full job description text (string, min 10 chars, required)
 - `motivations` — Array of preset motivation keys and/or custom free-text strings (optional, default `[]`)
-- `mode` — `"local"` or `"ai"` (default `"local"`)
+- `mode` — `"local"` or `"ai"` (default `"local"`). `"ai"` uses Gemini when configured; otherwise falls back to local.
 
 **Preset motivation keys:** `strong_company_culture`, `personal_growth`, `meaningful_work`, `reputation_stability`, `innovation`, `work_life_balance`, `social_impact`, `compensation`, `team_collaboration`, `learning_opportunities`
 
-**Response:**
+**Response:** Same fields as request metadata plus generated `content` and `generation_mode` — **no** `id` or `created_at`:
 ```json
 {
-  "id": 1,
   "resume_id": 2,
   "job_title": "Backend Engineer",
   "company": "Acme Corp",
   "job_description": "Build scalable REST APIs...",
   "motivations": ["meaningful_work", "innovation"],
-  "content": "Jane Smith\njane@example.com\nMarch 21, 2026\n\nBackend Engineer Application — Acme Corp\n\nDear Hiring Manager,\n...\n\nSincerely,\nJane Smith",
-  "generation_mode": "local",
-  "created_at": "2026-03-21T10:00:00"
+  "content": "Jane Smith\njane@example.com\n...",
+  "generation_mode": "local"
 }
 ```
 
@@ -1348,7 +1614,32 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 51. List All Cover Letters
+### 62. Save Cover Letter
+
+**What it does:** Persists a cover letter to the database (generated text from section 61, or user-composed text).
+
+**URL:** `POST /api/cover-letter/save`
+
+**Request:**
+```json
+{
+  "resume_id": 2,
+  "job_title": "Backend Engineer",
+  "company": "Acme Corp",
+  "job_description": "Build scalable REST APIs using Python and FastAPI...",
+  "motivations": ["meaningful_work"],
+  "content": "Full letter body text...",
+  "generation_mode": "local"
+}
+```
+
+**Response:** Full saved record including `id` and `created_at` (same shape as **Get Cover Letter**).
+
+**Errors:** `422` invalid `generation_mode`; `500` persistence or load failure.
+
+---
+
+### 63. List All Cover Letters
 
 **What it does:** Returns a summary list of all saved cover letters (no full content), ordered most-recent first.
 
@@ -1370,7 +1661,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 52. Get Cover Letter
+### 64. Get Cover Letter
 
 **What it does:** Retrieves a single saved cover letter with full content.
 
@@ -1399,9 +1690,9 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 53. Update Cover Letter Content
+### 65. Update Cover Letter Content
 
-**What it does:** Saves user edits to the text of an existing cover letter in-place. The PDF cache for this letter is automatically invalidated on the next PDF download.
+**What it does:** Saves user edits to the text of an existing cover letter in-place. The next PDF download reflects the updated content.
 
 **URL:** `PATCH /api/cover-letter/{id}`
 
@@ -1418,7 +1709,7 @@ This document explains all API endpoints in Project Insights.
 **Fields:**
 - `content` — Full updated letter text (string, min 1 char, required)
 
-**Response:** Full `CoverLetterResponse` object (same shape as endpoint 52) with updated content.
+**Response:** Full `CoverLetterResponse` object (same shape as endpoint 64) with updated content.
 
 **Errors:**
 - `404` — Cover letter not found
@@ -1426,9 +1717,9 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 54. Download Cover Letter as PDF
+### 66. Download Cover Letter as PDF
 
-**What it does:** Compiles the saved cover letter to PDF via `pdflatex` and returns it as a file download. Results are cached by SHA-256 content hash — re-downloading an unedited letter is instant. The cache is bypassed automatically after a PATCH edit.
+**What it does:** Compiles the saved cover letter to PDF via `pdflatex` and returns it as a file download (built per request from the stored letter content).
 
 **URL:** `GET /api/cover-letter/{id}/pdf`
 
@@ -1445,9 +1736,9 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 55. Delete Cover Letter
+### 67. Delete Cover Letter
 
-**What it does:** Permanently deletes a saved cover letter and its cached PDF.
+**What it does:** Permanently deletes a saved cover letter.
 
 **URL:** `DELETE /api/cover-letter/{id}`
 
@@ -1547,18 +1838,35 @@ fetch(`${API_BASE}/resume/123`, {
 - Get Thumbnail: `/api/portfolio/project/thumbnail/{project_id}`
 - Edit Project: `POST /api/portfolio/edit`
 
-**File Management:**
+**File Management & Upload Analysis:**
 - Upload Page: `/upload-file`
 - Upload ZIP: `POST /upload-file`
 - Resolve Upload: `GET /api/resolve-upload/{upload_id}`
 - List Upload Projects: `GET /api/analysis/uploads/{upload_id}/projects`
 - Run Analysis: `POST /api/analysis/run`
+- Scan Single Project (similarity / exclusions): `POST /api/analysis/uploads/{upload_id}/scan-project`
+
+**Learning & AI configuration:**
+- Learning recommendations: `GET /api/learning/recommendations`
+- Gemini status: `GET /api/gemini-key/status`
+- Gemini save: `POST /api/gemini-key`
+- Gemini delete: `DELETE /api/gemini-key`
+
+**ATS / Job match:**
+- Score resume vs job description: `POST /api/ats/score`
+
+**User profile media:**
+- Upload profile picture: `POST /api/user-preferences/profile-picture`
+- Get profile picture: `GET /api/user-preferences/profile-picture`
+- Delete profile picture: `DELETE /api/user-preferences/profile-picture`
 
 **Resume:**
 - Create: `POST /resume`
 - Get: `GET /resume`
 - Get Saved: `GET /resume/{resume_id}`
 - List Saved: `GET /resume_names`
+- Duplicate: `POST /resume/{resume_id}/duplicate`
+- Rename: `PATCH /resume/{resume_id}`
 - Save Edits: `POST /resume/{id}/edit`
 - Add Projects: `POST /resume/{resume_id}/projects`
 - Remove Project: `DELETE /resume/{resume_id}/project/{project_id}`
@@ -1583,7 +1891,8 @@ fetch(`${API_BASE}/resume/123`, {
 - Delete Skill: `DELETE /api/chronological/skills/{skill_id}`
 
 **Cover Letter:**
-- Generate + Save: `POST /api/cover-letter/generate`
+- Generate preview (not saved): `POST /api/cover-letter/generate`
+- Save to DB: `POST /api/cover-letter/save`
 - List All: `GET /api/cover-letter`
 - Get One: `GET /api/cover-letter/{id}`
 - Save Edits: `PATCH /api/cover-letter/{id}`
@@ -1609,6 +1918,6 @@ fetch(`${API_BASE}/resume/123`, {
 ```
 
 ---
-**Last Updated:** March 21, 2026  
-**Total Endpoints Documented:** 55  
+**Last Updated:** March 29, 2026  
+**Total Endpoints Documented:** 67  
 **Questions?** Contact development team

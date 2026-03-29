@@ -1,124 +1,148 @@
-import { ipcMain as v, app as f, BrowserWindow as g, dialog as b } from "electron";
-import { fileURLToPath as D } from "node:url";
+import { ipcMain as N, app as u, BrowserWindow as g, dialog as P } from "electron";
+import { fileURLToPath as v } from "node:url";
 import s from "node:path";
-import _ from "node:fs";
-import A from "node:http";
-import N from "node:readline";
-import { spawn as x } from "node:child_process";
-const I = s.dirname(D(import.meta.url));
-process.env.APP_ROOT = s.join(I, "..");
-const E = process.env.VITE_DEV_SERVER_URL, H = s.join(process.env.APP_ROOT, "dist-electron"), R = s.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = E ? s.join(process.env.APP_ROOT, "public") : R;
+import y from "node:fs";
+import I from "node:http";
+import O from "node:readline";
+import { spawn as C } from "node:child_process";
+const R = s.dirname(v(import.meta.url));
+process.env.APP_ROOT = s.join(R, "..");
+const E = process.env.VITE_DEV_SERVER_URL, X = s.join(process.env.APP_ROOT, "dist-electron"), D = s.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = E ? s.join(process.env.APP_ROOT, "public") : D;
 let p, i = null, a = null;
-const w = "SIDECAR_LISTENING ", h = "http://127.0.0.1:47291";
-v.handle("api:getBackendOrigin", () => a);
-function y() {
+const w = "SIDECAR_LISTENING ", h = 8e3, _ = 8099, B = 12e4, x = 6e5;
+N.handle("api:getBackendOrigin", () => a);
+function T() {
   const e = process.env.DESKTOP_BACKEND_BINARY?.trim();
   if (e)
-    return _.existsSync(e) ? e : (console.warn("[electron] DESKTOP_BACKEND_BINARY is set but file not found:", e), null);
-  if (f.isPackaged) {
-    const n = process.platform === "win32" ? "backend-sidecar.exe" : "backend-sidecar", r = process.platform === "win32" ? "win32" : process.platform === "darwin" ? "darwin" : "linux", t = [
-      s.join(process.resourcesPath, "backend", r, n),
+    return y.existsSync(e) ? e : (console.warn("[electron] DESKTOP_BACKEND_BINARY is set but file not found:", e), null);
+  if (u.isPackaged) {
+    const n = process.platform === "win32" ? "backend-sidecar.exe" : "backend-sidecar", t = process.platform === "win32" ? "win32" : process.platform === "darwin" ? "darwin" : "linux", o = [
+      s.join(process.resourcesPath, "backend", t, n),
       s.join(process.resourcesPath, "backend", n)
     ];
-    for (const o of t)
-      if (_.existsSync(o)) return o;
+    for (const r of o)
+      if (y.existsSync(r)) return r;
   }
   return null;
 }
-function O(e) {
+function A(e) {
   return `${e.replace(/\/+$/, "")}/health`;
 }
-async function P(e, n, r) {
-  const t = O(e), o = Date.now() + n;
-  for (; Date.now() < o; ) {
+async function L(e, n, t) {
+  const o = A(e), r = Date.now() + n;
+  for (; Date.now() < r; ) {
     if (await new Promise((c) => {
-      const l = A.get(t, (d) => {
+      const l = I.get(o, (d) => {
         d.resume(), c(d.statusCode === 200);
       });
       l.on("error", () => c(!1)), l.setTimeout(2500, () => {
         l.destroy(), c(!1);
       });
     })) return;
-    await new Promise((c) => setTimeout(c, r));
+    await new Promise((c) => setTimeout(c, t));
   }
-  throw new Error(`Timed out waiting for ${t} (${n}ms). Is the sidecar binary valid?`);
+  throw new Error(`Timed out waiting for ${o} (${n}ms). Is the sidecar binary valid?`);
 }
-function B(e, n) {
-  const r = e.stdout;
-  return r ? new Promise((t, o) => {
-    const u = N.createInterface({ input: r, crlfDelay: 1 / 0 }), c = () => {
-      u.close();
+function U(e, n) {
+  return new Promise((t) => {
+    const o = I.get(A(e), (r) => {
+      r.resume(), t(r.statusCode === 200);
+    });
+    o.on("error", () => t(!1)), o.setTimeout(n, () => {
+      o.destroy(), t(!1);
+    });
+  });
+}
+async function $(e) {
+  const n = Date.now() + e;
+  for (; Date.now() < n; ) {
+    for (let t = h; t <= _; t++) {
+      const o = `http://127.0.0.1:${t}`;
+      if (await U(o, 120))
+        return o;
+    }
+    await new Promise((t) => setTimeout(t, 350));
+  }
+  return null;
+}
+function K(e, n) {
+  const t = e.stdout;
+  return t ? new Promise((o, r) => {
+    const f = O.createInterface({ input: t, crlfDelay: 1 / 0 }), c = () => {
+      f.close();
     }, l = (m) => {
-      clearTimeout(T), u.off("line", d), c(), o(new Error(`Sidecar exited before announcing port (code=${m ?? "unknown"})`));
+      clearTimeout(S), f.off("line", d), c(), r(new Error(`Sidecar exited before announcing port (code=${m ?? "unknown"})`));
     }, d = (m) => {
-      m.startsWith(w) && (clearTimeout(T), e.removeListener("exit", l), u.off("line", d), c(), t(m.slice(w.length).trim()));
-    }, T = setTimeout(() => {
-      e.removeListener("exit", l), u.off("line", d), c(), o(new Error(`Timed out after ${n}ms waiting for ${w.trim()} from sidecar`));
+      m.startsWith(w) && (clearTimeout(S), e.removeListener("exit", l), f.off("line", d), c(), o(m.slice(w.length).trim()));
+    }, S = setTimeout(() => {
+      e.removeListener("exit", l), f.off("line", d), c(), r(new Error(`Timed out after ${n}ms waiting for ${w.trim()} from sidecar`));
     }, n);
-    u.on("line", d), e.on("exit", l);
+    f.on("line", d), e.on("exit", l);
   }) : Promise.reject(new Error("backend-sidecar has no stdout pipe (cannot read SIDECAR_LISTENING)"));
 }
-function C(e) {
+function j(e) {
   const n = { ...e };
   if (process.platform !== "darwin")
     return n;
-  const r = "/Library/TeX/texbin", t = s.delimiter, o = (n.PATH ?? "").split(t).filter(Boolean);
-  return o.includes(r) || (n.PATH = [r, ...o].join(t)), n;
+  const t = "/Library/TeX/texbin", o = s.delimiter, r = (n.PATH ?? "").split(o).filter(Boolean);
+  return r.includes(t) || (n.PATH = [t, ...r].join(o)), n;
 }
-function L() {
+function H() {
   if (i && !i.killed)
     return { ok: !0, spawnedNew: !1 };
-  const e = y();
+  const e = T();
   if (!e)
     return console.log(
       "[electron] No backend binary configured. Start the API manually (e.g. uvicorn) or set DESKTOP_BACKEND_BINARY."
     ), a = null, { ok: !1, spawnedNew: !1 };
-  const n = s.dirname(e), r = process.env.DESKTOP_BACKEND_DEBUG === "1" || process.env.DESKTOP_BACKEND_DEBUG === "true";
-  return i = x(e, [], {
+  const n = s.dirname(e), t = process.env.DESKTOP_BACKEND_DEBUG === "1" || process.env.DESKTOP_BACKEND_DEBUG === "true";
+  return i = C(e, [], {
     cwd: n,
     env: {
-      ...C(process.env),
+      ...j(process.env),
       PYTHONUNBUFFERED: "1",
       PROMPT_ROOT: "0",
       AUTO_CONSENT: "true",
       // Sidecar clears resume PDF export cache on SIGTERM/exit (see sidecar_main.py)
       CLEAR_RESUME_PDF_CACHE_ON_EXIT: "1"
     },
-    stdio: r ? ["ignore", "pipe", "inherit"] : ["ignore", "pipe", "pipe"]
-  }), i.on("exit", (t, o) => {
-    console.warn("[electron] backend-sidecar exited", { code: t, signal: o }), i = null, a = null;
-  }), !r && i.stderr && i.stderr.on("data", (t) => {
-    const o = t.toString();
-    o.trim() && console.error("[backend-sidecar]", o.slice(0, 2e3));
+    stdio: t ? ["ignore", "pipe", "inherit"] : ["ignore", "pipe", "pipe"]
+  }), i.on("exit", (o, r) => {
+    console.warn("[electron] backend-sidecar exited", { code: o, signal: r }), i = null, a = null;
+  }), !t && i.stderr && i.stderr.on("data", (o) => {
+    const r = o.toString();
+    r.trim() && console.error("[backend-sidecar]", r.slice(0, 2e3));
   }), console.log("[electron] started backend-sidecar:", e), { ok: !0, spawnedNew: !0 };
 }
-async function S() {
-  const { ok: e, spawnedNew: n } = L();
+async function b() {
+  const { ok: e, spawnedNew: n } = H();
   if (e) {
     if (n && i)
       try {
-        a = await B(i, 2e4), console.log("[electron] sidecar API origin:", a);
-      } catch (r) {
+        a = await K(i, B), console.log("[electron] sidecar API origin:", a);
+      } catch (t) {
         console.warn(
-          "[electron] no SIDECAR_LISTENING line in time; probing fixed default port",
-          h,
-          r instanceof Error ? `(${r.message})` : ""
+          "[electron] no SIDECAR_LISTENING line in time; scanning",
+          `${h}-${_}`,
+          t instanceof Error ? `(${t.message})` : ""
         );
-        try {
-          await P(h, 1e5, 400), a = h, console.warn("[electron] sidecar OK via default port (stdout handshake missed)");
-        } catch (t) {
-          throw console.error("[electron] sidecar did not become ready:", t), i.kill(), i = null, a = null, t;
-        }
+        const o = await $(12e4);
+        if (o)
+          a = o, console.warn("[electron] sidecar OK via port scan (stdout handshake missed)");
+        else
+          throw console.error("[electron] sidecar not found on scanned ports"), i.kill(), i = null, a = null, new Error(
+            `No SIDECAR_LISTENING line and no /health on 127.0.0.1:${h}-${_}. Rebuild the sidecar or set DESKTOP_BACKEND_DEBUG=1.`
+          );
       }
     else if (!a)
       throw new Error(
         "Sidecar process is running but the listen URL is unknown. Quit the app completely and try again."
       );
-    a && await P(a, 12e4, 400);
+    a && await L(a, x, 400);
   }
 }
-function U() {
+function V() {
   const e = new g({
     width: 420,
     height: 140,
@@ -141,22 +165,22 @@ function k() {
     title: "Big Picture",
     icon: s.join(process.env.VITE_PUBLIC, "big-picture-icon.png"),
     webPreferences: {
-      preload: s.join(I, "preload.mjs")
+      preload: s.join(R, "preload.mjs")
     }
   }), p.webContents.on("did-finish-load", () => {
     p?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), E ? p.loadURL(E) : p.loadFile(s.join(R, "index.html"));
+  }), E ? p.loadURL(E) : p.loadFile(s.join(D, "index.html"));
 }
-f.on("window-all-closed", () => {
-  process.platform !== "darwin" && (f.quit(), p = null);
+u.on("window-all-closed", () => {
+  process.platform !== "darwin" && (u.quit(), p = null);
 });
-f.on("activate", () => {
+u.on("activate", () => {
   g.getAllWindows().length === 0 && (async () => {
-    if (y())
+    if (T())
       try {
-        await S();
+        await b();
       } catch (e) {
-        console.error("[electron]", e), b.showMessageBox({
+        console.error("[electron]", e), P.showMessageBox({
           type: "error",
           title: "Backend not ready",
           message: "The local API server did not become ready in time.",
@@ -167,22 +191,22 @@ f.on("activate", () => {
     k();
   })();
 });
-f.on("before-quit", () => {
+u.on("before-quit", () => {
   i && !i.killed && (i.kill(), i = null);
 });
-f.whenReady().then(async () => {
+u.whenReady().then(async () => {
   let e = null;
-  if (y()) {
-    e = U();
+  if (T()) {
+    e = V();
     try {
-      await S();
+      await b();
     } catch (n) {
-      console.error("[electron]", n), e?.destroy(), b.showMessageBox({
+      console.error("[electron]", n), e?.destroy(), P.showMessageBox({
         type: "error",
         title: "Backend not ready",
         message: "The local API server did not become ready in time.",
         detail: n instanceof Error ? n.message : String(n)
-      }), f.quit();
+      }), u.quit();
       return;
     }
     e?.destroy();
@@ -190,7 +214,7 @@ f.whenReady().then(async () => {
   k();
 });
 export {
-  H as MAIN_DIST,
-  R as RENDERER_DIST,
+  X as MAIN_DIST,
+  D as RENDERER_DIST,
   E as VITE_DEV_SERVER_URL
 };

@@ -7,6 +7,8 @@ const isWebOnly = process.env.VITE_WEB_ONLY === 'true'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Relative URLs so `file://` loads (Electron production) resolve `public/` icons next to index.html.
+  base: './',
   plugins: [
     react(),
     ...(isWebOnly ? [] : [electron({

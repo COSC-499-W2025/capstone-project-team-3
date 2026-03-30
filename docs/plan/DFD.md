@@ -2,11 +2,9 @@
 
 ## View the diagrams (interactive)
 
-For a zoomable, editable view in draw.io (diagrams.net), open:
+**[DFD_Team-3.drawio — Google Drive, click open via draw.io](https://drive.google.com/file/d/10cYCpvFpWB_LUyqjNVTxVPAnlgEQ53dM/view?usp=sharing)**
 
-**[Productivity Dashboard DFD — diagrams.net](https://app.diagrams.net/#G10cYCpvFpWB_LUyqjNVTxVPAnlgEQ53dM#%7B%22pageId%22%3A%22CjHqhK4MZXdRkchG9Wa0%22%7D)**
-
-The Google Drive–backed diagram may show multiple pages (e.g. Level 0 and Level 1).
+The file includes Level 0 and Level 1 DFD.
 
 ## Static copies in this repository
 

@@ -255,19 +255,90 @@ Install dependencies:
 pip install requirements.txt
 ```
 
-### 🖥️ Launching the Desktop App
+### 🖥️ Desktop application (Big Picture): how to run
 
-The desktop application is built with **Electron + React (Vite)**.
+The desktop app is **Electron + React (Vite)** with a **Python backend** that can run as a **PyInstaller sidecar** inside the packaged app, or as **Docker / uvicorn** during development.
 
-In order to start it ensure ***node.js*** is installed and run : 
+#### Compatibility and system requirements
+
+Read this once so your environment matches what the app expects.
+
+| Topic | What you need |
+| ----- | ------------- |
+| **SQLite (database)** | The backend uses **SQLite** only—**no MySQL, PostgreSQL, or separate DB server**. The app creates its database file when the API first runs. With **Docker**, that file is `app/data/app.sqlite3` (see [Database Setup with Docker](#database-setup-with-docker) below). With the **packaged desktop app**, initialization happens automatically when the sidecar starts (no manual SQLite install). |
+| **LaTeX (`pdflatex`) — macOS** | **Résumé and cover-letter PDF export** needs a LaTeX toolchain. Install **[BasicTeX](https://tug.org/mactex/morepackages.html)** (recommended; use the **“smallest download”** pkg on that page) or the full **[MacTeX distribution](https://tug.org/mactex/)**. After installation, `pdflatex` should live under `/Library/TeX/texbin`; the Big Picture desktop app **prepends that folder to `PATH` on macOS** when it exists, so restart the app after installing BasicTeX. |
+| **LaTeX — Windows / Linux** | Install a distribution that puts **`pdflatex` on your `PATH`** (e.g. **MiKTeX** or **TeX Live** on Windows; **TeX Live** on Linux) if you use PDF export. |
+| **Gemini (optional)** | AI-backed features need a **Google Gemini API key**; see [Setting Up Gemini API Key for LLM Features](#setting-up-gemini-api-key-for-llm-features). You can still use local analysis without it. |
+| **Pre-built desktop installer** | **macOS only** on GitHub Releases (size limits); Windows/Linux use [the sidecar ZIP + local build](#windows-and-linux--use-the-sidecar-zip--build-the-desktop-locally) above. |
+
+#### macOS — pre-built release (easiest)
+
+Official **GitHub Releases** ship a **macOS `.dmg` only** so we stay under GitHub’s **2 GiB per-file** limit; full installers are large (Python ML stack + Electron).
+
+1. Open the repo **[Releases](https://github.com/COSC-499-W2025/capstone-project-team-3/releases)** and pick the latest version.
+2. Under **Assets**, try the **Big Picture** macOS installer (`.dmg`) if it is attached.
+3. If there is no DMG on the release page (file too large), open **`DOWNLOAD-INSTALLERS-HERE.txt`** in the same release — it links to the **Actions** workflow run. On that run, open **Artifacts**, download **`desktop-release-macos`** (ZIP), unzip, and open the **`.dmg`** inside.
+4. Install or drag the app to Applications and launch **Big Picture**. The app starts the bundled **backend sidecar** automatically.
+
+> **PDF export:** For compiling résumé/cover-letter PDFs on a Mac, install **[BasicTeX](https://tug.org/mactex/morepackages.html)** (or MacTeX) as described in [Compatibility and system requirements](#compatibility-and-system-requirements) above.
+
+#### Windows and Linux — use the sidecar ZIP + build the desktop locally
+
+There is **no Windows or Linux installer attached to Releases** in our current CI (releases focus on a single **~1 GiB** macOS build). You can still run Big Picture by combining a **pre-built backend sidecar** from CI with a **local Electron build**.
+
+**1. Prerequisites**
+
+- **Node.js** (e.g. 20 LTS) and **npm**
+- This repository cloned locally
+- Optional: **Docker** if you prefer the dev flow below instead of the sidecar
+
+**2. Download the backend sidecar (ZIP)**
+
+1. In GitHub go to **Actions** → workflow **“Build Backend Sidecar”**.
+2. Open a **successful** run (for example on the branch you use, e.g. `deployment2` / `main`).
+3. Under **Artifacts**, download:
+   - **Windows:** `backend-sidecar-windows` (ZIP)
+   - **Linux:** `backend-sidecar-linux` (ZIP)
+
+**3. Unzip into the folder Electron expects**
+
+Extract the artifact so the PyInstaller output (the folder that contains the executable and `_internal/`) ends up here:
+
+| OS | Put the extracted files here (paths from repo root) |
+|----|-----------------------------------------------------|
+| Windows | `desktop/resources/backend/win32/` — must include `backend-sidecar.exe` next to `_internal/` |
+| Linux | `desktop/resources/backend/linux/` — must include `backend-sidecar` next to `_internal/` |
+
+*(On macOS builds from source, the same layout uses `desktop/resources/backend/darwin/`; the release DMG already bundles **darwin** for you.)*
+
+**4. Build and run the desktop**
+
+From the repository root:
+
+```bash
+cd desktop
+npm ci          # or: npm install
+npm run build   # runs TypeScript + Vite + electron-builder
+```
+
+Install or run the generated artifact under `desktop/release/<version>/` (e.g. **NSIS** installer on Windows, **AppImage** on Linux — see `desktop/electron-builder.json5`).
+
+**5. Alternative: development mode (API + Electron, all platforms)**
+
+If you are not using a packaged app:
 
 ```bash
 cd desktop
 npm install       # First time only
-npm run dev       # Starts the Vite dev server + Electron window
+npm run dev       # Vite dev server + Electron window
 ```
 
-> **Note:** The desktop app connects to the backend server. Make sure the Docker backend is running (`docker compose up --build`) before launching the desktop app. See `docs/frontend.md` for comprehensive overview.
+Point the UI at a running API:
+
+- **Typical:** start the stack with **`docker compose up --build`** (API at `http://127.0.0.1:8000` — default for the desktop app in dev).
+- **Or** run the sidecar executable yourself and, for Electron dev, set **`DESKTOP_BACKEND_BINARY`** to the full path of `backend-sidecar` / `backend-sidecar.exe` so the main process can spawn it.
+
+> **Note:** For a deeper overview of the frontend stack, see `docs/frontend.md`.
 
 ---
 

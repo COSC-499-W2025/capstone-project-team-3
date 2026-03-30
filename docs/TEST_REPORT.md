@@ -18,17 +18,18 @@
 7. [CI/CD Integration](#cicd-integration)
 8. [Test Coverage Map](#test-coverage-map)
 9. [Known Limitations and Exclusions](#known-limitations-and-exclusions)
+10. [Test Files to Use for Demo](tests/files/test_data)
 
 ---
 
 ## Overview
 
-Project Insights is a full-stack desktop application for analyzing GitHub/local projects, generating resumes, and building portfolios. It consists of a Python/FastAPI backend and a TypeScript/React frontend running in Electron. The system uses pytest for backend testing and Jest for frontend testing, with a total of **83 test files** covering unit, component, API, integration, and CLI testing.
+Project Insights is a full-stack desktop application for analyzing GitHub/local projects, generating resumes, and building portfolios. It consists of a Python/FastAPI backend and a TypeScript/React frontend running in Electron. The system uses pytest for backend testing and Jest for frontend testing, with a total of **85 test files** covering unit, component, API, integration, and CLI testing.
 
 | Metric | Value |
 |--------|-------|
-| Total test files | 83 |
-| Backend test files | 61 |
+| Total test files | 85 |
+| Backend test files | 63 |
 | Frontend test files | 20 |
 | Mock/fixture files | 2 |
 | Test frameworks | 2 (pytest, Jest) |
@@ -175,23 +176,25 @@ The 61 backend test files are organized into four directories mirroring the appl
 | 50 | `test_score_override_utils.py` | `app.utils.score_override_utils` |
 | 51 | `test_thumbnail_utils.py` | `app.utils.thumbnail_utils` |
 | 52 | `test_user_preferences.py` | `app.utils.user_preferences` |
+| 53 | `test_analysis_clear_utils.py` | `app.utils.analysis_clear_utils` |
+| 54 | `test_learning_recommendations.py` | `app.utils.learning_recommendations` |
 
 #### Code Analysis Tests (`tests/utils/code_analysis/`)
 
 | # | File | Module Under Test |
 |---|------|-------------------|
-| 53 | `test_extract_components.py` | `app.utils.code_analysis.extract_components` |
-| 54 | `test_file_entity_utils.py` | `app.utils.code_analysis.file_entity_utils` |
-| 55 | `test_grammar_loader.py` | `app.utils.code_analysis.grammar_loader` |
-| 56 | `test_parse_code_utils.py` | `app.utils.code_analysis.parse_code_utils` |
+| 55 | `test_extract_components.py` | `app.utils.code_analysis.extract_components` |
+| 56 | `test_file_entity_utils.py` | `app.utils.code_analysis.file_entity_utils` |
+| 57 | `test_grammar_loader.py` | `app.utils.code_analysis.grammar_loader` |
+| 58 | `test_parse_code_utils.py` | `app.utils.code_analysis.parse_code_utils` |
 
 #### Non-Code Analysis Tests (`tests/utils/non_code_analysis/`)
 
 | # | File | Module Under Test |
 |---|------|-------------------|
-| 57 | `test_non_3rd_party_analysis.py` | `app.utils.non_code_analysis.non_3rd_party_analysis` |
-| 58 | `test_non_code_file_checker.py` | `app.utils.non_code_analysis.non_code_file_checker` |
-| 59 | `keywords/test_domain_keywords.py` | `app.utils.non_code_analysis.keywords.domain_keywords` |
+| 59 | `test_non_3rd_party_analysis.py` | `app.utils.non_code_analysis.non_3rd_party_analysis` |
+| 60 | `test_non_code_file_checker.py` | `app.utils.non_code_analysis.non_code_file_checker` |
+| 61 | `keywords/test_domain_keywords.py` | `app.utils.non_code_analysis.keywords.domain_keywords` |
 
 ---
 
@@ -409,28 +412,31 @@ cd desktop && npm run test
 
 ---
 
-## Test Coverage Map
+## Test Coverage 
 
-### Backend Coverage
+### Backend Coverage Report (896 Test Cases Passing)
 
-| Application Area | Test Files | Strategy |
-|------------------|------------|----------|
-| Main entry point (`app/main.py`) | `test_main.py` | Unit + Integration |
-| API routes (15 endpoints) | `tests/api/test_*.py` (10 files) | API/Route |
-| API route handlers (5 routes) | `tests/api/routes/test_*.py` (5 files) | API/Route |
-| CLI modules (6 modules) | `tests/cli/test_*.py` (6 files) | CLI |
-| Core utilities (10 modules) | `tests/utils/test_*.py` (10 files) | Unit |
-| Code analysis (4 modules) | `tests/utils/code_analysis/test_*.py` (4 files) | Unit |
-| Non-code analysis (3 modules) | `tests/utils/non_code_analysis/test_*.py` (3 files) | Unit |
-| Resume generation | `test_generate_resume.py`, `test_generate_resume_tex.py` | Unit |
-| Git operations | `test_git_utils.py`, `test_git_code_parsing.py` | Unit |
-| Consent management | `test_consent_manager.py`, `test_revoke_consent.py` | Unit |
-| Database seeding | `test_db_seed.py` | Unit |
-| Text/NLP processing | `test_text_processing.py` | Unit |
-| Similarity detection | `test_similarity_confirmation.py` | Unit |
-| Project scoring | `test_project_score.py` | Unit |
+[]
 
-### Frontend Coverage
+ Run `pytest --cov=app --cov-report=html:/app/htmlcov` 
+
+ This will run your tests and create a detailed **HTML report** inside the `/app/htmlcov` folder.
+
+To view the coverage report:
+
+1. Open the `htmlcov/index.html` file in a web browser.
+2. You’ll see a visual overview showing which lines of code are tested (highlighted in green) and which are not (highlighted in red). 
+
+
+
+### Frontend Coverage Report (455 Tests Passing)
+
+[desktop/coverage/Frontend_Coverage_03292026.png]
+
+To run : 
+ `cd desktop && npm run test:coverage`
+
+ This will run your tests and create a detailed **HTML report** inside the `/desktop/coverage` folder.
 
 | Application Area | Test Files | Strategy |
 |------------------|------------|----------|
@@ -439,52 +445,6 @@ cd desktop && npm run test
 | Theme context | `ThemeContext.test.tsx` | Unit |
 | Projects API client | `projectsApi.test.ts` | Unit |
 
+
+
 ---
-
-## Known Limitations and Exclusions
-
-### Excluded Test Files
-
-Three backend test files are excluded via `pytest.ini` due to import errors:
-
-| File | Reason |
-|------|--------|
-| `tests/test_cli.py` | Import errors |
-| `tests/test_code_analysis.py` | Import errors |
-| `tests/test_non_code_analysis.py` | Import errors |
-
-### Frontend Tests Not in CI
-
-The `ci.yml` workflow only runs Python tests. Frontend Jest tests are not executed as part of the automated CI pipeline.
-
-### No End-to-End Tests
-
-There are no E2E tests (e.g., Playwright, Cypress, Selenium) that exercise the full desktop application flow from the Electron renderer through the backend API.
-
-### No Performance or Load Tests
-
-No performance benchmarks or load testing is configured.
-
-### No Contract Tests
-
-There are no contract tests (e.g., Pact) verifying the API contract between the frontend and backend.
-
-### Coverage Gaps
-# TODO DO WE REMOVE IT 
-The following modules do not have dedicated test files:
-
-**Backend:**
-- `app/data/db.py` (database initialization)
-- `app/client/llm_client.py` (Gemini LLM client)
-- `app/utils/cover_letter_utils.py`
-- `app/utils/generate_portfolio.py`
-- `app/utils/scan_utils.py`
-- `app/utils/latex_template.py`
-- `app/utils/non_code_parsing/document_parser.py`
-
-**Frontend:**
-- 13 of 14 API client modules (only `projectsApi` is tested)
-- Electron main process code
-- `App.tsx` and `main.tsx` entry points
-- `GeminiApiKeyPage.tsx`
-- `scoreOverrideManager/` module

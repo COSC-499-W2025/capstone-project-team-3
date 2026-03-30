@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,7 +91,7 @@ async function parseErrorDetail(res: Response): Promise<string> {
 export async function generateCoverLetter(
   request: CoverLetterRequest
 ): Promise<CoverLetterDraft> {
-  const res = await fetch(`${API_BASE}/api/cover-letter/generate`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
@@ -113,7 +111,7 @@ export async function generateCoverLetter(
 export async function saveCoverLetter(
   draft: CoverLetterDraft
 ): Promise<CoverLetterResponse> {
-  const res = await fetch(`${API_BASE}/api/cover-letter/save`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -135,7 +133,7 @@ export async function saveCoverLetter(
 
 /** List all saved cover letters (summary only). */
 export async function listCoverLetters(): Promise<CoverLetterSummary[]> {
-  const res = await fetch(`${API_BASE}/api/cover-letter`);
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter`);
   if (!res.ok) {
     const message = await parseErrorDetail(res);
     throw new Error(message);
@@ -145,7 +143,7 @@ export async function listCoverLetters(): Promise<CoverLetterSummary[]> {
 
 /** Retrieve a single cover letter with full content. */
 export async function getCoverLetter(id: number): Promise<CoverLetterResponse> {
-  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`);
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter/${id}`);
   if (!res.ok) {
     const message = await parseErrorDetail(res);
     throw new Error(message);
@@ -157,7 +155,7 @@ export async function getCoverLetter(id: number): Promise<CoverLetterResponse> {
 export async function deleteCoverLetter(
   id: number
 ): Promise<{ success: boolean; deleted_id: number }> {
-  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter/${id}`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -172,7 +170,7 @@ export async function updateCoverLetter(
   id: number,
   content: string
 ): Promise<CoverLetterResponse> {
-  const res = await fetch(`${API_BASE}/api/cover-letter/${id}`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/cover-letter/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
@@ -186,7 +184,7 @@ export async function updateCoverLetter(
 
 /** Return the URL for downloading a cover letter as PDF. */
 export function coverLetterPdfUrl(id: number): string {
-  return `${API_BASE}/api/cover-letter/${id}/pdf`;
+  return `${getApiBaseUrl()}/api/cover-letter/${id}/pdf`;
 }
 
 /**

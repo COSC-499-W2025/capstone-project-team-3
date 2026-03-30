@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,7 +46,7 @@ export interface UpdateSkillNamePayload {
  * Fetch all projects with their date information (created_at, last_modified).
  */
 export async function getChronologicalProjects(): Promise<ChronologicalProject[]> {
-  const res = await fetch(`${API_BASE}/api/chronological/projects`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/chronological/projects`, {
     method: "GET",
   });
   if (!res.ok) throw new Error("Failed to fetch projects: " + res.statusText);
@@ -62,7 +60,7 @@ export async function getChronologicalProject(
   signature: string
 ): Promise<ChronologicalProject> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}`,
+    `${getApiBaseUrl()}/api/chronological/projects/${encodeURIComponent(signature)}`,
     { method: "GET" }
   );
   if (!res.ok) {
@@ -80,7 +78,7 @@ export async function updateProjectName(
   name: string
 ): Promise<ChronologicalProject> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}/name`,
+    `${getApiBaseUrl()}/api/chronological/projects/${encodeURIComponent(signature)}/name`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -107,7 +105,7 @@ export async function updateProjectDates(
   payload: UpdateProjectDatesPayload
 ): Promise<ChronologicalProject> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}/dates`,
+    `${getApiBaseUrl()}/api/chronological/projects/${encodeURIComponent(signature)}/dates`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -132,7 +130,7 @@ export async function getProjectSkills(
   signature: string
 ): Promise<ChronologicalSkill[]> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}/skills`,
+    `${getApiBaseUrl()}/api/chronological/projects/${encodeURIComponent(signature)}/skills`,
     { method: "GET" }
   );
   if (!res.ok) {
@@ -150,7 +148,7 @@ export async function addSkill(
   payload: AddSkillPayload
 ): Promise<{ message: string; skill: string; source: string; date: string }> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/projects/${encodeURIComponent(signature)}/skills`,
+    `${getApiBaseUrl()}/api/chronological/projects/${encodeURIComponent(signature)}/skills`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -180,7 +178,7 @@ export async function updateSkillDate(
   payload: UpdateSkillDatePayload
 ): Promise<ChronologicalSkill> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/skills/${skillId}/date`,
+    `${getApiBaseUrl()}/api/chronological/skills/${skillId}/date`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -202,7 +200,7 @@ export async function updateSkillName(
   payload: UpdateSkillNamePayload
 ): Promise<ChronologicalSkill> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/skills/${skillId}/name`,
+    `${getApiBaseUrl()}/api/chronological/skills/${skillId}/name`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -225,7 +223,7 @@ export async function updateSkillName(
  */
 export async function deleteSkill(skillId: number): Promise<void> {
   const res = await fetch(
-    `${API_BASE}/api/chronological/skills/${skillId}`,
+    `${getApiBaseUrl()}/api/chronological/skills/${skillId}`,
     { method: "DELETE" }
   );
   if (!res.ok) {

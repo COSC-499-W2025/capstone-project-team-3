@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 import "../styles/ConsentPage.css";
 import "../styles/Notification.css";
 
@@ -125,11 +125,11 @@ export function ConsentPage() {
   useEffect(() => {
     const fetchConsentStatus = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/privacy-consent`);
+        const res = await fetch(`${getApiBaseUrl()}/api/privacy-consent`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
 
-        const textRes = await fetch(`${API_BASE_URL}/api/privacy-consent/text`);
+        const textRes = await fetch(`${getApiBaseUrl()}/api/privacy-consent/text`);
         if (!textRes.ok) throw new Error(await textRes.text());
         const textData: ConsentTextResponse = await textRes.json();
 
@@ -147,7 +147,7 @@ export function ConsentPage() {
   const handleSubmit = async (accepted: boolean) => {
     if (!messages) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/privacy-consent`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/privacy-consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accepted }),
@@ -167,7 +167,7 @@ export function ConsentPage() {
 
   const handleRevoke = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/privacy-consent`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/privacy-consent`, {
         method: "DELETE",
       });
 

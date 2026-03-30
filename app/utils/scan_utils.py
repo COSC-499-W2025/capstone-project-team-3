@@ -237,10 +237,11 @@ def extract_file_signature(file_path: Union[str, Path], project_root: Union[str,
     """
     for attempt in range(1, retries + 1):
         try:
-            p = Path(file_path)
-            root = Path(project_root)
+            # Resolve so macOS /var/... and /private/var/... compare equal (symlink).
+            p = Path(file_path).expanduser().resolve()
+            root = Path(project_root).expanduser().resolve()
             stat = p.stat()
-            
+
             # Just use relative path + size (no timestamp)
             rel_path = str(p.relative_to(root))
             sig_str = f"{rel_path}:{stat.st_size}"

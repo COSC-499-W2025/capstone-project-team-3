@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Union, List, Dict, Optional
-import json 
+import json
 import logging
+import sys
 from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from app.utils.code_analysis.file_entity_utils import classify_node_types, extract_entities, get_parser
@@ -15,40 +16,56 @@ import re
 
 logger = logging.getLogger(__name__)
 
-_TS_IMPORT_NODES = {}
-_TS_IMPORT_REGEX={}
-_TS_IMPORT_QUERIES={}
-_TS_LANGUAGE_MAPPING={}
 
-try:
-    # Works even when installed as a package or run inside Docker
-    with pkg_resources.files("app.shared").joinpath("treesitter_import_keywords.json").open() as f:
-        _TS_IMPORT_NODES = json.load(f)
-except Exception as e:
-    print(f"Warning: Could not load treesitter_import_keywords.json: {e}")
-    _TS_IMPORT_NODES = {}
+def _shared_package_dir() -> Path:
+    """
+    Root of app/shared on disk (repo, Docker) or in PyInstaller (_MEIPASS/app/shared).
 
-try:
-    with pkg_resources.files("app.shared").joinpath("import_patterns_regex.json").open() as f:
-        _TS_IMPORT_REGEX = json.load(f)
-except Exception as e:
-    print(f"Warning: Could not load import_patterns_regex.json: {e}")
-    _TS_IMPORT_REGEX = {}
-    
-try:
-    with pkg_resources.files("app.shared").joinpath("library.json").open() as f:
-        _TS_IMPORT_QUERIES = json.load(f)
-except Exception as e:
-    print(f"Warning: Could not load library.json: {e}")
-    _TS_IMPORT_QUERIES = {}
-    
-try:
-    with pkg_resources.files("app.shared").joinpath("language_mapping.json").open() as f:
-        _TS_LANGUAGE_MAPPING_LOAD = json.load(f)
-        _TS_LANGUAGE_MAPPING={k.strip().lower(): v for k, v in _TS_LANGUAGE_MAPPING_LOAD.items()}
-except Exception as e:
-    print(f"Warning: Could not load language_mapping.json: {e}")
-    _TS_LANGUAGE_MAPPING = {}
+    Do not use Path('app/shared/...') — that is relative to os.getcwd() and breaks when the
+    backend cwd is dist/backend-sidecar or any non-project root.
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "app" / "shared"
+    # parse_code_utils.py -> app/utils/code_analysis/ -> app/
+    return Path(__file__).resolve().parents[2] / "shared"
+
+
+def _shared_json_path(filename: str) -> Path:
+    """
+    Path to app/shared/*.json.
+
+    importlib.resources.files('app.shared') often returns MultiplexedPath for namespace packages
+    (no app/shared/__init__.py), which cannot .open() files — use the filesystem instead.
+    PyInstaller: bundle JSON under _MEIPASS/app/shared/ (see backend-sidecar.spec).
+    """
+    return _shared_package_dir() / filename
+
+
+def _load_shared_json(filename: str) -> dict:
+    """Load a JSON dict from app/shared; fall back to importlib.resources for odd installs."""
+    path = _shared_json_path(filename)
+    if path.is_file():
+        try:
+            with path.open(encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning("Could not load %s from %s: %s", filename, path, e)
+    try:
+        root = pkg_resources.files("app.shared")
+        with root.joinpath(filename).open(encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning("Could not load %s via importlib.resources: %s", filename, e)
+    return {}
+
+
+_TS_IMPORT_NODES = _load_shared_json("treesitter_import_keywords.json")
+_TS_IMPORT_REGEX = _load_shared_json("import_patterns_regex.json")
+_TS_IMPORT_QUERIES = _load_shared_json("library.json")
+_TS_LANGUAGE_MAPPING_LOAD = _load_shared_json("language_mapping.json")
+_TS_LANGUAGE_MAPPING = {
+    k.strip().lower(): v for k, v in _TS_LANGUAGE_MAPPING_LOAD.items()
+}
 
 def _read_file_with_encoding_fallback(file_path: Path, return_content: bool = True) -> str | None:
     """
@@ -567,7 +584,7 @@ def parse_code_flow(file_paths: List[Path],top_level_dirs: List[str]) -> List[Di
             entities = {}
             if mapped_language:
                 try:
-                    grammar_path = Path(f"app/shared/grammars/{mapped_language}.js")
+                    grammar_path = _shared_package_dir() / "grammars" / f"{mapped_language}.js"
                     rule_names = extract_rule_names(grammar_path)
                     class_nodes, func_nodes, component_nodes = classify_node_types(rule_names)
                     ts_lang = get_language(mapped_language)

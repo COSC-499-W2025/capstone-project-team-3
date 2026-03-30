@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 export interface EducationDetail {
   institution: string;
@@ -38,7 +36,7 @@ export interface InstitutionSearchResponse {
  * Fetch the latest user preferences from the backend
  */
 export async function getUserPreferences(): Promise<UserPreferences> {
-  const res = await fetch(`${API_BASE}/api/user-preferences`, { 
+  const res = await fetch(`${getApiBaseUrl()}/api/user-preferences`, { 
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -72,7 +70,7 @@ export async function getUserPreferences(): Promise<UserPreferences> {
  * Save or update user preferences
  */
 export async function saveUserPreferences(preferences: UserPreferences): Promise<{ status: string; message: string }> {
-  const res = await fetch(`${API_BASE}/api/user-preferences`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/user-preferences`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -109,7 +107,7 @@ export async function searchInstitutions(
     simple: simple.toString(),
   });
   
-  const res = await fetch(`${API_BASE}/api/institutions/search?${params}`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/institutions/search?${params}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -127,7 +125,7 @@ export async function searchInstitutions(
  * Get all Canadian institutions (for dropdown/autocomplete)
  */
 export async function getAllInstitutions(): Promise<InstitutionSearchResponse> {
-  const res = await fetch(`${API_BASE}/api/institutions/list`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/institutions/list`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -145,7 +143,7 @@ export async function getAllInstitutions(): Promise<InstitutionSearchResponse> {
  * Returns the URL to fetch the profile picture directly from the backend.
  */
 export function getProfilePictureUrl(): string {
-  return `${API_BASE}/api/user-preferences/profile-picture`;
+  return `${getApiBaseUrl()}/api/user-preferences/profile-picture`;
 }
 
 /**
@@ -155,7 +153,7 @@ export async function uploadProfilePicture(file: File): Promise<{ status: string
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/api/user-preferences/profile-picture`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/user-preferences/profile-picture`, {
     method: "POST",
     body: formData,
   });
@@ -176,7 +174,7 @@ export async function uploadProfilePicture(file: File): Promise<{ status: string
  * Remove the stored profile picture
  */
 export async function deleteProfilePicture(): Promise<{ status: string; message: string }> {
-  const res = await fetch(`${API_BASE}/api/user-preferences/profile-picture`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/user-preferences/profile-picture`, {
     method: "DELETE",
   });
 

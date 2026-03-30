@@ -1,7 +1,5 @@
 import type { Resume, Skills, Award, WorkExperience } from "./resume_types";
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 /** Parse error body (e.g. FastAPI detail) when available; fallback to statusText. */
 async function parseErrorDetail(res: Response): Promise<string> {
@@ -10,12 +8,28 @@ async function parseErrorDetail(res: Response): Promise<string> {
     if (body?.detail != null) {
       if (typeof body.detail === "string") return body.detail;
       if (Array.isArray(body.detail)) return body.detail.map((d: { msg?: string }) => d?.msg ?? String(d)).join("; ");
+      if (typeof body.detail === "object") {
+        const d = body.detail as Record<string, unknown>;
+        // Resume PDF export: LaTeX compile failures (422)
+        if (typeof d.error === "string") {
+          const parts = [d.error];
+          const tail = (s: unknown) => (typeof s === "string" && s.trim() ? s.trim().slice(-1200) : "");
+          const err = tail(d.stderr) || tail(d.stdout);
+          if (err) parts.push(err);
+          return parts.join("\n\n");
+        }
+        try {
+          return JSON.stringify(body.detail);
+        } catch {
+          return String(body.detail);
+        }
+      }
     }
     if (body && typeof body.message === "string") return body.message;
   } catch {
     // ignore non-JSON or read errors
   }
-  return "Request failed: " + res.statusText;
+  return `Request failed (${res.status}): ${res.statusText || "Unknown error"}`;
 }
 
 export interface ResumeListItem {
@@ -27,7 +41,7 @@ export interface ResumeListItem {
 
 // Fetch list of all saved resumes
 export async function getResumes(): Promise<ResumeListItem[]> {
-  const res = await fetch(`${API_BASE}/resume_names`, { method: "GET" });
+  const res = await fetch(`${getApiBaseUrl()}/resume_names`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   const data = await res.json();
   return data.resumes ?? [];
@@ -35,7 +49,7 @@ export async function getResumes(): Promise<ResumeListItem[]> {
 
 // Build master resume with all projects
 export async function buildResume(): Promise<Resume> {
-  const res = await fetch(`${API_BASE}/resume`, { method: "GET" });
+  const res = await fetch(`${getApiBaseUrl()}/resume`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<Resume>;
 }
@@ -43,26 +57,26 @@ export async function buildResume(): Promise<Resume> {
 // Generate preview resume with selected projects only
 export async function previewResume(projectIds: string[]): Promise<Resume> {
   const params = projectIds.map(id => `project_ids=${id}`).join('&');
-  const res = await fetch(`${API_BASE}/resume?${params}`, { method: "GET" });
+  const res = await fetch(`${getApiBaseUrl()}/resume?${params}`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<Resume>;
 }
 
 // Fetch saved resume by ID (includes edits from RESUME_PROJECT table)
 export async function getResumeById(id: number): Promise<Resume> {
-  const res = await fetch(`${API_BASE}/resume/${id}`, { method: "GET" });
+  const res = await fetch(`${getApiBaseUrl()}/resume/${id}`, { method: "GET" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json() as Promise<Resume>;
 }
 
 export async function deleteResume(id: number): Promise<{ success: boolean; message: string }> {
-  const res = await fetch(`${API_BASE}/resume/${id}`, { method: "DELETE" });
+  const res = await fetch(`${getApiBaseUrl()}/resume/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Request failed: " + res.statusText);
   return res.json();
 }
 
 export async function duplicateResume(id: number): Promise<{ resume_id: number }> {
-  const res = await fetch(`${API_BASE}/resume/${id}/duplicate`, { method: "POST" });
+  const res = await fetch(`${getApiBaseUrl()}/resume/${id}/duplicate`, { method: "POST" });
   if (!res.ok) {
     const message = await parseErrorDetail(res);
     throw new Error(message);
@@ -71,7 +85,7 @@ export async function duplicateResume(id: number): Promise<{ resume_id: number }
 }
 
 export async function renameResume(id: number, name: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/resume/${id}`, {
+  const res = await fetch(`${getApiBaseUrl()}/resume/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -87,7 +101,7 @@ export async function deleteProjectFromResume(
   resumeId: number,
   projectId: string
 ): Promise<{ success: boolean; message: string }> {
-  const res = await fetch(`${API_BASE}/resume/${resumeId}/project/${encodeURIComponent(projectId)}`, {
+  const res = await fetch(`${getApiBaseUrl()}/resume/${resumeId}/project/${encodeURIComponent(projectId)}`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -102,7 +116,7 @@ export async function addProjectsToResume(
   resumeId: number,
   projectIds: string[]
 ): Promise<{ message: string }> {
-  const res = await fetch(`${API_BASE}/resume/${resumeId}/projects`, {
+  const res = await fetch(`${getApiBaseUrl()}/resume/${resumeId}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project_ids: projectIds }),
@@ -121,7 +135,7 @@ export async function saveNewResume(
   awards?: Award[],
   work_experience?: WorkExperience[]
 ): Promise<{ resume_id: number }> {
-  const res = await fetch(`${API_BASE}/resume`, {
+  const res = await fetch(`${getApiBaseUrl()}/resume`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -141,7 +155,7 @@ export async function updateResume(
   id: number, 
   payload: { skills?: Skills; projects?: unknown[]; awards?: Award[]; work_experience?: WorkExperience[]; personal_summary?: string | null }
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/resume/${id}/edit`, {
+  const res = await fetch(`${getApiBaseUrl()}/resume/${id}/edit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -166,11 +180,14 @@ export async function downloadResumePDF(params?: { projectIds?: string[], resume
   }
   
   const queryString = queryParams.toString();
-  const url = queryString ? `${API_BASE}/resume/export/pdf?${queryString}` : `${API_BASE}/resume/export/pdf`;
+  const url = queryString ? `${getApiBaseUrl()}/resume/export/pdf?${queryString}` : `${getApiBaseUrl()}/resume/export/pdf`;
   
   const res = await fetch(url, { method: "GET" });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
-  
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+
   // Trigger browser download
   const blob = await res.blob();
   const downloadUrl = window.URL.createObjectURL(blob);
@@ -200,11 +217,14 @@ export async function downloadResumeTeX(params?: { projectIds?: string[], resume
   }
   
   const queryString = queryParams.toString();
-  const url = queryString ? `${API_BASE}/resume/export/tex?${queryString}` : `${API_BASE}/resume/export/tex`;
+  const url = queryString ? `${getApiBaseUrl()}/resume/export/tex?${queryString}` : `${getApiBaseUrl()}/resume/export/tex`;
   
   const res = await fetch(url, { method: "GET" });
-  if (!res.ok) throw new Error("Request failed: " + res.statusText);
-  
+  if (!res.ok) {
+    const message = await parseErrorDetail(res);
+    throw new Error(message);
+  }
+
   // Trigger browser download
   const blob = await res.blob();
   const downloadUrl = window.URL.createObjectURL(blob);

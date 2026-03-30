@@ -116,12 +116,12 @@ def test_render_projects_empty_bullets_safe():
 
     rendered = render_projects(projects)
 
-    assert r"\begin{itemize}" in rendered
-    assert r"\end{itemize}" in rendered
+    assert r"\begin{resumeitemizewide}" in rendered
+    assert r"\end{resumeitemizewide}" in rendered
 
 def test_render_links_multiple():
     """
-    render_links should render multiple links separated by \\quad.
+    render_links should render multiple links separated by " | " (same as preview).
     """
     links = [
         {"label": "GitHub", "url": "https://github.com/test"},
@@ -131,7 +131,7 @@ def test_render_links_multiple():
     rendered = render_links(links)
 
     assert r"\href{https://github.com/test}{GitHub}" in rendered
-    assert r"\quad" in rendered
+    assert " | " in rendered
     assert r"\href{https://example.com}{Portfolio}" in rendered
 
 

@@ -3,10 +3,10 @@
  * Copy this file and rename for your endpoint.
  */
 
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 
 export async function callEndpoint(payload: any) {
-  const res = await fetch(`${API_BASE_URL}/ENDPOINT_HERE`, {
+  const res = await fetch(`${getApiBaseUrl()}/ENDPOINT_HERE`, {
     method: "POST", // or "GET" if applicable
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

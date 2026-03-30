@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 export type CoursePricing = "free" | "paid";
 export type CourseLevel = "starter" | "advanced";
@@ -23,14 +21,14 @@ export interface LearningRecommendationsResponse {
 }
 
 export async function getLearningRecommendations(): Promise<LearningRecommendationsResponse> {
-  const url = `${API_BASE}/api/learning/recommendations`;
+  const url = `${getApiBaseUrl()}/api/learning/recommendations`;
   let res: Response;
   try {
     res = await fetch(url, { method: "GET" });
   } catch (e) {
     if (e instanceof TypeError) {
       throw new Error(
-        `Cannot reach the API at ${API_BASE} (${url}). ` +
+        `Cannot reach the API at ${getApiBaseUrl()} (${url}). ` +
           "Start the FastAPI server (e.g. on port 8000), or set VITE_API_BASE_URL in .env to match where it runs."
       );
     }
@@ -55,7 +53,7 @@ export async function getLearningRecommendations(): Promise<LearningRecommendati
 export function learningThumbnailSrc(thumbnailUrl: string): string {
   if (!thumbnailUrl) return "";
   if (thumbnailUrl.startsWith("/")) {
-    return `${API_BASE}${thumbnailUrl}`;
+    return `${getApiBaseUrl()}${thumbnailUrl}`;
   }
   return thumbnailUrl;
 }

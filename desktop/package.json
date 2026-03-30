@@ -1,7 +1,9 @@
 {
-  "name": "desktop",
+  "name": "big-picture-desktop",
   "private": true,
   "version": "0.0.0",
+  "description": "Big Picture — portfolio and résumé insights",
+  "author": "COSC 499 Capstone Team 3",
   "type": "module",
   "scripts": {
     "dev": "vite",

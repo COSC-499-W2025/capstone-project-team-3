@@ -1,0 +1,185 @@
+name: Release Desktop App
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  # GitHub only lists manual "Run workflow" / `gh workflow run` for workflows on the default
+  # branch. This push rule runs the same pipeline from `deployment2` when you push here.
+  push:
+    branches:
+      - deployment2
+    paths:
+      - ".github/workflows/release-desktop.yml"
+      - "requirements.txt"
+      - "backend-sidecar.spec"
+      - "app/**"
+      - "desktop/**"
+      - "tests/**"
+
+jobs:
+  # macOS only: keeps CI time and release size reasonable; DMG ~1 GiB fits GitHub's 2 GiB asset cap.
+  # Use .github/workflows/backend-sidecar.yml for Linux/Windows sidecar builds when needed.
+  build-backend-sidecar:
+    name: Build backend (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            backend_artifact: backend-sidecar-macos
+            output_binary: backend-sidecar
+            platform_dir: darwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python build dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("requirements.txt").read_text(encoding="utf-8")
+          if re.search(r"(?m)^numpy==1\.", text):
+              raise SystemExit(
+                  "requirements.txt still pins NumPy 1.x; thinc 8.3 needs NumPy 2.x. "
+                  "Check the branch/commit GitHub checked out for this workflow."
+              )
+          PY
+          python -m pip install --no-cache-dir "numpy==2.2.6"
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install --no-cache-dir pyinstaller
+
+      - name: Build backend sidecar binary
+        run: |
+          pyinstaller --noconfirm --clean backend-sidecar.spec
+
+      - name: Upload backend sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.backend_artifact }}
+          path: dist/backend-sidecar
+
+  build-desktop:
+    name: Build desktop installer (${{ matrix.os }})
+    needs: build-backend-sidecar
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            backend_artifact: backend-sidecar-macos
+            platform_dir: darwin
+            output_artifact: desktop-release-macos
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Download backend sidecar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.backend_artifact }}
+          path: desktop/resources/backend/${{ matrix.platform_dir }}
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build desktop app installer
+        working-directory: desktop
+        run: npm run build
+
+      - name: Upload desktop build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_artifact }}
+          path: desktop/release/**/*
+
+  publish-release-assets:
+    name: Publish release assets
+    if: github.event_name == 'release'
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-release
+
+      # GitHub rejects any single release asset ≥ 2 GiB. PyInstaller + ML stack DMGs often exceed that.
+      # Upload files under the cap; skip oversize and attach a note pointing testers to workflow Artifacts.
+      # Option A (no bundle shrink): full installers often exceed GitHub's 2 GiB/release-file cap.
+      # Upload any installers that fit; always document the Actions run link for Artifacts.
+      - name: Upload release assets (2 GiB cap) + tester download instructions
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name }}"
+          repo="${{ github.repository }}"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          max=$((2147483648 - 1))
+          uploaded=0
+          note=""
+          while IFS= read -r -d '' f; do
+            size=$(stat -c%s "$f")
+            base=$(basename "$f")
+            if [ "$size" -le "$max" ]; then
+              echo "Uploading $base ($size bytes)"
+              gh release upload "$tag" "$f" --repo "$repo" --clobber
+              uploaded=$((uploaded + 1))
+            else
+              echo "::warning::Skipping $base ($size bytes) — over GitHub's 2 GiB release-asset limit."
+              note="${note}- ${base} (${size} bytes)"$'\n'
+            fi
+          done < <(find dist-release -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print0)
+
+          {
+            echo "Big Picture — how to get installers for tag ${tag}"
+            echo ""
+            echo "GitHub Releases allow at most 2 GiB per attached file. Full desktop installers may be larger."
+            echo ""
+            echo "This workflow produces macOS builds only. Download the DMG (recommended):"
+            echo "  1. Open: ${run_url}"
+            echo "  2. Scroll to the Artifacts section at the bottom."
+            echo "  3. Download: desktop-release-macos (ZIP contains the .dmg)."
+            echo "  4. Unzip and open the DMG."
+            echo ""
+            if [ -n "$note" ]; then
+              echo "These builds were too large to attach to this release page:"
+              echo ""
+              echo "${note}"
+              echo ""
+            fi
+            if [ "$uploaded" -gt 0 ]; then
+              echo "Some smaller files may also be attached under Assets on this release page."
+            fi
+          } > dist-release/DOWNLOAD-INSTALLERS-HERE.txt
+
+          gh release upload "$tag" dist-release/DOWNLOAD-INSTALLERS-HERE.txt --repo "$repo" --clobber
+
+          if [ "$uploaded" -eq 0 ]; then
+            echo "::notice::Publish release assets: no installer was under 2 GiB; testers should use Artifacts via DOWNLOAD-INSTALLERS-HERE.txt on this release."
+          fi

@@ -5,10 +5,19 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, MutableMapping, Optional, Set, Tuple
 
-CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "course_catalog.json"
+
+def _default_catalog_path() -> Path:
+    """Repo / Docker: .../app/data/... PyInstaller: .../_MEIPASS/app/data/..."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "app" / "data" / "course_catalog.json"
+    return Path(__file__).resolve().parent.parent / "data" / "course_catalog.json"
+
+
+CATALOG_PATH = _default_catalog_path()
 
 # Weights: higher = stronger signal for tag overlap
 WEIGHT_PROFICIENT = 3.0

@@ -191,9 +191,28 @@ def init_db():
     _ensure_project_score_constraint(cursor)
     _ensure_resume_project_has_no_project_fk(cursor)
     _ensure_cover_letter_table(cursor)
+    _ensure_consent_columns(cursor)
     conn.commit()
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
+
+
+def _ensure_consent_columns(cursor: sqlite3.Cursor) -> None:
+    """Older DBs may have CONSENT without timestamp/policy_version; API GET uses timestamp."""
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='CONSENT'"
+    )
+    if cursor.fetchone() is None:
+        return
+    cursor.execute("PRAGMA table_info(CONSENT)")
+    existing = {row[1] for row in cursor.fetchall()}
+    if "policy_version" not in existing:
+        cursor.execute("ALTER TABLE CONSENT ADD COLUMN policy_version TEXT")
+    if "timestamp" not in existing:
+        cursor.execute(
+            "ALTER TABLE CONSENT ADD COLUMN timestamp DATETIME DEFAULT CURRENT_TIMESTAMP"
+        )
+
 
 def _ensure_project_override_exclusions_column(cursor: sqlite3.Cursor) -> None:
     """Ensure PROJECT has score_override_exclusions column on existing DBs."""

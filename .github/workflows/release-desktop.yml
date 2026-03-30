@@ -4,6 +4,18 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+  # GitHub only lists manual "Run workflow" / `gh workflow run` for workflows on the default
+  # branch. This push rule runs the same pipeline from `deployment2` when you push here.
+  push:
+    branches:
+      - deployment2
+    paths:
+      - ".github/workflows/release-desktop.yml"
+      - "requirements.txt"
+      - "backend-sidecar.spec"
+      - "app/**"
+      - "desktop/**"
+      - "tests/**"
 
 jobs:
   build-backend-sidecar:

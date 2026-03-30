@@ -63,3 +63,6 @@ docker-compose.override.yml
 *.tar
 docker-entrypoint-*.sh
 desktop/release/
+
+# Ignore front-end coverage report
+desktop/coverage/

@@ -16,4 +16,12 @@ export default {
     testMatch: [
         '<rootDir>/tests/**/*.test.(ts|tsx)',
     ],
+    collectCoverageFrom: [
+        'src/**/*.{ts,tsx}',
+        '!src/**/*.d.ts',
+        '!src/main.tsx',
+        '!src/vite-env.d.ts',
+    ],
+    coverageReporters: ['text', 'lcov', 'html'],
+    coverageDirectory: 'coverage',
 };

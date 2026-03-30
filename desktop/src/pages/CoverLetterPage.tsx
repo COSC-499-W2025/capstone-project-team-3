@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { getResumes, type ResumeListItem } from "../api/resume";
+import { getGeminiKeyStatus, type GeminiKeyStatus } from "../api/geminiKey";
+import { GeminiApiKeyModal } from "../components/gemini/GeminiApiKeyModal";
 import {
   generateCoverLetter,
   saveCoverLetter,
@@ -14,6 +17,8 @@ import {
   type GenerationMode,
 } from "../api/cover_letter";
 import "../styles/CoverLetterPage.css";
+import "../styles/UploadPage.css";
+import "../styles/GeminiApiKey.css";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -118,28 +123,85 @@ function HistoryCard({
 // Generate tab
 // ---------------------------------------------------------------------------
 
+const CL_DRAFT_KEY = "cl-generate-draft";
+
+interface ClDraft {
+  resumeId: number | "";
+  jobTitle: string;
+  company: string;
+  jobDescription: string;
+  motivations: string[];
+  customMotivation: string;
+  mode: GenerationMode;
+}
+
+function loadDraft(): Partial<ClDraft> {
+  try {
+    const raw = sessionStorage.getItem(CL_DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Partial<ClDraft>) : {};
+  } catch {
+    return {};
+  }
+}
+
 interface GenerateTabProps {
   resumes: ResumeListItem[];
   onGenerated: (cl: CoverLetterDraft) => void;
+  geminiStatus: GeminiKeyStatus | null;
+  onOpenGeminiKeyModal: () => void;
 }
 
-function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
-  const [resumeId, setResumeId] = useState<number | "">("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [motivations, setMotivations] = useState<string[]>([]);
-  const [customMotivation, setCustomMotivation] = useState("");
-  const [mode, setMode] = useState<GenerationMode>("local");
+function GenerateTab({ resumes, onGenerated, geminiStatus, onOpenGeminiKeyModal }: GenerateTabProps) {
+  const [resumeId, setResumeId] = useState<number | "">(() => loadDraft().resumeId ?? "");
+  const [jobTitle, setJobTitle] = useState(() => loadDraft().jobTitle ?? "");
+  const [company, setCompany] = useState(() => loadDraft().company ?? "");
+  const [jobDescription, setJobDescription] = useState(() => loadDraft().jobDescription ?? "");
+  const [motivations, setMotivations] = useState<string[]>(() => loadDraft().motivations ?? []);
+  const [customMotivation, setCustomMotivation] = useState(() => loadDraft().customMotivation ?? "");
+  const [mode, setMode] = useState<GenerationMode>(() => loadDraft().mode ?? "local");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const savedResumes = resumes.filter((r) => r.id !== null);
+  // AI consent state
+  const [aiConsentAccepted, setAiConsentAccepted] = useState(false);
+  const [showAiConsentModal, setShowAiConsentModal] = useState(false);
+  const [pendingMode, setPendingMode] = useState<GenerationMode | null>(null);
+
+  // Persist form fields to sessionStorage whenever they change
+  useEffect(() => {
+    const draft: ClDraft = { resumeId, jobTitle, company, jobDescription, motivations, customMotivation, mode };
+    sessionStorage.setItem(CL_DRAFT_KEY, JSON.stringify(draft));
+  }, [resumeId, jobTitle, company, jobDescription, motivations, customMotivation, mode]);
+
+  const showAiWithoutKeyWarning = mode === "ai" && geminiStatus !== null && !geminiStatus.valid;
+
+  const savedResumes = resumes.filter((r) => r.id !== null && !r.is_master);
 
   function toggleMotivation(key: string) {
     setMotivations((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+  }
+
+  function handleModeSelect(selected: GenerationMode) {
+    if (selected === "ai" && !aiConsentAccepted) {
+      setPendingMode(selected);
+      setShowAiConsentModal(true);
+      return;
+    }
+    setMode(selected);
+  }
+
+  function handleAcceptAiConsent() {
+    setAiConsentAccepted(true);
+    if (pendingMode) setMode(pendingMode);
+    setPendingMode(null);
+    setShowAiConsentModal(false);
+  }
+
+  function handleCancelAiConsent() {
+    setPendingMode(null);
+    setShowAiConsentModal(false);
   }
 
   async function handleGenerate() {
@@ -298,7 +360,7 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
           <button
             type="button"
             className={`cl-mode-card${mode === "local" ? " cl-mode-card--selected" : ""}`}
-            onClick={() => setMode("local")}
+            onClick={() => handleModeSelect("local")}
             aria-pressed={mode === "local"}
             data-testid="cl-mode-local"
           >
@@ -310,7 +372,7 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
           <button
             type="button"
             className={`cl-mode-card${mode === "ai" ? " cl-mode-card--selected" : ""}`}
-            onClick={() => setMode("ai")}
+            onClick={() => handleModeSelect("ai")}
             aria-pressed={mode === "ai"}
             data-testid="cl-mode-ai"
           >
@@ -321,6 +383,34 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
             </p>
           </button>
         </div>
+
+        {aiConsentAccepted && mode === "ai" && (
+          <p className="upload-ai-consent-status" data-testid="cl-ai-consent-status" style={{ marginTop: "0.75rem" }}>
+            AI consent accepted for this session.
+          </p>
+        )}
+
+        {showAiWithoutKeyWarning && (
+          <div className="upload-ai-key-missing" role="alert" aria-live="polite" data-testid="cl-ai-key-missing" style={{ marginTop: "0.75rem" }}>
+            <p>
+              <strong>No valid Gemini API key is configured.</strong> The cover
+              letter will fall back to <strong>local template</strong> generation
+              unless you add a key first.
+            </p>
+            <div className="upload-ai-key-missing-actions">
+              <button
+                type="button"
+                className="upload-select-btn"
+                onClick={onOpenGeminiKeyModal}
+              >
+                Add API key
+              </button>
+              <Link to="/geminiapikeypage" className="upload-clear-btn upload-gemini-banner-link">
+                Open settings
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {error && (
@@ -340,6 +430,37 @@ function GenerateTab({ resumes, onGenerated }: GenerateTabProps) {
           {loading ? "Generating…" : "Generate Cover Letter"}
         </button>
       </div>
+
+      {showAiConsentModal && (
+        <div className="upload-consent-overlay" role="dialog" aria-modal="true" aria-label="AI consent required" data-testid="cl-ai-consent-modal">
+          <div className="upload-consent-modal">
+            <h3 className="upload-consent-title">AI consent required</h3>
+            <p className="upload-consent-text">
+              To use AI generation, your resume content and job description may
+              be sent to our configured LLM provider (Gemini) to generate the
+              cover letter. Please confirm you have permission to share this data.
+            </p>
+            <div className="upload-consent-actions">
+              <button
+                type="button"
+                className="upload-clear-btn"
+                onClick={handleCancelAiConsent}
+                data-testid="cl-ai-consent-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="upload-select-btn"
+                onClick={handleAcceptAiConsent}
+                data-testid="cl-ai-consent-accept"
+              >
+                I understand, use AI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -587,12 +708,29 @@ export default function CoverLetterPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
+  // Gemini key state
+  const [geminiStatus, setGeminiStatus] = useState<GeminiKeyStatus | null>(null);
+  const [showGeminiKeyModal, setShowGeminiKeyModal] = useState(false);
+
   // Load resumes on mount
   useEffect(() => {
     getResumes()
       .then(setResumes)
       .catch(() => setResumes([]));
   }, []);
+
+  // Load Gemini key status on mount
+  useEffect(() => {
+    getGeminiKeyStatus()
+      .then(setGeminiStatus)
+      .catch(() => setGeminiStatus(null));
+  }, []);
+
+  const refreshGeminiStatus = () => {
+    getGeminiKeyStatus()
+      .then(setGeminiStatus)
+      .catch(() => setGeminiStatus(null));
+  };
 
   // Load history whenever the history tab is activated
   const loadHistory = useCallback(async () => {
@@ -672,7 +810,12 @@ export default function CoverLetterPage() {
       </nav>
 
       {activeTab === "generate" && (
-        <GenerateTab resumes={resumes} onGenerated={handleGenerated} />
+        <GenerateTab
+          resumes={resumes}
+          onGenerated={handleGenerated}
+          geminiStatus={geminiStatus}
+          onOpenGeminiKeyModal={() => setShowGeminiKeyModal(true)}
+        />
       )}
 
       {activeTab === "preview" &&
@@ -712,6 +855,12 @@ export default function CoverLetterPage() {
           onRefresh={loadHistory}
         />
       )}
+
+      <GeminiApiKeyModal
+        open={showGeminiKeyModal}
+        onClose={() => setShowGeminiKeyModal(false)}
+        onSaved={refreshGeminiStatus}
+      />
     </div>
   );
 }

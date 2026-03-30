@@ -2026,9 +2026,9 @@ function ProjectCard({
             <div className="editable-field active">
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="0"
-                max="1"
+                max="100"
                 value={editing.value}
                 autoFocus
                 onChange={(e) =>

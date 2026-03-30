@@ -743,6 +743,38 @@
   font-family: var(--font-sans);
 }
 
+/* ---- Required Field Indicators ---- */
+.required-indicator {
+  color: #c53030;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.required-legend {
+  font-size: 0.8rem;
+  color: var(--color-text-dark);
+  opacity: 0.6;
+  margin-bottom: var(--spacing-xs);
+  font-family: var(--font-sans);
+}
+
+/* ---- Field Validation Errors ---- */
+.field-error {
+  font-size: 0.8rem;
+  color: #c53030;
+  margin-top: 2px;
+  display: block;
+  font-family: var(--font-sans);
+}
+
+.input-field.input-error {
+  border-color: #c53030;
+}
+
+.input-field.input-error:focus {
+  border-color: #c53030;
+  box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.12);
+}
 /* ---- Profile / Learning tabs ---- */
 .profile-page-tabs {
   display: flex;

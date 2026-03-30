@@ -143,7 +143,9 @@ jobs:
 
       # GitHub rejects any single release asset ≥ 2 GiB. PyInstaller + ML stack DMGs often exceed that.
       # Upload files under the cap; skip oversize and attach a note pointing testers to workflow Artifacts.
-      - name: Upload assets to GitHub Release (2 GiB max per file)
+      # Option A (no bundle shrink): full installers often exceed GitHub's 2 GiB/release-file cap.
+      # Upload any installers that fit; always document the Actions run link for Artifacts.
+      - name: Upload release assets (2 GiB cap) + tester download instructions
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -151,6 +153,7 @@ jobs:
           set -euo pipefail
           tag="${{ github.event.release.tag_name }}"
           repo="${{ github.repository }}"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           max=$((2147483648 - 1))
           uploaded=0
           note=""
@@ -162,22 +165,38 @@ jobs:
               gh release upload "$tag" "$f" --repo "$repo" --clobber
               uploaded=$((uploaded + 1))
             else
-              echo "::warning::Skipping $base ($size bytes) — over GitHub's 2 GiB release-asset limit. Use this workflow run's Artifacts to download it."
+              echo "::warning::Skipping $base ($size bytes) — over GitHub's 2 GiB release-asset limit."
               note="${note}- ${base} (${size} bytes)"$'\n'
             fi
           done < <(find dist-release -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print0)
 
-          if [ "$uploaded" -eq 0 ]; then
-            echo "::error::No installer was under 2 GiB — nothing uploaded to the release. Download desktop-release-* from the workflow run Artifacts, or reduce the sidecar bundle size."
-            exit 1
-          fi
-
-          if [ -n "$note" ]; then
-            {
-              echo "Some installers were too large for GitHub Releases (2 GiB maximum per file)."
+          {
+            echo "Big Picture — how to get installers for tag ${tag}"
+            echo ""
+            echo "GitHub Releases allow at most 2 GiB per attached file. Full desktop installers may be larger."
+            echo ""
+            echo "Download the built installers (recommended):"
+            echo "  1. Open: ${run_url}"
+            echo "  2. Scroll to the Artifacts section at the bottom."
+            echo "  3. Download the ZIP for your OS:"
+            echo "       - desktop-release-macos"
+            echo "       - desktop-release-windows"
+            echo "       - desktop-release-linux"
+            echo "  4. Unzip and run the installer inside."
+            echo ""
+            if [ -n "$note" ]; then
+              echo "These builds were too large to attach to this release page:"
               echo ""
               echo "${note}"
-              echo "Download those builds from: Actions → this workflow run → Artifacts (desktop-release-macos, desktop-release-windows, desktop-release-linux)."
-            } > dist-release/README-OVERSIZE-INSTALLERS.txt
-            gh release upload "$tag" dist-release/README-OVERSIZE-INSTALLERS.txt --repo "$repo" --clobber
+              echo ""
+            fi
+            if [ "$uploaded" -gt 0 ]; then
+              echo "Some smaller files may also be attached under Assets on this release page."
+            fi
+          } > dist-release/DOWNLOAD-INSTALLERS-HERE.txt
+
+          gh release upload "$tag" dist-release/DOWNLOAD-INSTALLERS-HERE.txt --repo "$repo" --clobber
+
+          if [ "$uploaded" -eq 0 ]; then
+            echo "::notice::Publish release assets: no installer was under 2 GiB; testers should use Artifacts via DOWNLOAD-INSTALLERS-HERE.txt on this release."
           fi

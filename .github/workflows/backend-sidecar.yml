@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   workflow_call:
   pull_request:
-    branches: [main, master]
+    branches: [main, master, deployment2]
   push:
-    branches: [main, master]
+    branches: [main, master, deployment2]
 
 jobs:
   build-backend-sidecar:
@@ -29,6 +29,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # PyInstaller + sentence-transformers/torch/spaCy needs several GB; Linux runners often hit ENOSPC
+      # without freeing preinstalled SDK images (same pattern as ci.yml python-tests). Skip on Windows
+      # (different paths/shell); macOS matrix builds are usually fine without this.
+      - name: Free disk space on runner (CI-only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/google-cloud-sdk || true
 
       - name: Set up Python
         uses: actions/setup-python@v5

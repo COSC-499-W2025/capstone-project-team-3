@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analysis Runner (Draft)</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --card: #ffffff;
+            --text: #1a202c;
+            --muted: #4a5568;
+            --border: #e2e8f0;
+            --accent: #2d3748;
+            --success: #2f855a;
+            --error: #c53030;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        h1 { margin: 0 0 8px; font-size: 24px; }
+        p { margin: 0 0 10px; color: var(--muted); }
+
+        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .field { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+        .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+        input, select, button {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 14px;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button.secondary {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border);
+        }
+
+        .projects-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .projects-table th,
+        .projects-table td {
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            padding: 10px 8px;
+            font-size: 14px;
+        }
+
+        .pill {
+            display: inline-block;
+            font-size: 12px;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .status { font-size: 13px; margin-top: 6px; }
+        .status.ok { color: var(--success); }
+        .status.error { color: var(--error); }
+
+        pre {
+            margin: 0;
+            padding: 12px;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Analysis Runner (Draft UI)</h1>
+            <p>Use this page to test <span class="pill">/api/analysis/run</span> without building frontend wiring yet.</p>
+            <div class="row">
+                <div class="field" style="flex: 1; min-width: 320px;">
+                    <label for="uploadId">Upload ID</label>
+                    <input id="uploadId" placeholder="e.g. 90a36b4b-fd2f-4c2f-9202-ebc5c90a432b" />
+                </div>
+                <button id="loadProjectsBtn" type="button">Load Projects</button>
+            </div>
+            <div id="loadStatus" class="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="row">
+                <div class="field">
+                    <label for="defaultMode">Default Analysis Type</label>
+                    <select id="defaultMode">
+                        <option value="local">local</option>
+                        <option value="ai">ai</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="similarityAction">Similarity Action</label>
+                    <select id="similarityAction">
+                        <option value="create_new">create_new</option>
+                        <option value="update_existing">update_existing</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="cleanupZip">Cleanup ZIP</label>
+                    <select id="cleanupZip">
+                        <option value="false">false</option>
+                        <option value="true">true</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="cleanupExtracted">Cleanup Extracted</label>
+                    <select id="cleanupExtracted">
+                        <option value="false">false</option>
+                        <option value="true">true</option>
+                    </select>
+                </div>
+            </div>
+
+            <table class="projects-table" id="projectsTable">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Mode</th>
+                        <th>Project Path</th>
+                    </tr>
+                </thead>
+                <tbody id="projectsBody">
+                    <tr><td colspan="3" style="color:#718096;">Load projects to configure per-project analysis type.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="row" style="margin-top: 12px;">
+                <button id="runAnalysisBtn" type="button">Run Analysis</button>
+                <button id="copyPayloadBtn" type="button" class="secondary">Copy Payload JSON</button>
+            </div>
+            <div id="runStatus" class="status"></div>
+        </div>
+
+        <div class="card">
+            <p><strong>API Response</strong></p>
+            <pre id="responseBox">{}</pre>
+        </div>
+    </div>
+
+    <script src="/static/analysis_runner.js"></script>
+</body>
+</html>

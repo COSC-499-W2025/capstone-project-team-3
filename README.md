@@ -5,7 +5,7 @@
 
 # Project details
 
- - [Data Flow Diagram and Explanation](docs/plan/DFD.md)
+ - [Data Flow Diagram and Explanation](docs/plan/DFD.md) — includes [DFD source on Google Drive then open via Draw.io](https://drive.google.com/file/d/10cYCpvFpWB_LUyqjNVTxVPAnlgEQ53dM/view?usp=sharing) and embedded Level 0 / Level 1 images
  - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
  - [System Architecture](docs/plan/System_Architecture_Diagram.md)
  - [API Documentation](docs/API_DOCUMENTATION.md)

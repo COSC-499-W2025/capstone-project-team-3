@@ -1,10 +1,11 @@
 from typing import Optional, List, Dict
 from fastapi import Query, APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from app.utils.generate_portfolio import build_portfolio_model
 from pydantic import BaseModel, Field
 from app.data.db import get_connection
 from datetime import datetime
+from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -13,6 +14,8 @@ import base64
 import urllib.request
 import urllib.error
 import json as _json
+
+_STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
 
 
@@ -1194,3 +1197,21 @@ def edit_portfolio(payload: BatchEditPayload):
             cur.close()
         if conn:
             conn.close()
+
+
+@router.get("/portfolio-dashboard", response_class=HTMLResponse)
+def portfolio_dashboard():
+    """Serve the portfolio dashboard HTML page."""
+    html_path = _STATIC_DIR / "portfolio.html"
+    if not html_path.is_file():
+        raise HTTPException(status_code=404, detail="Portfolio dashboard not found")
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
+
+@router.get("/static/portfolio.js")
+def portfolio_js():
+    """Serve the portfolio JavaScript file."""
+    js_path = _STATIC_DIR / "portfolio.js"
+    if not js_path.is_file():
+        raise HTTPException(status_code=404, detail="portfolio.js not found")
+    return FileResponse(str(js_path), media_type="application/javascript")

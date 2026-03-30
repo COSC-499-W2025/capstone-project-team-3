@@ -815,7 +815,10 @@ describe("PortfolioPage – GitHub Pages publish modal", () => {
     });
     await waitFor(() => {
       expect(document.querySelector(".github-pages-modal__success")).not.toBeNull();
-=======
+    });
+  });
+});
+
 // --- collaboration network fixtures ------------------------------------------
 
 const MOCK_NETWORK = {

@@ -2963,7 +2963,7 @@ ${mainClone.outerHTML}
     try {
       // Send only the token + selected project IDs — HTML is generated server-side
       const projectIds = Array.from(selectedProjects).map(String);
-      const endpoint = `${API_BASE_URL}/api/portfolio/publish-github-pages`;
+      const endpoint = `${getApiBaseUrl()}/api/portfolio/publish-github-pages`;
       const requestBody = {
         github_token: token,
         project_ids: projectIds.length > 0 ? projectIds : null,

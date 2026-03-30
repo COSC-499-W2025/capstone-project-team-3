@@ -282,6 +282,18 @@ Official **GitHub Releases** ship a **macOS `.dmg` only** so we stay under GitHu
 
 > **PDF export:** For compiling résumé/cover-letter PDFs on a Mac, install **[BasicTeX](https://tug.org/mactex/morepackages.html)** (or MacTeX) as described in [Compatibility and system requirements](#compatibility-and-system-requirements) above.
 
+**macOS security (Gatekeeper — “Open ‘Big Picture’?”):** The first launch may show an Apple warning that the app **could not be checked for malware**. That happens because **Gatekeeper** only “trusts” by default apps from the Mac App Store or from **registered Apple developers** who **notarize** the build. Our class/release builds are usually **ad-hoc or team-signed** for distribution on GitHub, **not** notarized for the public Mac ecosystem—so macOS still protects your Mac by asking you to confirm.
+
+**How to open the app anyway:**
+
+1. If the dialog has **Open Anyway**, you can click it (or **Done** and use step 2).
+2. Open **System Settings** → **Privacy & Security**. Scroll down; under **Security** you should see that **“Big Picture”** was blocked from use — click **Open Anyway** and confirm when prompted.
+3. Or in **Finder**, open **Applications**, **Control-click** (right-click) **Big Picture** → **Open** → click **Open** in the dialog (this often works for the first run).
+
+Example of the system prompt:
+
+![macOS Gatekeeper dialog: Open Big Picture / Move to Trash / Open Anyway](docs/screenshots/big-picture-macos-gatekeeper-open-anyway.png)
+
 #### Windows and Linux — use the sidecar ZIP + build the desktop locally
 
 There is **no Windows or Linux installer attached to Releases** in our current CI (releases focus on a single **~1 GiB** macOS build). You can still run Big Picture by combining a **pre-built backend sidecar** from CI with a **local Electron build**.

@@ -10,8 +10,6 @@ This document explains all API endpoints in Project Insights.
 
 **Recent additions** include upload **scan-project** (similarity / exclusions), **learning recommendations**, **Gemini API key** management, **ATS / job match scoring**, **profile picture** upload, **resume duplicate & rename**, and the split **cover letter generate** (preview) vs **save** (persist) flow.
 
-**Note:** Full frontend URLs depend on deployment; API paths below are relative to the server origin (e.g. `http://127.0.0.1:8000`).
-
 ---
 
 ## Response Codes

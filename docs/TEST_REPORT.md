@@ -416,9 +416,7 @@ cd desktop && npm run test
 
 ### Backend Coverage Report (896 Test Cases Passing)
 
-[]
-
- Run `pytest --cov=app --cov-report=html:/app/htmlcov` 
+ Run `docker compose server pytest --cov=app --cov-report=html:/app/htmlcov` 
 
  This will run your tests and create a detailed **HTML report** inside the `/app/htmlcov` folder.
 
@@ -427,7 +425,22 @@ To view the coverage report:
 1. Open the `htmlcov/index.html` file in a web browser.
 2. You’ll see a visual overview showing which lines of code are tested (highlighted in green) and which are not (highlighted in red). 
 
-
+| Application Area | Test Files | Strategy |
+|------------------|------------|----------|
+| Main entry point (`app/main.py`) | `test_main.py` | Unit + Integration |
+| API routes (15 endpoints) | `tests/api/test_*.py` (10 files) | API/Route |
+| API route handlers (5 routes) | `tests/api/routes/test_*.py` (5 files) | API/Route |
+| CLI modules (6 modules) | `tests/cli/test_*.py` (6 files) | CLI |
+| Core utilities (10 modules) | `tests/utils/test_*.py` (10 files) | Unit |
+| Code analysis (4 modules) | `tests/utils/code_analysis/test_*.py` (4 files) | Unit |
+| Non-code analysis (3 modules) | `tests/utils/non_code_analysis/test_*.py` (3 files) | Unit |
+| Resume generation | `test_generate_resume.py`, `test_generate_resume_tex.py` | Unit |
+| Git operations | `test_git_utils.py`, `test_git_code_parsing.py` | Unit |
+| Consent management | `test_consent_manager.py`, `test_revoke_consent.py` | Unit |
+| Database seeding | `test_db_seed.py` | Unit |
+| Text/NLP processing | `test_text_processing.py` | Unit |
+| Similarity detection | `test_similarity_confirmation.py` | Unit |
+| Project scoring | `test_project_score.py` | Unit |
 
 ### Frontend Coverage Report (455 Tests Passing)
 

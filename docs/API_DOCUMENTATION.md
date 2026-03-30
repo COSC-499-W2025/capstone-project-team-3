@@ -276,24 +276,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 10. View Portfolio Dashboard
-
-**What it does:** Opens interactive HTML dashboard with charts and project cards.
-
-**URL:** `GET /api/portfolio-dashboard`
-
-**Response:** Full HTML page with interactive visualizations.
-
-**Features:**
-- Project cards with thumbnails
-- Language distribution charts
-- Complexity and score charts
-- Project selection sidebar
-- Statistics overview
-
----
-
-### 11. Edit Portfolio Projects 
+### 10. Edit Portfolio Projects 
 
 **What it does:** Updates one to many projects in a single request.
 
@@ -1274,17 +1257,7 @@ This document explains all API endpoints in Project Insights.
 
 ---
 
-### 48. Portfolio JavaScript
-
-**What it does:** Serves the JavaScript bundle for the portfolio dashboard page.
-
-**URL:** `GET /api/static/portfolio.js`
-
-**Response:** JavaScript file (`application/javascript`).
-
----
-
-### 49. Read Root
+### 48. Read Root
 
 **What it does:** Returns a basic welcome payload for the API root.
 
@@ -1541,8 +1514,6 @@ fetch(`${API_BASE}/resume/123`, {
 - Clear Override: `POST /api/projects/{signature}/score-override/clear`
 
 **Portfolio & Thumbnails:**
-- Dashboard: `/api/portfolio-dashboard`
-- Dashboard JS: `GET /api/static/portfolio.js`
 - Upload Thumbnail: `POST /api/portfolio/project/thumbnail`
 - Get Thumbnail: `/api/portfolio/project/thumbnail/{project_id}`
 - Edit Project: `POST /api/portfolio/edit`

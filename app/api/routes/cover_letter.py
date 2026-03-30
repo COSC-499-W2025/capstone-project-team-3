@@ -158,7 +158,7 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     tex_date  = escape_latex(filtered[2]) if len(filtered) > 2 else ""
 
     # ── LinkedIn contact line ──────────────────────────────────────────────
-    if linkedin_url
+    if linkedin_url:
         safe_url = linkedin_url.replace("#", "\\#")
         linkedin_tex = (
             r" \textbar{} \href{" + safe_url + r"}{LinkedIn}"

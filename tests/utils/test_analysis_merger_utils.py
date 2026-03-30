@@ -4,6 +4,7 @@ Tests for analysis_merger_utils.py - Skill date inference functions.
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from git import Repo
 from app.utils.analysis_merger_utils import _get_skill_extensions, _infer_skill_dates_from_git
 
@@ -62,15 +63,19 @@ class TestInferSkillDatesFromGit:
     
     def test_infer_dates_from_git_history(self, git_repo):
         """Test that skill dates are correctly inferred from git history."""
-        result = _infer_skill_dates_from_git(git_repo, ["Python", "Java"])
-        
+        with patch("app.utils.analysis_merger_utils._get_preferred_author_email",
+                   return_value=(None, "test@example.com")):
+            result = _infer_skill_dates_from_git(git_repo, ["Python", "Java"])
+
         assert result["Python"] == "2024-01-15"
         assert result["Java"] == "2024-02-20"
-    
+
     def test_skill_not_in_repo(self, git_repo):
         """Test that skills not present in repo return None."""
-        result = _infer_skill_dates_from_git(git_repo, ["Python", "C++"])
-        
+        with patch("app.utils.analysis_merger_utils._get_preferred_author_email",
+                   return_value=(None, "test@example.com")):
+            result = _infer_skill_dates_from_git(git_repo, ["Python", "C++"])
+
         assert result["Python"] == "2024-01-15"
         assert result["C++"] is None
     

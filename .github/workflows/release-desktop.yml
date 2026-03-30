@@ -141,11 +141,43 @@ jobs:
         with:
           path: dist-release
 
-      - name: Upload assets to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist-release/**/*.dmg
-            dist-release/**/*.exe
-            dist-release/**/*.AppImage
-            dist-release/**/*.deb
+      # GitHub rejects any single release asset ≥ 2 GiB. PyInstaller + ML stack DMGs often exceed that.
+      # Upload files under the cap; skip oversize and attach a note pointing testers to workflow Artifacts.
+      - name: Upload assets to GitHub Release (2 GiB max per file)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name }}"
+          repo="${{ github.repository }}"
+          max=$((2147483648 - 1))
+          uploaded=0
+          note=""
+          while IFS= read -r -d '' f; do
+            size=$(stat -c%s "$f")
+            base=$(basename "$f")
+            if [ "$size" -le "$max" ]; then
+              echo "Uploading $base ($size bytes)"
+              gh release upload "$tag" "$f" --repo "$repo" --clobber
+              uploaded=$((uploaded + 1))
+            else
+              echo "::warning::Skipping $base ($size bytes) — over GitHub's 2 GiB release-asset limit. Use this workflow run's Artifacts to download it."
+              note="${note}- ${base} (${size} bytes)"$'\n'
+            fi
+          done < <(find dist-release -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print0)
+
+          if [ "$uploaded" -eq 0 ]; then
+            echo "::error::No installer was under 2 GiB — nothing uploaded to the release. Download desktop-release-* from the workflow run Artifacts, or reduce the sidecar bundle size."
+            exit 1
+          fi
+
+          if [ -n "$note" ]; then
+            {
+              echo "Some installers were too large for GitHub Releases (2 GiB maximum per file)."
+              echo ""
+              echo "${note}"
+              echo "Download those builds from: Actions → this workflow run → Artifacts (desktop-release-macos, desktop-release-windows, desktop-release-linux)."
+            } > dist-release/README-OVERSIZE-INSTALLERS.txt
+            gh release upload "$tag" dist-release/README-OVERSIZE-INSTALLERS.txt --repo "$repo" --clobber
+          fi

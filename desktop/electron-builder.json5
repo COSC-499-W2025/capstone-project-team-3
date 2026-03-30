@@ -17,6 +17,8 @@
       "dmg"
     ],
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}",
+    // PyInstaller's Python.framework under extraResources breaks ad-hoc codesign ("bundle format is ambiguous").
+    "signIgnore": ["Resources/backend/.*"],
     "extraResources": [
       {
         "from": "resources/backend/darwin",

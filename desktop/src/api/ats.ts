@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "../config/api";
-
-const API_BASE = API_BASE_URL;
+import { getApiBaseUrl } from "../config/api";
 
 export interface ATSBreakdown {
   keyword_coverage: number;
@@ -25,7 +23,7 @@ export async function scoreATS(
   resumeId: number | null,
   analysisMode: "local" | "ai" = "local"
 ): Promise<ATSScoreResult> {
-  const res = await fetch(`${API_BASE}/api/ats/score`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/ats/score`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

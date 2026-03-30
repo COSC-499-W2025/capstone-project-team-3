@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from app.utils.generate_resume import build_resume_model, load_saved_resume, resume_exists, save_resume_edits, save_personal_summary, create_resume, attach_projects_to_resume, add_projects_to_resume, remove_project_from_resume, list_resumes, duplicate_resume, rename_resume, ResumeNotFoundError, ResumeServiceError, ResumePersistenceError
 from app.utils.generate_resume_tex import generate_resume_tex
+from app.utils.pdflatex_path import resolve_pdflatex_executable
 from app.data.db import get_connection
 from pydantic import BaseModel, Field
 import subprocess
@@ -20,6 +21,32 @@ os.makedirs(PDF_CACHE_DIR, exist_ok=True)
 
 LATEX_BUILD_DIR = os.getenv("LATEX_BUILD_DIR", "app/data/latex_build")
 os.makedirs(LATEX_BUILD_DIR, exist_ok=True)
+
+
+def clear_resume_pdf_cache() -> int:
+    """
+    Remove cached compiled resume PDFs under PDF_CACHE_DIR.
+    Used when the desktop sidecar exits so exports are not left on disk between sessions.
+    Returns the number of files removed.
+    """
+    removed = 0
+    if not os.path.isdir(PDF_CACHE_DIR):
+        return removed
+    base = os.path.abspath(PDF_CACHE_DIR)
+    for name in os.listdir(PDF_CACHE_DIR):
+        path = os.path.join(PDF_CACHE_DIR, name)
+        if os.path.isfile(path) and not os.path.islink(path):
+            ap = os.path.abspath(path)
+            if os.path.commonpath([base, ap]) != base:
+                continue
+            try:
+                os.unlink(path)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
 class ResumeFilter(BaseModel):
     name: str = Field(..., min_length=1, description="Resume name (required, non-empty)")
     project_ids: list[str] = Field(..., min_length=1, description="List of project IDs")
@@ -240,7 +267,14 @@ def compile_pdf(tex: str) -> bytes:
 
     Raises HTTPException with LaTeX logs on failure.
     """
-    
+    pdflatex = resolve_pdflatex_executable()
+    if not pdflatex:
+        raise HTTPException(
+            500,
+            "pdflatex not found. Install BasicTeX (macOS) or MiKTeX (Windows), "
+            "or set PDFLATEX_PATH to the full path to pdflatex.",
+        )
+
     build_id = uuid.uuid4().hex
     build_dir = os.path.join(LATEX_BUILD_DIR, build_id)
     os.makedirs(build_dir, exist_ok=True)
@@ -254,7 +288,7 @@ def compile_pdf(tex: str) -> bytes:
             f.write(tex)
 
         proc = subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", f"{basename}.tex"],
+            [pdflatex, "-interaction=nonstopmode", f"{basename}.tex"],
             cwd=build_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

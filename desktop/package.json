@@ -1,7 +1,9 @@
 {
-  "name": "desktop",
+  "name": "big-picture-desktop",
   "private": true,
   "version": "0.0.0",
+  "description": "Big Picture — portfolio and résumé insights",
+  "author": "COSC 499 Capstone Team 3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +11,8 @@
     "build": "tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

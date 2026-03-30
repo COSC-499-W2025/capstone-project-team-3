@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 import re as _re
-import shutil
 import subprocess
 import tempfile
 from typing import List, Optional
@@ -21,6 +20,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from app.utils.pdflatex_path import resolve_pdflatex_executable
 from app.utils.cover_letter_utils import (
     CoverLetterNotFoundError,
     CoverLetterServiceError,
@@ -112,6 +112,15 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     """Wrap plain-text cover letter content in a minimal LaTeX document."""
     from app.utils.generate_resume_tex import escape_latex
 
+    # Normalize newlines; models/JSON sometimes emit literal backslash-n instead of a line break.
+    content = (
+        content.replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\\r\\n", "\n")
+        .replace("\\r", "\n")
+        .replace("\\n", "\n")
+    )
+
     # ── Split into header block and letter body ────────────────────────────
     body_match = _re.search(r"Dear\s+(?:\S+\s+)?Hiring", content, _re.IGNORECASE)
     if body_match:
@@ -165,7 +174,9 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     for para in paragraphs:
         lines = [escape_latex(line) for line in para.splitlines()]
         if len(lines) > 1 and lines[0].strip().lower().startswith("sincerely"):
-            escaped_paragraphs.append(" \\\\\\n".join(lines))
+            # Must be " \\\\\n" (two TeX backslashes + real newline). A fifth "\" turns \n into
+            # the literal letters \\n, which TeX reads as undefined control sequence \n.
+            escaped_paragraphs.append(" \\\\\n".join(lines))
         else:
             escaped_paragraphs.append(" ".join(lines))
 
@@ -222,10 +233,11 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
 
 def _compile_tex_to_pdf(tex_source: str) -> bytes:
     """Compile a LaTeX string to PDF bytes. Raises RuntimeError on failure."""
-    if not shutil.which("pdflatex"):
+    pdflatex = resolve_pdflatex_executable()
+    if not pdflatex:
         raise RuntimeError(
             "pdflatex is not installed on this system. "
-            "Install BasicTeX to enable PDF export."
+            "Install BasicTeX (macOS) or MiKTeX (Windows), or set PDFLATEX_PATH."
         )
     with tempfile.TemporaryDirectory() as tmpdir:
         tex_path = os.path.join(tmpdir, "cover_letter.tex")
@@ -234,7 +246,7 @@ def _compile_tex_to_pdf(tex_source: str) -> bytes:
 
         result = subprocess.run(
             [
-                "pdflatex",
+                pdflatex,
                 "-interaction=nonstopmode",
                 "-output-directory", tmpdir,
                 tex_path,

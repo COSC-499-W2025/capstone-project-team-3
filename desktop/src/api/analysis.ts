@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 
 export interface RunAnalysisPayload {
   upload_id: string;
@@ -36,7 +36,7 @@ export interface RunAnalysisResponse {
 export async function runAnalysis(
   payload: RunAnalysisPayload
 ): Promise<RunAnalysisResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
+  const res = await fetch(`${getApiBaseUrl()}/api/analysis/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

@@ -44,6 +44,15 @@ function projectBullets(p: Project): string[] {
   return [];
 }
 
+/** Normalize backend dates (incl. ISO datetimes) for <input type="month">. */
+function toMonthInputValue(raw?: string): string {
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}$/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw.slice(0, 7);
+  const prefix = raw.match(/^(\d{4}-\d{2})/);
+  return prefix ? prefix[1] : "";
+}
+
 export function ProjectsSection({
   projects,
   showHeading = true,
@@ -91,8 +100,6 @@ export function ProjectsSection({
         </div>
       )}
       {projects.map((p, i) => {
-        const skills = projectSkills(p);
-        const bullets = projectBullets(p);
         const globalKey = projectStartIndex + i;
         const sortableId =
           enableSortable && isEditing ? `project-${globalKey}` : undefined;
@@ -168,13 +175,17 @@ function ProjectBlock({
   );
 
   const parsed = parseDisplayDates(project.dates);
-  const [startMonth, setStartMonth] = useState<string>(() => project.start_date ?? parsed.start ?? "");
-  const [endMonth, setEndMonth] = useState<string>(() => project.end_date ?? parsed.end ?? "");
+  const [startMonth, setStartMonth] = useState<string>(() =>
+    toMonthInputValue(project.start_date ?? parsed.start ?? ""),
+  );
+  const [endMonth, setEndMonth] = useState<string>(() =>
+    toMonthInputValue(project.end_date ?? parsed.end ?? ""),
+  );
 
   useEffect(() => {
     const next = parseDisplayDates(project.dates);
-    setStartMonth((prev) => project.start_date ?? next.start ?? prev);
-    setEndMonth((prev) => project.end_date ?? next.end ?? prev);
+    setStartMonth((prev) => toMonthInputValue(project.start_date ?? next.start ?? prev));
+    setEndMonth((prev) => toMonthInputValue(project.end_date ?? next.end ?? prev));
   }, [project.start_date, project.end_date, project.dates]);
 
   const syncRefs = () => {

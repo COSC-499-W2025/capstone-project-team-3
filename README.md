@@ -5,10 +5,11 @@
 
 # Project details
 
- - [Data Flow Diagram and Explanation](docs/plan/DFD.md)
+ - [Data Flow Diagram and Explanation](docs/plan/DFD.md) — includes [DFD source on Google Drive then open via Draw.io](https://drive.google.com/file/d/10cYCpvFpWB_LUyqjNVTxVPAnlgEQ53dM/view?usp=sharing) and embedded Level 0 / Level 1 images
  - [Work Breakdown Structure](docs/plan/Work%20Breakdown%20Structure.md)
  - [System Architecture](docs/plan/System_Architecture_Diagram.md)
  - [API Documentation](docs/API_DOCUMENTATION.md)
+ - [Test Report](docs/TEST_REPORT.md)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 
@@ -255,19 +256,102 @@ Install dependencies:
 pip install requirements.txt
 ```
 
-### 🖥️ Launching the Desktop App
+### 🖥️ Desktop application (Big Picture): how to run
 
-The desktop application is built with **Electron + React (Vite)**.
+The desktop app is **Electron + React (Vite)** with a **Python backend** that can run as a **PyInstaller sidecar** inside the packaged app, or as **Docker / uvicorn** during development.
 
-In order to start it ensure ***node.js*** is installed and run : 
+#### Compatibility and system requirements
+
+Read this once so your environment matches what the app expects.
+
+| Topic | What you need |
+| ----- | ------------- |
+| **SQLite (database)** | The backend uses **SQLite** only—**no MySQL, PostgreSQL, or separate DB server**. The app creates its database file when the API first runs. With **Docker**, that file is `app/data/app.sqlite3` (see [Database Setup with Docker](#database-setup-with-docker) below). With the **packaged desktop app**, initialization happens automatically when the sidecar starts (no manual SQLite install). |
+| **LaTeX (`pdflatex`) — macOS** | **Résumé and cover-letter PDF export** needs a LaTeX toolchain. Install **[BasicTeX](https://tug.org/mactex/morepackages.html)** (recommended; use the **“smallest download”** pkg on that page) or the full **[MacTeX distribution](https://tug.org/mactex/)**. After installation, `pdflatex` should live under `/Library/TeX/texbin`; the Big Picture desktop app **prepends that folder to `PATH` on macOS** when it exists, so restart the app after installing BasicTeX. |
+| **LaTeX — Windows / Linux** | Install a distribution that puts **`pdflatex` on your `PATH`** (e.g. **MiKTeX** or **TeX Live** on Windows; **TeX Live** on Linux) if you use PDF export. |
+| **Gemini (optional)** | AI-backed features need a **Google Gemini API key**; see [Setting Up Gemini API Key for LLM Features](#setting-up-gemini-api-key-for-llm-features). You can still use local analysis without it. |
+| **Pre-built desktop installer** | **macOS only** on GitHub Releases (size limits); Windows/Linux use [the sidecar ZIP + local build](#windows-and-linux--use-the-sidecar-zip--build-the-desktop-locally) above. |
+
+#### macOS — pre-built release (easiest)
+
+Official **GitHub Releases** ship a **macOS `.dmg` only** so we stay under GitHub’s **2 GiB per-file** limit; full installers are large (Python ML stack + Electron).
+
+1. Open the repo **[Releases](https://github.com/COSC-499-W2025/capstone-project-team-3/releases)** and pick the latest version.
+2. Under **Assets**, try the **Big Picture** macOS installer (`.dmg`) if it is attached.
+3. If there is no DMG on the release page (file too large), open **`DOWNLOAD-INSTALLERS-HERE.txt`** in the same release — it links to the **Actions** workflow run. On that run, open **Artifacts**, download **`desktop-release-macos`** (ZIP), unzip, and open the **`.dmg`** inside.
+4. Install or drag the app to Applications and launch **Big Picture**. The app starts the bundled **backend sidecar** automatically.
+
+> **PDF export:** For compiling résumé/cover-letter PDFs on a Mac, install **[BasicTeX](https://tug.org/mactex/morepackages.html)** (or MacTeX) as described in [Compatibility and system requirements](#compatibility-and-system-requirements) above.
+
+**macOS security (Gatekeeper — “Open ‘Big Picture’?”):** The first launch may show an Apple warning that the app **could not be checked for malware**. That happens because **Gatekeeper** only “trusts” by default apps from the Mac App Store or from **registered Apple developers** who **notarize** the build. Our class/release builds are usually **ad-hoc or team-signed** for distribution on GitHub, **not** notarized for the public Mac ecosystem—so macOS still protects your Mac by asking you to confirm.
+
+**How to open the app anyway:**
+
+1. If the dialog has **Open Anyway**, you can click it (or **Done** and use step 2).
+2. Open **System Settings** → **Privacy & Security**. Scroll down; under **Security** you should see that **“Big Picture”** was blocked from use — click **Open Anyway** and confirm when prompted.
+3. Or in **Finder**, open **Applications**, **Control-click** (right-click) **Big Picture** → **Open** → click **Open** in the dialog (this often works for the first run).
+
+Example of the system prompt:
+
+![macOS Gatekeeper dialog: Open Big Picture / Move to Trash / Open Anyway](docs/screenshots/big-picture-macos-gatekeeper-open-anyway.png)
+
+#### Windows and Linux — use the sidecar ZIP + build the desktop locally
+
+There is **no Windows or Linux installer attached to Releases** in our current CI (releases focus on a single **~1 GiB** macOS build). You can still run Big Picture by combining a **pre-built backend sidecar** from CI with a **local Electron build**.
+
+**1. Prerequisites**
+
+- **Node.js** (e.g. 20 LTS) and **npm**
+- This repository cloned locally
+- Optional: **Docker** if you prefer the dev flow below instead of the sidecar
+
+**2. Download the backend sidecar (ZIP)**
+
+1. In GitHub go to **Actions** → workflow **“Build Backend Sidecar”**.
+2. Open a **successful** run (for example on the branch you use, e.g. `deployment2` / `main`).
+3. Under **Artifacts**, download:
+   - **Windows:** `backend-sidecar-windows` (ZIP)
+   - **Linux:** `backend-sidecar-linux` (ZIP)
+
+**3. Unzip into the folder Electron expects**
+
+Extract the artifact so the PyInstaller output (the folder that contains the executable and `_internal/`) ends up here:
+
+| OS | Put the extracted files here (paths from repo root) |
+|----|-----------------------------------------------------|
+| Windows | `desktop/resources/backend/win32/` — must include `backend-sidecar.exe` next to `_internal/` |
+| Linux | `desktop/resources/backend/linux/` — must include `backend-sidecar` next to `_internal/` |
+
+*(On macOS builds from source, the same layout uses `desktop/resources/backend/darwin/`; the release DMG already bundles **darwin** for you.)*
+
+**4. Build and run the desktop**
+
+From the repository root:
+
+```bash
+cd desktop
+npm ci          # or: npm install
+npm run build   # runs TypeScript + Vite + electron-builder
+```
+
+Install or run the generated artifact under `desktop/release/<version>/` (e.g. **NSIS** installer on Windows, **AppImage** on Linux — see `desktop/electron-builder.json5`).
+
+**5. Alternative: development mode (API + Electron, all platforms)**
+
+If you are not using a packaged app:
 
 ```bash
 cd desktop
 npm install       # First time only
-npm run dev       # Starts the Vite dev server + Electron window
+npm run dev       # Vite dev server + Electron window
 ```
 
-> **Note:** The desktop app connects to the backend server. Make sure the Docker backend is running (`docker compose up --build`) before launching the desktop app. See `docs/frontend.md` for comprehensive overview.
+Point the UI at a running API:
+
+- **Typical:** start the stack with **`docker compose up --build`** (API at `http://127.0.0.1:8000` — default for the desktop app in dev).
+- **Or** run the sidecar executable yourself and, for Electron dev, set **`DESKTOP_BACKEND_BINARY`** to the full path of `backend-sidecar` / `backend-sidecar.exe` so the main process can spawn it.
+
+> **Note:** For a deeper overview of the frontend stack, see `docs/frontend.md`.
 
 ---
 
@@ -338,22 +422,20 @@ For context each test file contains the following projects ***(M2 Requirement 33
 
 **5. Run analysis**
 
-Analysis can be run either through the CLI or using our analysis runner.
+Analysis can be run through the desktop app or the CLI.
 
-In order to run the analysis with a front-end view : 
-- Go to http://localhost:8000/upload-file
-- Upload any of the provided zip files and copy the resulting `upload_id`
-- Go to http://localhost:8000/static/analysis_runner.html
-- Paste the `upload_id` returned after your upload, then click **Load Projects**
+In order to run the analysis with the desktop app:
+- Open the desktop application and navigate to the Upload & Analysis page
+- Upload any of the provided zip files
 - Select an **Analysis Type** for each project (`local` or `ai`)
 - Click **Run Analysis**
 
-In order to run the analysis within the CLI : 
+In order to run the analysis within the CLI:
 - Go to http://localhost:8000/upload-file
--  Upload any of the provided zip files and copy the resulting `upload_id`
+- Upload any of the provided zip files and copy the resulting `upload_id`
 - Paste the `upload_id` in the terminal when prompted and hit **Enter**
 - User will be able to see similarity score and other metrics used to detect if a project has been previously analyzed.  
-- User will prompted to select an Analysis Type for each project (local or ai)
+- User will be prompted to select an Analysis Type for each project (local or ai)
 
 **Note** : Both methods follow and use the same analysis process, however in order to see feedback on whether or not a project was previously analyzed the user should refer to the CLI.
 

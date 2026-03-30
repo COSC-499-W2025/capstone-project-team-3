@@ -483,17 +483,21 @@ def store_results_in_db(project_name, merged_results, project_score, project_sig
     """, (project_signature, project_name, merged_results["summary"], project_score, 0, None))
     else:
         # Update summary if project already exists
+        # Reset override state including stored exclusion list — a fresh analysis run should not
+        # keep prior metric exclusions (same project re-upload / re-analyze).
         cur.execute("""
         UPDATE PROJECT
         SET name = ?,
             summary = ?,
             score = ?,
             score_overridden = 0,
-            score_overridden_value = NULL
+            score_overridden_value = NULL,
+            score_override_exclusions = NULL
         WHERE project_signature = ?
         """, (project_name, merged_results["summary"], project_score, project_signature))
     
-        # Delete existing records to avoid duplicates
+        # Delete existing records to avoid duplicates (including git-derived metrics)
+        cur.execute("DELETE FROM GIT_HISTORY WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM SKILL_ANALYSIS WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM RESUME_SUMMARY WHERE project_id = ?", (project_signature,))
         cur.execute("DELETE FROM DASHBOARD_DATA WHERE project_id = ?", (project_signature,))

@@ -171,10 +171,11 @@ def test_resume_download_pdf_with_both_params_returns_400(mock_compile, mock_tex
     mock_tex.assert_not_called()
     mock_compile.assert_not_called()
 
+@patch("app.api.routes.resume.resolve_pdflatex_executable", return_value="/usr/bin/pdflatex")
 @patch("app.api.routes.resume.subprocess.run")
 @patch("app.api.routes.resume.os.path.exists")
 @patch("builtins.open")
-def test_compile_pdf_success(mock_open, mock_exists, mock_run):
+def test_compile_pdf_success(mock_open, mock_exists, mock_run, _mock_resolve):
     """Verify compile_pdf returns PDF bytes on successful LaTeX compilation."""
     mock_run.return_value = MagicMock(returncode=0, stdout=b"", stderr=b"")
     mock_exists.return_value = True
@@ -185,11 +186,9 @@ def test_compile_pdf_success(mock_open, mock_exists, mock_run):
     assert result == b"PDF BYTES"
 
 
-@patch("app.api.routes.resume.subprocess.run")
-def test_compile_pdf_pdflatex_not_found(mock_run):
+@patch("app.api.routes.resume.resolve_pdflatex_executable", return_value=None)
+def test_compile_pdf_pdflatex_not_found(_mock_resolve):
     """Ensure compile_pdf raises an error when pdflatex is not installed."""
-    mock_run.side_effect = FileNotFoundError()
-
     with pytest.raises(HTTPException) as exc:
         compile_pdf("LATEX")
 
@@ -197,9 +196,10 @@ def test_compile_pdf_pdflatex_not_found(mock_run):
     assert "pdflatex not found" in exc.value.detail
 
 
+@patch("app.api.routes.resume.resolve_pdflatex_executable", return_value="/usr/bin/pdflatex")
 @patch("app.api.routes.resume.subprocess.run")
 @patch("app.api.routes.resume.os.path.exists")
-def test_compile_pdf_failure_no_pdf(mock_exists, mock_run):
+def test_compile_pdf_failure_no_pdf(mock_exists, mock_run, _mock_resolve):
     """Confirm compile_pdf fails when pdflatex errors and no PDF is produced."""
     mock_run.return_value = MagicMock(
         returncode=1,

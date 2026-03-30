@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Dict, Optional, Sequence, Iterable
 import hashlib
 import json
 import time 
@@ -110,6 +110,51 @@ def scan_project_files(root: Union[str, Path], exclude_patterns: List[str] = EXC
         print(f"Error scanning files in {root}: {e}")
     return files
 
+
+def _normalize_user_exclude_ext(ext: str) -> str:
+    e = str(ext).strip().lower()
+    if e and not e.startswith("."):
+        e = "." + e
+    return e
+
+
+def filter_files_by_user_exclusions(
+    files: List[Path],
+    exclude_extensions: Optional[Iterable[str]] = None,
+    exclude_name_prefixes: Optional[Sequence[str]] = None,
+) -> List[Path]:
+    """
+    Per-project exclusions: drop files whose suffix is in exclude_extensions
+    or whose stem starts with any exclude_name_prefix (case-insensitive).
+    """
+    paths: List[Path] = [f if isinstance(f, Path) else Path(f) for f in files]
+
+    if not exclude_extensions and not exclude_name_prefixes:
+        return list(paths)
+
+    ext_set = set()
+    if exclude_extensions:
+        for x in exclude_extensions:
+            ne = _normalize_user_exclude_ext(x)
+            if ne:
+                ext_set.add(ne)
+
+    prefixes = [p for p in (exclude_name_prefixes or []) if p]
+
+    if not ext_set and not prefixes:
+        return list(paths)
+
+    out: List[Path] = []
+    for f in paths:
+        suf = f.suffix.lower()
+        if ext_set and suf in ext_set:
+            continue
+        if prefixes and any(f.stem.lower().startswith(p.lower()) for p in prefixes):
+            continue
+        out.append(f)
+    return out
+
+
 def extract_file_metadata(file_path: Union[str, Path]) -> Dict:
     """Extract basic metadata from a file."""
     p = Path(file_path)
@@ -192,10 +237,11 @@ def extract_file_signature(file_path: Union[str, Path], project_root: Union[str,
     """
     for attempt in range(1, retries + 1):
         try:
-            p = Path(file_path)
-            root = Path(project_root)
+            # Resolve so macOS /var/... and /private/var/... compare equal (symlink).
+            p = Path(file_path).expanduser().resolve()
+            root = Path(project_root).expanduser().resolve()
             stat = p.stat()
-            
+
             # Just use relative path + size (no timestamp)
             rel_path = str(p.relative_to(root))
             sig_str = f"{rel_path}:{stat.st_size}"
@@ -241,7 +287,57 @@ def project_signature_exists(signature: str) -> bool:
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
-  
+
+
+def get_stored_project_file_signatures(project_signature: str) -> Optional[List[str]]:
+    """File signature list last stored on PROJECT, or None if missing/unparseable."""
+    if not project_signature:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT file_signatures FROM PROJECT WHERE project_signature = ?",
+        (project_signature,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row or row[0] is None or row[0] == "":
+        return None
+    try:
+        data = json.loads(row[0])
+        if isinstance(data, list) and all(isinstance(x, str) for x in data):
+            return data
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def persist_analyzed_file_signatures(
+    project_signature: str, project_root: str, analyzed_files: List[Path]
+) -> None:
+    """Keep PROJECT.file_signatures and size_bytes aligned with files merged into analysis."""
+    if not project_signature:
+        return
+    root = str(Path(project_root).resolve())
+    conn = get_connection()
+    cursor = conn.cursor()
+    if not analyzed_files:
+        cursor.execute(
+            "UPDATE PROJECT SET file_signatures = ?, size_bytes = ? WHERE project_signature = ?",
+            (json.dumps([]), 0, project_signature),
+        )
+        conn.commit()
+        conn.close()
+        return
+    sigs = [extract_file_signature(f, root) for f in analyzed_files]
+    size_bytes = sum(extract_file_metadata(f)["size_bytes"] for f in analyzed_files)
+    cursor.execute(
+        "UPDATE PROJECT SET file_signatures = ?, size_bytes = ? WHERE project_signature = ?",
+        (json.dumps(sigs), size_bytes, project_signature),
+    )
+    conn.commit()
+    conn.close()
+
 
 def get_all_file_signatures_from_db() -> set:
     """Get all file signatures from all projects in the DB."""
@@ -408,6 +504,8 @@ def run_scan_flow(
     similarity_threshold: float = None,
     base_threshold: float = 65.0,
     similarity_decision: Optional[bool] = None,
+    exclude_extensions: Optional[List[str]] = None,
+    exclude_name_prefixes: Optional[List[str]] = None,
 ) -> dict:
     """
     Scans the project, stores signatures in DB, and returns analysis info.
@@ -422,19 +520,39 @@ def run_scan_flow(
             - True: update existing similar project
             - False: create new project
             - None: prompt user via CLI
+        exclude_extensions: Per-project suffixes to omit (e.g. [".md", ".pdf"]).
+        exclude_name_prefixes: Per-project filename stem prefixes to omit (e.g. ["readme"]).
     """
     patterns = EXCLUDE_PATTERNS.copy()
     if exclude:
         patterns.extend(exclude)
-    files = scan_project_files(root, exclude_patterns=patterns)
+    raw_files = scan_project_files(root, exclude_patterns=patterns)
+    files = filter_files_by_user_exclusions(
+        raw_files,
+        exclude_extensions=exclude_extensions,
+        exclude_name_prefixes=exclude_name_prefixes,
+    )
     if not files:
+        if raw_files:
+            print("All files excluded by user file-type filters. Skipping analysis.")
+            # Same signature as a full scan (pre user exclusions) so the API can clear
+            # SKILL_ANALYSIS / DASHBOARD_DATA for the correct PROJECT row.
+            pre_exclusion_sigs = [extract_file_signature(f, root) for f in raw_files]
+            excluded_sig = get_project_signature(pre_exclusion_sigs)
+            return {
+                "files": [],
+                "skip_analysis": True,
+                "score": 0.0,
+                "reason": "all_files_excluded",
+                "signature": excluded_sig,
+            }
         print("No files found to scan in the specified directory. Skipping analysis.")
         return {
-            "files": [], 
-            "skip_analysis": True, 
-            "score": 0.0, 
+            "files": [],
+            "skip_analysis": True,
+            "score": 0.0,
             "reason": "no_files",
-            "signature": None
+            "signature": None,
         }
 
     # Print scanned files for user feedback
@@ -447,19 +565,69 @@ def run_scan_flow(
     
     file_signatures = [extract_file_signature(f, root) for f in files]
     project_signature = get_project_signature(file_signatures)
+
+    raw_file_signatures = [extract_file_signature(f, root) for f in raw_files]
+    full_project_signature = get_project_signature(raw_file_signatures)
     
     # Count files for dynamic threshold calculation
     file_count = len(files)
-    
-    # Check if exact project already exists
+
+    has_user_type_exclusions = bool(exclude_extensions) or bool(exclude_name_prefixes)
+
+    # If the user set file-type exclusions, always re-run when this upload's full content
+    # is already in the DB — even when the filtered file hash matches (100%) or only the
+    # full hash matches. Use the canonical (full-content) signature for merge/storage.
+    if has_user_type_exclusions and project_signature_exists(full_project_signature):
+        print(
+            "Project (full content) exists in DB, but per-project file-type exclusions are set — "
+            "re-running analysis on the filtered file set."
+        )
+        return {
+            "files": files,
+            "skip_analysis": False,
+            "score": 100.0,
+            "reason": "reanalyze_with_exclusions",
+            "signature": full_project_signature,
+        }
+
+    # Check if exact project already exists (skip re-analysis unless user applied type exclusions)
     if project_signature_exists(project_signature):
+        if has_user_type_exclusions:
+            print(
+                "Project signature matches DB, but per-project file-type exclusions are set — "
+                "re-running analysis on the filtered file set."
+            )
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": 100.0,
+                "reason": "reanalyze_with_exclusions",
+                "signature": project_signature,
+            }
+        # Same content hash as DB — only skip if we know the last merged run used this exact file set.
+        # Missing file_signatures (legacy row or persist never ran) must NOT auto-skip, or exclusions
+        # cleared / full re-upload will incorrectly hit "already analyzed".
+        stored_sigs = get_stored_project_file_signatures(project_signature)
+        current_set = set(file_signatures)
+        if stored_sigs is None or set(stored_sigs) != current_set:
+            print(
+                "Project signature matches DB but stored file manifest is missing or differs from "
+                "current scan — re-running analysis."
+            )
+            return {
+                "files": files,
+                "skip_analysis": False,
+                "score": 100.0,
+                "reason": "file_manifest_mismatch_after_exclusions",
+                "signature": project_signature,
+            }
         print("100.0% of this Project was analyzed in the past.")
         return {
             "files": files,
             "skip_analysis": True,
             "score": 100.0,
             "reason": "already_analyzed",
-            "signature": project_signature
+            "signature": project_signature,
         }
     
     # Check for similar projects (find only, don't auto-update)

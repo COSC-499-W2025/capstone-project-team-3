@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { uploadZipFile } from "../api/upload";
 import { getGeminiKeyStatus } from "../api/geminiKey";
 import { GeminiApiKeyModal } from "../components/gemini/GeminiApiKeyModal";
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 import { SimilarityIndicator } from "../components/SimilarityIndicator";
 import "../styles/UploadPage.css";
 import "../styles/AnalysisRunnerPage.css";
@@ -20,24 +20,67 @@ interface FileTypeGroup {
 }
 
 const FILE_TYPE_GROUPS: FileTypeGroup[] = [
-  { id: "markdown", label: "Markdown",       exts: [".md", ".markdown"] },
-  { id: "readme",   label: "README files",   exts: [], namePrefix: "readme" },
-  { id: "text",     label: "Plain Text",     exts: [".txt"] },
-  { id: "pdf",      label: "PDF",            exts: [".pdf"] },
-  { id: "word",     label: "Word Docs",      exts: [".docx", ".doc"] },
-  { id: "slides",   label: "Presentations",  exts: [".pptx", ".ppt"] },
-  { id: "json",     label: "JSON / Config",  exts: [".json", ".toml", ".ini"] },
-  { id: "yaml",     label: "YAML",           exts: [".yml", ".yaml"] },
-  { id: "html",     label: "HTML",           exts: [".html", ".htm"] },
-  { id: "css",      label: "Stylesheets",    exts: [".css", ".scss", ".sass", ".less"] },
-  { id: "shell",    label: "Shell Scripts",  exts: [".sh", ".bash"] },
+  { id: "markdown", label: "Markdown", exts: [".md", ".markdown"] },
+  { id: "readme", label: "README files", exts: [], namePrefix: "readme" },
+  { id: "text", label: "Plain Text", exts: [".txt"] },
+  { id: "pdf", label: "PDF", exts: [".pdf"] },
+  { id: "word", label: "Word Docs", exts: [".docx", ".doc"] },
+  { id: "slides", label: "Presentations", exts: [".pptx", ".ppt"] },
+  { id: "json", label: "JSON / Config", exts: [".json", ".toml", ".ini"] },
+  { id: "yaml", label: "YAML", exts: [".yml", ".yaml"] },
+  { id: "html", label: "HTML", exts: [".html", ".htm"] },
+  { id: "css", label: "Stylesheets", exts: [".css", ".scss", ".sass", ".less"] },
+  { id: "shell", label: "Shell Scripts", exts: [".sh", ".bash"] },
+  // Source code (same exclusion mechanism as docs)
+  { id: "python", label: "Python", exts: [".py", ".pyw", ".pyi"] },
+  {
+    id: "javascript",
+    label: "JavaScript",
+    exts: [".js", ".jsx", ".mjs", ".cjs"],
+  },
+  {
+    id: "typescript",
+    label: "TypeScript",
+    exts: [".ts", ".tsx", ".mts", ".cts"],
+  },
+  {
+    id: "java_family",
+    label: "Java / Kotlin / Scala",
+    exts: [".java", ".kt", ".kts", ".scala"],
+  },
+  {
+    id: "c_cpp",
+    label: "C / C++",
+    exts: [".c", ".cpp", ".cxx", ".cc", ".h", ".hpp", ".hxx"],
+  },
+  { id: "csharp", label: "C#", exts: [".cs", ".csx"] },
+  { id: "go_rust", label: "Go / Rust", exts: [".go", ".rs"] },
+  { id: "ruby_php", label: "Ruby / PHP", exts: [".rb", ".php"] },
+  { id: "swift", label: "Swift", exts: [".swift"] },
 ];
+
+/** Build API payload for per-project file-type exclusions (same shape as run analysis). */
+function buildExcludePayloadForPath(
+  path: string,
+  groups: Record<string, Set<string>>,
+): { exclude_extensions: string[]; exclude_name_prefixes: string[] } {
+  const set = groups[path];
+  if (!set?.size) {
+    return { exclude_extensions: [], exclude_name_prefixes: [] };
+  }
+  const matched = FILE_TYPE_GROUPS.filter((g) => set.has(g.id));
+  const exclude_extensions = matched.flatMap((g) => [...g.exts]);
+  const exclude_name_prefixes = matched.filter((g) => g.namePrefix).map((g) => g.namePrefix!);
+  return { exclude_extensions, exclude_name_prefixes };
+}
 
 interface Project {
   name: string;
   path: string;
   mode: string;
   fileCount?: number;
+  /** Files on disk after global scan patterns (before user type exclusions). */
+  totalScannedFiles?: number;
   similarity?: {
     jaccard_similarity: number;
     containment_ratio: number;
@@ -108,7 +151,10 @@ export function UploadPage() {
   const [defaultMode, setDefaultMode] = useState<"local" | "ai">("local");
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+  /** True while per-project similarity scan loop is in progress (before POST /analysis/run). */
+  const [scanPhaseActive, setScanPhaseActive] = useState(false);
+  /** True only while POST /api/analysis/run is in flight. */
+  const [analysisRequestPending, setAnalysisRequestPending] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [aiConsentAccepted, setAiConsentAccepted] = useState(false);
@@ -131,10 +177,28 @@ export function UploadPage() {
   const [expandedExclude, setExpandedExclude] =
     useState<Set<string>>(new Set());
 
+  const projectExcludeGroupsRef = useRef<Record<string, Set<string>>>({});
+  useEffect(() => {
+    projectExcludeGroupsRef.current = projectExcludeGroups;
+  }, [projectExcludeGroups]);
+
+  const hasRunAnalysisRef = useRef(hasRunAnalysis);
+  useEffect(() => {
+    hasRunAnalysisRef.current = hasRunAnalysis;
+  }, [hasRunAnalysis]);
+
+  const rescanDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   useEffect(() => {
     getGeminiKeyStatus()
       .then(setGeminiStatus)
       .catch(() => setGeminiStatus(null));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(rescanDebounceTimers.current).forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   useEffect(() => {
@@ -144,7 +208,7 @@ export function UploadPage() {
       setLoadError(null);
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId)}/projects`,
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId)}/projects`,
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Failed to load projects");
@@ -200,7 +264,7 @@ export function UploadPage() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (uploading || running) return;
+    if (uploading || scanPhaseActive || analysisRequestPending) return;
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
       setUploadError(null);
@@ -212,7 +276,7 @@ export function UploadPage() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = uploading || running ? "none" : "copy";
+    e.dataTransfer.dropEffect = uploading || scanPhaseActive || analysisRequestPending ? "none" : "copy";
   };
 
   const handleResetUpload = () => {
@@ -286,6 +350,142 @@ export function UploadPage() {
     setShowAiConsentModal(false);
   };
 
+  const refreshProjectScan = useCallback(
+    async (projectPath: string) => {
+      if (!uploadId || hasRunAnalysisRef.current) return;
+      const proj = projectsRef.current.find((p) => p.path === projectPath);
+      if (!proj || proj.status === "scanning") return;
+      const { exclude_extensions, exclude_name_prefixes } = buildExcludePayloadForPath(
+        projectPath,
+        projectExcludeGroupsRef.current,
+      );
+      const scanUsedExclusions =
+        exclude_extensions.length > 0 || exclude_name_prefixes.length > 0;
+      try {
+        const res = await fetch(
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId)}/scan-project`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project_path: projectPath, exclude_extensions, exclude_name_prefixes }),
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+
+        const eligible = data.eligible_file_count ?? data.file_count;
+        const total = data.total_scanned_files ?? data.file_count;
+
+        setProjectsWithRef((prev) =>
+          prev.map((p) => {
+            if (p.path !== projectPath) return p;
+
+            // Debounced rescan sends user exclusions; API similarity is for filtered files only.
+            // Keep the wheel / matched name frozen — only refresh eligibility counts.
+            if (scanUsedExclusions) {
+              if (data.reason === "all_files_excluded") {
+                return {
+                  ...p,
+                  fileCount: 0,
+                  totalScannedFiles: total,
+                  status: "ready",
+                  userDecision: "create_new",
+                };
+              }
+              if (data.reason === "reanalyze_with_exclusions") {
+                return {
+                  ...p,
+                  fileCount: eligible,
+                  totalScannedFiles: total,
+                  // Do not set status: "ready" — that clears similarity_detected and the yellow row.
+                };
+              }
+              return {
+                ...p,
+                fileCount: eligible,
+                totalScannedFiles: total,
+              };
+            }
+
+            if (data.reason === "all_files_excluded") {
+              return {
+                ...p,
+                similarity: null,
+                fileCount: 0,
+                totalScannedFiles: total,
+                status: "ready",
+                userDecision: "create_new",
+              };
+            }
+
+            if (data.reason === "reanalyze_with_exclusions" || data.reason === "reanalyze_cleared_exclusions") {
+              return {
+                ...p,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "ready",
+                // Drop stale "skip" from a prior 100% row so Run Analysis always sends this project.
+                userDecision:
+                  data.reason === "reanalyze_cleared_exclusions" ? "create_new" : p.userDecision,
+                similarity: data.reason === "reanalyze_cleared_exclusions" ? null : p.similarity,
+              };
+            }
+
+            if (data.exact_match) {
+              return {
+                ...p,
+                similarity: data.similarity,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "ready",
+                userDecision: "skip",
+              };
+            }
+
+            if (data.similarity) {
+              return {
+                ...p,
+                similarity: data.similarity,
+                fileCount: eligible,
+                totalScannedFiles: total,
+                status: "similarity_detected",
+                userDecision:
+                  p.userDecision === "update_existing" || p.userDecision === "create_new"
+                    ? p.userDecision
+                    : "create_new",
+              };
+            }
+
+            return {
+              ...p,
+              similarity: null,
+              fileCount: eligible,
+              totalScannedFiles: total,
+              status: "ready",
+              userDecision: "create_new",
+            };
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    },
+    [uploadId, setProjectsWithRef],
+  );
+
+  const scheduleRescanProject = useCallback(
+    (projectPath: string) => {
+      if (!uploadId || hasRunAnalysisRef.current) return;
+      const timers = rescanDebounceTimers.current;
+      if (timers[projectPath]) clearTimeout(timers[projectPath]);
+      timers[projectPath] = setTimeout(() => {
+        delete timers[projectPath];
+        void refreshProjectScan(projectPath);
+      }, 400);
+    },
+    [uploadId, refreshProjectScan],
+  );
+
   const handleSimilarityDecision = (decision: "create_new" | "update_existing") => {
     if (!similarityModalData) return;
 
@@ -299,10 +499,11 @@ export function UploadPage() {
     );
 
     setSimilarityModalData(null);
-    processNextProject(nextIndex);
+    void processNextProject(nextIndex);
   };
 
   const processNextProject = async (startIndex: number) => {
+    try {
     for (let i = startIndex; i < projectsRef.current.length; i++) {
       const project = projectsRef.current[i];
 
@@ -313,19 +514,68 @@ export function UploadPage() {
       );
 
       try {
+        const { exclude_extensions, exclude_name_prefixes } = buildExcludePayloadForPath(
+          project.path,
+          projectExcludeGroupsRef.current,
+        );
         const res = await fetch(
-          `${API_BASE_URL}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
+          `${getApiBaseUrl()}/api/analysis/uploads/${encodeURIComponent(uploadId!)}/scan-project`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ project_path: project.path }),
+            body: JSON.stringify({
+              project_path: project.path,
+              exclude_extensions,
+              exclude_name_prefixes,
+            }),
           }
         );
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.detail || "Scan failed");
 
-        // Handle exact match (100%) - auto-skip
+        const eligible = data.eligible_file_count ?? data.file_count;
+        const total = data.total_scanned_files ?? data.file_count;
+
+        if (data.reason === "all_files_excluded") {
+          setProjectsWithRef((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? {
+                    ...p,
+                    similarity: null,
+                    fileCount: 0,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision: "create_new",
+                  }
+                : p
+            )
+          );
+          continue;
+        }
+
+        // Same content as DB, but user set exclusions — or prior run used exclusions and now full tree (no auto-skip)
+        if (data.reason === "reanalyze_with_exclusions" || data.reason === "reanalyze_cleared_exclusions") {
+          setProjectsWithRef((prev) =>
+            prev.map((p, idx) =>
+              idx === i
+                ? {
+                    ...p,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision:
+                      data.reason === "reanalyze_cleared_exclusions" ? "create_new" : p.userDecision,
+                    similarity: data.reason === "reanalyze_cleared_exclusions" ? null : p.similarity,
+                  }
+                : p
+            )
+          );
+          continue;
+        }
+
+        // Handle exact match (100%) - auto-skip (similarity only; exclusions handled on Run Analysis)
         if (data.exact_match) {
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
@@ -333,7 +583,8 @@ export function UploadPage() {
                 ? {
                     ...p,
                     similarity: data.similarity,
-                    fileCount: data.file_count,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
                     status: "ready",
                     userDecision: "skip",
                   }
@@ -349,7 +600,13 @@ export function UploadPage() {
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
               idx === i
-                ? { ...p, similarity: data.similarity, fileCount: data.file_count, status: "similarity_detected" }
+                ? {
+                    ...p,
+                    similarity: data.similarity,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
+                    status: "similarity_detected",
+                  }
                 : p
             )
           );
@@ -365,7 +622,15 @@ export function UploadPage() {
           // No similarity - proceed
           setProjectsWithRef((prev) =>
             prev.map((p, idx) =>
-              idx === i ? { ...p, fileCount: data.file_count, status: "ready", userDecision: "create_new" } : p
+              idx === i
+                ? {
+                    ...p,
+                    fileCount: eligible,
+                    totalScannedFiles: total,
+                    status: "ready",
+                    userDecision: "create_new",
+                  }
+                : p
             )
           );
         }
@@ -379,20 +644,59 @@ export function UploadPage() {
       }
     }
 
-    runActualAnalysis();
+    setScanPhaseActive(false);
+    await runActualAnalysis();
+    } catch (e) {
+      console.error(e);
+      setScanPhaseActive(false);
+    }
   };
 
   const runActualAnalysis = async () => {
     if (!uploadId) return;
 
+    setAnalysisRequestPending(true);
+    setRunResult(null);
+    setRunError(null);
+
+    // Final rescan so file counts match current exclusions (debounced rescan may not have finished).
+    const pathsToSync = projectsRef.current.map((p) => p.path);
+    for (const projectPath of pathsToSync) {
+      await refreshProjectScan(projectPath);
+    }
+
+    const latestProjects = projectsRef.current;
+    const nameCounts = new Map<string, number>();
+    latestProjects.forEach((p) => {
+      nameCounts.set(p.name, (nameCounts.get(p.name) ?? 0) + 1);
+    });
+
+    const blocked = latestProjects.filter(
+      (p) =>
+        (projectExcludeGroupsRef.current[p.path]?.size ?? 0) > 0 && p.fileCount === 0,
+    );
+    if (blocked.length > 0) {
+      setRunError(
+        `No files left to analyze after exclusions for: ${blocked.map((p) => p.name).join(", ")}. Clear some excluded types before running.`,
+      );
+      setAnalysisRequestPending(false);
+      return;
+    }
+
     const project_analysis_types: Record<string, string> = {};
     const project_similarity_actions: Record<string, string> = {};
 
-    const latestProjects = projectsRef.current;
     latestProjects.forEach((p) => {
-      if (p.userDecision !== "skip") {
+      const hasExclusions = (projectExcludeGroupsRef.current[p.path]?.size ?? 0) > 0;
+      // Similarity Decision column: skip/update/create only. Exclusions do not remove a row from
+      // these maps — if exclusions are set, still send mode + similarity action so run matches UI,
+      // while run_scan_flow on the server applies exclusions and re-runs when they trump 100% match.
+      if (p.userDecision !== "skip" || hasExclusions) {
         project_analysis_types[p.path] = p.mode;
-        if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
+        if (p.userDecision === "skip" && hasExclusions) {
+          project_similarity_actions[p.path] = "create_new";
+          project_similarity_actions[p.name] = "create_new";
+        } else if (p.userDecision === "create_new" || p.userDecision === "update_existing") {
           project_similarity_actions[p.path] = p.userDecision;
           project_similarity_actions[p.name] = p.userDecision;
         } else {
@@ -410,16 +714,22 @@ export function UploadPage() {
         const matched = FILE_TYPE_GROUPS.filter((g) => groups.has(g.id));
         const exts = matched.flatMap((g) => [...g.exts]);
         const prefixes = matched.filter((g) => g.namePrefix).map((g) => g.namePrefix!);
-        if (exts.length) project_exclude_extensions[p.path] = exts;
-        if (prefixes.length) project_exclude_name_prefixes[p.path] = prefixes;
+        if (exts.length) {
+          project_exclude_extensions[p.path] = exts;
+          if (nameCounts.get(p.name) === 1) {
+            project_exclude_extensions[p.name] = exts;
+          }
+        }
+        if (prefixes.length) {
+          project_exclude_name_prefixes[p.path] = prefixes;
+          if (nameCounts.get(p.name) === 1) {
+            project_exclude_name_prefixes[p.name] = prefixes;
+          }
+        }
       }
     });
-
-    setRunning(true);
-    setRunResult(null);
-    setRunError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/analysis/run`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/analysis/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -444,11 +754,11 @@ export function UploadPage() {
         results: data.results ?? [],
       });
       setSimilarityModalData(null);
-      setRunning(false);
+      setAnalysisRequestPending(false);
       setHasRunAnalysis(true);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Analysis failed");
-      setRunning(false);
+      setAnalysisRequestPending(false);
     }
   };
 
@@ -456,8 +766,11 @@ export function UploadPage() {
     setProjectExcludeGroups((prev) => {
       const current = new Set(prev[projectPath] ?? []);
       current.has(groupId) ? current.delete(groupId) : current.add(groupId);
-      return { ...prev, [projectPath]: current };
+      const next = { ...prev, [projectPath]: current };
+      projectExcludeGroupsRef.current = next;
+      return next;
     });
+    scheduleRescanProject(projectPath);
   };
 
   const toggleExpandExclude = (projectPath: string) => {
@@ -469,9 +782,9 @@ export function UploadPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!uploadId || running || hasRunAnalysis) return;
+    if (!uploadId || scanPhaseActive || analysisRequestPending || hasRunAnalysis) return;
 
-    setRunning(true);
+    setScanPhaseActive(true);
     setRunResult(null);
     setRunError(null);
 
@@ -479,11 +792,17 @@ export function UploadPage() {
       prev.map((p) => ({ ...p, status: "pending" as const, similarity: null }))
     );
 
-    processNextProject(0);
+    await processNextProject(0);
   };
 
   const hasUpload = !!uploadId;
-  const analysisDisabled = !hasUpload || loadingProjects || running || hasRunAnalysis;
+  /** Locks default / per-project analysis mode and Run Analysis — not exclusion checkboxes. */
+  const analysisPipelineBusy = scanPhaseActive || analysisRequestPending;
+  const analysisFormDisabled =
+    !hasUpload || loadingProjects || analysisPipelineBusy || hasRunAnalysis;
+  /** Exclusions stay editable during similarity scan; only lock while POST /analysis/run runs. */
+  const exclusionControlsDisabled =
+    !hasUpload || loadingProjects || hasRunAnalysis || analysisRequestPending;
   const isAiSelected =
     defaultMode === "ai" || projects.some((project) => project.mode === "ai");
 
@@ -574,8 +893,10 @@ export function UploadPage() {
               <button
                 type="button"
                 className="upload-select-btn"
-                onClick={() => !uploading && !running && fileInputRef.current?.click()}
-                disabled={uploading || running}
+                onClick={() =>
+                  !uploading && !analysisPipelineBusy && fileInputRef.current?.click()
+                }
+                disabled={uploading || analysisPipelineBusy}
               >
                 {uploading ? "Uploading…" : hasUpload ? "Upload another ZIP" : "Choose ZIP file"}
               </button>
@@ -584,7 +905,7 @@ export function UploadPage() {
                   type="button"
                   className="upload-clear-btn"
                   onClick={handleResetUpload}
-                  disabled={uploading || running}
+                  disabled={uploading || analysisPipelineBusy}
                 >
                   Clear
                 </button>
@@ -593,14 +914,19 @@ export function UploadPage() {
           </div>
 
           <div
-            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}${running ? " upload-dropzone--disabled" : ""}`}
+            className={`upload-dropzone${uploading ? " upload-dropzone--loading" : ""}${analysisPipelineBusy ? " upload-dropzone--disabled" : ""}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onClick={() => !uploading && !running && fileInputRef.current?.click()}
+            onClick={() =>
+              !uploading && !analysisPipelineBusy && fileInputRef.current?.click()
+            }
             role="button"
             tabIndex={0}
             onKeyDown={(e) =>
-              e.key === "Enter" && !uploading && !running && fileInputRef.current?.click()
+              e.key === "Enter" &&
+              !uploading &&
+              !analysisPipelineBusy &&
+              fileInputRef.current?.click()
             }
             aria-label="Drop or click to select ZIP file"
           >
@@ -624,7 +950,7 @@ export function UploadPage() {
             onChange={handleFileChange}
             className="upload-file-input"
             aria-label="Select ZIP file"
-            disabled={uploading || running}
+            disabled={uploading || analysisPipelineBusy}
           />
         </section>
 
@@ -644,7 +970,7 @@ export function UploadPage() {
                 className="ar-select"
                 value={defaultMode}
                 onChange={(e) => handleDefaultModeChange(e.target.value as "local" | "ai")}
-                disabled={analysisDisabled}
+                disabled={analysisFormDisabled}
               >
                 <option value="local">Local (rule-based)</option>
                 <option value="ai">AI (language model)</option>
@@ -747,7 +1073,11 @@ export function UploadPage() {
                                   });
                                 }
                               }}
-                              title={hasRunAnalysis ? "Analysis complete - cannot change decision" : `Click to view/change decision for: ${project.similarity.matched_project_name}`}
+                              title={
+                                hasRunAnalysis
+                                  ? "Analysis complete - cannot change decision"
+                                  : `Click to view/change decision for: ${project.similarity.matched_project_name}`
+                              }
                               disabled={hasRunAnalysis}
                             >
                               <SimilarityIndicator
@@ -774,7 +1104,7 @@ export function UploadPage() {
                             value={project.mode}
                             onChange={(e) => handleProjectModeChange(index, e.target.value)}
                             aria-label={`Analysis type for ${project.name}`}
-                            disabled={analysisDisabled}
+                            disabled={analysisFormDisabled}
                           >
                             <option value="local">Local</option>
                             <option value="ai">AI</option>
@@ -813,7 +1143,7 @@ export function UploadPage() {
                             type="button"
                             className={`ar-exclude-btn${isExpanded ? " ar-exclude-btn--open" : ""}`}
                             onClick={() => toggleExpandExclude(project.path)}
-                            disabled={analysisDisabled}
+                            disabled={exclusionControlsDisabled}
                             aria-expanded={isExpanded}
                             aria-label={`Exclude file types for ${project.name}`}
                           >
@@ -832,6 +1162,12 @@ export function UploadPage() {
                                   <p className="ar-exclude-hint">
                                     Check types to <strong>exclude</strong> from analysis for this project.
                                   </p>
+                                  {excluded && excluded.size === FILE_TYPE_GROUPS.length && (
+                                    <p className="ar-exclude-all-types-msg" role="status">
+                                      All <strong>{FILE_TYPE_GROUPS.length}</strong> categories are excluded
+                                      (documents and code).
+                                    </p>
+                                  )}
                                   <div className="ar-exclude-grid">
                                     {FILE_TYPE_GROUPS.map((group) => {
                                       const checked = excluded?.has(group.id) ?? false;
@@ -841,7 +1177,7 @@ export function UploadPage() {
                                             type="checkbox"
                                             checked={checked}
                                             onChange={() => toggleExcludeGroup(project.path, group.id)}
-                                            disabled={analysisDisabled}
+                                            disabled={exclusionControlsDisabled}
                                           />
                                           <span className="ar-exclude-label">{group.label}</span>
                                           {group.exts.length > 0 ? (
@@ -853,6 +1189,13 @@ export function UploadPage() {
                                       );
                                     })}
                                   </div>
+                                  {(project.totalScannedFiles ?? 0) > 0 &&
+                                    (project.fileCount ?? 0) === 0 && (
+                                      <p className="ar-exclude-no-files-msg" role="status">
+                                        No files left to analyze for this project — change or clear
+                                        exclusions.
+                                      </p>
+                                    )}
                                 </div>
                               </td>
                             </tr>
@@ -868,18 +1211,22 @@ export function UploadPage() {
 
           <div className="ar-actions">
             <button
-              className={`ar-btn ar-btn--primary ${running || hasRunAnalysis ? "ar-btn--disabled" : ""}`}
-              onClick={handleRunAnalysis}
-              disabled={analysisDisabled || projects.length === 0}
+              className={`ar-btn ar-btn--primary ${analysisPipelineBusy || hasRunAnalysis ? "ar-btn--disabled" : ""}`}
+              onClick={() => void handleRunAnalysis()}
+              disabled={analysisFormDisabled || projects.length === 0}
               title={
                 hasRunAnalysis
                   ? "Analysis already run. Upload another ZIP or clear to run again."
-                  : running
+                  : analysisPipelineBusy
                     ? "Analysis in progress…"
                     : ""
               }
             >
-              {running ? "Running…" : hasRunAnalysis ? "Analysis Complete" : "Run Analysis"}
+              {analysisPipelineBusy
+                ? "Running…"
+                : hasRunAnalysis
+                  ? "Analysis Complete"
+                  : "Run Analysis"}
             </button>
           </div>
 

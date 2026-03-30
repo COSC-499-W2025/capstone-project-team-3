@@ -25,6 +25,15 @@ beforeEach(() => {
     writable: true,
     value: jest.fn(() => ({})),
   });
+
+  // ResizeObserver is not available in jsdom
+  if (typeof globalThis.ResizeObserver === "undefined") {
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+  }
 });
 
 // --- fixtures ----------------------------------------------------------------
@@ -239,9 +248,7 @@ describe("PortfolioPage – successful load", () => {
   test("renders Projects heading in sidebar", async () => {
     renderPortfolio();
     await waitFor(() => {
-      // Sidebar <h2> reads "Projects" (not "Project Selection")
-      const h2 = document.querySelector(".sidebar h2");
-      expect(h2?.textContent).toMatch(/projects/i);
+      expect(screen.getByText("Projects")).toBeDefined();
     });
   });
 
@@ -808,6 +815,293 @@ describe("PortfolioPage – GitHub Pages publish modal", () => {
     });
     await waitFor(() => {
       expect(document.querySelector(".github-pages-modal__success")).not.toBeNull();
+=======
+// --- collaboration network fixtures ------------------------------------------
+
+const MOCK_NETWORK = {
+  nodes: [
+    { id: "janedev", name: "janedev", commits: 42, is_primary: true, projects: ["My Awesome App", "CLI Toolbox"] },
+    { id: "alice", name: "alice", commits: 15, is_primary: false, projects: ["My Awesome App"] },
+    { id: "bob", name: "bob", commits: 8, is_primary: false, projects: ["My Awesome App", "CLI Toolbox"] },
+  ],
+  edges: [
+    { source: "janedev", target: "alice", projects: ["My Awesome App"], weight: 1, is_peer: false },
+    { source: "janedev", target: "bob", projects: ["My Awesome App", "CLI Toolbox"], weight: 2, is_peer: false },
+    { source: "alice", target: "bob", projects: ["My Awesome App"], weight: 1, is_peer: true },
+  ],
+};
+
+const PORTFOLIO_WITH_NETWORK = {
+  ...MOCK_PORTFOLIO,
+  collaboration_network: MOCK_NETWORK,
+};
+
+// --- collaboration network tests ---------------------------------------------
+
+describe("PortfolioPage – collaboration network", () => {
+  test("shows empty state when no network data", async () => {
+    setupFetchMock();
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/no collaboration data detected/i)).toBeDefined();
+    });
+  });
+
+  test("shows empty state hint about .git history", async () => {
+    setupFetchMock();
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/\.git/)).toBeDefined();
+    });
+  });
+
+  test("renders network graph container when network data exists", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(document.querySelector(".network-graph-container")).not.toBeNull();
+    });
+  });
+
+  test("renders canvas element for the network graph", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      const canvas = document.querySelector(".network-canvas-wrap canvas");
+      expect(canvas).not.toBeNull();
+    });
+  });
+
+  test("renders theme toggle buttons (Dark / Light)", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByTitle("Dark theme")).toBeDefined();
+      expect(screen.getByTitle("Light theme")).toBeDefined();
+    });
+  });
+
+  test("renders Star and Network mode buttons", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByTitle(/star view/i)).toBeDefined();
+      expect(screen.getByTitle(/full network/i)).toBeDefined();
+    });
+  });
+
+  test("renders legend with contributor count", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Contributors")).toBeDefined();
+      const legend = document.querySelector(".network-legend");
+      expect(legend).not.toBeNull();
+      expect(legend!.textContent).toContain("3");
+    });
+  });
+
+  test("renders legend with Connections count", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Connections")).toBeDefined();
+    });
+  });
+
+  test("shows hover hint when no node is hovered", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/hover for details/i)).toBeDefined();
+    });
+  });
+
+  test("renders Collaboration Network section heading", async () => {
+    setupFetchMock({ portfolio: PORTFOLIO_WITH_NETWORK });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/collaboration network/i)).toBeDefined();
+    });
+  });
+});
+
+// --- activity heatmap tests --------------------------------------------------
+
+describe("PortfolioPage – activity heatmap", () => {
+  beforeEach(() => {
+    setupFetchMock();
+  });
+
+  test("renders Activity Heatmap section heading", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/activity heatmap/i)).toBeDefined();
+    });
+  });
+
+  test("renders Active Days KPI", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Active Days")).toBeDefined();
+    });
+  });
+
+  test("renders Peak Signal KPI", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Peak Signal")).toBeDefined();
+    });
+  });
+
+  test("renders Total Signal KPI", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Total Signal")).toBeDefined();
+    });
+  });
+
+  test("renders heatmap grid cells", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const grid = document.querySelector(".activity-heatmap-grid");
+      expect(grid).not.toBeNull();
+    });
+  });
+
+  test("renders weekday labels", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const weekdays = document.querySelector(".activity-heatmap-weekdays");
+      expect(weekdays).not.toBeNull();
+    });
+  });
+
+  test("renders heatmap legend", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const legend = document.querySelector(".activity-heatmap-legend");
+      expect(legend).not.toBeNull();
+    });
+  });
+});
+
+// --- detailed analysis section tests -----------------------------------------
+
+describe("PortfolioPage – detailed analysis cards", () => {
+  beforeEach(() => {
+    setupFetchMock();
+  });
+
+  test("renders Testing & Quality card", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/testing & quality/i)).toBeDefined();
+    });
+  });
+
+  test("renders Total Test Files metric", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Total Test Files:")).toBeDefined();
+    });
+  });
+
+  test("renders Total Commits metric for GitHub projects", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Total Commits:")).toBeDefined();
+    });
+  });
+
+  test("renders Project Distribution card", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/project distribution/i)).toBeDefined();
+    });
+  });
+
+  test("renders GitHub and Local project counts", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("GitHub Projects:")).toBeDefined();
+      expect(screen.getByText("Local Projects:")).toBeDefined();
+    });
+  });
+
+  test("renders Development Patterns card", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/development patterns/i)).toBeDefined();
+    });
+  });
+
+  test("renders evolution pattern tags from metrics", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Iterative")).toBeDefined();
+      expect(screen.getByText("Refactoring")).toBeDefined();
+    });
+  });
+
+  test("renders Document Types card in analysis section", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getAllByText(/document types/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  test("renders individual document type counts", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("README:")).toBeDefined();
+      expect(screen.getByText("Wiki:")).toBeDefined();
+    });
+  });
+});
+
+// --- scoring methodology section tests ---------------------------------------
+
+describe("PortfolioPage – scoring methodology", () => {
+  beforeEach(() => {
+    setupFetchMock();
+  });
+
+  test("renders Project Scoring Methodology heading", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/project scoring methodology/i)).toBeDefined();
+    });
+  });
+
+  test("renders GitHub Project Scoring formula card", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("GitHub Project Scoring")).toBeDefined();
+    });
+  });
+
+  test("renders Local Project Scoring formula card", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText("Local Project Scoring")).toBeDefined();
+    });
+  });
+});
+
+// --- sidebar project count ---------------------------------------------------
+
+describe("PortfolioPage – sidebar count", () => {
+  beforeEach(() => {
+    setupFetchMock();
+  });
+
+  test("renders project count badge in sidebar header", async () => {
+    renderPortfolio();
+    await waitFor(() => {
+      const count = document.querySelector(".sidebar-count");
+      expect(count).not.toBeNull();
+      expect(count?.textContent).toContain("2");
     });
   });
 });

@@ -331,7 +331,11 @@ export function ResumeBuilderPage() {
       }
     } catch (error) {
       console.error('Download failed:', error);
-      alert('Failed to download resume. Please try again.');
+      const msg =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Failed to download resume. Please try again.';
+      alert(`Failed to download resume.\n\n${msg}`);
     } finally {
       setDownloading(false);
     }

@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ResumeListItem } from "../../api/resume";
+import thumbnailIconUrl from "../../assets/resume-sidebar/thumbnail_icon.svg?url";
+import editIconUrl from "../../assets/resume-sidebar/edit_icon.svg?url";
+import moreIconUrl from "../../assets/resume-sidebar/more_icon.svg?url";
 import "../../styles/ResumeSidebar.css";
 
 function isMasterItem(r: ResumeListItem): boolean {
@@ -96,7 +99,7 @@ export const ResumeSidebar = ({
           onClick={onToggleSidebar}
           aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
         >
-          <img src="/thumbnail_icon.svg" alt="" className="resume-sidebar__header-icon" width={30} height={30} />
+          <img src={thumbnailIconUrl} alt="" className="resume-sidebar__header-icon" width={30} height={30} />
         </button>
       </div>
       <hr className="resume-sidebar__divider" />
@@ -170,7 +173,7 @@ export const ResumeSidebar = ({
                       onEditResume?.(fullIndex);
                     }}
                   >
-                    <img src="/edit_icon.svg" alt="" width={20} height={20} />
+                    <img src={editIconUrl} alt="" width={20} height={20} />
                   </button>
                 )}
                 {showOverflow && (
@@ -184,7 +187,7 @@ export const ResumeSidebar = ({
                         setOpenMenuIndex(openMenuIndex === fullIndex ? null : fullIndex);
                       }}
                     >
-                      <img src="/more_icon.svg" alt="" width={18} height={18} />
+                      <img src={moreIconUrl} alt="" width={18} height={18} />
                     </button>
                     {openMenuIndex === fullIndex && (
                       <div className="resume-sidebar__dropdown">

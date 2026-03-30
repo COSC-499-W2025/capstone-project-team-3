@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config/api";
+import { getApiBaseUrl } from "../config/api";
 
 export interface ConsentStatus {
   has_consent: boolean;
@@ -9,7 +9,7 @@ export interface ConsentStatus {
  * Returns { has_consent } on success; throws Error with backend detail or a fallback message on failure.
  */
 export async function getConsentStatus(): Promise<ConsentStatus> {
-  const res = await fetch(`${API_BASE_URL}/api/privacy-consent`);
+  const res = await fetch(`${getApiBaseUrl()}/api/privacy-consent`);
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

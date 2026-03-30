@@ -1,2 +1,6 @@
 // Mock for API config in tests
-export const API_BASE_URL = 'http://localhost:8000';
+export async function initApiBaseUrlFromElectron(): Promise<void> {}
+
+export function getApiBaseUrl(): string {
+  return 'http://localhost:8000'
+}

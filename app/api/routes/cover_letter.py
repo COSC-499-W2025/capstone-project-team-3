@@ -165,7 +165,7 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
     for para in paragraphs:
         lines = [escape_latex(line) for line in para.splitlines()]
         if len(lines) > 1 and lines[0].strip().lower().startswith("sincerely"):
-            escaped_paragraphs.append(" \\\\\\n".join(lines))
+            escaped_paragraphs.append(" \\\\\n".join(lines))
         else:
             escaped_paragraphs.append(" ".join(lines))
 

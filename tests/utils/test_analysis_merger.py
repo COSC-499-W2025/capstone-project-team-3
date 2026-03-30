@@ -117,22 +117,29 @@ def test_store_results_resets_override(isolated_db):
     conn = dbmod.get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE PROJECT SET score_overridden = 1, score_overridden_value = ? WHERE project_signature = ?",
-        (0.5, project_signature)
+        """
+        UPDATE PROJECT SET score_overridden = 1, score_overridden_value = ?,
+        score_override_exclusions = ? WHERE project_signature = ?
+        """,
+        (0.5, json.dumps(["total_lines", "test_files_changed"]), project_signature),
     )
     conn.commit()
 
     store_results_in_db(project_name, merged_results, project_score=0.9, project_signature=project_signature)
 
     cursor.execute(
-        "SELECT score_overridden, score_overridden_value FROM PROJECT WHERE project_signature = ?",
-        (project_signature,)
+        """
+        SELECT score_overridden, score_overridden_value, score_override_exclusions
+        FROM PROJECT WHERE project_signature = ?
+        """,
+        (project_signature,),
     )
     row = cursor.fetchone()
     conn.close()
 
     assert row[0] == 0
     assert row[1] is None
+    assert row[2] is None
 
 def test_merge_with_empty_non_code_results(isolated_db):
     """Test merge_analysis_results handles empty non-code results gracefully."""

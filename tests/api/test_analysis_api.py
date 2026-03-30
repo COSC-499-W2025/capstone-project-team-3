@@ -50,6 +50,7 @@ def test_run_analysis_upload_not_found(mock_exists):
     assert response.json()["detail"] == "Upload not found for provided upload_id"
 
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch(
     "app.api.routes.analysis.analyze_parsed_project",
@@ -112,6 +113,7 @@ def test_run_analysis_non_interactive_flow(
     mock_analyze_non_code,
     mock_analyze_code,
     mock_merge,
+    mock_persist_manifest,
 ):
     payload = {
         "upload_id": "upload-123",
@@ -172,6 +174,8 @@ def test_scan_project_no_similarity_new_project(
     assert data["project_name"] == "my-project"
     assert data["project_path"] == "/tmp/extracted/my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["similarity"] is None
     assert data.get("exact_match") is None
 
@@ -206,6 +210,8 @@ def test_scan_project_with_similarity_detected(
     assert data["status"] == "ok"
     assert data["project_name"] == "my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["similarity"] is not None
     assert data["similarity"]["jaccard_similarity"] == 75.5
     assert data["similarity"]["containment_ratio"] == 82.3
@@ -217,6 +223,7 @@ def test_scan_project_with_similarity_detected(
 @patch("app.api.routes.analysis.scan_project_files")
 @patch("app.api.routes.analysis.extract_file_signature")
 @patch("app.api.routes.analysis.get_project_signature")
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=["sig123"])
 @patch("app.utils.scan_utils.project_signature_exists")
 @patch("app.api.routes.analysis.find_similar_project")
 @patch("app.api.routes.analysis.os.path.exists", return_value=True)
@@ -224,6 +231,7 @@ def test_scan_project_exact_match(
     mock_exists,
     mock_find_similar,
     mock_sig_exists,
+    mock_get_stored,
     mock_get_sig,
     mock_extract_sig,
     mock_scan_files,
@@ -244,10 +252,114 @@ def test_scan_project_exact_match(
     assert data["status"] == "ok"
     assert data["project_name"] == "my-project"
     assert data["file_count"] == 2
+    assert data["eligible_file_count"] == 2
+    assert data["total_scanned_files"] == 2
     assert data["exact_match"] is True
     assert data["similarity"]["jaccard_similarity"] == 100.0
     assert data["similarity"]["containment_ratio"] == 100.0
     assert data["similarity"]["match_reason"] == "Exact match (100%)"
+
+
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.get_project_signature")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_reanalyze_with_exclusions_bypasses_exact_match(
+    mock_os_exists,
+    mock_get_sig,
+    mock_extract_sig,
+    mock_scan_files,
+    mock_sig_exists,
+):
+    """With exclusions, do not return exact_match — user must be able to re-run analysis."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/main.py")]
+    mock_extract_sig.return_value = "sig123"
+    mock_get_sig.return_value = "project_sig_abc"
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={
+            "project_path": "/tmp/extracted/my-project",
+            "exclude_extensions": [".md"],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_with_exclusions"
+    assert data.get("exact_match") is False
+    assert data["similarity"] is None
+    assert data["file_count"] == 1
+
+
+@patch("app.api.routes.analysis.find_similar_project", return_value=None)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=None)
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.get_project_signature", return_value="same_project_hash")
+@patch("app.api.routes.analysis.extract_file_signature", return_value="sig-file")
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_null_stored_manifest_bypasses_exact_match(
+    mock_exists,
+    mock_scan_files,
+    mock_extract_sig,
+    mock_get_sig,
+    mock_sig_exists,
+    mock_stored_none,
+    mock_find_similar,
+):
+    """No exclusions: NULL file_signatures in DB must not show 100% auto-skip."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/a.py"), Path("/tmp/proj/b.py")]
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_cleared_exclusions"
+    assert data.get("exact_match") is False
+
+
+@patch("app.api.routes.analysis.find_similar_project", return_value=None)
+@patch("app.utils.scan_utils.get_stored_project_file_signatures", return_value=["old-sig-only"])
+@patch("app.utils.scan_utils.project_signature_exists", return_value=True)
+@patch("app.api.routes.analysis.get_project_signature", return_value="same_project_hash")
+@patch("app.api.routes.analysis.extract_file_signature")
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_cleared_exclusions_bypasses_exact_match(
+    mock_exists,
+    mock_scan_files,
+    mock_extract_sig,
+    mock_get_sig,
+    mock_sig_exists,
+    mock_stored_sigs,
+    mock_find_similar,
+):
+    """No exclusions: if DB analyzed fewer files than this scan, do not show 100% auto-skip."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/a.py"), Path("/tmp/proj/b.py")]
+    mock_extract_sig.return_value = "sig-file"
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={"project_path": "/tmp/extracted/my-project"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["reason"] == "reanalyze_cleared_exclusions"
+    assert data.get("exact_match") is False
+    assert data["similarity"] is None
+    assert data["eligible_file_count"] == 2
 
 
 @patch("app.api.routes.analysis.scan_project_files", return_value=[])
@@ -264,8 +376,36 @@ def test_scan_project_no_files(mock_exists, mock_scan_files):
     assert data["status"] == "ok"
     assert data["project_name"] == "empty-project"
     assert data["file_count"] == 0
+    assert data["eligible_file_count"] == 0
+    assert data["total_scanned_files"] == 0
     assert data["similarity"] is None
     assert data["reason"] == "no_files"
+
+
+@patch("app.api.routes.analysis.scan_project_files")
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+def test_scan_project_all_files_excluded(mock_exists, mock_scan_files):
+    """User exclusions remove every file — similarity must not run."""
+    from pathlib import Path
+
+    mock_scan_files.return_value = [Path("/tmp/proj/readme.md"), Path("/tmp/proj/notes.txt")]
+
+    response = client.post(
+        "/api/analysis/uploads/upload-123/scan-project",
+        json={
+            "project_path": "/tmp/extracted/docs-only",
+            "exclude_extensions": [".md", ".txt"],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["file_count"] == 0
+    assert data["eligible_file_count"] == 0
+    assert data["total_scanned_files"] == 2
+    assert data["similarity"] is None
+    assert data["reason"] == "all_files_excluded"
 
 
 def test_scan_project_missing_project_path():
@@ -277,6 +417,7 @@ def test_scan_project_missing_project_path():
 # Extension and name-prefix exclusion tests
 # ---------------------------------------------------------------------------
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch("app.api.routes.analysis.analyze_parsed_project", return_value={"Metrics": {}, "Resume_bullets": []})
 @patch("app.api.routes.analysis.analyze_project_clean", return_value={"Metrics": {}})
@@ -316,6 +457,7 @@ def test_project_exclude_extensions_filters_non_code_files(
     mock_exists, mock_extract, mock_api_status, mock_scan, mock_git,
     mock_identity, mock_classify, mock_parse_non_code, mock_top_level,
     mock_parse_code, mock_analyze_non_code, mock_analyze_code, mock_merge,
+    mock_persist_manifest,
 ):
     """Files with excluded extensions must not reach parsed_input_text."""
     response = client.post(
@@ -332,6 +474,7 @@ def test_project_exclude_extensions_filters_non_code_files(
     assert call_kwargs["file_paths_dict"]["non_collaborative"] == []
 
 
+@patch("app.api.routes.analysis.persist_analyzed_file_signatures")
 @patch("app.api.routes.analysis.merge_analysis_results")
 @patch("app.api.routes.analysis.analyze_parsed_project", return_value={"Metrics": {}, "Resume_bullets": []})
 @patch("app.api.routes.analysis.analyze_project_clean", return_value={"Metrics": {}})
@@ -371,6 +514,7 @@ def test_project_exclude_name_prefixes_filters_readme_files(
     mock_exists, mock_extract, mock_api_status, mock_scan, mock_git,
     mock_identity, mock_classify, mock_parse_non_code, mock_top_level,
     mock_parse_code, mock_analyze_non_code, mock_analyze_code, mock_merge,
+    mock_persist_manifest,
 ):
     """Files whose stem starts with 'readme' must be excluded when namePrefix filter is set."""
     response = client.post(
@@ -405,13 +549,14 @@ def test_project_exclude_name_prefixes_filters_readme_files(
 @patch(
     "app.api.routes.analysis.run_scan_flow",
     return_value={
-        "files": [Path("/tmp/proj/README.md"), Path("/tmp/proj/notes.md")],
-        "skip_analysis": False,
+        "files": [],
+        "skip_analysis": True,
+        "reason": "all_files_excluded",
         "signature": "sig-all-excl",
     },
 )
 def test_all_files_excluded_returns_skipped(mock_scan, mock_exists, mock_extract, mock_api_key):
-    """When exclusions remove every file the project must be skipped with reason all_files_excluded."""
+    """When run_scan_flow reports all_files_excluded the API must skip (exclusions removed every file)."""
     response = client.post(
         "/api/analysis/run",
         json={
@@ -427,3 +572,38 @@ def test_all_files_excluded_returns_skipped(mock_scan, mock_exists, mock_extract
     result = data["results"][0]
     assert result["status"] == "skipped"
     assert result["reason"] == "all_files_excluded"
+
+
+@patch("app.api.routes.analysis.clear_project_analysis_when_skipped_no_files")
+@patch("app.api.routes.analysis.check_gemini_api_key", return_value=(False, "missing key"))
+@patch(
+    "app.api.routes.analysis.extract_and_list_projects",
+    return_value={
+        "status": "ok",
+        "projects": ["/tmp/proj"],
+        "extracted_dir": "/tmp",
+    },
+)
+@patch("app.api.routes.analysis.os.path.exists", return_value=True)
+@patch(
+    "app.api.routes.analysis.run_scan_flow",
+    return_value={
+        "files": [],
+        "skip_analysis": True,
+        "reason": "all_files_excluded",
+        "signature": "sig-from-scan",
+    },
+)
+def test_all_files_excluded_skip_calls_clear_with_signature(
+    mock_scan, mock_exists, mock_extract, mock_api_key, mock_clear,
+):
+    """Skip from scan must clear stale DB rows using the content signature when provided."""
+    response = client.post(
+        "/api/analysis/run",
+        json={
+            "upload_id": "upload-skip-clear",
+            "project_exclude_extensions": {"/tmp/proj": [".md"]},
+        },
+    )
+    assert response.status_code == 200
+    mock_clear.assert_called_once_with("/tmp/proj", "proj", "sig-from-scan")

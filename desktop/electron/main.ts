@@ -4,7 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
 import readline from 'node:readline'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -65,6 +65,46 @@ function resolveBackendExecutable(): string | null {
   }
 
   return null
+}
+
+/**
+ * Best-effort self-heal for macOS packaged apps:
+ * - Ensure sidecar has execute bit
+ * - Remove quarantine xattr from app bundle and sidecar so Gatekeeper does not block spawn
+ */
+function repairPackagedMacSidecarPermissions(exe: string): void {
+  if (!(app.isPackaged && process.platform === 'darwin')) {
+    return
+  }
+
+  try {
+    fs.chmodSync(exe, 0o755)
+  } catch (err) {
+    console.warn('[electron] chmod sidecar failed:', err)
+  }
+
+  const appBundlePath = path.resolve(process.resourcesPath, '..', '..')
+  const xattrBin = '/usr/bin/xattr'
+  if (!fs.existsSync(xattrBin)) {
+    return
+  }
+
+  // Clear quarantine recursively on the app bundle first, then directly on sidecar.
+  const clearTargets = [
+    ['-dr', 'com.apple.quarantine', appBundlePath],
+    ['-d', 'com.apple.quarantine', exe],
+  ]
+
+  for (const args of clearTargets) {
+    try {
+      const result = spawnSync(xattrBin, args, { timeout: 7000 })
+      if (result.error) {
+        console.warn('[electron] xattr clear failed:', { args, error: result.error.message })
+      }
+    } catch (err) {
+      console.warn('[electron] xattr clear exception:', { args, err })
+    }
+  }
 }
 
 function healthUrl(origin: string): string {
@@ -208,6 +248,8 @@ function startBackendSidecar(): { ok: boolean; spawnedNew: boolean } {
 
   const cwd = path.dirname(exe)
   const debug = process.env.DESKTOP_BACKEND_DEBUG === '1' || process.env.DESKTOP_BACKEND_DEBUG === 'true'
+
+  repairPackagedMacSidecarPermissions(exe)
 
   // Keep stdout piped so we can parse SIDECAR_LISTENING; in debug mode send sidecar stderr to terminal.
   backendChild = spawn(exe, [], {

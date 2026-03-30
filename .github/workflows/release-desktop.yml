@@ -18,6 +18,8 @@ on:
       - "tests/**"
 
 jobs:
+  # macOS only: keeps CI time and release size reasonable; DMG ~1 GiB fits GitHub's 2 GiB asset cap.
+  # Use .github/workflows/backend-sidecar.yml for Linux/Windows sidecar builds when needed.
   build-backend-sidecar:
     name: Build backend (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -29,14 +31,6 @@ jobs:
             backend_artifact: backend-sidecar-macos
             output_binary: backend-sidecar
             platform_dir: darwin
-          - os: ubuntu-latest
-            backend_artifact: backend-sidecar-linux
-            output_binary: backend-sidecar
-            platform_dir: linux
-          - os: windows-latest
-            backend_artifact: backend-sidecar-windows
-            output_binary: backend-sidecar.exe
-            platform_dir: win32
 
     steps:
       - name: Checkout code
@@ -87,14 +81,6 @@ jobs:
             backend_artifact: backend-sidecar-macos
             platform_dir: darwin
             output_artifact: desktop-release-macos
-          - os: ubuntu-latest
-            backend_artifact: backend-sidecar-linux
-            platform_dir: linux
-            output_artifact: desktop-release-linux
-          - os: windows-latest
-            backend_artifact: backend-sidecar-windows
-            platform_dir: win32
-            output_artifact: desktop-release-windows
 
     steps:
       - name: Checkout code
@@ -175,14 +161,11 @@ jobs:
             echo ""
             echo "GitHub Releases allow at most 2 GiB per attached file. Full desktop installers may be larger."
             echo ""
-            echo "Download the built installers (recommended):"
+            echo "This workflow produces macOS builds only. Download the DMG (recommended):"
             echo "  1. Open: ${run_url}"
             echo "  2. Scroll to the Artifacts section at the bottom."
-            echo "  3. Download the ZIP for your OS:"
-            echo "       - desktop-release-macos"
-            echo "       - desktop-release-windows"
-            echo "       - desktop-release-linux"
-            echo "  4. Unzip and run the installer inside."
+            echo "  3. Download: desktop-release-macos (ZIP contains the .dmg)."
+            echo "  4. Unzip and open the DMG."
             echo ""
             if [ -n "$note" ]; then
               echo "These builds were too large to attach to this release page:"

@@ -339,22 +339,20 @@ For context each test file contains the following projects ***(M2 Requirement 33
 
 **5. Run analysis**
 
-Analysis can be run either through the CLI or using our analysis runner.
+Analysis can be run through the desktop app or the CLI.
 
-In order to run the analysis with a front-end view : 
-- Go to http://localhost:8000/upload-file
-- Upload any of the provided zip files and copy the resulting `upload_id`
-- Go to http://localhost:8000/static/analysis_runner.html
-- Paste the `upload_id` returned after your upload, then click **Load Projects**
+In order to run the analysis with the desktop app:
+- Open the desktop application and navigate to the Upload & Analysis page
+- Upload any of the provided zip files
 - Select an **Analysis Type** for each project (`local` or `ai`)
 - Click **Run Analysis**
 
-In order to run the analysis within the CLI : 
+In order to run the analysis within the CLI:
 - Go to http://localhost:8000/upload-file
--  Upload any of the provided zip files and copy the resulting `upload_id`
+- Upload any of the provided zip files and copy the resulting `upload_id`
 - Paste the `upload_id` in the terminal when prompted and hit **Enter**
 - User will be able to see similarity score and other metrics used to detect if a project has been previously analyzed.  
-- User will prompted to select an Analysis Type for each project (local or ai)
+- User will be prompted to select an Analysis Type for each project (local or ai)
 
 **Note** : Both methods follow and use the same analysis process, however in order to see feedback on whether or not a project was previously analyzed the user should refer to the CLI.
 

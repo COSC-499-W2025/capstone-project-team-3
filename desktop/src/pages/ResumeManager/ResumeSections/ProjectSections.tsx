@@ -91,8 +91,6 @@ export function ProjectsSection({
         </div>
       )}
       {projects.map((p, i) => {
-        const skills = projectSkills(p);
-        const bullets = projectBullets(p);
         const globalKey = projectStartIndex + i;
         const sortableId =
           enableSortable && isEditing ? `project-${globalKey}` : undefined;

@@ -26,6 +26,8 @@ const scanProjectNoSimilarityResponse = {
   json: async () => ({
     status: "ok",
     file_count: 5,
+    eligible_file_count: 5,
+    total_scanned_files: 5,
     similarity: null,
     reason: "no_match",
   }),
@@ -179,6 +181,7 @@ describe("UploadPage", () => {
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
       .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ analyzed_projects: 1, skipped_projects: 0, failed_projects: 0 }),
@@ -212,6 +215,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ projects: [{ name: "proj-a", path: "/tmp/proj-a" }] }),
       } as Response)
+      .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce(scanProjectNoSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
@@ -252,6 +256,8 @@ describe("UploadPage", () => {
       json: async () => ({
         status: "ok",
         file_count: 5,
+        eligible_file_count: 5,
+        total_scanned_files: 5,
         similarity: {
           jaccard_similarity: 75.5,
           containment_ratio: 82.3,
@@ -269,6 +275,7 @@ describe("UploadPage", () => {
           projects: [{ name: "proj-a", path: "/tmp/proj-a" }],
         }),
       } as Response)
+      .mockResolvedValueOnce(scanProjectSimilarityResponse)
       .mockResolvedValueOnce(scanProjectSimilarityResponse)
       .mockResolvedValueOnce({
         ok: true,
@@ -330,9 +337,23 @@ describe("UploadPage", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          status: "ok",
           file_count: 5,
+          eligible_file_count: 5,
+          total_scanned_files: 5,
           similarity: null,
-          exact_match: false,
+          reason: "no_match",
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: "ok",
+          file_count: 5,
+          eligible_file_count: 5,
+          total_scanned_files: 5,
+          similarity: null,
+          reason: "no_match",
         }),
       } as Response)
       .mockResolvedValueOnce({

@@ -61,3 +61,6 @@ npm-debug.log
 docker-compose.override.yml
 *.tar
 docker-entrypoint-*.sh
+
+# Ignore front-end coverage report
+desktop/coverage/

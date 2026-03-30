@@ -410,10 +410,6 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                 )
                 if isinstance(parsed_history, list):
                     git_commits = parsed_history
-                    try:
-                        _persist_git_history(project_signature, git_commits)
-                    except Exception:
-                        pass
 
             except Exception:
                 git_commits = []
@@ -470,6 +466,14 @@ def run_analysis_for_upload(payload: AnalyzeUploadRequest) -> Dict[str, Any]:
                 project_signature=project_signature,
             )
             persist_analyzed_file_signatures(project_signature, project_path, files)
+
+            # Persist git history AFTER merge
+            # (merge_analysis_results wipes GIT_HISTORY, so this must come after)
+            if is_git_repo and git_commits:
+                try:
+                    _persist_git_history(project_signature, git_commits)
+                except Exception:
+                    pass
 
             # Extract and persist collaborator data AFTER merge
             # (merge_analysis_results wipes DASHBOARD_DATA, so this must come after)

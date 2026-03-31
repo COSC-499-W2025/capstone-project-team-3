@@ -10,6 +10,7 @@
  - [System Architecture](docs/plan/System_Architecture_Diagram.md)
  - [API Documentation](docs/API_DOCUMENTATION.md)
  - [Test Report](docs/TEST_REPORT.md)
+ - [Desktop application (Big Picture): how to run](#desktop-big-picture-how-to-run)
 
 # Project-Starter
 Please use the provided folder structure for your project. You are free to organize any additional internal folder structure as required by the project. 
@@ -256,7 +257,7 @@ Install dependencies:
 pip install requirements.txt
 ```
 
-### 🖥️ Desktop application (Big Picture): how to run
+### Desktop Big Picture How To Run
 
 The desktop app is **Electron + React (Vite)** with a **Python backend** that can run as a **PyInstaller sidecar** inside the packaged app, or as **Docker / uvicorn** during development.
 

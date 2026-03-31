@@ -4,6 +4,7 @@ Tests for analysis_merger_utils.py - Skill date inference functions.
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from git import Repo
 from app.utils.analysis_merger_utils import _get_skill_extensions, _infer_skill_dates_from_git
 

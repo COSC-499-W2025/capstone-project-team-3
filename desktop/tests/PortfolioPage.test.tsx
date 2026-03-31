@@ -661,6 +661,164 @@ describe("PortfolioPage – user profile card", () => {
   });
 });
 
+// --- GitHub Pages publishing -------------------------------------------------
+
+describe("PortfolioPage – GitHub Pages publish button visibility", () => {
+  test("shows publish button when github_user is set", async () => {
+    setupFetchMock(); // MOCK_PORTFOLIO has github_user: "janedev"
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.getByText(/publish to github pages/i)).toBeDefined();
+    });
+  });
+
+  test("hides publish button when github_user is empty", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: { ...MOCK_PORTFOLIO.user, github_user: "" },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.queryByText(/publish to github pages/i)).toBeNull();
+    });
+  });
+
+  test("hides publish button when github_user is absent", async () => {
+    setupFetchMock({
+      portfolio: {
+        ...MOCK_PORTFOLIO,
+        user: { ...MOCK_PORTFOLIO.user, github_user: undefined },
+      },
+    });
+    renderPortfolio();
+    await waitFor(() => {
+      expect(screen.queryByText(/publish to github pages/i)).toBeNull();
+    });
+  });
+
+  test("publish button is hidden (not rendered) when no projects are selected", async () => {
+    setupFetchMock();
+    renderPortfolio();
+
+    // Deselect all projects — button is conditionally rendered only when projects are selected
+    await waitFor(() => screen.getByText(/deselect all/i));
+    await act(async () => {
+      fireEvent.click(screen.getByText(/deselect all/i));
+    });
+
+    await waitFor(() => {
+      // Button is removed from DOM when selectedProjects.size === 0
+      expect(document.querySelector(".publish-github-pages-btn")).toBeNull();
+    });
+  });
+});
+
+describe("PortfolioPage – GitHub Pages publish modal", () => {
+  beforeEach(() => {
+    setupFetchMock(); // github_user is "janedev"
+  });
+
+  async function openModal() {
+    renderPortfolio();
+    const btn = await screen.findByTitle(/publish your portfolio to github pages/i);
+    await act(async () => { fireEvent.click(btn); });
+    await waitFor(() => expect(document.querySelector(".github-pages-modal")).not.toBeNull());
+  }
+
+  test("opens modal when publish button is clicked", async () => {
+    await openModal();
+    expect(screen.getByText(/publish to github pages/i, { selector: "h2,h3" })).toBeDefined();
+  });
+
+  test("modal shows the correct github.io URL for the user", async () => {
+    await openModal();
+    expect(screen.getByText(/janedev\.github\.io/i)).toBeDefined();
+  });
+
+  test("modal closes when overlay is clicked", async () => {
+    await openModal();
+    const overlay = document.querySelector(".github-pages-modal-overlay");
+    expect(overlay).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(overlay!);
+    });
+    expect(document.querySelector(".github-pages-modal")).toBeNull();
+  });
+
+  test("shows error state when publish API returns an error", async () => {
+    global.fetch = jest.fn((url: RequestInfo | URL) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api/portfolio/publish-github-pages")) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ detail: "Invalid token" }),
+        } as Response);
+      }
+      if (urlStr.includes("/api/projects"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_PROJECTS) } as Response);
+      if (urlStr.includes("/api/portfolio"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_PORTFOLIO) } as Response);
+      return Promise.resolve({ ok: false } as Response);
+    }) as typeof fetch;
+
+    renderPortfolio();
+    // Wait until the publish button is rendered, then click it
+    const openBtn = await screen.findByTitle(/publish your portfolio to github pages/i);
+    await act(async () => { fireEvent.click(openBtn); });
+
+    // Modal should now be open — fill in the token
+    await waitFor(() => expect(document.querySelector(".github-pages-modal__input")).not.toBeNull());
+    fireEvent.change(document.querySelector(".github-pages-modal__input")!, { target: { value: "bad_token" } });
+
+    await act(async () => {
+      fireEvent.click(document.querySelector(".github-pages-modal__publish-btn")!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector(".github-pages-modal__error")).not.toBeNull();
+    });
+  });
+
+  test("shows success state with URL when publish succeeds", async () => {
+    global.fetch = jest.fn((url: RequestInfo | URL) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api/portfolio/publish-github-pages")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            status: "ok",
+            url: "https://janedev.github.io",
+            repo: "https://github.com/janedev/janedev.github.io",
+            username: "janedev",
+          }),
+        } as Response);
+      }
+      if (urlStr.includes("/api/projects"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_PROJECTS) } as Response);
+      if (urlStr.includes("/api/portfolio"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_PORTFOLIO) } as Response);
+      return Promise.resolve({ ok: false } as Response);
+    }) as typeof fetch;
+
+    renderPortfolio();
+    // Wait until the publish button is rendered, then click it
+    const openBtn = await screen.findByTitle(/publish your portfolio to github pages/i);
+    await act(async () => { fireEvent.click(openBtn); });
+
+    // Modal should now be open — fill in the token
+    await waitFor(() => expect(document.querySelector(".github-pages-modal__input")).not.toBeNull());
+    fireEvent.change(document.querySelector(".github-pages-modal__input")!, { target: { value: "ghp_valid" } });
+
+    await act(async () => {
+      fireEvent.click(document.querySelector(".github-pages-modal__publish-btn")!);
+    });
+    await waitFor(() => {
+      expect(document.querySelector(".github-pages-modal__success")).not.toBeNull();
+    });
+  });
+});
+
 // --- collaboration network fixtures ------------------------------------------
 
 const MOCK_NETWORK = {

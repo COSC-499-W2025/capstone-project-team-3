@@ -159,7 +159,7 @@ def _build_cover_letter_tex(content: str, job_title: str, company: str, name: st
 
     # ── LinkedIn contact line ──────────────────────────────────────────────
     if linkedin_url:
-        safe_url = linkedin_url.replace("%", "\\%").replace("#", "\\#").replace("_", "\\_")
+        safe_url = linkedin_url.replace("#", "\\#")
         linkedin_tex = (
             r" \textbar{} \href{" + safe_url + r"}{LinkedIn}"
         )
